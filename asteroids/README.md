@@ -22,6 +22,7 @@ velocities, and sizes, and turns the data into:
 - Mathematica or the free Wolfram Engine
 - `wolframscript` on your PATH
 - Internet connection (to fetch from NASA)
+- `stem-core` (sibling directory `../stem-core`) — loaded automatically by `main.wl`
 
 Optional: a free NASA API key from https://api.nasa.gov (the default
 DEMO_KEY works at 30 requests/hour).

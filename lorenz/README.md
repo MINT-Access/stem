@@ -21,6 +21,7 @@ diverge completely: this is the "butterfly effect".
 
 - Mathematica or the free Wolfram Engine
 - `wolframscript` on your PATH
+- `stem-core` (sibling directory `../stem-core`) — loaded automatically by `main.wl`
 
 ## Usage
 

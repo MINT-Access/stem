@@ -4,6 +4,12 @@ A pendulum physics simulation written in Wolfram Language, runnable entirely
 from the terminal via `wolframscript`. Produces CSV data, an animated GIF,
 and a musical WAV sonification.
 
+## Requirements
+
+- Mathematica or the free Wolfram Engine
+- `wolframscript` on your PATH
+- `stem-core` (sibling directory `../stem-core`) — loaded automatically by `main.wl`
+
 ## Quick start
 
 ```bash
