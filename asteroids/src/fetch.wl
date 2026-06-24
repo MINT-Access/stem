@@ -88,7 +88,7 @@ ParseAsteroid[raw_Association, approachDate_String] :=
    Sorted by miss distance ascending (closest first). *)
 
 FetchAsteroids[startDate_String, endDate_String] :=
-  Module[{raw, json, dateGroups, allAsteroids},
+  Module[{raw, json, dateGroups, allAsteroids, toAssoc},
 
     raw = FetchRawJson[startDate, endDate];
     If[raw === $Failed, Return[$Failed]];
