@@ -33,29 +33,31 @@ Print["  Period (small-angle approx): ",
 Print[""];
 
 (* --- 1. Run the simulation --- *)
-Print["[1/3] Solving ODE..."];
+Print["[1/4] Solving ODE..."];
 solution = SolvePendulum[params];
 Print["  Computed ", Length[solution], " time steps."];
+Print[""];
 
 (* --- 2. Export CSV results --- *)
+Print["[2/4] Exporting CSV..."];
 outCSV = FileNameJoin[{$projectRoot, "data", "results.csv"}];
 ExportResults[solution, params, outCSV];
-Print["  CSV written to: ", outCSV];
+Print["  CSV: ", outCSV];
 PrintSummary[solution, params];
 Print[""];
 
 (* --- 3. Export animation --- *)
-Print["[2/3] Generating animation..."];
+Print["[3/4] Generating animation..."];
 outGIF = FileNameJoin[{$projectRoot, "data", "pendulum_animation.gif"}];
 ExportAnimation[solution, params, outGIF, 25, 1.0];
-Print["  GIF written to: ", outGIF];
+Print["  GIF: ", outGIF];
 Print[""];
 
 (* --- 4. Export sonification --- *)
-Print["[3/3] Generating sonification..."];
+Print["[4/4] Generating sonification..."];
 outWAV = FileNameJoin[{$projectRoot, "data", "pendulum_audio.wav"}];
 ExportSonification[solution, params, outWAV];
-Print["  WAV written to: ", outWAV];
+Print["  WAV: ", outWAV];
 Print[""];
 
 Print["=== Done ==="];
