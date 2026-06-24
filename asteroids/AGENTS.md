@@ -15,8 +15,10 @@ terminal via `wolframscript`.
                            (`FetchAsteroids`, `FetchRawJson`, `ParseAsteroid`)
 - `src/analyse.wl`       — Filters and statistics
                            (`HazardousAsteroids`, `SafeAsteroids`,
-                            `MissDistanceStats`, `VelocityStats`,
-                            `SizeDistribution`, `ClosestApproachSummary`)
+                            `ClosestAsteroids`, `MissDistanceStats`,
+                            `VelocityStats`, `SizeClass`, `SizeDistribution`,
+                            `ToLunarDistances`, `ToEarthRadii`,
+                            `ClosestApproachSummary`)
 - `src/output.wl`        — CSV export and console report
                            (`ExportResults`, `PrintSummary`)
 - `src/animate.wl`       — Solar system GIF (`ExportAnimation`)

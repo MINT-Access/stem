@@ -10,7 +10,7 @@
                 Farthest = highest note (safe, distant).
                 Closest  = lowest note (ominous, near).
 
-     Duration — proportional to asteroid velocity.
+     Duration — inversely proportional to asteroid velocity.
                 Fast asteroids = short sharp notes.
                 Slow asteroids = long sustained notes.
 
