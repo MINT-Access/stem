@@ -57,7 +57,7 @@ afplay data/lorenz_audio.wav         # play audio on macOS
 ## Animation design (src/animate.wl)
 
 - Projects 3D trajectory onto x-z plane (classic butterfly view)
-- Colour gradient: blue (early) → orange → red (recent)
+- Colour gradient: blue → cyan → orange → red (early to recent)
 - Dark background for contrast
 - `ExportDualAnimation` shows two trajectories side-by-side
 
