@@ -47,7 +47,7 @@ VelocityStats[asteroids_List] :=
   ]
 
 
-(* SizeClasses: classify by estimated mean diameter *)
+(* SizeClass: classify by estimated mean diameter in km *)
 SizeClass[dKm_?NumericQ] :=
   Which[
     dKm < 0.05,  "Small    (<50 m)",
