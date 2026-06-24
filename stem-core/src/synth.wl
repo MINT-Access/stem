@@ -1,22 +1,6 @@
 (* ========================================================
    stem-core/src/synth.wl — PCM waveform synthesis
 
-   Consolidates:
-     - SynthesizeNote (pendulum/src/sonify.wl:67)
-       SynthNote      (lorenz/src/sonify.wl:75)
-       SynthNote      (asteroids/src/sonify.wl:54)
-       All three use exp-decay × additive-sine synthesis;
-       differ only in harmonics and decay speed.
-
-     - NormalizeBuffer: identical in lorenz/src/sonify.wl:125
-       and asteroids/src/sonify.wl:124; pendulum used a
-       slightly different always-normalise variant at line 180.
-
-     - ExportAudioBuffer: identical Sound[SampledSoundList]+Export
-       blocks in lorenz/src/sonify.wl:157 and
-       asteroids/src/sonify.wl:154; pendulum used Audio[] at
-       line 188 (replaced here with the headless-safe form).
-
    Requires: utils.wl (for EnsureDir)
    ======================================================== *)
 
@@ -58,9 +42,7 @@ StemSynthNote[freq_?NumericQ, dur_?NumericQ, vol_?NumericQ,
    Scales a PCM buffer so its peak does not exceed ceiling.
    Returns the buffer unchanged if it is already within range.
 
-   Replaces identical blocks in lorenz/src/sonify.wl:125 and
-   asteroids/src/sonify.wl:124, and the unconditional variant
-   in pendulum/src/sonify.wl:180. *)
+   Returns the buffer unchanged if it is already within range. *)
 
 NormalizeBuffer[buffer_List, ceiling_:0.95] :=
   Module[{peak},
@@ -74,9 +56,8 @@ NormalizeBuffer[buffer_List, ceiling_:0.95] :=
    Uses SampledSoundList which works correctly in headless
    wolframscript (Audio[] requires a display context on some builds).
 
-   Replaces the Sound[SampledSoundList]+Export blocks in
-   lorenz/src/sonify.wl:157–162 and asteroids/src/sonify.wl:154–159,
-   and the Audio[]+Export block in pendulum/src/sonify.wl:188–190. *)
+   Uses SampledSoundList which exports correctly in headless
+   wolframscript sessions (Audio[] requires a display context). *)
 
 ExportAudioBuffer[buffer_List, filePath_String,
                   sr_Integer:44100] :=

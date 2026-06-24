@@ -1,17 +1,6 @@
 (* ========================================================
    stem-core/src/export.wl — CSV and GIF file export helpers
 
-   Consolidates:
-     - ExportCSV: the EnsureDir + Export[allRows,"CSV"] + return
-       pattern repeated in pendulum/src/output.wl:46,
-       lorenz/src/output.wl:29 and :44, asteroids/src/output.wl:36.
-
-     - ExportGIF: the identical Export[frames,"GIF",
-       "AnimationRepetitions"->Infinity, "DisplayDurations"->...]
-       block repeated in pendulum/src/animate.wl:122,
-       lorenz/src/animate.wl:116 and :162,
-       asteroids/src/animate.wl:145.
-
    Requires: utils.wl (for EnsureDir)
    ======================================================== *)
 

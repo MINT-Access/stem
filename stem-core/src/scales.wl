@@ -1,16 +1,5 @@
 (* ========================================================
    stem-core/src/scales.wl — Musical scales and pitch mapping
-
-   Consolidates:
-     - $SampleRate = 44100 from all three sonify.wl files
-     - $Scales tables from lorenz/src/sonify.wl and
-       asteroids/src/sonify.wl (merged; asteroids added "Phrygian",
-       lorenz added "Major" and "WholeTone")
-     - SemitoneToHz from lorenz/src/sonify.wl:44 and
-       asteroids/src/sonify.wl:39 (byte-for-byte identical)
-     - ScaleLookup replaces XToFrequency (lorenz),
-       DistanceToFrequency (asteroids), AngleToFrequency (pendulum) —
-       all three used the same Rescale → Round → Clip → lookup body
    ======================================================== *)
 
 
@@ -49,10 +38,7 @@ SemitoneToHz[semitones_?NumericQ, rootHz_?NumericQ] :=
    scale   — a list of semitone offsets, e.g. $StemScales["Minor"]
    rootHz  — frequency of scale degree 1 in Hz
 
-   Replaces:
-     AngleToFrequency[theta, maxAngle]        pendulum/src/sonify.wl:50
-     XToFrequency[x, maxX, scale]             lorenz/src/sonify.wl:48
-     DistanceToFrequency[km, minKm, maxKm, scale]  asteroids/src/sonify.wl:41 *)
+   Values outside [lo, hi] clamp to the nearest scale degree. *)
 
 ScaleLookup[value_?NumericQ, lo_?NumericQ, hi_?NumericQ,
             scale_List, rootHz_?NumericQ] :=

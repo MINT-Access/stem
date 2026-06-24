@@ -1,11 +1,5 @@
 (* ========================================================
    stem-core/src/utils.wl — Shared filesystem utilities
-
-   Consolidates:
-     - EnsureDir: 12 inline copies across pendulum, lorenz,
-       asteroids (animate.wl, output.wl, sonify.wl in each)
-     - LogError: full implementation from pendulum/src/output.wl;
-       asteroids used a one-liner stub, lorenz had none
    ======================================================== *)
 
 
