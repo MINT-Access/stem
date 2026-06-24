@@ -26,10 +26,10 @@ RunExperiment[name_String, params_Association] :=
     Print[""];
     Print[">>> Experiment: ", name];
     Print["    Length=", params["Length"], " m  |  ",
-          "InitAngle=", NumberForm[params["InitAngle"] * 180/Pi, 3], " deg  |  ",
+          "InitAngle=", FmtN[params["InitAngle"] * 180/Pi, 3], " deg  |  ",
           "TimeEnd=", params["TimeEnd"], " s"];
     Print["    Small-angle period: ",
-      NumberForm[2 Pi Sqrt[params["Length"]/params["Gravity"]], 4], " s"];
+      FmtN[2 Pi Sqrt[params["Length"]/params["Gravity"]], 4], " s"];
 
     sol = SolvePendulum[params];
 

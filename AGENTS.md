@@ -63,6 +63,7 @@ After `Get[".../stem-core/init.wl"]` all of the following are available:
 | `ExportGIF[frames, filePath, frameRate]` | export | Write looping animated GIF |
 | `EnsureDir[filePath]` | utils | Create parent directory if absent |
 | `LogError[message, logPath]` | utils | Append timestamped error to log file |
+| `FmtN[x, n]` | utils | Format number to n sig figs, single-line (use in Print) |
 
 See `stem-core/AGENTS.md` for full parameter descriptions and constraints.
 

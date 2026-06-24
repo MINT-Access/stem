@@ -42,6 +42,17 @@ Safe to call repeatedly. Called internally by `ExportCSV`, `ExportGIF`,
 EnsureDir["data/results.csv"]   (* creates "data/" if absent *)
 ```
 
+#### `FmtN[x_?NumericQ, n_:4]`
+Formats `x` to `n` significant figures as a single-line string. Use in `Print`
+calls instead of bare `NumberForm` — in headless `wolframscript`, `OutputForm`
+renders scientific notation as multi-line superscripts; `FmtN` produces inline
+`*^` notation instead (e.g. `3.498*^-7`).
+
+```wolfram
+Print["Period: ", FmtN[2.0060666, 4], " s"]   (* → "Period: 2.006 s" *)
+Print["Drift:  ", FmtN[3.498*^-7, 4], " J"]   (* → "Drift:  3.498*^-7 J" *)
+```
+
 #### `LogError[message_String, logPath_String]`
 Appends a timestamped `[ERROR] YYYY-MM-DD HH:MM:SS <message>` line to `logPath`.
 Creates the log directory if it does not exist. Opens the file in append mode so

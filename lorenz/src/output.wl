@@ -50,10 +50,7 @@ PrintSummary[solution_List, params_Association] :=
     zs = solution[[All, 4]];
     Print["--- Trajectory Summary ---"];
     Print["  Steps:   ", Length[solution]];
-    Print["  x range: [", NumberForm[Min[xs],4],
-                  ", ", NumberForm[Max[xs],4], "]"];
-    Print["  y range: [", NumberForm[Min[ys],4],
-                  ", ", NumberForm[Max[ys],4], "]"];
-    Print["  z range: [", NumberForm[Min[zs],4],
-                  ", ", NumberForm[Max[zs],4], "]"];
+    Print["  x range: [", FmtN[Min[xs],4], ", ", FmtN[Max[xs],4], "]"];
+    Print["  y range: [", FmtN[Min[ys],4], ", ", FmtN[Max[ys],4], "]"];
+    Print["  z range: [", FmtN[Min[zs],4], ", ", FmtN[Max[zs],4], "]"];
   ]

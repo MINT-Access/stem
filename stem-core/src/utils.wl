@@ -17,6 +17,18 @@ EnsureDir[filePath_String] :=
      message — human-readable description of the error
      logPath — destination log file (directory is created if needed) *)
 
+(* FmtN
+   Formats x to n significant figures as a single-line string.
+   Use in Print calls instead of NumberForm — OutputForm renders
+   scientific notation as multi-line superscripts in headless mode;
+   this helper produces inline *^ notation instead (e.g. 3.498*^-7). *)
+
+FmtN[x_?NumericQ, n_:4] :=
+  ToString[
+    NumberForm[x, n, NumberFormat -> (If[#3 == "", #1, #1 <> "*^" <> #3]&)],
+    OutputForm]
+
+
 LogError[message_String, logPath_String] :=
   Module[{stream, ts},
     ts = DateString[{"Year", "-", "Month", "-", "Day", " ",

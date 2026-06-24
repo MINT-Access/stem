@@ -26,10 +26,10 @@ params = <|
 Print["=== Pendulum Simulation ==="];
 Print["  Length:        ", params["Length"], " m"];
 Print["  Initial angle: ", params["InitAngle"], " rad (",
-  NumberForm[params["InitAngle"] * 180.0 / Pi, 3], " deg)"];
+  FmtN[params["InitAngle"] * 180.0 / Pi, 3], " deg)"];
 Print["  Duration:      ", params["TimeEnd"], " s"];
 Print["  Period (small-angle approx): ",
-  NumberForm[2 Pi Sqrt[params["Length"] / params["Gravity"]], 4], " s"];
+  FmtN[2 Pi Sqrt[params["Length"] / params["Gravity"]], 4], " s"];
 Print[""];
 
 (* --- 1. Run the simulation --- *)

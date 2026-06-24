@@ -77,7 +77,7 @@ ExportSonification[solution_List, params_Association, filePath_String] :=
     nTotalSamples  = Round[totalDuration * $StemSampleRate];
 
     Print["  Synthesizing audio at ", $StemSampleRate, " Hz, ",
-          NumberForm[totalDuration, 3], " s total..."];
+          FmtN[totalDuration, 3], " s total..."];
 
     (* Pre-allocate audio buffer with silence *)
     audioBuffer = ConstantArray[0.0, nTotalSamples];

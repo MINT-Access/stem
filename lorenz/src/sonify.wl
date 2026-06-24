@@ -113,6 +113,6 @@ ExportSonification[solution_List, filePath_String,
     buffer = BuildWaveform[extrema, maxX, scale, $StemSampleRate];
 
     Print["  Duration: ",
-      NumberForm[Length[buffer] / $StemSampleRate, 4], " s"];
+      FmtN[Length[buffer] / $StemSampleRate, 4], " s"];
     ExportAudioBuffer[buffer, filePath, $StemSampleRate]
   ]

@@ -42,10 +42,10 @@ PrintSummary[solution_List, params_Association] := Module[
 
   Print["--- Simulation Summary ---"];
   Print["  Steps computed:  ", Length[solution]];
-  Print["  Max angle:       ", NumberForm[maxAngle, 4], " deg"];
-  Print["  Min angle:       ", NumberForm[minAngle, 4], " deg"];
-  Print["  Initial energy:  ", NumberForm[First[energies], 4], " J"];
-  Print["  Final energy:    ", NumberForm[Last[energies], 4], " J"];
+  Print["  Max angle:       ", FmtN[maxAngle, 4], " deg"];
+  Print["  Min angle:       ", FmtN[minAngle, 4], " deg"];
+  Print["  Initial energy:  ", FmtN[First[energies], 4], " J"];
+  Print["  Final energy:    ", FmtN[Last[energies], 4], " J"];
   Print["  Energy drift:    ",
-    NumberForm[Abs[Last[energies] - First[energies]], 4], " J"];
+    FmtN[Abs[Last[energies] - First[energies]], 4], " J"];
 ]
