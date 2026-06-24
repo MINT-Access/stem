@@ -12,9 +12,10 @@
    dur       — note duration in seconds
    vol       — peak amplitude 0.0–1.0
    harmonics — list of relative amplitudes for partials 1, 2, 3, …
-               {1.0}              → pure sine  (pendulum style)
-               {1.0, 0.35, 0.12} → warm bell  (lorenz / asteroids safe)
-               {1.0, 0.30, 0.20, 0.25, 0.15} → bright/harsh (asteroids hazardous)
+               {1.0}                          → pure sine        (pendulum)
+               {1.0, 0.35, 0.12}             → warm bell        (lorenz)
+               {1.0, 0.35, 0.10}             → warm bell        (asteroids safe)
+               {1.0, 0.30, 0.20, 0.25, 0.15} → bright/harsh    (asteroids hazardous)
    decayFrac — envelope time constant as a fraction of dur.
                At t = dur the envelope reaches exp(-1/decayFrac).
                pendulum used ~0.33, lorenz 0.5, asteroids 0.6.
@@ -40,8 +41,6 @@ StemSynthNote[freq_?NumericQ, dur_?NumericQ, vol_?NumericQ,
 
 (* NormalizeBuffer
    Scales a PCM buffer so its peak does not exceed ceiling.
-   Returns the buffer unchanged if it is already within range.
-
    Returns the buffer unchanged if it is already within range. *)
 
 NormalizeBuffer[buffer_List, ceiling_:0.95] :=
@@ -53,9 +52,6 @@ NormalizeBuffer[buffer_List, ceiling_:0.95] :=
 
 (* ExportAudioBuffer
    Wraps a PCM buffer in a Sound object and writes a WAV file.
-   Uses SampledSoundList which works correctly in headless
-   wolframscript (Audio[] requires a display context on some builds).
-
    Uses SampledSoundList which exports correctly in headless
    wolframscript sessions (Audio[] requires a display context). *)
 
