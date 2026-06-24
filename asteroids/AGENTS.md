@@ -54,7 +54,7 @@ All lists are sorted by missDistanceKm ascending (closest first).
 - Duration: inversely proportional to velocity (fast = short)
 - Volume: proportional to diameter
 - Timbre: hazardous asteroids have extra high harmonics (brighter, harsher)
-- Available scales: MinorPentatonic, MajorPentatonic, Minor, Phrygian
+- Available scales: MinorPentatonic, MajorPentatonic, Major, Minor, WholeTone, Phrygian
 
 ## Animation design
 
