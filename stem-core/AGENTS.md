@@ -42,15 +42,19 @@ Safe to call repeatedly. Called internally by `ExportCSV`, `ExportGIF`,
 EnsureDir["data/results.csv"]   (* creates "data/" if absent *)
 ```
 
-#### `FmtN[x_?NumericQ, n_:4]`
-Formats `x` to `n` significant figures as a single-line string. Use in `Print`
-calls instead of bare `NumberForm` — in headless `wolframscript`, `OutputForm`
-renders scientific notation as multi-line superscripts; `FmtN` produces inline
-`*^` notation instead (e.g. `3.498*^-7`).
+#### `FmtN[x_?NumericQ, spec_:4]`
+Formats `x` as a single-line string for use in `Print` statements.
+`spec` is passed directly to `NumberForm`: use an integer for significant
+figures or `{total, decimals}` for fixed decimal places.
+
+Use this instead of `ToString[NumberForm[x, spec], OutputForm]` — in headless
+`wolframscript`, `OutputForm` renders scientific notation as multi-line
+superscripts; `FmtN` produces inline `*^` notation instead (e.g. `3.498*^-7`).
 
 ```wolfram
-Print["Period: ", FmtN[2.0060666, 4], " s"]   (* → "Period: 2.006 s" *)
-Print["Drift:  ", FmtN[3.498*^-7, 4], " J"]   (* → "Drift:  3.498*^-7 J" *)
+Print["Period: ", FmtN[2.0060666, 4], " s"]    (* → "Period: 2.006 s" *)
+Print["Drift:  ", FmtN[3.498*^-7, 4], " J"]    (* → "Drift:  3.498*^-7 J" *)
+Print["Dist:   ", FmtN[1.234567, {5,2}], " LD"] (* → "Dist:   1.23 LD" *)
 ```
 
 #### `LogError[message_String, logPath_String]`

@@ -57,17 +57,17 @@ PrintSummary[asteroids_List, startDate_String, endDate_String] :=
     Print["-- Miss Distance --"];
     Print["  Closest:  ",
       IntegerString[Round[distStats["minKm"]]], " km  (",
-      ToString[NumberForm[ToLunarDistances[distStats["minKm"]], {5,2}], OutputForm], " LD)"];
+      FmtN[ToLunarDistances[distStats["minKm"]], {5,2}], " LD)"];
     Print["  Farthest: ",
       IntegerString[Round[distStats["maxKm"]]], " km  (",
-      ToString[NumberForm[ToLunarDistances[distStats["maxKm"]], {5,2}], OutputForm], " LD)"];
+      FmtN[ToLunarDistances[distStats["maxKm"]], {5,2}], " LD)"];
     Print["  Mean:     ",
       IntegerString[Round[distStats["meanKm"]]], " km"];
     Print[""];
     Print["-- Velocity --"];
-    Print["  Min:  ", ToString[NumberForm[velStats["minKmS"],  4], OutputForm], " km/s"];
-    Print["  Max:  ", ToString[NumberForm[velStats["maxKmS"],  4], OutputForm], " km/s"];
-    Print["  Mean: ", ToString[NumberForm[velStats["meanKmS"], 4], OutputForm], " km/s"];
+    Print["  Min:  ", FmtN[velStats["minKmS"],  4], " km/s"];
+    Print["  Max:  ", FmtN[velStats["maxKmS"],  4], " km/s"];
+    Print["  Mean: ", FmtN[velStats["meanKmS"], 4], " km/s"];
     Print[""];
     Print["-- Size Distribution --"];
     KeyValueMap[
@@ -83,7 +83,7 @@ PrintSummary[asteroids_List, startDate_String, endDate_String] :=
       Scan[
         Print["  ", #["name"], "  dist=",
           IntegerString[Round[#["missDistanceKm"]]], " km  vel=",
-          ToString[NumberForm[#["velocityKmS"], {5,2}], OutputForm], " km/s"] &,
+          FmtN[#["velocityKmS"], {5,2}], " km/s"] &,
         hazardous
       ]
     ];
