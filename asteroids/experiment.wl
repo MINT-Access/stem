@@ -37,7 +37,7 @@ filterFn  = HazardousAsteroids;
 scaleName = "Phrygian";
 *)
 
-(* C: Last 7 days, large + enormous only (>140 m) *)
+(* C: Last 7 days, large + enormous only (>=140 m) *)
 (*
 label     = "large_only";
 startDate = DateString[Today - Quantity[6,"Days"], "ISODate"];
