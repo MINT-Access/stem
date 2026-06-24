@@ -108,6 +108,6 @@ ExportSonification[asteroids_List, filePath_String,
                            noteDur, gapDur];
 
     Print["  Duration: ",
-      ToString[NumberForm[N[Length[buffer] / $StemSampleRate], 4], OutputForm], " s"];
+      FmtN[Length[buffer] / $StemSampleRate, 4], " s"];
     ExportAudioBuffer[buffer, filePath, $StemSampleRate]
   ]
