@@ -63,7 +63,7 @@ After `Get[".../stem-core/init.wl"]` all of the following are available:
 | `ExportGIF[frames, filePath, frameRate]` | export | Write looping animated GIF |
 | `EnsureDir[filePath]` | utils | Create parent directory if absent |
 | `LogError[message, logPath]` | utils | Append timestamped error to log file |
-| `FmtN[x, n]` | utils | Format number to n sig figs, single-line (use in Print) |
+| `FmtN[x, spec]` | utils | Format number (sig figs or {total,decimals}), single-line (use in Print) |
 
 See `stem-core/AGENTS.md` for full parameter descriptions and constraints.
 
@@ -102,6 +102,9 @@ All code must run correctly via `wolframscript -file` with no display server.
 - **NumberForm in CSV**: always use `ToString[NumberForm[x, spec], OutputForm]`
   — omitting `OutputForm` causes `×10^n` notation with embedded newlines that
   breaks CSV parsing in headless mode.
+- **NumberForm in Print**: always use `FmtN[x, spec]` — `ToString[NumberForm[x,
+  spec], OutputForm]` renders scientific notation as multi-line superscripts in
+  headless mode; `FmtN` produces inline `*^` notation instead.
 - **Tests**: `Exit[1]` on any failure so CI tools detect broken runs.
 
 ---
