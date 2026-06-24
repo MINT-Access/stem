@@ -1,0 +1,91 @@
+(* ========================================================
+   src/output.wl — CSV export and console summary
+   ======================================================== *)
+
+
+(* ExportResults
+   Writes one row per asteroid to a CSV file. *)
+
+ExportResults[asteroids_List, filePath_String] :=
+  Module[{header, rows, allRows},
+
+    header = {{
+      "id", "name", "approachDate",
+      "missDistanceKm", "missDistanceLunarD",
+      "velocityKmS", "diamMinKm", "diamMaxKm", "diamMeanKm",
+      "isHazardous", "absoluteMag", "sizeClass"
+    }};
+
+    rows = {
+      #["id"],
+      #["name"],
+      #["approachDate"],
+      NumberForm[#["missDistanceKm"],    {10, 1}] // ToString,
+      NumberForm[ToLunarDistances[#["missDistanceKm"]], {6, 3}] // ToString,
+      NumberForm[#["velocityKmS"],       {6, 3}]  // ToString,
+      NumberForm[#["diamMinKm"],         {6, 4}]  // ToString,
+      NumberForm[#["diamMaxKm"],         {6, 4}]  // ToString,
+      NumberForm[#["diamMeanKm"],        {6, 4}]  // ToString,
+      If[#["isHazardous"], "yes", "no"],
+      NumberForm[#["absoluteMag"],       {5, 2}]  // ToString,
+      SizeClass[#["diamMeanKm"]]
+    } & /@ asteroids;
+
+    allRows = Join[header, rows];
+
+    ExportCSV[allRows, filePath]
+  ]
+
+
+(* PrintSummary — structured console report, VoiceOver-friendly *)
+
+PrintSummary[asteroids_List, startDate_String, endDate_String] :=
+  Module[{hazardous, distStats, velStats, sizeDist},
+
+    hazardous = HazardousAsteroids[asteroids];
+    distStats  = MissDistanceStats[asteroids];
+    velStats   = VelocityStats[asteroids];
+    sizeDist   = SizeDistribution[asteroids];
+
+    Print[""];
+    Print["=== Near-Earth Asteroid Report: ",
+          startDate, " to ", endDate, " ==="];
+    Print[""];
+    Print["Total asteroids tracked: ", distStats["count"]];
+    Print["Potentially hazardous:   ", Length[hazardous]];
+    Print[""];
+    Print["-- Miss Distance --"];
+    Print["  Closest:  ",
+      IntegerString[Round[distStats["minKm"]]], " km  (",
+      ToString[NumberForm[ToLunarDistances[distStats["minKm"]], {5,2}], OutputForm], " LD)"];
+    Print["  Farthest: ",
+      IntegerString[Round[distStats["maxKm"]]], " km  (",
+      ToString[NumberForm[ToLunarDistances[distStats["maxKm"]], {5,2}], OutputForm], " LD)"];
+    Print["  Mean:     ",
+      IntegerString[Round[distStats["meanKm"]]], " km"];
+    Print[""];
+    Print["-- Velocity --"];
+    Print["  Min:  ", ToString[NumberForm[velStats["minKmS"],  4], OutputForm], " km/s"];
+    Print["  Max:  ", ToString[NumberForm[velStats["maxKmS"],  4], OutputForm], " km/s"];
+    Print["  Mean: ", ToString[NumberForm[velStats["meanKmS"], 4], OutputForm], " km/s"];
+    Print[""];
+    Print["-- Size Distribution --"];
+    KeyValueMap[
+      Print["  ", #1, ": ", #2] &,
+      sizeDist
+    ];
+    Print[""];
+    Print["-- Closest Approach --"];
+    Print["  ", ClosestApproachSummary[First[asteroids]]];
+    If[Length[hazardous] > 0,
+      Print[""];
+      Print["-- Potentially Hazardous Asteroids --"];
+      Scan[
+        Print["  ", #["name"], "  dist=",
+          IntegerString[Round[#["missDistanceKm"]]], " km  vel=",
+          ToString[NumberForm[#["velocityKmS"], {5,2}], OutputForm], " km/s"] &,
+        hazardous
+      ]
+    ];
+    Print[""];
+  ]
