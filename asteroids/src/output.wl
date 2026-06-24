@@ -20,14 +20,14 @@ ExportResults[asteroids_List, filePath_String] :=
       #["id"],
       #["name"],
       #["approachDate"],
-      NumberForm[#["missDistanceKm"],    {10, 1}] // ToString,
-      NumberForm[ToLunarDistances[#["missDistanceKm"]], {6, 3}] // ToString,
-      NumberForm[#["velocityKmS"],       {6, 3}]  // ToString,
-      NumberForm[#["diamMinKm"],         {6, 4}]  // ToString,
-      NumberForm[#["diamMaxKm"],         {6, 4}]  // ToString,
-      NumberForm[#["diamMeanKm"],        {6, 4}]  // ToString,
+      ToString[NumberForm[#["missDistanceKm"],    {10, 1}], OutputForm],
+      ToString[NumberForm[ToLunarDistances[#["missDistanceKm"]], {6, 3}], OutputForm],
+      ToString[NumberForm[#["velocityKmS"],       {6, 3}],  OutputForm],
+      ToString[NumberForm[#["diamMinKm"],         {6, 4}],  OutputForm],
+      ToString[NumberForm[#["diamMaxKm"],         {6, 4}],  OutputForm],
+      ToString[NumberForm[#["diamMeanKm"],        {6, 4}],  OutputForm],
       If[#["isHazardous"], "yes", "no"],
-      NumberForm[#["absoluteMag"],       {5, 2}]  // ToString,
+      ToString[NumberForm[#["absoluteMag"],       {5, 2}],  OutputForm],
       SizeClass[#["diamMeanKm"]]
     } & /@ asteroids;
 
