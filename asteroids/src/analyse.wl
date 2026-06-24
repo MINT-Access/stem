@@ -84,7 +84,7 @@ ClosestApproachSummary[asteroid_Association] :=
     "Closest: ", asteroid["name"],
     " on ",     asteroid["approachDate"],
     " at ",     IntegerString[Round[asteroid["missDistanceKm"]]],
-    " km (",    ToString[NumberForm[ToLunarDistances[asteroid["missDistanceKm"]], {5,2}], OutputForm],
+    " km (",    FmtN[ToLunarDistances[asteroid["missDistanceKm"]], {5,2}],
     " LD)",
     If[asteroid["isHazardous"], "  *** POTENTIALLY HAZARDOUS ***", ""]
   ]
