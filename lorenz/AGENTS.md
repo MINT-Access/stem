@@ -52,7 +52,7 @@ afplay data/lorenz_audio.wav         # play audio on macOS
 - Volume: proportional to |x| at each extremum
 - Timbre: additive sine synthesis (3 harmonics) + exponential decay
 - Available scales: MinorPentatonic, MajorPentatonic, Major, Minor, WholeTone
-- Root note: Middle C (261.63 Hz), change `$RootFrequency` to transpose
+- Root note: Middle C (261.63 Hz), hardcoded as the `rootHz` argument to `ScaleLookup` in `BuildWaveform` — edit there to transpose
 
 ## Animation design (src/animate.wl)
 
@@ -67,3 +67,9 @@ afplay data/lorenz_audio.wav         # play audio on macOS
 - Parameters always in an `Association`; never global
 - SI units throughout
 - Tests use `Exit[1]` on failure
+
+## Dependencies
+
+- Mathematica or Wolfram Engine (any recent version)
+- `stem-core` (sibling directory `../stem-core`) — loaded automatically by `main.wl`
+- No external paclets required

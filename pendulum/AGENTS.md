@@ -50,19 +50,19 @@ wolframscript -file tests/test_model.wl
 
 ## Important: WAV synthesis
 
-`sonify.wl` uses direct waveform synthesis via `Audio[]` + sine waves,
-NOT `SoundNote`/`Sound`. This is intentional: `SoundNote` requires the
-Mathematica notebook front end to render MIDI to audio and produces a
-silent or broken WAV when run headless under `wolframscript`. Always use
-`Audio[]` with explicit sample arrays for terminal-compatible audio export.
+`sonify.wl` uses stem-core's `StemSynthNote` + `ExportAudioBuffer` for all
+audio synthesis — not `SoundNote`, `Audio[]`, or MIDI. `ExportAudioBuffer`
+wraps samples in `SampledSoundList` (not `Audio[]`), which exports a valid WAV
+in headless `wolframscript` sessions. Do not switch to `Audio[]` or `SoundNote`;
+both fail silently in terminal contexts on macOS.
 
 ## Sonification design (src/sonify.wl)
 
-- Pitch: pendulum angle mapped to A minor pentatonic scale (2 octaves).
+- Pitch: pendulum angle mapped to `$StemScales["MinorPentatonic"]`, root A3 (220 Hz).
 - Duration: each note lasts one half-swing (zero crossing to zero crossing).
 - Volume: proportional to angular velocity at each zero crossing.
-- Instrument: Vibraphone (MIDI 12). Change `$Instrument` to taste.
-- To change the scale, modify `$PentatonicScale` (MIDI note numbers).
+- Timbre: pure sine (`harmonics = {1.0}`) with decay fraction 1/3 via `StemSynthNote`.
+- To change scale: pass a different key from `$StemScales` to `ScaleLookup` in `sonify.wl`.
 
 ## Animation design (src/animate.wl)
 
@@ -82,4 +82,5 @@ silent or broken WAV when run headless under `wolframscript`. Always use
 ## Dependencies
 
 - Mathematica or Wolfram Engine (any recent version)
+- `stem-core` (sibling directory `../stem-core`) — loaded automatically by `main.wl`
 - No external paclets required

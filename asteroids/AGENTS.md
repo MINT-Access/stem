@@ -76,3 +76,9 @@ All lists are sorted by missDistanceKm ascending (closest first).
 - Parameters in Associations, never globals
 - Tests are fully offline (synthetic data) — no network needed
 - `Exit[1]` on test failure for CI compatibility
+
+## Dependencies
+
+- Mathematica or Wolfram Engine (any recent version)
+- `stem-core` (sibling directory `../stem-core`) — loaded automatically by `main.wl`
+- No external paclets required
