@@ -12,11 +12,6 @@ EnsureDir[filePath_String] :=
     CreateDirectory[DirectoryName[filePath]]]
 
 
-(* LogError
-   Appends a timestamped error line to a log file.
-     message — human-readable description of the error
-     logPath — destination log file (directory is created if needed) *)
-
 (* FmtN
    Formats x as a single-line string for use in Print statements.
    spec can be n (sig figs) or {total, decimals} — same as NumberForm.
@@ -30,6 +25,11 @@ FmtN[x_?NumericQ, spec_:4] :=
     NumberForm[x, spec, NumberFormat -> (If[#3 == "", #1, #1 <> "*^" <> #3]&)],
     OutputForm]
 
+
+(* LogError
+   Appends a timestamped error line to a log file.
+     message — human-readable description of the error
+     logPath — destination log file (directory is created if needed) *)
 
 LogError[message_String, logPath_String] :=
   Module[{stream, ts},
