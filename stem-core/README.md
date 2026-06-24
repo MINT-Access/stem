@@ -25,7 +25,7 @@ wolframscript -version
 stem-core/
   init.wl          ← single entry point; load this from your project
   src/
-    utils.wl       ← EnsureDir, LogError
+    utils.wl       ← EnsureDir, LogError, FmtN
     scales.wl      ← $StemSampleRate, $StemScales, SemitoneToHz, ScaleLookup
     synth.wl       ← StemSynthNote, NormalizeBuffer, ExportAudioBuffer
     export.wl      ← ExportCSV, ExportGIF
