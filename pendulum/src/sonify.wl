@@ -6,7 +6,7 @@
 
    Sonification design:
      Pitch    — angle mapped to an A minor pentatonic scale.
-                Centre (theta=0) plays the tonic A4 (440 Hz).
+                Centre (theta=0) plays the tonic A3 (220 Hz).
                 Swinging out raises or lowers pitch by scale step.
      Duration — each note lasts one half-swing (zero crossing
                 to zero crossing), matching the physical period.
@@ -23,7 +23,7 @@
 
 (* FindZeroCrossings
    Returns a list of Associations, one per zero crossing,
-   with keys Time, Velocity, Direction. *)
+   with keys Time, Velocity, Angle, Direction. *)
 
 FindZeroCrossings[solution_List] :=
   Module[{pairs, crossings},
