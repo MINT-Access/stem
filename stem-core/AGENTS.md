@@ -121,8 +121,9 @@ in roughly `[-vol, vol]`. Partial amplitudes are normalised so the sum of
 Common `harmonics` presets used by the projects:
 
 ```wolfram
-{1.0}                      (* pure sine — pendulum *)
-{1.0, 0.35, 0.12}          (* warm bell — lorenz / safe asteroids *)
+{1.0}                           (* pure sine — pendulum *)
+{1.0, 0.35, 0.12}               (* warm bell — lorenz *)
+{1.0, 0.35, 0.10}               (* warm bell — safe asteroids *)
 {1.0, 0.30, 0.20, 0.25, 0.15}  (* bright/harsh — hazardous asteroids *)
 ```
 
