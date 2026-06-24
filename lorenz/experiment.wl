@@ -123,7 +123,7 @@ If[dualAnim,
     ExportDualAnimation[solution, sol2, outGIF, 30, 150];
   ],
   ExportAnimation[solution, outGIF, 30, 150,
-    "Lorenz  rho=" <> ToString[N[params["Rho"],4]]];
+    "Lorenz rho=" <> FmtN[params["Rho"],4]];
 ];
 Print["  ", outGIF];
 Print[""];
