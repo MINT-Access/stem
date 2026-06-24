@@ -1,3 +1,5 @@
+#!/usr/bin/env wolframscript
+
 (* ========================================================
    tests/test_model.wl — Unit tests for the pendulum model
    Usage: wolframscript -file tests/test_model.wl
