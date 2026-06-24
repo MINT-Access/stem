@@ -111,7 +111,7 @@ ExportAnimation[asteroids_List, filePath_String,
                 startDate_String, endDate_String,
                 frameRate_:12] :=
   Module[
-    {maxDist, n, angles, frames, holdFrames, allFrames},
+    {maxDist, n, dateRange, angles, frames, holdFrames, allFrames},
 
     maxDist = Max[#["missDistanceKm"] & /@ asteroids] * 1.05;
     n       = Length[asteroids];
