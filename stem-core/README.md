@@ -36,7 +36,7 @@ stem-core/
 The projects that consume stem-core live as siblings:
 
 ```
-Projects/
+stem/
   stem-core/
   pendulum/
   lorenz/
