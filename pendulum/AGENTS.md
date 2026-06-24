@@ -15,7 +15,7 @@ musical WAV sonification.
 - `src/model.wl`     — ODE definition (`SolvePendulum`) and `PendulumEnergy`.
 - `src/output.wl`    — CSV export (`ExportResults`) and `PrintSummary`.
 - `src/animate.wl`   — Animated GIF export (`ExportAnimation`, `PendulumFrame`).
-- `src/sonify.wl`    — Musical WAV export (`ExportSonification`, `BuildNotes`).
+- `src/sonify.wl`    — Musical WAV export (`FindZeroCrossings`, `ExportSonification`).
 - `tests/test_model.wl` — Unit tests for the physics and solver.
 - `data/`            — Output directory. Do not commit this directory.
 
