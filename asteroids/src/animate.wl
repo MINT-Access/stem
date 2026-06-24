@@ -7,7 +7,7 @@
 
    Layout (top-down view, not to scale):
      - Earth at centre (blue dot)
-     - Moon orbit ring (grey dashed circle)
+     - Reference rings at 1 LD, 5 LD, 20 LD (1 LD ≈ Moon orbit)
      - Each asteroid: dot sized by diameter, coloured by
        hazard status (red = hazardous, cyan = safe),
        placed at its closest approach distance and a
@@ -29,7 +29,7 @@ ScaleDistance[km_?NumericQ, maxDist_?NumericQ] :=
 
 AsteroidDot[asteroid_Association, angle_?NumericQ,
             maxDist_?NumericQ] :=
-  Module[{r, x, y, col, sz, label},
+  Module[{r, x, y, col, sz},
 
     r   = ScaleDistance[asteroid["missDistanceKm"], maxDist];
     x   = r * Cos[angle];
@@ -53,10 +53,7 @@ AsteroidDot[asteroid_Association, angle_?NumericQ,
 BuildFrame[asteroids_List, angles_List, k_Integer,
            maxDist_?NumericQ, dateRange_String] :=
   Module[
-    {moonR, lunarRings, earthDot, dots, labels, visible},
-
-    (* Moon orbit radius in plot units *)
-    moonR = ScaleDistance[$LunarDistance, maxDist];
+    {lunarRings, earthDot, dots, labels, visible},
 
     (* Reference rings: 1 LD, 5 LD, 20 LD *)
     lunarRings = Map[
@@ -124,7 +121,7 @@ ExportAnimation[asteroids_List, filePath_String,
     SeedRandom[42];
     angles = RandomReal[{0, 2 Pi}, n];
 
-    Print["  Rendering ", n + 8, " frames for ",
+    Print["  Rendering ", n + Round[frameRate * 3], " frames for ",
           n, " asteroids..."];
 
     (* One frame per asteroid appearing, farthest first (list is closest-first
