@@ -9,7 +9,7 @@
      Get[FileNameJoin[{$stemCoreRoot, "init.wl"}]];
 
    Modules loaded (in dependency order):
-     utils.wl  — EnsureDir, LogError
+     utils.wl  — EnsureDir, LogError, FmtN
      scales.wl — $StemSampleRate, $StemScales, SemitoneToHz, ScaleLookup
      synth.wl  — StemSynthNote, NormalizeBuffer, ExportAudioBuffer
      export.wl — ExportCSV, ExportGIF
