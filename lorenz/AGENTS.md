@@ -51,7 +51,7 @@ afplay data/lorenz_audio.wav         # play audio on macOS
 - Pitch: x-value mapped to chosen scale (default MinorPentatonic)
 - Volume: proportional to |x| at each extremum
 - Timbre: additive sine synthesis (3 harmonics) + exponential decay
-- Available scales: MinorPentatonic, MajorPentatonic, Major, Minor, WholeTone
+- Available scales: MinorPentatonic, MajorPentatonic, Major, Minor, WholeTone, Phrygian
 - Root note: Middle C (261.63 Hz), hardcoded as the `rootHz` argument to `ScaleLookup` in `BuildWaveform` — edit there to transpose
 
 ## Animation design (src/animate.wl)
