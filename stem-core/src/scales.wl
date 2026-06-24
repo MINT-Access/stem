@@ -21,9 +21,8 @@ $StemScales = <|
 
 
 (* SemitoneToHz
-   Converts a semitone offset above rootHz to a frequency in Hz.
-   Identical to the definitions in lorenz/src/sonify.wl:44 and
-   asteroids/src/sonify.wl:39, generalised to accept a root. *)
+   Converts a semitone offset above rootHz to a frequency in Hz
+   using equal temperament: rootHz * 2^(semitones/12). *)
 
 SemitoneToHz[semitones_?NumericQ, rootHz_?NumericQ] :=
   rootHz * 2.0^(semitones / 12.0)
