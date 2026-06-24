@@ -20,9 +20,6 @@ AssertTrue[label_String, cond_] :=
     Print["  FAIL  ", label]; failed++
   ]
 
-AssertNear[label_String, val_, ref_, tol_:0.01] :=
-  AssertTrue[label, Abs[val - ref] < tol * Abs[ref + 0.0001]]
-
 (* Standard parameters *)
 params = <|
   "Sigma" -> 10.0, "Rho" -> 28.0, "Beta" -> 8/3,
