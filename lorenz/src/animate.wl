@@ -4,8 +4,8 @@
    Renders the growing trajectory as an animated GIF.
    The path is drawn in 3D projection (x-z plane, the
    classic "butterfly" view), with a colour gradient from
-   cool blue (early) to warm orange (recent) so the
-   direction of travel is immediately readable.
+   cool blue (early) to red (recent) so the direction of
+   travel is immediately readable.
 
    Optionally renders TWO trajectories side by side to
    visualise the butterfly effect.
@@ -103,7 +103,7 @@ ExportAnimation[solution_List, filePath_String,
     plotRange = ComputePlotRange[solution];
 
     (* Indices into solution, evenly spaced, always ending at last point *)
-    indices = Round[Subdivide[1, Length[solution], nFrames]];
+    indices = Round[Subdivide[1, Length[solution], nFrames - 1]];
     indices = Max[2, #] & /@ indices;   (* at least 2 points to draw *)
 
     Print["  Rendering ", Length[indices], " frames..."];
@@ -127,7 +127,7 @@ ExportDualAnimation[sol1_List, sol2_List, filePath_String,
     allPts   = Join[sol1, sol2];
     plotRange = ComputePlotRange[allPts];
 
-    indices = Round[Subdivide[1, Length[sol1], nFrames]];
+    indices = Round[Subdivide[1, Length[sol1], nFrames - 1]];
     indices = Max[2, #] & /@ indices;
 
     Print["  Rendering ", Length[indices], " dual frames..."];
