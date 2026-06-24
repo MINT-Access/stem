@@ -7,7 +7,9 @@
    Usage: wolframscript -file tests/test_analyse.wl
    ======================================================== *)
 
-$projectRoot = FileNameJoin[{DirectoryName[$InputFileName], ".."}];
+$projectRoot  = FileNameJoin[{DirectoryName[$InputFileName], ".."}];
+$stemCoreRoot = FileNameJoin[{$projectRoot, "..", "stem-core"}];
+Get[FileNameJoin[{$stemCoreRoot, "init.wl"}]];
 Get[FileNameJoin[{$projectRoot, "src", "analyse.wl"}]];
 
 passed = 0; failed = 0;
