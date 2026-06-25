@@ -14,6 +14,7 @@ stem/
   pendulum/         Simple pendulum ODE simulation
   lorenz/           Lorenz strange attractor simulation
   asteroids/        NASA near-Earth asteroid tracker (live API data)
+  docs/             Workflow guides (VoiceOver, wolframscript usage)
 ```
 
 ---
@@ -89,6 +90,27 @@ provides:
 - **`StemSynthNote`** — additive-sine PCM synthesis with exponential decay
 - **`NormalizeBuffer`** / **`ExportAudioBuffer`** — headless-safe WAV export
 - **`ExportCSV`** / **`ExportGIF`** — file export helpers
+- **`STEMHeading`** / **`STEMPrintN`** / **`STEMSay`** — screen-reader-friendly console output
 
 See [`stem-core/README.md`](stem-core/README.md) for the full API and
 [`stem-core/AGENTS.md`](stem-core/AGENTS.md) for parameter details.
+
+---
+
+## Accessibility
+
+All projects run fully headlessly and write plain WAV files playable with
+`afplay`. A built-in accessibility layer formats every console output line as a
+self-contained announcement so VoiceOver reads it cleanly without splitting
+numbers across lines.
+
+To enable spoken announcements via the macOS `say` command alongside normal
+printed output, set the flag before running:
+
+```sh
+wolframscript -e '$STEMSpeakEnabled = True' -file pendulum/main.wl
+```
+
+For the complete VoiceOver + wolframscript workflow — Terminal setup, navigation
+shortcuts, and the full accessibility API — see
+[`docs/voiceover-wolframscript-guide.md`](docs/voiceover-wolframscript-guide.md).
