@@ -12,7 +12,8 @@ terminal via `wolframscript`.
 - `main.wl`              — Full pipeline for the last 7 days
 - `experiment.wl`        — Named presets (date ranges, filters, scales)
 - `src/fetch.wl`         — NASA NeoWs API fetch and JSON parsing
-                           (`FetchAsteroids`, `FetchRawJson`, `ParseAsteroid`)
+                           (`FetchAsteroidsMulti`, `FetchAsteroids`,
+                            `ChunkDateRange`, `FetchRawJson`, `ParseAsteroid`)
 - `src/analyse.wl`       — Filters and statistics
                            (`HazardousAsteroids`, `SafeAsteroids`,
                             `ClosestAsteroids`, `MissDistanceStats`,
@@ -29,11 +30,22 @@ terminal via `wolframscript`.
 ## How to run
 
 ```bash
-wolframscript -file main.wl               # last 7 days, full pipeline
-wolframscript -file experiment.wl         # named preset
-wolframscript -file tests/test_analyse.wl # offline tests
-afplay data/asteroids_<dates>.wav         # play audio on macOS
+wolframscript -file main.wl                                    # last 7 days, MinorPentatonic
+wolframscript -file main.wl -- 2026-01-01 2026-12-31           # full year, MinorPentatonic
+wolframscript -file main.wl -- 2026-01-01 2026-06-25 Phrygian  # date range + scale
+wolframscript -file experiment.wl                              # named preset
+wolframscript -file experiment.wl -- 2026-01-01 2026-06-25 WholeTone  # override dates + scale
+wolframscript -file tests/test_analyse.wl                      # offline tests
+afplay data/asteroids_<dates>.wav                              # play audio on macOS
 ```
+
+CLI args for `main.wl` and `experiment.wl`: `[-- YYYY-MM-DD YYYY-MM-DD [Scale]]`
+- 0 args: last 7 days, preset scale (MinorPentatonic for `main.wl`)
+- 2 args: given date range, preset scale
+- 3 args: given date range, given scale
+
+Ranges longer than 7 days are split into ≤7-day chunks automatically.
+Valid scales: `MinorPentatonic` `MajorPentatonic` `Major` `Minor` `WholeTone` `Phrygian`
 
 ## API key
 
