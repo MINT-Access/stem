@@ -53,6 +53,29 @@ afplay data/asteroids_<start>_<end>.wav
 | chelyabinsk_week  | Feb 11–17 2013 — week of the Chelyabinsk meteor      |
 | major_mood        | Same data, brighter major pentatonic scale           |
 
+## Sonification
+
+| Parameter | Design |
+|---|---|
+| Order | Farthest → closest (dramatic build toward Earth) |
+| Pitch | Miss distance → minor pentatonic, root C3 (130.81 Hz) |
+| Duration | Inversely proportional to velocity — fast asteroids = shorter notes |
+| Volume | Proportional to mean diameter |
+| Timbre | Safe: warm bell (3 harmonics: 1.0, 0.35, 0.10); hazardous: bright/harsh (5 harmonics) |
+
+The ordering and timbre together tell the story: you hear a sparse, gentle
+opening as distant safe rocks drift past, then the texture thickens and harshens
+as hazardous asteroids approach Earth.
+
+To change scale, edit the `"Scale"` option in `main.wl`:
+
+```wolfram
+ExportSonification[asteroids, outWAV, "Scale" -> "Phrygian"]
+```
+
+Available scales: `MinorPentatonic`, `MajorPentatonic`, `Major`, `Minor`,
+`WholeTone`, `Phrygian`.
+
 ## Project structure
 
     asteroids/

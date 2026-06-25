@@ -47,6 +47,30 @@ afplay data/lorenz_audio.wav
 | data/lorenz_animation.gif         | Animated butterfly attractor (x-z)   |
 | data/lorenz_audio.wav             | Musical sonification of x(t)         |
 
+## Sonification
+
+| Parameter | Design |
+|---|---|
+| Trigger | Each local extremum of x(t) — one note per peak or trough |
+| Pitch | x-value → minor pentatonic, root middle C (261.63 Hz) |
+| Volume | Proportional to \|x\| at each extremum |
+| Timbre | Additive sine (3 harmonics: 1.0, 0.35, 0.12), exponential decay |
+
+The two-wing structure of the attractor maps naturally to pitch space: the
+positive wing tends toward higher notes, the negative wing toward lower ones,
+and the chaotic switching between wings produces the characteristic unpredictable
+melody.
+
+To change scale, edit the `"Scale"` option in `main.wl`:
+
+```wolfram
+ExportSonification[solution, outWAV, "Scale" -> "WholeTone"]
+```
+
+Available scales: `MinorPentatonic`, `MajorPentatonic`, `Major`, `Minor`,
+`WholeTone`, `Phrygian`. To transpose, edit the `rootHz` argument to
+`ScaleLookup` in `src/sonify.wl`.
+
 ## Experiment presets (experiment.wl)
 
 | Label      | What it shows                                    |
