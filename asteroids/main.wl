@@ -2,8 +2,9 @@
 
 (* ========================================================
    Near-Earth Asteroid Tracker — Entry Point
-   Usage: wolframscript -file main.wl
-   Fetches the last 7 days of asteroid data from NASA NeoWs.
+   Usage: wolframscript -file main.wl [-- YYYY-MM-DD YYYY-MM-DD]
+   Without arguments fetches the last 7 days (NeoWs max per request).
+   With two ISO dates fetches that range (max 7 days).
    ======================================================== *)
 
 $projectRoot  = DirectoryName[$InputFileName];
@@ -16,9 +17,29 @@ Get[FileNameJoin[{$projectRoot, "src", "output.wl"}]];
 Get[FileNameJoin[{$projectRoot, "src", "animate.wl"}]];
 Get[FileNameJoin[{$projectRoot, "src", "sonify.wl"}]];
 
-(* Date range: last 7 days (NeoWs maximum per request) *)
-endDate   = DateString[Today, "ISODate"];
-startDate = DateString[Today - Quantity[6, "Days"], "ISODate"];
+(* Date range: CLI args take priority, otherwise default to last 7 days.
+   Drop script path and any bare "--" that wolframscript may include. *)
+$cliDates = Select[Rest[$ScriptCommandLine], (# =!= "--") &];
+Which[
+  Length[$cliDates] === 2,
+    startDate = $cliDates[[1]];
+    endDate   = $cliDates[[2]],
+  Length[$cliDates] === 0,
+    endDate   = DateString[Today, "ISODate"];
+    startDate = DateString[Today - Quantity[6, "Days"], "ISODate"],
+  True,
+    Print["Usage: wolframscript -file main.wl [-- YYYY-MM-DD YYYY-MM-DD]"];
+    Exit[1]
+];
+
+(* Guard: NeoWs rejects ranges longer than 7 days *)
+With[{span = QuantityMagnitude[
+    DateDifference[DateObject[startDate], DateObject[endDate], "Day"]]},
+  If[span < 0 || span > 7,
+    Print["Error: date range must be 1-7 days (got ", span, " days)."];
+    Exit[1]
+  ]
+];
 
 STEMHeading["Near-Earth Asteroid Tracker"];
 Print["  Date range: ", startDate, " to ", endDate];

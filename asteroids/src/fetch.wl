@@ -18,7 +18,11 @@ LogError[msg_String] :=
   WriteString[$stderr, "[ERROR] " <> msg <> "\n"];
 
 
-If[!ValueQ[$NasaApiKey], $NasaApiKey = "DEMO_KEY"];   (* override before loading, or set NASA_API_KEY env var *)
+If[!ValueQ[$NasaApiKey],
+  With[{envKey = Environment["NASA_API_KEY"]},
+    $NasaApiKey = If[StringQ[envKey] && envKey =!= "", envKey, "DEMO_KEY"]
+  ]
+];
 
 $NeoWsBaseUrl = "https://api.nasa.gov/neo/rest/v1/feed";
 
