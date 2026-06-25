@@ -2,10 +2,12 @@
 
 (* ========================================================
    Near-Earth Asteroid Tracker — Entry Point
-   Usage: wolframscript -file main.wl [-- YYYY-MM-DD YYYY-MM-DD]
-   Without arguments fetches the last 7 days.
+   Usage: wolframscript -file main.wl [-- YYYY-MM-DD YYYY-MM-DD [Scale]]
+   Without arguments fetches the last 7 days using MinorPentatonic.
    With two ISO dates fetches that range (any length; split into
    ≤7-day chunks automatically to satisfy the NeoWs API limit).
+   Optional third argument sets the scale; valid values:
+     MinorPentatonic MajorPentatonic Major Minor WholeTone Phrygian
    ======================================================== *)
 
 $projectRoot  = DirectoryName[$InputFileName];
@@ -18,19 +20,35 @@ Get[FileNameJoin[{$projectRoot, "src", "output.wl"}]];
 Get[FileNameJoin[{$projectRoot, "src", "animate.wl"}]];
 Get[FileNameJoin[{$projectRoot, "src", "sonify.wl"}]];
 
-(* Date range: CLI args take priority, otherwise default to last 7 days.
-   Drop script path and any bare "--" that wolframscript may include. *)
-$cliDates = Select[Rest[$ScriptCommandLine], (# =!= "--") &];
+(* CLI args: drop script path and any bare "--" that wolframscript may include. *)
+$cliArgs = Select[Rest[$ScriptCommandLine], (# =!= "--") &];
+
+$validScales = {"MinorPentatonic", "MajorPentatonic", "Major", "Minor",
+                "WholeTone", "Phrygian"};
+
 Which[
-  Length[$cliDates] === 2,
-    startDate = $cliDates[[1]];
-    endDate   = $cliDates[[2]],
-  Length[$cliDates] === 0,
+  Length[$cliArgs] === 3,
+    startDate = $cliArgs[[1]];
+    endDate   = $cliArgs[[2]];
+    scaleName = $cliArgs[[3]],
+  Length[$cliArgs] === 2,
+    startDate = $cliArgs[[1]];
+    endDate   = $cliArgs[[2]];
+    scaleName = "MinorPentatonic",
+  Length[$cliArgs] === 0,
     endDate   = DateString[Today, "ISODate"];
-    startDate = DateString[Today - Quantity[6, "Days"], "ISODate"],
+    startDate = DateString[Today - Quantity[6, "Days"], "ISODate"];
+    scaleName = "MinorPentatonic",
   True,
-    Print["Usage: wolframscript -file main.wl [-- YYYY-MM-DD YYYY-MM-DD]"];
+    Print["Usage: wolframscript -file main.wl [-- YYYY-MM-DD YYYY-MM-DD [Scale]]"];
+    Print["Scales: ", StringRiffle[$validScales, "  "]];
     Exit[1]
+];
+
+If[!MemberQ[$validScales, scaleName],
+  Print["Error: unknown scale \"", scaleName, "\". Valid: ",
+        StringRiffle[$validScales, "  "]];
+  Exit[1]
 ];
 
 With[{span = QuantityMagnitude[
@@ -43,6 +61,7 @@ With[{span = QuantityMagnitude[
 
 STEMHeading["Near-Earth Asteroid Tracker"];
 Print["  Date range: ", startDate, " to ", endDate];
+Print["  Scale:      ", scaleName];
 Print[""];
 
 (* 1. Fetch *)
@@ -78,7 +97,7 @@ Print["[4/4] Synthesising audio..."];
 outWAV = FileNameJoin[{$projectRoot, "data",
   "asteroids_" <> startDate <> "_" <> endDate <> ".wav"}];
 ExportSonification[asteroids, outWAV,
-  "Scale" -> "MinorPentatonic"];
+  "Scale" -> scaleName];
 STEMDescribeWAV[outWAV];
 
 Print[""];

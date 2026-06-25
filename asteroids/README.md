@@ -43,16 +43,21 @@ environment variable.
 wolframscript -file main.wl
 
 # Specific date range — any length; automatically split into ≤7-day chunks
-wolframscript -file main.wl -- 2026-01-01 2026-01-07   # one week   (1 request,  ~34 asteroids)
-wolframscript -file main.wl -- 2026-01-01 2026-01-31   # one month  (5 requests, ~150 asteroids)
-wolframscript -file main.wl -- 2026-01-01 2026-06-30   # six months (27 requests, ~900 asteroids)
-wolframscript -file main.wl -- 2026-01-01 2026-12-31   # full year  (53 requests, ~1800 asteroids)
+wolframscript -file main.wl -- 2026-01-01 2026-01-07            # one week   (1 request,  ~34 asteroids)
+wolframscript -file main.wl -- 2026-01-01 2026-01-31            # one month  (5 requests, ~150 asteroids)
+wolframscript -file main.wl -- 2026-01-01 2026-06-30            # six months (27 requests, ~900 asteroids)
+wolframscript -file main.wl -- 2026-01-01 2026-12-31            # full year  (53 requests, ~1800 asteroids)
+
+# Optional third argument sets the scale (default: MinorPentatonic)
+# Valid: MinorPentatonic  MajorPentatonic  Major  Minor  WholeTone  Phrygian
+wolframscript -file main.wl -- 2026-01-01 2026-06-25 Phrygian
+wolframscript -file main.wl -- 2026-01-01 2026-12-31 WholeTone
 
 # With a personal NASA API key
 NASA_API_KEY=your_key wolframscript -file main.wl -- 2026-01-01 2026-01-31
 
 # With speech enabled
-STEM_SPEAK=1 NASA_API_KEY=your_key wolframscript -file main.wl -- 2026-01-01 2026-01-31
+STEM_SPEAK=1 NASA_API_KEY=your_key wolframscript -file main.wl -- 2026-01-01 2026-01-31 Phrygian
 
 # Experiments — active preset's dates, filter, and scale
 wolframscript -file experiment.wl
