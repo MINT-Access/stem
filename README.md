@@ -37,8 +37,14 @@ Run any project from the `stem/` root:
 ```sh
 wolframscript -file pendulum/main.wl
 wolframscript -file lorenz/main.wl
-wolframscript -file asteroids/main.wl
+wolframscript -file asteroids/main.wl                                    # last 7 days
+wolframscript -file asteroids/main.wl -- 2026-01-01 2026-12-31           # full year
+wolframscript -file asteroids/main.wl -- 2026-01-01 2026-06-25 Phrygian  # date range + scale
 ```
+
+The asteroids project accepts an optional date range and scale: `[-- YYYY-MM-DD YYYY-MM-DD [Scale]]`.
+Ranges longer than 7 days are split into multiple API requests automatically.
+Valid scales: `MinorPentatonic` `MajorPentatonic` `Major` `Minor` `WholeTone` `Phrygian`
 
 Each project writes its outputs into its own `data/` directory:
 
