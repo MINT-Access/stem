@@ -85,15 +85,19 @@ well within that. For very long ranges (6+ months) a personal key is recommended
 | chelyabinsk_week  | Feb 11–17 2013 — week of the Chelyabinsk meteor      |
 | major_mood        | Same data, brighter major pentatonic scale           |
 
-Pass `-- YYYY-MM-DD YYYY-MM-DD` to override the active preset's date range
-while keeping its filter and scale. Any range length is accepted.
+Pass `-- YYYY-MM-DD YYYY-MM-DD [Scale]` to override the active preset's date
+range and/or scale while keeping its filter. Any range length is accepted.
+
+```bash
+wolframscript -file experiment.wl -- 2026-01-01 2026-06-25 WholeTone
+```
 
 ## Sonification
 
 | Parameter | Design |
 |---|---|
 | Order | Farthest → closest (dramatic build toward Earth) |
-| Pitch | Miss distance → minor pentatonic, root C3 (130.81 Hz) |
+| Pitch | Miss distance → scale (default: minor pentatonic), root C3 (130.81 Hz) |
 | Duration | Inversely proportional to velocity — fast asteroids = shorter notes |
 | Volume | Proportional to mean diameter |
 | Timbre | Safe: warm bell (3 harmonics: 1.0, 0.35, 0.10); hazardous: bright/harsh (5 harmonics) |
