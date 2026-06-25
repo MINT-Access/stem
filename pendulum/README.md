@@ -90,10 +90,17 @@ as a self-contained announcement. Headings use `STEMHeading`; the six
 `STEMPrintN`; export confirmations use `STEMDescribeCSV`, `STEMDescribeGIF`,
 and `STEMDescribeWAV`; the final line uses `STEMSay`.
 
-To also hear a spoken announcement when the run finishes:
+To also hear a spoken announcement when the run finishes, use a small
+wrapper script that sets the flag before loading `main.wl`:
+
+```wolfram
+(* run.wl *)
+$STEMSpeakEnabled = True;
+Get["/path/to/pendulum/main.wl"];
+```
 
 ```sh
-wolframscript -e '$STEMSpeakEnabled = True' -file main.wl
+wolframscript -file run.wl
 ```
 
 See [`docs/voiceover-wolframscript-guide.md`](../docs/voiceover-wolframscript-guide.md)
