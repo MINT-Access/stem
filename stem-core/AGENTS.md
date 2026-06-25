@@ -83,9 +83,39 @@ Prints `  label: value unit` as one line. `spec` is passed to `FmtN` (integer
 for significant figures, `{total, decimals}` for fixed decimal places). The
 two-argument form uses the `FmtN` default of 4 significant figures.
 
+Use this in `PrintSummary` functions for any line that carries exactly one
+numeric value with a label and optional unit. Leave bare `Print` for lines that
+mix two values on one line (e.g. `[min, max]` ranges) or that use
+`IntegerString` formatting rather than `FmtN`.
+
+**pendulum/src/output.wl** — all six `PrintSummary` lines converted:
+
 ```wolfram
-STEMPrintN["Max angle", 22.9183, "deg", 4]   (* →  "  Max angle: 22.92 deg" *)
-STEMPrintN["Energy drift", 3.498*^-7, "J"]   (* →  "  Energy drift: 3.498*^-7 J" *)
+STEMPrintN["Steps computed",  Length[solution]]
+STEMPrintN["Max angle",       maxAngle,                              "deg", 4]
+STEMPrintN["Min angle",       minAngle,                              "deg", 4]
+STEMPrintN["Initial energy",  First[energies],                       "J",   4]
+STEMPrintN["Final energy",    Last[energies],                        "J",   4]
+STEMPrintN["Energy drift",    Abs[Last[energies] - First[energies]], "J",   4]
+```
+
+**lorenz/src/output.wl** — step count only; x/y/z range lines carry two values
+each and remain as bare `Print`:
+
+```wolfram
+STEMPrintN["Steps", Length[solution]]
+(* ranges kept: Print["  x range: [", FmtN[Min[xs],4], ", ", FmtN[Max[xs],4], "]"] *)
+```
+
+**asteroids/src/output.wl** — count lines and velocity block converted; miss
+distance lines mix km and LD on one line and remain as bare `Print`:
+
+```wolfram
+STEMPrintN["Total asteroids tracked", distStats["count"]]
+STEMPrintN["Potentially hazardous",  Length[hazardous]]
+STEMPrintN["Min velocity",  velStats["minKmS"],  "km/s", 4]
+STEMPrintN["Max velocity",  velStats["maxKmS"],  "km/s", 4]
+STEMPrintN["Mean velocity", velStats["meanKmS"], "km/s", 4]
 ```
 
 #### Structured announcements
