@@ -41,11 +41,10 @@ PrintSummary[solution_List, params_Association] := Module[
   minAngle = Min[angles] * 180.0 / Pi;
 
   Print["--- Simulation Summary ---"];
-  Print["  Steps computed:  ", Length[solution]];
-  Print["  Max angle:       ", FmtN[maxAngle, 4], " deg"];
-  Print["  Min angle:       ", FmtN[minAngle, 4], " deg"];
-  Print["  Initial energy:  ", FmtN[First[energies], 4], " J"];
-  Print["  Final energy:    ", FmtN[Last[energies], 4], " J"];
-  Print["  Energy drift:    ",
-    FmtN[Abs[Last[energies] - First[energies]], 4], " J"];
+  STEMPrintN["Steps computed",  Length[solution]];
+  STEMPrintN["Max angle",       maxAngle,                             "deg", 4];
+  STEMPrintN["Min angle",       minAngle,                             "deg", 4];
+  STEMPrintN["Initial energy",  First[energies],                      "J",   4];
+  STEMPrintN["Final energy",    Last[energies],                       "J",   4];
+  STEMPrintN["Energy drift",    Abs[Last[energies] - First[energies]], "J",   4];
 ]

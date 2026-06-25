@@ -51,8 +51,8 @@ PrintSummary[asteroids_List, startDate_String, endDate_String] :=
     Print["=== Near-Earth Asteroid Report: ",
           startDate, " to ", endDate, " ==="];
     Print[""];
-    Print["Total asteroids tracked: ", distStats["count"]];
-    Print["Potentially hazardous:   ", Length[hazardous]];
+    STEMPrintN["Total asteroids tracked", distStats["count"]];
+    STEMPrintN["Potentially hazardous",  Length[hazardous]];
     Print[""];
     Print["-- Miss Distance --"];
     Print["  Closest:  ",
@@ -65,9 +65,9 @@ PrintSummary[asteroids_List, startDate_String, endDate_String] :=
       IntegerString[Round[distStats["meanKm"]]], " km"];
     Print[""];
     Print["-- Velocity --"];
-    Print["  Min:  ", FmtN[velStats["minKmS"],  4], " km/s"];
-    Print["  Max:  ", FmtN[velStats["maxKmS"],  4], " km/s"];
-    Print["  Mean: ", FmtN[velStats["meanKmS"], 4], " km/s"];
+    STEMPrintN["Min velocity",  velStats["minKmS"],  "km/s", 4];
+    STEMPrintN["Max velocity",  velStats["maxKmS"],  "km/s", 4];
+    STEMPrintN["Mean velocity", velStats["meanKmS"], "km/s", 4];
     Print[""];
     Print["-- Size Distribution --"];
     KeyValueMap[

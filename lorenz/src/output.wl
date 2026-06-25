@@ -49,7 +49,7 @@ PrintSummary[solution_List, params_Association] :=
     ys = solution[[All, 3]];
     zs = solution[[All, 4]];
     Print["--- Trajectory Summary ---"];
-    Print["  Steps:   ", Length[solution]];
+    STEMPrintN["Steps", Length[solution]];
     Print["  x range: [", FmtN[Min[xs],4], ", ", FmtN[Max[xs],4], "]"];
     Print["  y range: [", FmtN[Min[ys],4], ", ", FmtN[Max[ys],4], "]"];
     Print["  z range: [", FmtN[Min[zs],4], ", ", FmtN[Max[zs],4], "]"];
