@@ -33,9 +33,25 @@ wolframscript -file tests/test_model.wl
 
 ## Sonification
 
-Angle is mapped to an A minor pentatonic scale. Each note lasts one
-half-swing (zero crossing to zero crossing), and volume is proportional
-to angular velocity — so the pendulum literally plays itself.
+| Parameter | Design |
+|---|---|
+| Pitch | Swing angle → A minor pentatonic, root A3 (220 Hz) |
+| Duration | One half-swing (zero crossing to zero crossing) |
+| Volume | Proportional to angular velocity at each zero crossing |
+| Timbre | Pure sine (`harmonics = {1.0}`), exponential decay (τ = dur/3) |
+
+The pendulum literally plays itself: wider, faster swings produce louder,
+higher notes, and the rhythm slows naturally as the pendulum loses energy.
+
+To change scale, edit the `ScaleLookup` call in `src/sonify.wl` and pass
+any key from `$StemScales`:
+
+```wolfram
+ScaleLookup[angle, -maxAngle, maxAngle, $StemScales["Major"], 220.0]
+```
+
+Available scales: `MinorPentatonic`, `MajorPentatonic`, `Major`, `Minor`,
+`WholeTone`, `Phrygian`.
 
 ## Project structure
 
