@@ -25,7 +25,7 @@ params = <|
   "TimeStep" -> 0.005
 |>;
 
-Print["=== Lorenz Attractor ==="];
+STEMHeading["Lorenz Attractor"];
 Print["  sigma = ", params["Sigma"],
       "   rho = ", params["Rho"],
       "   beta = ", params["Beta"]];
@@ -47,22 +47,22 @@ Print[""];
 Print["[2/4] Exporting trajectory data..."];
 outCSV = FileNameJoin[{$projectRoot, "data", "lorenz_trajectory.csv"}];
 ExportResults[solution, params, outCSV];
-Print["  CSV: ", outCSV];
+STEMDescribeCSV[outCSV, Length[solution], 5];
 Print[""];
 
 (* 3. Animation *)
 Print["[3/4] Rendering animation..."];
 outGIF = FileNameJoin[{$projectRoot, "data", "lorenz_animation.gif"}];
 ExportAnimation[solution, outGIF, 30, 150, "Lorenz Attractor"];
-Print["  GIF: ", outGIF];
+STEMDescribeGIF[outGIF, 150, 30];
 Print[""];
 
 (* 4. Sonification *)
 Print["[4/4] Synthesising audio..."];
 outWAV = FileNameJoin[{$projectRoot, "data", "lorenz_audio.wav"}];
 ExportSonification[solution, outWAV, "Scale" -> "MinorPentatonic"];
-Print["  WAV: ", outWAV];
+STEMDescribeWAV[outWAV, params["TimeEnd"]];
 Print[""];
 
-Print["=== Done ==="];
-Print["Play audio:  afplay ", outWAV];
+STEMHeading["Done"];
+STEMSay["Play audio:  afplay " <> outWAV];

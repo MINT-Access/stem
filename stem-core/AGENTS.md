@@ -21,11 +21,12 @@ Get[FileNameJoin[{$stemCoreRoot, "init.wl"}]];
 and loads the four modules in dependency order:
 
 ```
-utils.wl  →  scales.wl  →  synth.wl  →  export.wl
+utils.wl  →  scales.wl  →  synth.wl  →  export.wl  →  accessibility.wl
 ```
 
-`synth.wl` and `export.wl` both call `EnsureDir` from `utils.wl`; nothing else
-requires a later module, so the order is fixed and must not be changed.
+`synth.wl` and `export.wl` both call `EnsureDir` from `utils.wl`;
+`accessibility.wl` calls `FmtN` from `utils.wl`. Nothing requires a later module,
+so the order is fixed and must not be changed.
 
 ---
 
@@ -64,6 +65,86 @@ existing entries are preserved.
 
 ```wolfram
 LogError["API request failed", "data/errors.log"]
+```
+
+---
+
+### accessibility.wl — Screen-reader-friendly output
+
+All functions in this module print exactly one complete line to stdout so
+VoiceOver reads each chunk as a self-contained announcement.
+
+#### Numeric formatting
+
+##### `STEMPrintN[label_String, x_?NumericQ]`
+##### `STEMPrintN[label_String, x_?NumericQ, unit_String]`
+##### `STEMPrintN[label_String, x_?NumericQ, unit_String, spec_]`
+Prints `  label: value unit` as one line. `spec` is passed to `FmtN` (integer
+for significant figures, `{total, decimals}` for fixed decimal places). The
+two-argument form uses the `FmtN` default of 4 significant figures.
+
+```wolfram
+STEMPrintN["Max angle", 22.9183, "deg", 4]   (* →  "  Max angle: 22.92 deg" *)
+STEMPrintN["Energy drift", 3.498*^-7, "J"]   (* →  "  Energy drift: 3.498*^-7 J" *)
+```
+
+#### Structured announcements
+
+##### `STEMHeading[text_String]`
+Prints `=== text ===`. Used for major section titles; matches the heading style
+already present in each project's `main.wl`.
+
+##### `STEMSection[title_String]`
+Prints `-- title --`. Used for sub-section markers within a heading block.
+
+##### `STEMBullet[text_String]`
+Prints `  * text`. Uses ASCII `*` rather than a Unicode bullet because some
+terminal configurations cause VoiceOver to skip non-ASCII punctuation.
+
+#### Export metadata descriptions
+
+##### `STEMDescribeCSV[filePath_String]`
+##### `STEMDescribeCSV[filePath_String, nRows_Integer, nCols_Integer]`
+Prints a single line confirming a CSV export. `nRows` excludes the header row.
+
+```wolfram
+STEMDescribeCSV["data/results.csv", 1001, 5]
+(* →  "  CSV: 1001 rows, 5 columns — data/results.csv" *)
+```
+
+##### `STEMDescribeWAV[filePath_String]`
+##### `STEMDescribeWAV[filePath_String, durationSec_?NumericQ]`
+Prints a single line confirming a WAV export. Pass `durationSec` when the
+simulation duration is known at the call site.
+
+```wolfram
+STEMDescribeWAV["data/audio.wav", 10.0]   (* →  "  Audio: 10.0 s — data/audio.wav" *)
+```
+
+##### `STEMDescribeGIF[filePath_String]`
+##### `STEMDescribeGIF[filePath_String, nFrames_Integer, fps_?NumericQ]`
+Prints a single line confirming a GIF export.
+
+```wolfram
+STEMDescribeGIF["data/anim.gif", 150, 30]
+(* →  "  Animation: 150 frames at 30 fps — data/anim.gif" *)
+```
+
+#### Speech integration
+
+##### `$STEMSpeakEnabled`
+Boolean flag, default `False`. Set to `True` to enable the macOS `say` command.
+`If[!ValueQ[$STEMSpeakEnabled], ...]` in `accessibility.wl` means setting the
+flag before loading `init.wl` is respected.
+
+##### `STEMSay[text_String]`
+Always prints `text`. When `$STEMSpeakEnabled` is `True`, also invokes
+`say "text"` via `Run`. Double-quote characters in `text` are escaped before
+shell hand-off.
+
+```wolfram
+$STEMSpeakEnabled = True;
+STEMSay["Lorenz Attractor done"]   (* printed + spoken *)
 ```
 
 ---
@@ -208,6 +289,13 @@ of whether a display server is present.
 correctly through VoiceOver-routed audio on macOS. No special AIFF or CoreAudio
 metadata is embedded.
 
+**Screen-reader output**: `accessibility.wl` provides `STEMHeading`, `STEMSection`,
+`STEMBullet`, `STEMPrintN`, `STEMDescribeCSV`, `STEMDescribeWAV`, `STEMDescribeGIF`,
+and `STEMSay` — all guaranteed to emit exactly one complete stdout line, so
+VoiceOver reads each item as a discrete unit. Set `$STEMSpeakEnabled = True`
+before loading `init.wl` to also invoke `say` for `STEMSay` calls. See
+`docs/voiceover-wolframscript-guide.md` for a full workflow walkthrough.
+
 **Paths**: `EnsureDir` uses `CreateDirectory` (creates one level). If a project
 nests outputs more than one directory deep below an existing root, each level
 must exist or the project's `main.wl` must call `CreateDirectory` for the
@@ -222,7 +310,8 @@ init.wl
  ├── utils.wl          (no deps)
  ├── scales.wl         (no deps)
  ├── synth.wl          ← utils.wl  (EnsureDir)
- └── export.wl         ← utils.wl  (EnsureDir)
+ ├── export.wl         ← utils.wl  (EnsureDir)
+ └── accessibility.wl  ← utils.wl  (FmtN)
 ```
 
 Projects may call any public symbol after loading `init.wl`. They must not

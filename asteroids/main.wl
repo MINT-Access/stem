@@ -20,7 +20,7 @@ Get[FileNameJoin[{$projectRoot, "src", "sonify.wl"}]];
 endDate   = DateString[Today, "ISODate"];
 startDate = DateString[Today - Quantity[6, "Days"], "ISODate"];
 
-Print["=== Near-Earth Asteroid Tracker ==="];
+STEMHeading["Near-Earth Asteroid Tracker"];
 Print["  Date range: ", startDate, " to ", endDate];
 Print[""];
 
@@ -41,7 +41,7 @@ PrintSummary[asteroids, startDate, endDate];
 outCSV = FileNameJoin[{$projectRoot, "data",
   "asteroids_" <> startDate <> "_" <> endDate <> ".csv"}];
 ExportResults[asteroids, outCSV];
-Print["  CSV: ", outCSV];
+STEMDescribeCSV[outCSV, Length[asteroids], 12];
 
 (* 3. Animation *)
 Print[""];
@@ -49,7 +49,7 @@ Print["[3/4] Rendering solar system animation..."];
 outGIF = FileNameJoin[{$projectRoot, "data",
   "asteroids_" <> startDate <> "_" <> endDate <> ".gif"}];
 ExportAnimation[asteroids, outGIF, startDate, endDate, 10];
-Print["  GIF: ", outGIF];
+STEMDescribeGIF[outGIF, Length[asteroids] + 30, 10];
 
 (* 4. Sonification *)
 Print[""];
@@ -58,8 +58,8 @@ outWAV = FileNameJoin[{$projectRoot, "data",
   "asteroids_" <> startDate <> "_" <> endDate <> ".wav"}];
 ExportSonification[asteroids, outWAV,
   "Scale" -> "MinorPentatonic"];
-Print["  WAV: ", outWAV];
+STEMDescribeWAV[outWAV];
 
 Print[""];
-Print["=== Done ==="];
-Print["Play audio:  afplay ", outWAV];
+STEMHeading["Done"];
+STEMSay["Play audio:  afplay " <> outWAV];

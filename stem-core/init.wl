@@ -9,10 +9,13 @@
      Get[FileNameJoin[{$stemCoreRoot, "init.wl"}]];
 
    Modules loaded (in dependency order):
-     utils.wl  — EnsureDir, LogError, FmtN
-     scales.wl — $StemSampleRate, $StemScales, SemitoneToHz, ScaleLookup
-     synth.wl  — StemSynthNote, NormalizeBuffer, ExportAudioBuffer
-     export.wl — ExportCSV, ExportGIF
+     utils.wl         — EnsureDir, LogError, FmtN
+     scales.wl        — $StemSampleRate, $StemScales, SemitoneToHz, ScaleLookup
+     synth.wl         — StemSynthNote, NormalizeBuffer, ExportAudioBuffer
+     export.wl        — ExportCSV, ExportGIF
+     accessibility.wl — STEMHeading, STEMSection, STEMBullet, STEMPrintN,
+                        STEMDescribeCSV, STEMDescribeWAV, STEMDescribeGIF,
+                        $STEMSpeakEnabled, STEMSay
    ======================================================== *)
 
 $stemCoreRoot = DirectoryName[$InputFileName];
@@ -21,3 +24,4 @@ Get[FileNameJoin[{$stemCoreRoot, "src", "utils.wl"}]];
 Get[FileNameJoin[{$stemCoreRoot, "src", "scales.wl"}]];
 Get[FileNameJoin[{$stemCoreRoot, "src", "synth.wl"}]];
 Get[FileNameJoin[{$stemCoreRoot, "src", "export.wl"}]];
+Get[FileNameJoin[{$stemCoreRoot, "src", "accessibility.wl"}]];
