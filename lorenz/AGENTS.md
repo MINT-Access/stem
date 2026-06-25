@@ -67,6 +67,10 @@ afplay data/lorenz_audio.wav         # play audio on macOS
 - Parameters always in an `Association`; never global
 - SI units throughout
 - Tests use `Exit[1]` on failure
+- `PrintSummary` uses `STEMPrintN` (stem-core) for the step count line. The
+  x/y/z range lines each carry two values (`[min, max]`) and remain as bare
+  `Print`. Follow the same rule for any additions: `STEMPrintN` for one value,
+  bare `Print` for two.
 
 ## Dependencies
 

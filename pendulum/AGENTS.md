@@ -47,6 +47,9 @@ wolframscript -file tests/test_model.wl
 - Parameters are always passed as an `Association` (never as globals).
 - Physical quantities use SI units. Variable names include units where helpful.
 - Tests use `Exit[1]` on failure so CI tools can detect failures.
+- `PrintSummary` uses `STEMPrintN` (stem-core) for every numeric summary line —
+  steps computed, max/min angle, initial/final/drift energy. Use `STEMPrintN`
+  for any new single-value numeric line; bare `Print` for multi-value lines.
 
 ## Important: WAV synthesis
 

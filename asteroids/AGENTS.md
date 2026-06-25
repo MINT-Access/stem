@@ -78,6 +78,11 @@ All lists are sorted by missDistanceKm ascending (closest first).
 - Parameters in Associations, never globals
 - Tests are fully offline (synthetic data) — no network needed
 - `Exit[1]` on test failure for CI compatibility
+- `PrintSummary` uses `STEMPrintN` (stem-core) for the count lines (total
+  asteroids tracked, potentially hazardous) and the velocity block (Min/Max/Mean
+  velocity). Miss distance lines mix km and LD on one line and remain as bare
+  `Print`. Follow the same rule for additions: `STEMPrintN` for one value per
+  line, bare `Print` when two quantities appear together.
 
 ## Dependencies
 
