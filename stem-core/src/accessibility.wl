@@ -109,9 +109,9 @@ If[!ValueQ[$STEMSpeakEnabled], $STEMSpeakEnabled = False]
    Prints text as a single stdout line.
    When $STEMSpeakEnabled is True, also passes text to the macOS `say`
    command so it is spoken aloud through the system voice.
-   Double-quote characters in text are escaped before shell hand-off. *)
+   RunProcess blocks until speech completes and avoids shell quoting issues. *)
 
 STEMSay[text_String] :=
   (Print[text];
    If[$STEMSpeakEnabled,
-     Run["say \"" <> StringReplace[text, "\"" -> "\\\""] <> "\""]])
+     RunProcess[{"/usr/bin/say", text}]])
