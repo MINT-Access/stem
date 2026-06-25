@@ -1,8 +1,9 @@
 # stem-core
 
 Shared Wolfram Language library for the STEM sonification projects.
-Provides musical pitch mapping, PCM synthesis, and file export helpers
-used by the pendulum, lorenz, and asteroids simulations.
+Provides musical pitch mapping, PCM synthesis, file export helpers,
+and screen-reader-friendly console output used by the pendulum, lorenz,
+and asteroids simulations.
 
 ---
 
@@ -29,6 +30,9 @@ stem-core/
     scales.wl      ← $StemSampleRate, $StemScales, SemitoneToHz, ScaleLookup
     synth.wl       ← StemSynthNote, NormalizeBuffer, ExportAudioBuffer
     export.wl      ← ExportCSV, ExportGIF
+    accessibility.wl ← STEMHeading, STEMSection, STEMBullet, STEMPrintN,
+                       STEMDescribeCSV, STEMDescribeWAV, STEMDescribeGIF,
+                       $STEMSpeakEnabled, STEMSay
   README.md
   AGENTS.md        ← full API reference
 ```
@@ -41,6 +45,7 @@ stem/
   pendulum/
   lorenz/
   asteroids/
+  docs/
 ```
 
 ---
@@ -56,7 +61,7 @@ $stemCoreRoot = FileNameJoin[{$projectRoot, "..", "stem-core"}];
 Get[FileNameJoin[{$stemCoreRoot, "init.wl"}]];
 ```
 
-`init.wl` sets `$stemCoreRoot` from its own location and loads the four
+`init.wl` sets `$stemCoreRoot` from its own location and loads the five
 modules in dependency order. After this, all public symbols are available
 in the global context.
 
@@ -98,26 +103,56 @@ $stemCoreRoot = FileNameJoin[{$projectRoot, "..", "stem-core"}];
 Get[FileNameJoin[{$stemCoreRoot, "init.wl"}]];
 
 (* --- your simulation --- *)
+STEMHeading["My Simulation"];
 data = Table[{t, Sin[t]}, {t, 0, 2 Pi, 0.01}];
 
 (* --- export --- *)
-ExportCSV[Prepend[data, {"t", "y"}], "data/results.csv"];
+outCSV = "data/results.csv";
+ExportCSV[Prepend[data, {"t", "y"}], outCSV];
+STEMDescribeCSV[outCSV, Length[data], 2];
 
 notes = StemSynthNote[
   ScaleLookup[#[[2]], -1, 1, $StemScales["Minor"], 220.0],
   0.3, 0.7
 ] & /@ data;
 
-ExportAudioBuffer[
-  NormalizeBuffer[Total[notes]],
-  "data/output.wav"
-];
+outWAV = "data/output.wav";
+ExportAudioBuffer[NormalizeBuffer[Total[notes]], outWAV];
+STEMDescribeWAV[outWAV];
 
-Print["Done."]
+STEMSay["Done"]
 ```
 
 See `AGENTS.md` for the complete API reference, parameter descriptions,
 and headless / VoiceOver compatibility notes.
+
+---
+
+## Accessibility
+
+stem-core includes a screen-reader output layer (`accessibility.wl`) that
+guarantees every console line is a self-contained announcement — no partial
+lines, no numbers split across multiple Print arguments — so VoiceOver reads
+each item cleanly.
+
+Key functions:
+
+| Function | Output |
+|---|---|
+| `STEMHeading["text"]` | `=== text ===` |
+| `STEMSection["title"]` | `-- title --` |
+| `STEMPrintN["label", x, "unit", spec]` | `  label: value unit` |
+| `STEMDescribeWAV["path", dur]` | `  Audio: D.D s — path` |
+| `STEMSay["text"]` | prints text; speaks it when `$STEMSpeakEnabled` is `True` |
+
+To enable spoken output via the macOS `say` command:
+
+```sh
+wolframscript -e '$STEMSpeakEnabled = True' -file main.wl
+```
+
+For the full VoiceOver + wolframscript workflow, see
+[`docs/voiceover-wolframscript-guide.md`](../docs/voiceover-wolframscript-guide.md).
 
 ---
 
