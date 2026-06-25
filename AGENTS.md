@@ -13,6 +13,7 @@ stem/
   pendulum/         Physics simulation (pendulum ODE)
   lorenz/           Physics simulation (Lorenz attractor)
   asteroids/        Data project (NASA NeoWs API)
+  docs/             Workflow guides (e.g. voiceover-wolframscript-guide.md)
 ```
 
 All four directories are siblings. Projects load stem-core with a
@@ -64,6 +65,15 @@ After `Get[".../stem-core/init.wl"]` all of the following are available:
 | `EnsureDir[filePath]` | utils | Create parent directory if absent |
 | `LogError[message, logPath]` | utils | Append timestamped error to log file |
 | `FmtN[x, spec]` | utils | Format number (sig figs or {total,decimals}), single-line (use in Print) |
+| `STEMHeading[text]` | accessibility | Print `=== text ===` — major section title |
+| `STEMSection[title]` | accessibility | Print `-- title --` — sub-section marker |
+| `STEMBullet[text]` | accessibility | Print `  * text` — list item |
+| `STEMPrintN[label, x, unit, spec]` | accessibility | Print `  label: value unit` — one numeric value per line |
+| `STEMDescribeCSV[path, nRows, nCols]` | accessibility | Print CSV export summary line |
+| `STEMDescribeWAV[path, durationSec]` | accessibility | Print WAV export summary line |
+| `STEMDescribeGIF[path, nFrames, fps]` | accessibility | Print GIF export summary line |
+| `$STEMSpeakEnabled` | accessibility | Boolean flag; enables macOS `say` for `STEMSay` |
+| `STEMSay[text]` | accessibility | Print text + optionally speak via `say` |
 
 See `stem-core/AGENTS.md` for full parameter descriptions and constraints.
 
@@ -105,6 +115,11 @@ All code must run correctly via `wolframscript -file` with no display server.
 - **NumberForm in Print**: always use `FmtN[x, spec]` — `ToString[NumberForm[x,
   spec], OutputForm]` renders scientific notation as multi-line superscripts in
   headless mode; `FmtN` produces inline `*^` notation instead.
+- **Single-value numeric console lines**: use `STEMPrintN[label, x, unit, spec]`
+  rather than a bare `Print` with `FmtN` — it guarantees one complete stdout line
+  and consistent `  label: value unit` formatting for VoiceOver. Keep bare `Print`
+  only for lines that carry two values (e.g. `[min, max]` ranges) or that use
+  `IntegerString` formatting.
 - **Tests**: `Exit[1]` on any failure so CI tools detect broken runs.
 
 ---
@@ -118,5 +133,7 @@ All code must run correctly via `wolframscript -file` with no display server.
 | A shared file-export pattern | `stem-core/src/export.wl` |
 | A new simulation or data source | A new sibling directory, loaded like the existing projects |
 | Physics or domain logic specific to one project | That project's `src/` |
+| A new screen-reader output helper | `stem-core/src/accessibility.wl` |
+| A workflow or usage guide | `docs/` |
 
 If a helper appears in more than one project's `src/`, it belongs in stem-core.
