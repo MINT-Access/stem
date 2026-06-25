@@ -43,8 +43,11 @@ NASA_API_KEY=your_key wolframscript -file main.wl -- 2026-01-01 2026-01-07
 # With speech enabled — use a wrapper script (see Console output section)
 # NASA_API_KEY=your_key wolframscript -file run.wl -- 2026-01-01 2026-01-07
 
-# Experiments (filters, scales, named presets)
+# Experiments — active preset's dates, filter, and scale
 wolframscript -file experiment.wl
+
+# Override the preset's date range from the command line
+NASA_API_KEY=your_key wolframscript -file experiment.wl -- 2026-01-01 2026-01-07
 
 # Offline tests (no API call)
 wolframscript -file tests/test_analyse.wl
@@ -62,6 +65,9 @@ afplay data/asteroids_<start>_<end>.wav
 | large_only        | Last 7 days, diameter ≥ 140 m                        |
 | chelyabinsk_week  | Feb 11–17 2013 — week of the Chelyabinsk meteor      |
 | major_mood        | Same data, brighter major pentatonic scale           |
+
+Pass `-- YYYY-MM-DD YYYY-MM-DD` to override the active preset's date range
+while keeping its filter and scale (1–7 days, NeoWs limit).
 
 ## Sonification
 
