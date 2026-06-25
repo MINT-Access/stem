@@ -32,8 +32,14 @@ Get[FileNameJoin[{$stemCoreRoot, "init.wl"}]];
 ```sh
 wolframscript -file pendulum/main.wl
 wolframscript -file lorenz/main.wl
-wolframscript -file asteroids/main.wl
+wolframscript -file asteroids/main.wl                                    # last 7 days, MinorPentatonic
+wolframscript -file asteroids/main.wl -- 2026-01-01 2026-12-31           # full year
+wolframscript -file asteroids/main.wl -- 2026-01-01 2026-06-25 Phrygian  # date range + scale
 ```
+
+`asteroids/main.wl` and `asteroids/experiment.wl` accept `[-- YYYY-MM-DD YYYY-MM-DD [Scale]]`.
+Ranges longer than 7 days are split into ≤7-day API requests automatically.
+Valid scales: `MinorPentatonic` `MajorPentatonic` `Major` `Minor` `WholeTone` `Phrygian`
 
 Tests (run from the `stem/` root or from within the project directory):
 
