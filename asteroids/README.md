@@ -43,9 +43,10 @@ environment variable.
 wolframscript -file main.wl
 
 # Specific date range — any length; automatically split into ≤7-day chunks
-wolframscript -file main.wl -- 2026-01-01 2026-01-07   # one week
-wolframscript -file main.wl -- 2026-01-01 2026-01-31   # one month (5 requests)
-wolframscript -file main.wl -- 2026-01-01 2026-06-30   # six months (27 requests)
+wolframscript -file main.wl -- 2026-01-01 2026-01-07   # one week   (1 request,  ~34 asteroids)
+wolframscript -file main.wl -- 2026-01-01 2026-01-31   # one month  (5 requests, ~150 asteroids)
+wolframscript -file main.wl -- 2026-01-01 2026-06-30   # six months (27 requests, ~900 asteroids)
+wolframscript -file main.wl -- 2026-01-01 2026-12-31   # full year  (53 requests, ~1800 asteroids)
 
 # With a personal NASA API key
 NASA_API_KEY=your_key wolframscript -file main.wl -- 2026-01-01 2026-01-31
