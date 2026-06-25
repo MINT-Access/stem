@@ -71,6 +71,20 @@ Available scales: `MinorPentatonic`, `MajorPentatonic`, `Major`, `Minor`,
 `WholeTone`, `Phrygian`. To transpose, edit the `rootHz` argument to
 `ScaleLookup` in `src/sonify.wl`.
 
+## Animation
+
+| Parameter | Design |
+|---|---|
+| View | 3D trajectory projected onto the x-z plane (classic butterfly view) |
+| Colour gradient | Blue (early) → cyan → orange → red (recent) |
+| Background | Dark for contrast |
+| Frame count | 150 (default), fourth argument to `ExportAnimation` |
+| Frame rate | 30 fps |
+
+`ExportDualAnimation` in `src/animate.wl` renders two near-identical
+trajectories side-by-side, used by the `butterfly` experiment preset to
+visualise how quickly they diverge.
+
 ## Experiment presets (experiment.wl)
 
 | Label      | What it shows                                    |

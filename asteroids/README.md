@@ -76,6 +76,21 @@ ExportSonification[asteroids, outWAV, "Scale" -> "Phrygian"]
 Available scales: `MinorPentatonic`, `MajorPentatonic`, `Major`, `Minor`,
 `WholeTone`, `Phrygian`.
 
+## Animation
+
+| Parameter | Design |
+|---|---|
+| View | Top-down solar system, Earth at centre |
+| Distance scale | Square root (so close and far objects are both visible) |
+| Reference rings | 1 LD, 5 LD, 20 LD (1 LD ≈ 384 400 km) |
+| Dot colour | Cyan = safe, red = hazardous |
+| Dot size | Proportional to log(mean diameter) |
+| Reveal order | Farthest → closest; final frame held 3 s |
+
+Only miss distance is known from the API — asteroid directions are not — so
+each dot is placed at the correct radial distance but at a fixed random angle
+(seeded at 42 for repeatability across runs).
+
 ## Project structure
 
     asteroids/

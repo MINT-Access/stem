@@ -53,6 +53,22 @@ ScaleLookup[angle, -maxAngle, maxAngle, $StemScales["Major"], 220.0]
 Available scales: `MinorPentatonic`, `MajorPentatonic`, `Major`, `Minor`,
 `WholeTone`, `Phrygian`.
 
+## Animation
+
+| Parameter | Design |
+|---|---|
+| View | Side-on pendulum, pivot at top centre |
+| Frame rate | 25 fps (default), configurable |
+| Colour | Bob shifts from blue (at centre) to red-violet (at maximum swing) |
+| Trail | Motion trail shows the recent path of the bob (~0.3 s of frames) |
+| Speedup | `speedup` sub-samples the solution; 1.0 = real time, 2.0 = double speed |
+
+To render at half speed:
+
+```wolfram
+ExportAnimation[solution, params, outGIF, 25, 0.5]
+```
+
 ## Project structure
 
 ```
