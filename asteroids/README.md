@@ -69,3 +69,22 @@ afplay data/asteroids_<start>_<end>.wav
     ├── data/                    Output files (not committed)
     ├── AGENTS.md                Guidance for Claude Code
     └── README.md
+
+## Console output
+
+`main.wl` prints one complete line per event so VoiceOver reads each chunk
+as a self-contained announcement. Headings use `STEMHeading`; the asteroid
+count and hazardous count in `PrintSummary` use `STEMPrintN`, as do the
+Min/Max/Mean velocity lines; miss distance lines mix km and LD on one line
+and remain as bare `Print`; export confirmations use `STEMDescribeCSV`
+(1 row per asteroid, 12 columns), `STEMDescribeGIF`, and `STEMDescribeWAV`;
+the final line uses `STEMSay`.
+
+To also hear a spoken announcement when the run finishes:
+
+```sh
+wolframscript -e '$STEMSpeakEnabled = True' -file main.wl
+```
+
+See [`docs/voiceover-wolframscript-guide.md`](../docs/voiceover-wolframscript-guide.md)
+for the full VoiceOver + wolframscript workflow.

@@ -72,3 +72,22 @@ afplay data/lorenz_audio.wav
     ├── data/                Output directory (not committed)
     ├── AGENTS.md            Guidance for Claude Code
     └── README.md
+
+## Console output
+
+`main.wl` prints one complete line per event so VoiceOver reads each chunk
+as a self-contained announcement. Headings use `STEMHeading`; the step count
+in `PrintSummary` uses `STEMPrintN`; the x/y/z range lines carry two values
+each and remain as bare `Print`; export confirmations use `STEMDescribeCSV`
+(1 row per step, 5 columns), `STEMDescribeGIF` (150 frames at 30 fps), and
+`STEMDescribeWAV` (duration from `params["TimeEnd"]`); the final line uses
+`STEMSay`.
+
+To also hear a spoken announcement when the run finishes:
+
+```sh
+wolframscript -e '$STEMSpeakEnabled = True' -file main.wl
+```
+
+See [`docs/voiceover-wolframscript-guide.md`](../docs/voiceover-wolframscript-guide.md)
+for the full VoiceOver + wolframscript workflow.

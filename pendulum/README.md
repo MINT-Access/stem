@@ -49,3 +49,20 @@ src/sonify.wl    — WAV audio export
 tests/           — Unit tests
 data/            — Output directory (not committed)
 ```
+
+## Console output
+
+`main.wl` prints one complete line per event so VoiceOver reads each chunk
+as a self-contained announcement. Headings use `STEMHeading`; the six
+`PrintSummary` values (steps, max/min angle, initial/final/drift energy) use
+`STEMPrintN`; export confirmations use `STEMDescribeCSV`, `STEMDescribeGIF`,
+and `STEMDescribeWAV`; the final line uses `STEMSay`.
+
+To also hear a spoken announcement when the run finishes:
+
+```sh
+wolframscript -e '$STEMSpeakEnabled = True' -file main.wl
+```
+
+See [`docs/voiceover-wolframscript-guide.md`](../docs/voiceover-wolframscript-guide.md)
+for the full VoiceOver + wolframscript workflow.
