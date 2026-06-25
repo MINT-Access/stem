@@ -87,9 +87,58 @@ ParseAsteroid[raw_Association, approachDate_String] :=
   ]
 
 
+(* ChunkDateRange
+   Splits [startDate, endDate] into consecutive windows of at most maxDays
+   days (default 7, the NeoWs per-request limit).
+   Returns a List of {startStr, endStr} string pairs. *)
+
+ChunkDateRange[startDate_String, endDate_String, maxDays_Integer : 7] :=
+  Module[{start, end, chunks, s, e, remaining},
+    start  = DateObject[startDate];
+    end    = DateObject[endDate];
+    chunks = {};
+    s      = start;
+    While[True,
+      remaining = QuantityMagnitude[DateDifference[s, end, "Day"]];
+      If[remaining < 0, Break[]];
+      e = If[remaining > maxDays - 1, s + Quantity[maxDays - 1, "Days"], end];
+      AppendTo[chunks, {DateString[s, "ISODate"], DateString[e, "ISODate"]}];
+      s = e + Quantity[1, "Days"]
+    ];
+    chunks
+  ]
+
+
+(* FetchAsteroidsMulti
+   Fetches any date range by splitting it into ≤7-day chunks, calling
+   FetchAsteroids for each, and merging the results.
+   Returns a sorted list of asteroid Associations (closest first),
+   or $Failed if any chunk fails. *)
+
+FetchAsteroidsMulti[startDate_String, endDate_String] :=
+  Module[{chunks, allAsteroids, batch},
+    chunks = ChunkDateRange[startDate, endDate];
+    If[Length[chunks] > 1,
+      Print["  Splitting into ", Length[chunks],
+            " requests (NeoWs limit: 7 days per request)..."]
+    ];
+    Catch[
+      allAsteroids = {};
+      Do[
+        batch = FetchAsteroids[chunk[[1]], chunk[[2]]];
+        If[batch === $Failed, Throw[$Failed]];
+        allAsteroids = Join[allAsteroids, batch],
+        {chunk, chunks}
+      ];
+      SortBy[allAsteroids, #["missDistanceKm"] &]
+    ]
+  ]
+
+
 (* FetchAsteroids
-   High-level entry point. Returns a sorted list of asteroid Associations.
-   Sorted by miss distance ascending (closest first). *)
+   High-level entry point for a single ≤7-day window.
+   Returns a sorted list of asteroid Associations (closest first).
+   Use FetchAsteroidsMulti for ranges longer than 7 days. *)
 
 FetchAsteroids[startDate_String, endDate_String] :=
   Module[{raw, json, dateGroups, allAsteroids, toAssoc},

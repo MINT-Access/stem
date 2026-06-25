@@ -3,8 +3,9 @@
 (* ========================================================
    Near-Earth Asteroid Tracker — Entry Point
    Usage: wolframscript -file main.wl [-- YYYY-MM-DD YYYY-MM-DD]
-   Without arguments fetches the last 7 days (NeoWs max per request).
-   With two ISO dates fetches that range (max 7 days).
+   Without arguments fetches the last 7 days.
+   With two ISO dates fetches that range (any length; split into
+   ≤7-day chunks automatically to satisfy the NeoWs API limit).
    ======================================================== *)
 
 $projectRoot  = DirectoryName[$InputFileName];
@@ -32,11 +33,10 @@ Which[
     Exit[1]
 ];
 
-(* Guard: NeoWs rejects ranges longer than 7 days *)
 With[{span = QuantityMagnitude[
     DateDifference[DateObject[startDate], DateObject[endDate], "Day"]]},
-  If[span < 0 || span > 7,
-    Print["Error: date range must be 1-7 days (got ", span, " days)."];
+  If[span < 0,
+    Print["Error: end date must be on or after start date."];
     Exit[1]
   ]
 ];
@@ -47,7 +47,7 @@ Print[""];
 
 (* 1. Fetch *)
 Print["[1/4] Fetching data from NASA NeoWs API..."];
-asteroids = FetchAsteroids[startDate, endDate];
+asteroids = FetchAsteroidsMulti[startDate, endDate];
 
 If[asteroids === $Failed,
   Print["Aborting — could not fetch data."];

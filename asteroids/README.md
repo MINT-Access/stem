@@ -42,20 +42,22 @@ environment variable.
 # Last 7 days (default)
 wolframscript -file main.wl
 
-# Specific date range (1–7 days, NeoWs limit)
-wolframscript -file main.wl -- 2026-01-01 2026-01-07
+# Specific date range — any length; automatically split into ≤7-day chunks
+wolframscript -file main.wl -- 2026-01-01 2026-01-07   # one week
+wolframscript -file main.wl -- 2026-01-01 2026-01-31   # one month (5 requests)
+wolframscript -file main.wl -- 2026-01-01 2026-06-30   # six months (27 requests)
 
 # With a personal NASA API key
-NASA_API_KEY=your_key wolframscript -file main.wl -- 2026-01-01 2026-01-07
+NASA_API_KEY=your_key wolframscript -file main.wl -- 2026-01-01 2026-01-31
 
 # With speech enabled
-# STEM_SPEAK=1 NASA_API_KEY=your_key wolframscript -file main.wl -- 2026-01-01 2026-01-07
+STEM_SPEAK=1 NASA_API_KEY=your_key wolframscript -file main.wl -- 2026-01-01 2026-01-31
 
 # Experiments — active preset's dates, filter, and scale
 wolframscript -file experiment.wl
 
 # Override the preset's date range from the command line
-NASA_API_KEY=your_key wolframscript -file experiment.wl -- 2026-01-01 2026-01-07
+NASA_API_KEY=your_key wolframscript -file experiment.wl -- 2026-01-01 2026-01-31
 
 # Offline tests (no API call)
 wolframscript -file tests/test_analyse.wl
@@ -63,6 +65,9 @@ wolframscript -file tests/test_analyse.wl
 # Play the sonification (macOS)
 afplay data/asteroids_<start>_<end>.wav
 ```
+
+With `DEMO_KEY` the NASA API allows 30 requests/hour; a multi-month range stays
+well within that. For very long ranges (6+ months) a personal key is recommended.
 
 ## Experiment presets (experiment.wl)
 
@@ -75,7 +80,7 @@ afplay data/asteroids_<start>_<end>.wav
 | major_mood        | Same data, brighter major pentatonic scale           |
 
 Pass `-- YYYY-MM-DD YYYY-MM-DD` to override the active preset's date range
-while keeping its filter and scale (1–7 days, NeoWs limit).
+while keeping its filter and scale. Any range length is accepted.
 
 ## Sonification
 

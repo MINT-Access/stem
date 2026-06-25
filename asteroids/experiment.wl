@@ -4,8 +4,10 @@
    experiment.wl — Date range and filter experiments
    Edit the ACTIVE PRESET and run:
      wolframscript -file experiment.wl
-   Override the preset's date range from the command line (1–7 days):
+   Override the preset's date range from the command line:
      wolframscript -file experiment.wl -- YYYY-MM-DD YYYY-MM-DD
+   Any date range length is accepted; ranges longer than 7 days
+   are split into multiple NeoWs requests automatically.
    ======================================================== *)
 
 $projectRoot  = DirectoryName[$InputFileName];
@@ -94,8 +96,8 @@ Which[
 
 With[{span = QuantityMagnitude[
     DateDifference[DateObject[startDate], DateObject[endDate], "Day"]]},
-  If[span < 0 || span > 7,
-    Print["Error: date range must be 1-7 days (got ", span, " days)."];
+  If[span < 0,
+    Print["Error: end date must be on or after start date."];
     Exit[1]
   ]
 ];
@@ -110,7 +112,7 @@ Print["  Scale: ", scaleName];
 Print[""];
 
 Print["[1/4] Fetching..."];
-allAsteroids = FetchAsteroids[startDate, endDate];
+allAsteroids = FetchAsteroidsMulti[startDate, endDate];
 If[allAsteroids === $Failed, Print["Fetch failed."]; Exit[1]];
 
 asteroids = filterFn[allAsteroids];
