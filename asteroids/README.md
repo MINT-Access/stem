@@ -8,7 +8,7 @@ musical sonification — all from the terminal via `wolframscript`.
 ## What it does
 
 Every day, dozens of asteroids pass near Earth. This project fetches
-the last 7 days of close-approach data, analyses the distances,
+close-approach data from NASA's NeoWs API, analyses the distances,
 velocities, and sizes, and turns the data into:
 
 - A **CSV report** with one row per asteroid
@@ -25,15 +25,25 @@ velocities, and sizes, and turns the data into:
 - `stem-core` (sibling directory `../stem-core`) — loaded automatically by `main.wl`
 
 Optional: a free NASA API key from https://api.nasa.gov (the default
-DEMO_KEY works at 30 requests/hour).
+`DEMO_KEY` works at 30 requests/hour). Set it via the `NASA_API_KEY`
+environment variable to avoid editing source files.
 
 ## Usage
 
 ```bash
-# Full run — last 7 days
+# Last 7 days (default)
 wolframscript -file main.wl
 
-# Experiments (date ranges, filters, scales)
+# Specific date range (1–7 days, NeoWs limit)
+wolframscript -file main.wl -- 2026-01-01 2026-01-07
+
+# With a personal NASA API key
+NASA_API_KEY=your_key wolframscript -file main.wl -- 2026-01-01 2026-01-07
+
+# With speech enabled — use a wrapper script (see Console output section)
+# NASA_API_KEY=your_key wolframscript -file run.wl -- 2026-01-01 2026-01-07
+
+# Experiments (filters, scales, named presets)
 wolframscript -file experiment.wl
 
 # Offline tests (no API call)
@@ -118,10 +128,17 @@ and remain as bare `Print`; export confirmations use `STEMDescribeCSV`
 (1 row per asteroid, 12 columns), `STEMDescribeGIF`, and `STEMDescribeWAV`;
 the final line uses `STEMSay`.
 
-To also hear a spoken announcement when the run finishes:
+To also hear a spoken announcement when the run finishes, use a small
+wrapper script that sets the flag before loading `main.wl`:
+
+```wolfram
+(* run.wl *)
+$STEMSpeakEnabled = True;
+Get["/path/to/asteroids/main.wl"];
+```
 
 ```sh
-wolframscript -e '$STEMSpeakEnabled = True' -file main.wl
+NASA_API_KEY=your_key wolframscript -file run.wl
 ```
 
 See [`docs/voiceover-wolframscript-guide.md`](../docs/voiceover-wolframscript-guide.md)
