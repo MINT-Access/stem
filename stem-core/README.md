@@ -111,6 +111,11 @@ outCSV = "data/results.csv";
 ExportCSV[Prepend[data, {"t", "y"}], outCSV];
 STEMDescribeCSV[outCSV, Length[data], 2];
 
+frames = (* list of Graphics objects, one per frame *);
+outGIF = "data/animation.gif";
+ExportGIF[frames, outGIF, 25];
+STEMDescribeGIF[outGIF, Length[frames], 25];
+
 notes = StemSynthNote[
   ScaleLookup[#[[2]], -1, 1, $StemScales["Minor"], 220.0],
   0.3, 0.7
@@ -142,6 +147,8 @@ Key functions:
 | `STEMHeading["text"]` | `=== text ===` |
 | `STEMSection["title"]` | `-- title --` |
 | `STEMPrintN["label", x, "unit", spec]` | `  label: value unit` |
+| `STEMDescribeCSV["path", nRows, nCols]` | `  CSV: nRows rows, nCols columns — path` |
+| `STEMDescribeGIF["path", nFrames, fps]` | `  Animation: nFrames frames at fps fps — path` |
 | `STEMDescribeWAV["path", dur]` | `  Audio: D.D s — path` |
 | `STEMSay["text"]` | prints text; speaks it when `$STEMSpeakEnabled` is `True` |
 

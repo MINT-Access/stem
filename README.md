@@ -64,20 +64,26 @@ afplay asteroids/data/asteroids_*.wav
 
 Solves the nonlinear pendulum ODE with `NDSolve`. Maps the swing angle to an
 A minor pentatonic scale — each half-swing becomes one note, volume set by
-angular velocity. See [`pendulum/README.md`](pendulum/README.md).
+angular velocity. The GIF shows the bob in side-on view with a colour trail
+that shifts from blue (centre) to red-violet (maximum swing).
+See [`pendulum/README.md`](pendulum/README.md).
 
 ### lorenz
 
 Simulates the Lorenz strange attractor. Notes are triggered at each local
 extremum of x(t); pitch tracks which wing of the butterfly the trajectory is
-on. Includes a dual-trajectory animation for visualising the butterfly effect.
+on. The GIF renders the growing trajectory in x-z projection with a
+blue→cyan→orange→red colour gradient; `ExportDualAnimation` shows two
+near-identical trajectories diverging apart.
 See [`lorenz/README.md`](lorenz/README.md).
 
 ### asteroids
 
 Fetches live close-approach data from NASA's NeoWs API. Each asteroid becomes
 one note — pitch reflects miss distance, timbre distinguishes hazardous from
-safe. See [`asteroids/README.md`](asteroids/README.md).
+safe. The GIF shows a top-down solar system view with asteroids revealed
+farthest-to-closest, coloured cyan (safe) or red (hazardous).
+See [`asteroids/README.md`](asteroids/README.md).
 
 ---
 
