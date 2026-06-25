@@ -98,11 +98,12 @@ STEMDescribeGIF[filePath_String, nFrames_Integer, fps_?NumericQ] :=
 (* ── 4. Speech integration (optional, macOS only) ─────────── *)
 
 (* $STEMSpeakEnabled
-   Set to True before loading this file (or any time after) to enable
-   the macOS `say` command alongside normal Print output.
-   Default False so the flag is always defined, but speech is strictly opt-in. *)
+   Read from the STEM_SPEAK environment variable at load time.
+   Set STEM_SPEAK=1 before running any project to enable the macOS `say`
+   command alongside normal Print output; any other value (or unset) leaves
+   speech disabled. *)
 
-If[!ValueQ[$STEMSpeakEnabled], $STEMSpeakEnabled = False]
+$STEMSpeakEnabled = Environment["STEM_SPEAK"] === "1"
 
 
 (* STEMSay

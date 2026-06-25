@@ -72,7 +72,7 @@ After `Get[".../stem-core/init.wl"]` all of the following are available:
 | `STEMDescribeCSV[path, nRows, nCols]` | accessibility | Print CSV export summary line |
 | `STEMDescribeWAV[path, durationSec]` | accessibility | Print WAV export summary line |
 | `STEMDescribeGIF[path, nFrames, fps]` | accessibility | Print GIF export summary line |
-| `$STEMSpeakEnabled` | accessibility | Boolean flag; enables macOS `say` for `STEMSay` |
+| `$STEMSpeakEnabled` | accessibility | Boolean flag; `True` when `STEM_SPEAK=1` env var is set at load time |
 | `STEMSay[text]` | accessibility | Print text + optionally speak via `say` |
 
 See `stem-core/AGENTS.md` for full parameter descriptions and constraints.

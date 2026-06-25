@@ -155,7 +155,7 @@ Key functions:
 To enable spoken output via the macOS `say` command:
 
 ```sh
-wolframscript -e '$STEMSpeakEnabled = True' -file main.wl
+STEM_SPEAK=1 wolframscript -file main.wl
 ```
 
 For the full VoiceOver + wolframscript workflow, see

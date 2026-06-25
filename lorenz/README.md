@@ -121,17 +121,11 @@ each and remain as bare `Print`; export confirmations use `STEMDescribeCSV`
 `STEMDescribeWAV` (duration from `params["TimeEnd"]`); the final line uses
 `STEMSay`.
 
-To also hear a spoken announcement when the run finishes, use a small
-wrapper script that sets the flag before loading `main.wl`:
-
-```wolfram
-(* run.wl *)
-$STEMSpeakEnabled = True;
-Get["/path/to/lorenz/main.wl"];
-```
+To also hear a spoken announcement when the run finishes, set `STEM_SPEAK=1`
+before running:
 
 ```sh
-wolframscript -file run.wl
+STEM_SPEAK=1 wolframscript -file main.wl
 ```
 
 See [`docs/voiceover-wolframscript-guide.md`](../docs/voiceover-wolframscript-guide.md)

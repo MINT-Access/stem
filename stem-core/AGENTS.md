@@ -163,18 +163,17 @@ STEMDescribeGIF["data/anim.gif", 150, 30]
 #### Speech integration
 
 ##### `$STEMSpeakEnabled`
-Boolean flag, default `False`. Set to `True` to enable the macOS `say` command.
-`If[!ValueQ[$STEMSpeakEnabled], ...]` in `accessibility.wl` means setting the
-flag before loading `init.wl` is respected.
+Boolean flag. Set by reading the `STEM_SPEAK` environment variable at load time:
+`True` when `STEM_SPEAK=1`, `False` otherwise. The flag is always defined after
+`init.wl` loads; it must not be set before or after loading — use the env var instead.
 
 ##### `STEMSay[text_String]`
 Always prints `text`. When `$STEMSpeakEnabled` is `True`, also invokes
 `say "text"` via `Run`. Double-quote characters in `text` are escaped before
 shell hand-off.
 
-```wolfram
-$STEMSpeakEnabled = True;
-STEMSay["Lorenz Attractor done"]   (* printed + spoken *)
+```sh
+STEM_SPEAK=1 wolframscript -file main.wl   # printed + spoken
 ```
 
 ---
@@ -322,9 +321,9 @@ metadata is embedded.
 **Screen-reader output**: `accessibility.wl` provides `STEMHeading`, `STEMSection`,
 `STEMBullet`, `STEMPrintN`, `STEMDescribeCSV`, `STEMDescribeWAV`, `STEMDescribeGIF`,
 and `STEMSay` — all guaranteed to emit exactly one complete stdout line, so
-VoiceOver reads each item as a discrete unit. Set `$STEMSpeakEnabled = True`
-before loading `init.wl` to also invoke `say` for `STEMSay` calls. See
-`docs/voiceover-wolframscript-guide.md` for a full workflow walkthrough.
+VoiceOver reads each item as a discrete unit. Set `STEM_SPEAK=1` in the shell
+environment before running any project to also invoke `say` for `STEMSay` calls.
+See `docs/voiceover-wolframscript-guide.md` for a full workflow walkthrough.
 
 **Paths**: `EnsureDir` uses `CreateDirectory` (creates one level). If a project
 nests outputs more than one directory deep below an existing root, each level

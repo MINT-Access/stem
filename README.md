@@ -111,10 +111,10 @@ self-contained announcement so VoiceOver reads it cleanly without splitting
 numbers across lines.
 
 To enable spoken announcements via the macOS `say` command alongside normal
-printed output, set the flag before running:
+printed output, set `STEM_SPEAK=1` before running:
 
 ```sh
-wolframscript -e '$STEMSpeakEnabled = True' -file pendulum/main.wl
+STEM_SPEAK=1 wolframscript -file pendulum/main.wl
 ```
 
 For the complete VoiceOver + wolframscript workflow — Terminal setup, navigation

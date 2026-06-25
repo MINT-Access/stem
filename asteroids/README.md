@@ -48,8 +48,8 @@ wolframscript -file main.wl -- 2026-01-01 2026-01-07
 # With a personal NASA API key
 NASA_API_KEY=your_key wolframscript -file main.wl -- 2026-01-01 2026-01-07
 
-# With speech enabled — use a wrapper script (see Console output section)
-# NASA_API_KEY=your_key wolframscript -file run.wl -- 2026-01-01 2026-01-07
+# With speech enabled
+# STEM_SPEAK=1 NASA_API_KEY=your_key wolframscript -file main.wl -- 2026-01-01 2026-01-07
 
 # Experiments — active preset's dates, filter, and scale
 wolframscript -file experiment.wl
@@ -142,17 +142,11 @@ and remain as bare `Print`; export confirmations use `STEMDescribeCSV`
 (1 row per asteroid, 12 columns), `STEMDescribeGIF`, and `STEMDescribeWAV`;
 the final line uses `STEMSay`.
 
-To also hear a spoken announcement when the run finishes, use a small
-wrapper script that sets the flag before loading `main.wl`:
-
-```wolfram
-(* run.wl *)
-$STEMSpeakEnabled = True;
-Get["/path/to/asteroids/main.wl"];
-```
+To also hear a spoken announcement when the run finishes, set `STEM_SPEAK=1`
+before running:
 
 ```sh
-NASA_API_KEY=your_key wolframscript -file run.wl
+STEM_SPEAK=1 NASA_API_KEY=your_key wolframscript -file main.wl
 ```
 
 See [`docs/voiceover-wolframscript-guide.md`](../docs/voiceover-wolframscript-guide.md)

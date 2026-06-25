@@ -103,26 +103,18 @@ afplay -v 0.5 data/<output>.wav    # 50 % volume
 
 ## Enabling spoken announcements
 
-stem-core includes an optional `say` integration controlled by a flag. Set the
-flag **before** the script loads stem-core, or inside a wrapper script:
+stem-core includes an optional `say` integration controlled by the `STEM_SPEAK`
+environment variable. Set it to `1` before running any project:
 
-```wolfram
-$STEMSpeakEnabled = True;
-Get["path/to/stem-core/init.wl"];
-(* ... rest of main.wl ... *)
+```sh
+STEM_SPEAK=1 wolframscript -file main.wl
 ```
 
-Or pass it as an inline expression before loading:
-
-```
-wolframscript -e '$STEMSpeakEnabled = True' -file main.wl
-```
-
-When the flag is `True`, calls to `STEMSay` inside `main.wl` speak the text
+When `STEM_SPEAK=1`, calls to `STEMSay` inside `main.wl` speak the text
 through the macOS `say` command in addition to printing it. This is useful when
 you want a spoken "done" announcement without monitoring the terminal actively.
 
-The flag defaults to `False` so normal script runs are silent.
+The variable defaults to unset so normal script runs are silent.
 
 ---
 
@@ -172,13 +164,13 @@ site; omit them to print only the path.
 ### Speech integration
 
 ```wolfram
-$STEMSpeakEnabled   (* Boolean flag, default False *)
+$STEMSpeakEnabled   (* Boolean flag — True when STEM_SPEAK=1 in the environment *)
 STEMSay["text"]     (* Print + optional say *)
 ```
 
 `STEMSay` always prints its argument. When `$STEMSpeakEnabled` is `True` it also
 invokes the macOS `say` command. The function is safe to call unconditionally —
-enabling or disabling speech only requires changing the flag.
+enabling or disabling speech only requires setting or unsetting `STEM_SPEAK`.
 
 ---
 
@@ -208,8 +200,8 @@ a NASA API key in `$NASAAPIKEY`; the pendulum and lorenz projects have no extern
 dependencies.
 
 **`say` does not speak**
-Confirm `$STEMSpeakEnabled` is `True` and that the `say` binary is present
-(`which say`). On non-macOS systems, set `$STEMSpeakEnabled = False`.
+Confirm `STEM_SPEAK=1` is set in the shell environment and that the `say` binary
+is present (`which say`). On non-macOS systems, leave `STEM_SPEAK` unset.
 
 **VoiceOver reads numbers as individual digits**
 This happens when scientific notation like `3.498e-07` is split across multiple
