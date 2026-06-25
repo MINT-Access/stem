@@ -24,9 +24,17 @@ velocities, and sizes, and turns the data into:
 - Internet connection (to fetch from NASA)
 - `stem-core` (sibling directory `../stem-core`) — loaded automatically by `main.wl`
 
-Optional: a free NASA API key from https://api.nasa.gov (the default
-`DEMO_KEY` works at 30 requests/hour). Set it via the `NASA_API_KEY`
-environment variable to avoid editing source files.
+A free NASA API key from https://api.nasa.gov is required for sustained
+use. The default `DEMO_KEY` works at 30 requests/hour; for anything
+beyond that, register for a free key and set it as an environment
+variable before running:
+
+```bash
+export NASA_API_KEY=your_key_here
+```
+
+Never hardcode the key in source files — always pass it via the
+environment variable.
 
 ## Usage
 

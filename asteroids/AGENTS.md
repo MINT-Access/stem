@@ -38,8 +38,16 @@ afplay data/asteroids_<dates>.wav         # play audio on macOS
 ## API key
 
 The project uses NASA's DEMO_KEY by default (30 req/hour).
-For heavier use, get a free key at https://api.nasa.gov and set
-`$NasaApiKey` in `src/fetch.wl`.
+For heavier use, get a free key at https://api.nasa.gov.
+
+**Never hardcode the key in source files.** Always pass it via the
+environment variable:
+
+```bash
+export NASA_API_KEY=your_key_here
+```
+
+`src/fetch.wl` reads it at runtime via `Environment["NASA_API_KEY"]`.
 
 ## Data model
 
