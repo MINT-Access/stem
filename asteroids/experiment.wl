@@ -4,10 +4,11 @@
    experiment.wl — Date range and filter experiments
    Edit the ACTIVE PRESET and run:
      wolframscript -file experiment.wl
-   Override the preset's date range from the command line:
-     wolframscript -file experiment.wl -- YYYY-MM-DD YYYY-MM-DD
+   Override the preset's date range and/or scale from the command line:
+     wolframscript -file experiment.wl -- YYYY-MM-DD YYYY-MM-DD [Scale]
    Any date range length is accepted; ranges longer than 7 days
    are split into multiple NeoWs requests automatically.
+   Valid scales: MinorPentatonic MajorPentatonic Major Minor WholeTone Phrygian
    ======================================================== *)
 
 $projectRoot  = DirectoryName[$InputFileName];
@@ -79,19 +80,33 @@ filterFn  = Identity;
 scaleName = "MinorPentatonic";
 
 (* -------------------------------------------------------
-   CLI date override — takes priority over the active preset.
+   CLI overrides — take priority over the active preset.
    Drop script path and any bare "--" wolframscript may include.
    ------------------------------------------------------- *)
-$cliDates = Select[Rest[$ScriptCommandLine], (# =!= "--") &];
+$cliArgs    = Select[Rest[$ScriptCommandLine], (# =!= "--") &];
+$validScales = {"MinorPentatonic", "MajorPentatonic", "Major", "Minor",
+                "WholeTone", "Phrygian"};
+
 Which[
-  Length[$cliDates] === 2,
-    startDate = $cliDates[[1]];
-    endDate   = $cliDates[[2]],
-  Length[$cliDates] === 0,
+  Length[$cliArgs] === 3,
+    startDate = $cliArgs[[1]];
+    endDate   = $cliArgs[[2]];
+    scaleName = $cliArgs[[3]],
+  Length[$cliArgs] === 2,
+    startDate = $cliArgs[[1]];
+    endDate   = $cliArgs[[2]],
+  Length[$cliArgs] === 0,
     Null,
   True,
-    Print["Usage: wolframscript -file experiment.wl [-- YYYY-MM-DD YYYY-MM-DD]"];
+    Print["Usage: wolframscript -file experiment.wl [-- YYYY-MM-DD YYYY-MM-DD [Scale]]"];
+    Print["Scales: ", StringRiffle[$validScales, "  "]];
     Exit[1]
+];
+
+If[!MemberQ[$validScales, scaleName],
+  Print["Error: unknown scale \"", scaleName, "\". Valid: ",
+        StringRiffle[$validScales, "  "]];
+  Exit[1]
 ];
 
 With[{span = QuantityMagnitude[
