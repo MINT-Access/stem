@@ -4,6 +4,8 @@
    experiment.wl — Date range and filter experiments
    Edit the ACTIVE PRESET and run:
      wolframscript -file experiment.wl
+   Override the preset's date range from the command line (1–7 days):
+     wolframscript -file experiment.wl -- YYYY-MM-DD YYYY-MM-DD
    ======================================================== *)
 
 $projectRoot  = DirectoryName[$InputFileName];
@@ -73,6 +75,30 @@ startDate = DateString[Today - Quantity[6,"Days"], "ISODate"];
 endDate   = DateString[Today, "ISODate"];
 filterFn  = Identity;
 scaleName = "MinorPentatonic";
+
+(* -------------------------------------------------------
+   CLI date override — takes priority over the active preset.
+   Drop script path and any bare "--" wolframscript may include.
+   ------------------------------------------------------- *)
+$cliDates = Select[Rest[$ScriptCommandLine], (# =!= "--") &];
+Which[
+  Length[$cliDates] === 2,
+    startDate = $cliDates[[1]];
+    endDate   = $cliDates[[2]],
+  Length[$cliDates] === 0,
+    Null,
+  True,
+    Print["Usage: wolframscript -file experiment.wl [-- YYYY-MM-DD YYYY-MM-DD]"];
+    Exit[1]
+];
+
+With[{span = QuantityMagnitude[
+    DateDifference[DateObject[startDate], DateObject[endDate], "Day"]]},
+  If[span < 0 || span > 7,
+    Print["Error: date range must be 1-7 days (got ", span, " days)."];
+    Exit[1]
+  ]
+];
 
 (* -------------------------------------------------------
    Run
