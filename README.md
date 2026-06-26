@@ -128,3 +128,9 @@ STEM_SPEAK=1 wolframscript -file pendulum/main.wl
 For the complete VoiceOver + wolframscript workflow — Terminal setup, navigation
 shortcuts, and the full accessibility API — see
 [`docs/voiceover-wolframscript-guide.md`](docs/voiceover-wolframscript-guide.md).
+
+---
+
+## About MINT Access
+
+MINT Access is a Swiss organisation promoting accessible STEM education. Website: [mintaccess.ch](https://www.mintaccess.ch/) (German)
