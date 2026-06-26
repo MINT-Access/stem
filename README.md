@@ -1,5 +1,7 @@
 # stem
 
+[![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](LICENSE)
+
 A monorepo of Wolfram Language physics simulations and data sonification projects,
 each producing CSV data, an animated GIF, and a musical WAV file — all from the
 terminal via `wolframscript`.
