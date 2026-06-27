@@ -1,0 +1,42 @@
+{
+  "version": 1,
+  "app": "relativity",
+  "description": "General relativity: gravitational wave chirp from binary inspiral (post-Newtonian model)",
+
+  "simulation": {
+    "mode": "chirp",
+
+    "chirp": {
+      "mass1_solar":       36.0,
+      "mass2_solar":       29.0,
+      "distance_mpc":     410.0,
+      "sample_rate":      4096,
+      "time_before_merger": 0.5,
+      "ringdown_duration":  0.05,
+      "frequency_min_hz":  20.0,
+      "frequency_max_hz": 500.0,
+
+      "presets": {
+        "gw150914": { "mass1": 36.0,  "mass2": 29.0,  "distance_mpc": 410.0 },
+        "gw170817": { "mass1":  1.17, "mass2":  1.36, "distance_mpc":  40.0 },
+        "stellar":  { "mass1": 10.0,  "mass2":  8.0,  "distance_mpc": 100.0 }
+      }
+    }
+  },
+
+  "animation": {
+    "fps":    30,
+    "width":  800,
+    "height": 400
+  },
+
+  "sonification": {
+    "sample_rate": 44100,
+
+    "chirp": {
+      "time_stretch":     4.0,
+      "frequency_shift":  1.0,
+      "amplitude_scale":  1.0
+    }
+  }
+}
