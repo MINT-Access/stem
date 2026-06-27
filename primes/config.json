@@ -1,0 +1,35 @@
+{
+  "version": 1,
+  "app": "primes",
+  "description": "Prime number patterns: Ulam spiral and prime gap analysis",
+
+  "simulation": {
+    "mode": "ulam",
+    "ulam": {
+      "size": 101,
+      "color_primes": "white",
+      "color_composite": "black"
+    },
+    "gaps": {
+      "count": 5000,
+      "max_gap_display": 72
+    }
+  },
+
+  "animation": {
+    "fps": 12,
+    "width": 600,
+    "height": 600
+  },
+
+  "sonification": {
+    "pitch": {
+      "min_hz": 120,
+      "max_hz": 1000
+    },
+    "gaps": {
+      "tempo_bpm": 120,
+      "tone_duration_ms": 80
+    }
+  }
+}
