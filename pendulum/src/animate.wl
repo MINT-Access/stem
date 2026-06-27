@@ -154,7 +154,8 @@ AnimateDoublePendulum[solution_List, cfg_Association, outPath_String] :=
     ];
 
     EnsureDir[outPath];
-    ExportGIF[frames, outPath, frameRate]
+    ExportGIF[frames, outPath, frameRate];
+    Length[frames]
   ]
 
 
@@ -194,5 +195,6 @@ ExportAnimation[solution_List, params_Association, filePath_String,
       {k, 1, Length[sampledSol]}
     ];
 
-    ExportGIF[frames, filePath, frameRate]
+    ExportGIF[frames, filePath, frameRate];
+    Length[frames]
   ]

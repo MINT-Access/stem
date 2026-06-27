@@ -63,8 +63,8 @@ Which[
 
     Print["[3/4] Generating animation..."];
     outGIF = FileNameJoin[{$projectRoot, "data", "simple_animation.gif"}];
-    ExportAnimation[solution, params, outGIF, 25, 1.0];
-    STEMDescribeGIF[outGIF];
+    nFrames = ExportAnimation[solution, params, outGIF, 25, 1.0];
+    STEMDescribeGIF[outGIF, nFrames, 25];
     Print[""];
 
     Print["[4/4] Generating sonification..."];
@@ -114,8 +114,8 @@ Which[
 
     Print["[3/4] Generating animation..."];
     outGIF = FileNameJoin[{$projectRoot, "data", "double_animation.gif"}];
-    AnimateDoublePendulum[solution, cfg, outGIF];
-    STEMDescribeGIF[outGIF];
+    nFrames = AnimateDoublePendulum[solution, cfg, outGIF];
+    STEMDescribeGIF[outGIF, nFrames, 25];
     Print[""];
 
     Print["[4/4] Generating sonification..."];
@@ -133,4 +133,4 @@ Which[
 ];
 
 STEMHeading["Done"];
-STEMSay["Pendulum simulation complete"];
+STEMSay["Complete. Play audio: afplay " <> outWAV];

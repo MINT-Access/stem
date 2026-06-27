@@ -126,4 +126,4 @@ Which[
 ];
 
 STEMHeading["Done"];
-STEMSay["Cellular automata simulation complete. Play audio: afplay " <> outWAV];
+STEMSay["Complete. Play audio: afplay " <> outWAV];

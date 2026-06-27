@@ -53,7 +53,7 @@ PrintSummary[solution_List, params_Association] := Module[
   maxAngle = Max[angles] * 180.0 / Pi;
   minAngle = Min[angles] * 180.0 / Pi;
 
-  Print["--- Simulation Summary ---"];
+  STEMSection["Simulation Summary"];
   STEMPrintN["Steps computed",  Length[solution]];
   STEMPrintN["Max angle",       maxAngle,                             "deg", 4];
   STEMPrintN["Min angle",       minAngle,                             "deg", 4];

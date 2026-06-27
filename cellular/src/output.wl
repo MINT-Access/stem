@@ -53,7 +53,7 @@ PrintCellularSummary[grid3D_List, modeName_String] :=
     finalPop = Last[pops];
     peakGen  = First[Position[pops, maxPop]][[1]] - 1;   (* 0-indexed *)
 
-    Print["--- Cellular Automata Summary (", modeName, ") ---"];
+    STEMSection["Cellular Automata Summary (" <> modeName <> ")"];
     STEMPrintN["Generations",     nGen];
     Print["  Grid:          ", nRows, " x ", nCols, " (", nRows * nCols, " cells)"];
     STEMPrintN["Initial pop",     firstPop];

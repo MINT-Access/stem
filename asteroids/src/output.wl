@@ -48,13 +48,12 @@ PrintSummary[asteroids_List, startDate_String, endDate_String] :=
     sizeDist   = SizeDistribution[asteroids];
 
     Print[""];
-    Print["=== Near-Earth Asteroid Report: ",
-          startDate, " to ", endDate, " ==="];
+    STEMHeading["Near-Earth Asteroid Report: " <> startDate <> " to " <> endDate];
     Print[""];
     STEMPrintN["Total asteroids tracked", distStats["count"]];
     STEMPrintN["Potentially hazardous",  Length[hazardous]];
     Print[""];
-    Print["-- Miss Distance --"];
+    STEMSection["Miss Distance"];
     Print["  Closest:  ",
       IntegerString[Round[distStats["minKm"]]], " km  (",
       FmtN[ToLunarDistances[distStats["minKm"]], {5,2}], " LD)"];
@@ -64,22 +63,22 @@ PrintSummary[asteroids_List, startDate_String, endDate_String] :=
     Print["  Mean:     ",
       IntegerString[Round[distStats["meanKm"]]], " km"];
     Print[""];
-    Print["-- Velocity --"];
+    STEMSection["Velocity"];
     STEMPrintN["Min velocity",  velStats["minKmS"],  "km/s", 4];
     STEMPrintN["Max velocity",  velStats["maxKmS"],  "km/s", 4];
     STEMPrintN["Mean velocity", velStats["meanKmS"], "km/s", 4];
     Print[""];
-    Print["-- Size Distribution --"];
+    STEMSection["Size Distribution"];
     KeyValueMap[
       Print["  ", #1, ": ", #2] &,
       sizeDist
     ];
     Print[""];
-    Print["-- Closest Approach --"];
+    STEMSection["Closest Approach"];
     Print["  ", ClosestApproachSummary[First[asteroids]]];
     If[Length[hazardous] > 0,
       Print[""];
-      Print["-- Potentially Hazardous Asteroids --"];
+      STEMSection["Potentially Hazardous Asteroids"];
       Scan[
         Print["  ", #["name"], "  dist=",
           IntegerString[Round[#["missDistanceKm"]]], " km  vel=",

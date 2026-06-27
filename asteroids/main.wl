@@ -100,9 +100,9 @@ Print[""];
 Print["[4/4] Synthesising audio..."];
 outWAV = FileNameJoin[{$projectRoot, "data",
   "asteroids_" <> startDate <> "_" <> endDate <> ".wav"}];
-ExportSonification[asteroids, cfg, outWAV];
-STEMDescribeWAV[outWAV];
+trajDuration = ExportSonification[asteroids, cfg, outWAV];
+STEMDescribeWAV[outWAV, trajDuration];
 
 Print[""];
 STEMHeading["Done"];
-STEMSay["Play audio:  afplay " <> outWAV];
+STEMSay["Complete. Play audio: afplay " <> outWAV];

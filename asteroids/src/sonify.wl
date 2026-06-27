@@ -62,5 +62,6 @@ ExportSonification[asteroids_List, cfg_Association, filePath_String] :=
     Print["  Trajectory: ", n, " asteroids, ",
       FmtN[trajDuration, 3], " s total"];
 
-    SonifyTrajectory[trajectory, cfgWithDuration, filePath, {"approach"}]
+    SonifyTrajectory[trajectory, cfgWithDuration, filePath, {"approach"}];
+    trajDuration
   ]
