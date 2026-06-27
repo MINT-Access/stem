@@ -28,6 +28,19 @@ ExportResults[solution_List, params_Association, filePath_String] := Module[
 ]
 
 
+(* ExportDoublePendulumResults
+   Writes the double pendulum solution to a CSV file.
+   Columns: time_s, theta1_rad, omega1_rad_s, theta2_rad, omega2_rad_s *)
+
+ExportDoublePendulumResults[solution_List, filePath_String] :=
+  Module[{header, rows},
+    header = {{"time_s", "theta1_rad", "omega1_rad_s",
+               "theta2_rad", "omega2_rad_s"}};
+    rows   = {#[[1]], #[[2]], #[[3]], #[[4]], #[[5]]} & /@ solution;
+    ExportCSV[Join[header, rows], filePath]
+  ]
+
+
 (* PrintSummary
    Prints a brief summary of key simulation results to stdout. *)
 

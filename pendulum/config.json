@@ -4,7 +4,7 @@
   "description": "Simple and double pendulum simulation",
 
   "simulation": {
-    "mode": "simple",
+    "mode": "double",
     "duration": 20.0,
     "timestep": 0.01,
     "gravity": 9.81,

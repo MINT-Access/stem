@@ -1,9 +1,12 @@
 #!/usr/bin/env wolframscript
 
 (* ========================================================
-   Pendulum Simulation — Entry Point
-   Usage: wolframscript -file main.wl [-- [--key=value ...]]
-          wolframscript -file main.wl -- --config-dump
+   Pendulum Simulation — Unified Entry Point
+   Usage:
+     wolframscript -file run.wl                         # double pendulum (config default)
+     wolframscript -file run.wl -- --simulation.mode=simple
+     wolframscript -file run.wl -- --config-dump
+     wolframscript -file run.wl -- --simulation.double.angle1_deg=150
    ======================================================== *)
 
 $projectRoot  = DirectoryName[$InputFileName];
@@ -16,54 +19,118 @@ Get[FileNameJoin[{$projectRoot, "src", "sonify.wl"}]];
 
 (* --- Load config (exits here if --config-dump is present) --- *)
 $cliArgs = Select[Rest[$ScriptCommandLine], # =!= "--" &];
-cfg = LoadConfig["pendulum", $cliArgs];
+cfg  = LoadConfig["pendulum", $cliArgs];
+mode = GetCfg[cfg, {"simulation","mode"}, "simple"];
 
-(* --- Build simulation params from config --- *)
-params = <|
-  "Length"       -> GetCfg[cfg, {"simulation","simple","length"},     1.0],
-  "Gravity"      -> GetCfg[cfg, {"simulation","gravity"},             9.81],
-  "InitAngle"    -> GetCfg[cfg, {"simulation","simple","angle_deg"}, 45.0] * Pi / 180.0,
-  "InitVelocity" -> 0.0,
-  "TimeEnd"      -> GetCfg[cfg, {"simulation","duration"},           20.0],
-  "TimeStep"     -> GetCfg[cfg, {"simulation","timestep"},           0.01]
-|>;
-
-STEMHeading["Pendulum Simulation"];
-Print["  Length:        ", FmtN[params["Length"], 3], " m"];
-Print["  Initial angle: ", FmtN[params["InitAngle"], 4], " rad (",
-  FmtN[params["InitAngle"] * 180.0 / Pi, 3], " deg)"];
-Print["  Duration:      ", params["TimeEnd"], " s"];
-Print["  Period (small-angle approx): ",
-  FmtN[2 Pi Sqrt[params["Length"] / params["Gravity"]], 4], " s"];
+STEMHeading["Pendulum Simulation: " <> mode];
 Print[""];
 
-(* --- 1. Run the simulation --- *)
-Print["[1/4] Solving ODE..."];
-solution = SolvePendulum[params];
-Print["  Computed ", Length[solution], " time steps."];
-Print[""];
+Which[
 
-(* --- 2. Export CSV results --- *)
-Print["[2/4] Exporting CSV..."];
-outCSV = FileNameJoin[{$projectRoot, "data", "results.csv"}];
-ExportResults[solution, params, outCSV];
-STEMDescribeCSV[outCSV, Length[solution], 5];
-PrintSummary[solution, params];
-Print[""];
+  (* ══════════════════════════════════════════════════════
+     SIMPLE PENDULUM
+     ══════════════════════════════════════════════════════ *)
+  mode === "simple",
 
-(* --- 3. Export animation --- *)
-Print["[3/4] Generating animation..."];
-outGIF = FileNameJoin[{$projectRoot, "data", "pendulum_animation.gif"}];
-ExportAnimation[solution, params, outGIF, 25, 1.0];
-STEMDescribeGIF[outGIF];
-Print[""];
+    params = <|
+      "Length"       -> GetCfg[cfg, {"simulation","simple","length"},     1.0],
+      "Gravity"      -> GetCfg[cfg, {"simulation","gravity"},             9.81],
+      "InitAngle"    -> GetCfg[cfg, {"simulation","simple","angle_deg"}, 45.0] * Pi / 180.0,
+      "InitVelocity" -> 0.0,
+      "TimeEnd"      -> GetCfg[cfg, {"simulation","duration"},           20.0],
+      "TimeStep"     -> GetCfg[cfg, {"simulation","timestep"},           0.01]
+    |>;
 
-(* --- 4. Export sonification --- *)
-Print["[4/4] Generating sonification..."];
-outWAV = FileNameJoin[{$projectRoot, "data", "pendulum_audio.wav"}];
-ExportSonification[solution, params, cfg, outWAV];
-STEMDescribeWAV[outWAV, solution[[-1, 1]]];
-Print[""];
+    Print["  Length:        ", FmtN[params["Length"], 3], " m"];
+    Print["  Initial angle: ",
+      FmtN[params["InitAngle"] * 180.0 / Pi, 3], " deg"];
+    Print["  Duration:      ", params["TimeEnd"], " s"];
+    Print["  Period (small-angle approx): ",
+      FmtN[2 Pi Sqrt[params["Length"] / params["Gravity"]], 4], " s"];
+    Print[""];
+
+    Print["[1/4] Solving ODE..."];
+    solution = SolvePendulum[params];
+    Print["  Computed ", Length[solution], " time steps."];
+    Print[""];
+
+    Print["[2/4] Exporting CSV..."];
+    outCSV = FileNameJoin[{$projectRoot, "data", "simple_results.csv"}];
+    ExportResults[solution, params, outCSV];
+    STEMDescribeCSV[outCSV, Length[solution], 5];
+    PrintSummary[solution, params];
+    Print[""];
+
+    Print["[3/4] Generating animation..."];
+    outGIF = FileNameJoin[{$projectRoot, "data", "simple_animation.gif"}];
+    ExportAnimation[solution, params, outGIF, 25, 1.0];
+    STEMDescribeGIF[outGIF];
+    Print[""];
+
+    Print["[4/4] Generating sonification..."];
+    outWAV = FileNameJoin[{$projectRoot, "data", "simple_audio.wav"}];
+    ExportSonification[solution, params, cfg, outWAV];
+    STEMDescribeWAV[outWAV, solution[[-1, 1]]];
+    Print[""],
+
+
+  (* ══════════════════════════════════════════════════════
+     DOUBLE PENDULUM
+     ══════════════════════════════════════════════════════ *)
+  mode === "double",
+
+    With[
+      {L1    = GetCfg[cfg, {"simulation","double","length1"},    1.0],
+       L2    = GetCfg[cfg, {"simulation","double","length2"},    1.0],
+       m1    = GetCfg[cfg, {"simulation","double","mass1"},      1.0],
+       m2    = GetCfg[cfg, {"simulation","double","mass2"},      1.0],
+       a1    = GetCfg[cfg, {"simulation","double","angle1_deg"}, 120.0],
+       a2    = GetCfg[cfg, {"simulation","double","angle2_deg"},  90.0],
+       tEnd  = GetCfg[cfg, {"simulation","duration"},            20.0]},
+
+      Print["  L1=", L1, " m, L2=", L2, " m"];
+      Print["  m1=", m1, " kg, m2=", m2, " kg"];
+      Print["  angle1_0=", a1, " deg  angle2_0=", a2, " deg"];
+      Print["  Duration=", tEnd, " s  (chaotic above ~60 deg)"];
+      Print[""]
+    ];
+
+    Print["[1/4] Solving double pendulum ODE..."];
+    solution = DoublePendulumModel[cfg];
+    Print["  Computed ", Length[solution], " time steps."];
+    With[
+      {th1 = solution[[All, 2]] * 180.0 / Pi,
+       th2 = solution[[All, 4]] * 180.0 / Pi},
+      Print["  theta1 range: [", FmtN[Min[th1], 4], ", ", FmtN[Max[th1], 4], "] deg"];
+      Print["  theta2 range: [", FmtN[Min[th2], 4], ", ", FmtN[Max[th2], 4], "] deg"]
+    ];
+    Print[""];
+
+    Print["[2/4] Exporting CSV..."];
+    outCSV = FileNameJoin[{$projectRoot, "data", "double_results.csv"}];
+    ExportDoublePendulumResults[solution, outCSV];
+    STEMDescribeCSV[outCSV, Length[solution], 5];
+    Print[""];
+
+    Print["[3/4] Generating animation..."];
+    outGIF = FileNameJoin[{$projectRoot, "data", "double_animation.gif"}];
+    AnimateDoublePendulum[solution, cfg, outGIF];
+    STEMDescribeGIF[outGIF];
+    Print[""];
+
+    Print["[4/4] Generating sonification..."];
+    outWAV = FileNameJoin[{$projectRoot, "data", "double_audio.wav"}];
+    SonifyDoublePendulum[solution, cfg, outWAV];
+    STEMDescribeWAV[outWAV, solution[[-1, 1]]];
+    Print[""],
+
+
+  (* Unknown mode *)
+  True,
+    Print["Error: unknown simulation.mode \"", mode,
+          "\" — expected \"simple\" or \"double\"."];
+    Exit[1]
+];
 
 STEMHeading["Done"];
-STEMSay["Pendulum Simulation complete"];
+STEMSay["Pendulum simulation complete"];
