@@ -2,7 +2,8 @@
 
 (* ========================================================
    Lorenz Attractor — Entry Point
-   Usage: wolframscript -file main.wl
+   Usage: wolframscript -file main.wl [-- [--key=value ...]]
+          wolframscript -file main.wl -- --config-dump
    ======================================================== *)
 
 $projectRoot  = DirectoryName[$InputFileName];
@@ -13,22 +14,28 @@ Get[FileNameJoin[{$projectRoot, "src", "output.wl"}]];
 Get[FileNameJoin[{$projectRoot, "src", "animate.wl"}]];
 Get[FileNameJoin[{$projectRoot, "src", "sonify.wl"}]];
 
-(* Classic chaotic parameters *)
-params = <|
-  "Sigma"    -> 10.0,
-  "Rho"      -> 28.0,
-  "Beta"     -> 8/3,
-  "InitX"    -> 1.0,
-  "InitY"    -> 1.0,
-  "InitZ"    -> 1.0,
-  "TimeEnd"  -> 40.0,
-  "TimeStep" -> 0.005
-|>;
+(* --- Load config (exits here if --config-dump is present) --- *)
+$cliArgs = Select[Rest[$ScriptCommandLine], # =!= "--" &];
+cfg = LoadConfig["lorenz", $cliArgs];
+
+(* --- Build simulation params from config --- *)
+With[{ic = GetCfg[cfg, {"simulation","initial_conditions"}, {0.1, 0.0, 0.0}]},
+  params = <|
+    "Sigma"    -> GetCfg[cfg, {"simulation","lorenz","sigma"}, 10.0],
+    "Rho"      -> GetCfg[cfg, {"simulation","lorenz","rho"},   28.0],
+    "Beta"     -> GetCfg[cfg, {"simulation","lorenz","beta"},  8/3],
+    "InitX"    -> N[ic[[1]]],
+    "InitY"    -> N[ic[[2]]],
+    "InitZ"    -> N[ic[[3]]],
+    "TimeEnd"  -> GetCfg[cfg, {"simulation","duration"},       40.0],
+    "TimeStep" -> GetCfg[cfg, {"simulation","timestep"},       0.005]
+  |>
+];
 
 STEMHeading["Lorenz Attractor"];
 Print["  sigma = ", params["Sigma"],
       "   rho = ", params["Rho"],
-      "   beta = ", params["Beta"]];
+      "   beta = ", FmtN[N[params["Beta"]], 4]];
 Print["  Initial: (",
   params["InitX"], ", ",
   params["InitY"], ", ",
@@ -60,8 +67,8 @@ Print[""];
 (* 4. Sonification *)
 Print["[4/4] Synthesising audio..."];
 outWAV = FileNameJoin[{$projectRoot, "data", "lorenz_audio.wav"}];
-ExportSonification[solution, outWAV, "Scale" -> "MinorPentatonic"];
-STEMDescribeWAV[outWAV, params["TimeEnd"]];
+ExportSonification[solution, params, cfg, outWAV];
+STEMDescribeWAV[outWAV, solution[[-1, 1]]];
 Print[""];
 
 STEMHeading["Done"];

@@ -79,6 +79,24 @@ DeepMerge[<||>, override_Association]      := override
 DeepMerge[_,    override_]                 := override
 
 
+(* ── GetCfg ──────────────────────────────────────────────── *)
+(*
+   Public helper for safe nested key-path lookup — available to
+   all app code after init.wl loads config.wl.  Identical logic
+   to the private CfgAt in sonification.wl but in Global context.
+
+   Usage:
+     GetCfg[cfg, {"sonification","pitch","min_hz"}, 110]
+     GetCfg[cfg, {"simulation","lorenz","sigma"}, 10.0]   *)
+
+GetCfg[cfg_Association, keys_List, default_] :=
+  If[Length[keys] === 0, default,
+    With[{inner = Fold[Lookup[#1, #2, <||>] &, cfg, Most[keys]]},
+      Lookup[inner, Last[keys], default]
+    ]
+  ]
+
+
 (* ── LoadJsonConfig ──────────────────────────────────────── *)
 (*
    Loads a JSON file and returns an Association.

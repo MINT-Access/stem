@@ -1,113 +1,66 @@
 (* ========================================================
-   src/sonify.wl — Musical sonification of asteroid data
+   src/sonify.wl — Sonification via stem-core SonifyTrajectory
 
-   Each asteroid becomes one note, played in order of
-   miss distance (farthest first, building toward the
-   closest). Direct PCM synthesis — works headlessly.
+   Builds a synthetic {t, x, y, z, speed} trajectory matrix
+   from the list of asteroid Associations, sorted farthest → closest
+   to build dramatically toward the nearest miss.
 
-   Design:
-     Pitch    — miss distance → scale degree.
-                Farthest = highest note (safe, distant).
-                Closest  = lowest note (ominous, near).
+   Column mapping:
+     t     — evenly spaced; stepDur = noteDuration + gapDuration per object
+     x     — missDistanceKm normalised to [-1, +1]  (pan: far=+1, close=-1)
+     y     — missDistanceKm in km                    (pitch: far=high, close=low)
+     z     — diamMeanKm                              (size, passive)
+     speed — velocityKmS                             (volume: fast=louder)
 
-     Duration — inversely proportional to asteroid velocity.
-                Fast asteroids = short sharp notes.
-                Slow asteroids = long sustained notes.
-
-     Volume   — proportional to estimated diameter.
-                Bigger asteroids are louder.
-
-     Timbre   — safe asteroids: warm sine tone (bell).
-                hazardous asteroids: brighter tone with
-                extra high harmonics — distinctly different
-                character so you can hear the difference.
-
-     Gap      — a short silence between notes gives the
-                sequence a clear rhythm.
-
-   Scale, synthesis, and export helpers come from stem-core.
+   Event type: "approach"
+     Passed through to EventLayer; no detection is implemented
+     for this type — the spatial and motion layers carry the
+     full sonification character.
    ======================================================== *)
 
-
-(* BuildWaveform
-   Assembles notes into a PCM buffer, farthest to closest. *)
-
-BuildWaveform[asteroids_List, scale_List, sr_Integer,
-              noteDur_?NumericQ, gapDur_?NumericQ] :=
+ExportSonification[asteroids_List, cfg_Association, filePath_String] :=
   Module[
-    {sorted, minKm, maxKm, maxDiam,
-     stepSamples, gapSamples, nTotal, buffer,
-     maxVel},
+    {n, noteDur, gapDur, stepDur,
+     sorted, missKm, velocity, diameter,
+     minKm, maxKm, times, trajectory,
+     trajDuration, cfgWithDuration},
 
-    (* Play farthest → closest: dramatic build toward the near miss *)
-    sorted  = Reverse[asteroids];
-
-    minKm   = Min[#["missDistanceKm"] & /@ asteroids];
-    maxKm   = Max[#["missDistanceKm"] & /@ asteroids];
-    maxDiam = Max[#["diamMeanKm"]     & /@ asteroids] + 0.001;
-    maxVel  = Max[#["velocityKmS"]    & /@ asteroids] + 0.001;
-
-    stepSamples = Round[(noteDur + gapDur) * sr];
-    gapSamples  = Round[gapDur * sr];
-    nTotal      = stepSamples * Length[sorted] + gapSamples;
-    buffer      = ConstantArray[0.0, nTotal];
-
-    MapIndexed[
-      Function[{ast, idx},
-        Module[{i, freq, vol, dur, harmonics, samples, startIdx, endIdx},
-          i        = idx[[1]];
-          freq     = ScaleLookup[ast["missDistanceKm"],
-                       minKm, maxKm, scale, 130.81];
-          vol      = Rescale[ast["diamMeanKm"],
-                       {0, maxDiam}, {0.25, 1.0}];
-          (* Faster asteroids → shorter, punchier notes *)
-          dur      = Rescale[ast["velocityKmS"],
-                       {Min[#["velocityKmS"] & /@ asteroids], maxVel},
-                       {noteDur, noteDur * 0.3}];
-          harmonics = If[ast["isHazardous"],
-            {1.00, 0.30, 0.20, 0.25, 0.15},   (* bright/harsh *)
-            {1.00, 0.35, 0.10}                  (* warm bell    *)
-          ];
-          samples  = StemSynthNote[freq, dur, vol, harmonics, 0.6, sr];
-          startIdx = (i - 1) * stepSamples + 1;
-          endIdx   = Min[nTotal, startIdx + Length[samples] - 1];
-          buffer[[startIdx ;; endIdx]] +=
-            samples[[1 ;; endIdx - startIdx + 1]];
-        ]
-      ],
-      sorted
+    n = Length[asteroids];
+    If[n === 0,
+      Print["  No asteroids to sonify."];
+      Return[$Failed]
     ];
 
-    NormalizeBuffer[buffer]
-  ]
+    noteDur = GetCfg[cfg, {"sonification","motion","noteDuration"}, 0.55];
+    gapDur  = GetCfg[cfg, {"sonification","motion","gapDuration"},  0.12];
+    stepDur = noteDur + gapDur;
 
+    (* Farthest → closest: dramatic build toward the near miss *)
+    sorted   = Reverse[SortBy[asteroids, #["missDistanceKm"] &]];
+    missKm   = #["missDistanceKm"] & /@ sorted;
+    velocity = #["velocityKmS"]    & /@ sorted;
+    diameter = #["diamMeanKm"]     & /@ sorted;
 
-(* ExportSonification *)
+    minKm = Min[missKm];
+    maxKm = Max[missKm] + $MachineEpsilon;
+    times = N[Table[(i - 1) * stepDur, {i, n}]];
 
-Options[ExportSonification] = {
-  "Scale"        -> "MinorPentatonic",
-  "NoteDuration" -> 0.55,    (* seconds per note *)
-  "GapDuration"  -> 0.12     (* silence between notes *)
-};
+    trajectory = N[Table[
+      {times[[i]],
+       Rescale[missKm[[i]], {minKm, maxKm}, {-1.0, 1.0}],   (* x: pan *)
+       missKm[[i]],                                            (* y: pitch *)
+       diameter[[i]],                                          (* z: size *)
+       velocity[[i]]},                                         (* speed: volume *)
+      {i, n}
+    ]];
 
-ExportSonification[asteroids_List, filePath_String,
-                   opts:OptionsPattern[]] :=
-  Module[
-    {scaleName, scale, noteDur, gapDur, buffer},
+    trajDuration    = Last[times] + stepDur;
+    cfgWithDuration = DeepMerge[cfg,
+      <| "sonification" -> <| "duration" -> trajDuration |> |>];
 
-    scaleName = OptionValue["Scale"];
-    scale     = Lookup[$StemScales, scaleName, $StemScales["MinorPentatonic"]];
-    noteDur   = OptionValue["NoteDuration"];
-    gapDur    = OptionValue["GapDuration"];
+    EnsureDir[filePath];
+    Print["  Trajectory: ", n, " asteroids, ",
+      FmtN[trajDuration, 3], " s total"];
 
-    Print["  Scale: ", scaleName, "  notes: ", Length[asteroids]];
-    Print["  Hazardous (distinct timbre): ",
-      Length[HazardousAsteroids[asteroids]]];
-
-    buffer = BuildWaveform[asteroids, scale, $StemSampleRate,
-                           noteDur, gapDur];
-
-    Print["  Duration: ",
-      FmtN[Length[buffer] / $StemSampleRate, 4], " s"];
-    ExportAudioBuffer[buffer, filePath, $StemSampleRate]
+    SonifyTrajectory[trajectory, cfgWithDuration, filePath, {"approach"}]
   ]
