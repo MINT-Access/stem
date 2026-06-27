@@ -1,0 +1,82 @@
+{
+  "version": "1.0.0",
+
+  "output": {
+    "directory": "data",
+    "csv": true,
+    "gif": true,
+    "wav": true,
+    "overwrite": true,
+    "manifest": true
+  },
+
+  "accessibility": {
+    "speak": false,
+    "verbosity": "normal",
+    "voiceover": true,
+    "language": "en-GB",
+    "announce": true,
+    "voice": "Daniel",
+    "rate": 180
+  },
+
+  "animation": {
+    "frameRate": 10,
+    "imageWidth": 400,
+    "imageHeight": 400,
+    "holdSeconds": 3,
+    "background": "dark",
+    "colorScheme": "accessible"
+  },
+
+  "sonification": {
+    "sampleRate": 44100,
+    "scale": "MinorPentatonic",
+    "duration": 10.0,
+
+    "spatial": {
+      "enabled": true,
+      "channels": 1,
+      "panAxis": "x",
+      "panRange": [-1.0, 1.0]
+    },
+
+    "pitch": {
+      "rootHz": 220.0,
+      "octaves": 2,
+      "minHz": 110,
+      "maxHz": 880,
+      "scale": "chromatic"
+    },
+
+    "volume": {
+      "peak": 0.95,
+      "normalize": true,
+      "minDb": -24,
+      "maxDb": 0
+    },
+
+    "motion": {
+      "noteDuration": 0.55,
+      "gapDuration": 0.12,
+      "decayFrac": 0.5,
+      "tremoloOnOscillation": true,
+      "noiseOnChaos": true
+    },
+
+    "events": {
+      "onStart": null,
+      "onComplete": null,
+      "enabled": true,
+      "apexTone": true,
+      "crossingClick": true
+    }
+  },
+
+  "data": {
+    "logErrors": true,
+    "logPath": "data/errors.log",
+    "csvDelimiter": ",",
+    "decimalPlaces": 6
+  }
+}

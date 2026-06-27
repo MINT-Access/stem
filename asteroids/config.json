@@ -1,0 +1,25 @@
+{
+  "version": 1,
+  "app": "asteroids",
+  "description": "Near-Earth asteroid trajectories via NASA API",
+
+  "simulation": {
+    "days_ahead": 7,
+    "max_objects": 10,
+    "use_orbital_elements": false,
+    "api_cache_hours": 6,
+    "fallback_to_cache": true
+  },
+
+  "sonification": {
+    "pitch": { "min_hz": 150, "max_hz": 900 },
+    "events": { "closest_approach_tone": true }
+  },
+  "animation": {
+    "width": 500,
+    "height": 500,
+    "show_trail": false,
+    "marker_size": 4,
+    "show_orbit_ellipse": false
+  }
+}

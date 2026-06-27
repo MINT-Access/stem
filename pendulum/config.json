@@ -1,0 +1,43 @@
+{
+  "version": 1,
+  "app": "pendulum",
+  "description": "Simple and double pendulum simulation",
+
+  "simulation": {
+    "mode": "simple",
+    "duration": 20.0,
+    "timestep": 0.01,
+    "gravity": 9.81,
+    "simple": {
+      "length": 1.0,
+      "mass": 1.0,
+      "angle_deg": 45.0,
+      "damping": 0.0
+    },
+    "double": {
+      "length1": 1.0,
+      "length2": 1.0,
+      "mass1": 1.0,
+      "mass2": 1.0,
+      "angle1_deg": 120.0,
+      "angle2_deg": 90.0
+    }
+  },
+
+  "sonification": {
+    "pitch": {
+      "min_hz": 220,
+      "max_hz": 660
+    },
+    "double_pendulum": {
+      "rod1_channel": "left",
+      "rod2_channel": "right"
+    }
+  },
+
+  "animation": {
+    "trail_length": 60,
+    "show_rod": true,
+    "bob_radius": 8
+  }
+}
