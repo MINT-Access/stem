@@ -139,6 +139,7 @@ particle-in-a-box. Both modes export an animated probability-density GIF, a
 3×3 snapshot PNG, and a time-series CSV of ⟨x⟩, Var(x), and speed. Stereo pan
 tracks mean position, pitch encodes position variance, and volume follows
 |d⟨x⟩/dt|.
+See [`quantum/README.md`](quantum/README.md).
 
 ---
 
