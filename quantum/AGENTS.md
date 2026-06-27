@@ -23,8 +23,7 @@ via a density-to-trajectory adapter.
 - `src/animate.wl`       — `AnimateQuantum[solution, cfg, outDir]`
                            Exports 1 GIF + 1 PNG per run; returns frame count
 - `src/sonify.wl`        — `DensityToTrajectory[solution]`,
-                           `SonifyQuantum[solution, cfg, outDir]`,
-                           `SpeakToBuffer[text, sr]`
+                           `SonifyQuantum[solution, cfg, outDir]`
 - `output/`              — All output files (not committed)
 
 ## How to run
@@ -53,7 +52,6 @@ config → QHOModel / BoxModel
                          trajectory[nt×5]
                            ↓
                          SonifyTrajectory  →  {mode}_audio.wav
-                         SpeakToBuffer     →  {mode}_description.wav
            ↓
          CSV (time series: t, mean_x, variance_x, speed)
 ```
@@ -145,10 +143,6 @@ can coexist in `output/` without overwriting each other.
 - **`SonifyTrajectory` requires a non-empty `eventTypes` list.** Passing `{}`
   gives silence from the event layer but still works; `{"apex","crossing"}` is
   the standard default.
-- **`SpeakToBuffer`** calls macOS `say` and degrades to 0.5 s of silence if `say`
-  is unavailable in the subprocess context. This is expected; the primary audio
-  output (`{mode}_audio.wav`) is unaffected.
-
 ## Dependencies
 
 - Mathematica or Wolfram Engine (any recent version with `HermiteH`)

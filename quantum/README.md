@@ -80,7 +80,6 @@ All outputs are prefixed with the mode name so both modes coexist in `output/`.
 | `{mode}_density.png` | 3×3 snapshot grid at 9 equal time intervals |
 | `{mode}_timeseries.csv` | Time series: t, ⟨x⟩, Var(x), \|d⟨x⟩/dt\| |
 | `{mode}_audio.wav` | Sonification: pan tracks ⟨x⟩, pitch tracks Var(x), volume tracks speed |
-| `{mode}_description.wav` | Spoken description of the quantum state (macOS `say`) |
 
 ## Sonification
 
