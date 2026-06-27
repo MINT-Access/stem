@@ -1,0 +1,43 @@
+{
+  "version": 1,
+  "app": "signal",
+  "description": "Signal processing: Fourier analysis with direct audio output",
+
+  "simulation": {
+    "mode": "chord",
+    "chord": {
+      "frequencies":  [261.63, 329.63, 392.00],
+      "amplitudes":   [1.0, 0.8, 0.6],
+      "duration":     3.0,
+      "noise_type":   "gaussian",
+      "noise_level":  0.4
+    },
+    "sweep": {
+      "start_hz":    100.0,
+      "end_hz":      2000.0,
+      "duration":    4.0,
+      "noise_level": 0.3
+    },
+    "am": {
+      "carrier_hz":       440.0,
+      "modulator_hz":     4.0,
+      "modulation_depth": 0.8,
+      "duration":         3.0,
+      "noise_level":      0.35
+    }
+  },
+
+  "sonification": {
+    "sample_rate": 44100
+  },
+
+  "animation": {
+    "width":  800,
+    "height": 400,
+    "fps":    10
+  },
+
+  "output": {
+    "wav_stages": true
+  }
+}
