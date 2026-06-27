@@ -1,0 +1,38 @@
+{
+  "version": 1,
+  "app": "cellular",
+  "description": "Cellular automata: Conway's Game of Life and Wolfram Rule 110",
+
+  "simulation": {
+    "mode": "life",
+    "life": {
+      "rows": 80,
+      "cols": 80,
+      "generations": 300,
+      "starting_pattern": "rpentomino",
+      "wrap": true
+    },
+    "rule110": {
+      "width": 120,
+      "generations": 200,
+      "initial": "single_cell"
+    }
+  },
+
+  "animation": {
+    "fps": 10,
+    "width": 480,
+    "height": 480
+  },
+
+  "sonification": {
+    "pitch": {
+      "min_hz": 150,
+      "max_hz": 900
+    },
+    "events": {
+      "extinction": true,
+      "explosion": true
+    }
+  }
+}
