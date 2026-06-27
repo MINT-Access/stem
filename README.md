@@ -19,6 +19,7 @@ stem/
   cellular/         Conway's Game of Life and Wolfram Rule 110
   signal/           Fourier analysis demonstration (chord, sweep, AM)
   quantum/          Quantum mechanics (coherent state QHO, particle-in-a-box)
+  primes/           Prime number patterns (Ulam spiral, prime gap rhythm)
   config/           Global config defaults (config.json)
   docs/             Workflow guides
 ```
@@ -63,6 +64,12 @@ wolframscript -file signal/main.wl -- --simulation.mode=am
 wolframscript -file quantum/main.wl                                      # QHO coherent state
 wolframscript -file quantum/main.wl -- --simulation.mode=box             # particle-in-a-box
 wolframscript -file quantum/main.wl -- --simulation.qho.alpha=3.0        # larger coherent amplitude
+
+# Prime number patterns
+wolframscript -file primes/main.wl                                       # Ulam spiral (default)
+wolframscript -file primes/main.wl -- --simulation.mode=gaps             # prime gap rhythm
+wolframscript -file primes/main.wl -- --simulation.ulam.size=201         # larger spiral
+wolframscript -file primes/main.wl -- --simulation.gaps.count=10000      # more primes
 ```
 
 Each project writes outputs into its own directory:
@@ -70,7 +77,7 @@ Each project writes outputs into its own directory:
 | Project | Output dir | File types |
 |---------|-----------|------------|
 | pendulum, lorenz, asteroids | `data/` | CSV, GIF, WAV |
-| cellular, signal, quantum | `output/` | CSV, GIF, WAV (+ PNG for signal and quantum) |
+| cellular, signal, quantum, primes | `output/` | CSV, GIF, WAV (+ PNG for signal, quantum, primes) |
 
 Play audio on macOS:
 
@@ -81,6 +88,8 @@ afplay asteroids/data/asteroids_*.wav
 afplay cellular/output/life_rpentomino_audio.wav
 afplay signal/output/chord_narrative_full.wav
 afplay quantum/output/qho_audio.wav
+afplay primes/output/ulam_audio.wav
+afplay primes/output/gaps_audio.wav
 ```
 
 ---
@@ -141,6 +150,18 @@ tracks mean position, pitch encodes position variance, and volume follows
 |d⟨x⟩/dt|.
 See [`quantum/README.md`](quantum/README.md).
 
+### primes
+
+Visualises prime number structure in two modes. `ulam` mode generates a size×size
+grid winding the integers outward in a spiral — prime cells appear white, composites
+black — revealing the diagonal stripes that emerge from polynomial prime-rich
+progressions. The app also exports a 31×31 centre zoom with cell borders. `gaps`
+mode maps the sequence of gaps between consecutive primes to percussive audio: each
+prime triggers a short sine burst at a time proportional to its distance from p₁,
+so twin primes (gap=2) produce near-simultaneous attacks and large gaps leave
+audible rests. A second WAV at quarter tempo stretches the rhythm so individual gap
+lengths become easier to count by ear.
+
 ---
 
 ## Config system
@@ -175,7 +196,7 @@ See [`docs/APPS.md`](docs/APPS.md) for a full listing of each app's config keys.
 
 ## stem-core
 
-All six projects load `stem-core` as a shared library. It provides:
+All seven projects load `stem-core` as a shared library. It provides:
 
 - **Config** — `LoadConfig`, `GetCfg`, `DeepMerge` — four-layer config merging and safe key lookup
 - **Sonification pipeline** — `SonifyTrajectory`, `SpatialLayer`, `MotionLayer`, `EventLayer`, `MixLayers`, `RenderAudio`

@@ -1,6 +1,6 @@
 # STEM Apps — Quick Reference
 
-All six apps share the same invocation pattern and config system. This
+All seven apps share the same invocation pattern and config system. This
 document covers CLI options, modes, config keys, and output files for each.
 
 ---
@@ -15,6 +15,7 @@ document covers CLI options, modes, config keys, and output files for each.
 | `cellular` | Cellular automata | `life`, `rule110` | `output/` | No |
 | `signal` | Fourier analysis | `chord`, `sweep`, `am` | `output/` | No |
 | `quantum` | Quantum mechanics | `qho`, `box` | `output/` | No |
+| `primes` | Prime number patterns | `ulam`, `gaps` | `output/` | No |
 
 ---
 
@@ -293,7 +294,6 @@ wolframscript -file quantum/main.wl -- --simulation.qho.alpha=3.0
 | `output/{mode}_density.png` | 3×3 snapshot grid at equal time intervals |
 | `output/{mode}_timeseries.csv` | Time series of ⟨x⟩, Var(x), and speed |
 | `output/{mode}_audio.wav` | Sonification: pan=⟨x⟩, pitch=Var(x), vol=\|d⟨x⟩/dt\| |
-| `output/{mode}_description.wav` | Spoken description of the quantum state |
 
 **Physics notes:**
 - QHO coherent state: ⟨E⟩ = ω(\|α\|² + ½). For α=2, ω=1: ⟨E⟩ = 4.5.
@@ -301,3 +301,60 @@ wolframscript -file quantum/main.wl -- --simulation.qho.alpha=3.0
   For L=10: ⟨E⟩ ≈ 0.1234.
 - Normalisation ∫\|ψ\|²dx is verified at every 10th timestep; a warning
   is printed if any sample deviates from 1 by more than 1%.
+
+---
+
+## primes
+
+Visualises prime number structure in two modes. Both share the four-layer config
+system and write all output to `output/`.
+
+**Run:**
+```sh
+wolframscript -file primes/main.wl
+wolframscript -file primes/main.wl -- --simulation.mode=gaps
+wolframscript -file primes/main.wl -- --simulation.ulam.size=201
+wolframscript -file primes/main.wl -- --simulation.gaps.count=10000
+```
+
+**Key config keys (`primes/config.json`):**
+
+| Key | Default | Description |
+|-----|---------|-------------|
+| `simulation.mode` | `"ulam"` | `"ulam"` or `"gaps"` |
+| `simulation.ulam.size` | `101` | Grid side length (odd; even values incremented by 1) |
+| `simulation.ulam.color_primes` | `"white"` | Prime cell colour: `"white"` or `"black"` |
+| `simulation.ulam.color_composite` | `"black"` | Composite cell colour |
+| `simulation.gaps.count` | `5000` | Number of primes to analyse |
+| `simulation.gaps.max_gap_display` | `72` | Y-axis cap for the gap chart |
+| `sonification.pitch.min_hz` | `120` | Pitch for the smallest prime (p₁ = 2) |
+| `sonification.pitch.max_hz` | `1000` | Pitch for the largest prime |
+| `sonification.gaps.tempo_bpm` | `120` | Base tempo; controls normalised audio duration |
+| `sonification.gaps.tone_duration_ms` | `80` | Duration of each prime's sine burst in ms |
+
+**Output files — `ulam` mode:**
+
+| File | Description |
+|------|-------------|
+| `output/ulam_spiral.png` | Full-resolution prime/composite grid |
+| `output/ulam_spiral.gif` | Single-frame GIF (pipeline consistency) |
+| `output/ulam_centre_zoom.png` | 31×31 centre crop with cell borders visible |
+| `output/ulam_spiral.csv` | integer, row, col, is_prime for each prime in the grid |
+| `output/ulam_audio.wav` | Row-scan sonification (pan=asymmetry, pitch=density) |
+
+**Output files — `gaps` mode:**
+
+| File | Description |
+|------|-------------|
+| `output/gaps_animation.gif` | Animated gap chart with progressive reveal (50 frames) |
+| `output/gaps_stats.csv` | n, prime, next_prime, gap, cumulative_gap, is_twin_prime |
+| `output/gaps_audio.wav` | Percussive sonification at base tempo (≈30 s at 120 bpm) |
+| `output/gaps_slow.wav` | Same sonification at quarter tempo (≈120 s); gaps easier to count |
+
+**Notes:**
+- Ulam audio: rows scanned top-to-bottom; pan = right-minus-left prime density,
+  pitch = row density, volume = |row-to-row density change|.
+- Gaps audio: attack time for prime pₙ = (pₙ − p₁)/(p\_count − p₁) × baseDuration.
+  All relative gap ratios are preserved exactly.
+- baseDuration = 30 × 120 / tempo\_bpm seconds. At tempo=120: base ≈ 30 s, slow ≈ 120 s.
+- For 5000 primes: mean gap ≈ 9.72, largest gap = 72, twin prime pairs = 680.
