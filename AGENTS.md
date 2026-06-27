@@ -13,10 +13,13 @@ stem/
   pendulum/         Physics simulation (pendulum ODE)
   lorenz/           Physics simulation (Lorenz attractor)
   asteroids/        Data project (NASA NeoWs API)
-  docs/             Workflow guides (e.g. voiceover-wolframscript-guide.md)
+  cellular/         Cellular automata (Game of Life, Rule 110)
+  signal/           Signal processing (Fourier analysis, direct audio output)
+  config/           Global config defaults (config.json)
+  docs/             Workflow guides
 ```
 
-All four directories are siblings. Projects load stem-core with a
+All app directories are siblings. Projects load stem-core with a
 relative path that stays correct wherever the monorepo lives:
 
 ```wolfram
@@ -35,11 +38,29 @@ wolframscript -file lorenz/main.wl
 wolframscript -file asteroids/main.wl                                    # last 7 days, MinorPentatonic
 wolframscript -file asteroids/main.wl -- 2026-01-01 2026-12-31           # full year
 wolframscript -file asteroids/main.wl -- 2026-01-01 2026-06-25 Phrygian  # date range + scale
+wolframscript -file cellular/main.wl                                     # Game of Life, R-pentomino
+wolframscript -file cellular/main.wl -- --simulation.mode=rule110
+wolframscript -file signal/main.wl                                       # chord (default)
+wolframscript -file signal/main.wl -- --simulation.mode=sweep
 ```
 
 `asteroids/main.wl` and `asteroids/experiment.wl` accept `[-- YYYY-MM-DD YYYY-MM-DD [Scale]]`.
 Ranges longer than 7 days are split into ≤7-day API requests automatically.
 Valid scales: `MinorPentatonic` `MajorPentatonic` `Major` `Minor` `WholeTone` `Phrygian`
+
+Inspect any app's active config without running the simulation:
+
+```sh
+wolframscript -file <app>/main.wl -- --config-dump | python3 -m json.tool
+```
+
+Override any config key at runtime:
+
+```sh
+wolframscript -file pendulum/main.wl -- --simulation.mode=simple --simulation.duration=30
+wolframscript -file cellular/main.wl -- --simulation.life.starting_pattern=gliderlgun
+wolframscript -file signal/main.wl -- --simulation.chord.noise_level=0.8
+```
 
 Tests (run from the `stem/` root or from within the project directory):
 
@@ -49,7 +70,8 @@ wolframscript -file lorenz/tests/test_model.wl
 wolframscript -file asteroids/tests/test_analyse.wl
 ```
 
-All test files exit 0 on success, 1 on failure.
+`cellular` and `signal` do not have test files. All existing test files exit 0 on
+success, 1 on failure.
 
 ---
 

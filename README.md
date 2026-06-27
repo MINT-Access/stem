@@ -2,9 +2,9 @@
 
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](LICENSE)
 
-A monorepo of Wolfram Language physics simulations and data sonification projects,
-each producing CSV data, an animated GIF, and a musical WAV file — all from the
-terminal via `wolframscript`.
+A monorepo of Wolfram Language physics simulations, data projects, and signal
+processing demonstrations — each runnable from the terminal via `wolframscript`
+and producing CSV data, an animated GIF, and audio output.
 
 ---
 
@@ -12,11 +12,14 @@ terminal via `wolframscript`.
 
 ```
 stem/
-  stem-core/        Shared library: pitch mapping, PCM synthesis, file export
-  pendulum/         Simple pendulum ODE simulation
-  lorenz/           Lorenz strange attractor simulation
+  stem-core/        Shared library: config, sonification pipeline, PCM synthesis, file export
+  pendulum/         Simple and double pendulum ODE simulation
+  lorenz/           Lorenz and Rössler strange attractor simulation
   asteroids/        NASA near-Earth asteroid tracker (live API data)
-  docs/             Workflow guides (VoiceOver, wolframscript usage)
+  cellular/         Conway's Game of Life and Wolfram Rule 110
+  signal/           Fourier analysis demonstration (chord, sweep, AM)
+  config/           Global config defaults (config.json)
+  docs/             Workflow guides
 ```
 
 ---
@@ -37,31 +40,40 @@ wolframscript -version
 Run any project from the `stem/` root:
 
 ```sh
+# Physics simulations
 wolframscript -file pendulum/main.wl
 wolframscript -file lorenz/main.wl
+
+# Live NASA asteroid data
 wolframscript -file asteroids/main.wl                                    # last 7 days
 wolframscript -file asteroids/main.wl -- 2026-01-01 2026-12-31           # full year
 wolframscript -file asteroids/main.wl -- 2026-01-01 2026-06-25 Phrygian  # date range + scale
+
+# Cellular automata
+wolframscript -file cellular/main.wl                                     # Game of Life, R-pentomino
+wolframscript -file cellular/main.wl -- --simulation.mode=rule110
+
+# Signal processing
+wolframscript -file signal/main.wl                                       # chord (default)
+wolframscript -file signal/main.wl -- --simulation.mode=sweep
+wolframscript -file signal/main.wl -- --simulation.mode=am
 ```
 
-The asteroids project accepts an optional date range and scale: `[-- YYYY-MM-DD YYYY-MM-DD [Scale]]`.
-Ranges longer than 7 days are split into multiple API requests automatically.
-Valid scales: `MinorPentatonic` `MajorPentatonic` `Major` `Minor` `WholeTone` `Phrygian`
+Each project writes outputs into its own directory:
 
-Each project writes its outputs into its own `data/` directory:
-
-| File | Description |
-|---|---|
-| `data/*.csv` | Simulation or measurement data |
-| `data/*.gif` | Looping animated visualisation |
-| `data/*.wav` | Musical sonification |
+| Project | Output dir | File types |
+|---------|-----------|------------|
+| pendulum, lorenz, asteroids | `data/` | CSV, GIF, WAV |
+| cellular, signal | `output/` | CSV, GIF, WAV (+ PNG for signal) |
 
 Play audio on macOS:
 
 ```sh
-afplay pendulum/data/pendulum_audio.wav
+afplay pendulum/data/simple_audio.wav
 afplay lorenz/data/lorenz_audio.wav
 afplay asteroids/data/asteroids_*.wav
+afplay cellular/output/life_rpentomino_audio.wav
+afplay signal/output/chord_narrative_full.wav
 ```
 
 ---
@@ -70,19 +82,18 @@ afplay asteroids/data/asteroids_*.wav
 
 ### pendulum
 
-Solves the nonlinear pendulum ODE with `NDSolve`. Maps the swing angle to an
-A minor pentatonic scale — each half-swing becomes one note, volume set by
-angular velocity. The GIF shows the bob in side-on view with a colour trail
-that shifts from blue (centre) to red-violet (maximum swing).
+Solves the nonlinear pendulum ODE with `NDSolve`. Two modes: `simple` (one rod)
+and `double` (two rods, chaotic). The simple pendulum maps swing angle to an A
+minor pentatonic scale — each half-swing becomes one note, volume set by angular
+velocity. The double pendulum sonifies both rods independently in binaural stereo.
 See [`pendulum/README.md`](pendulum/README.md).
 
 ### lorenz
 
-Simulates the Lorenz strange attractor. Notes are triggered at each local
-extremum of x(t); pitch tracks which wing of the butterfly the trajectory is
-on. The GIF renders the growing trajectory in x-z projection with a
-blue→cyan→orange→red colour gradient; `ExportDualAnimation` shows two
-near-identical trajectories diverging apart.
+Simulates the Lorenz and Rössler strange attractors. Apex events on the
+trajectory trigger pitched notes; spatial position controls the stereo pan. The
+GIF renders the growing trajectory in x-z projection with a
+blue→cyan→orange→red colour gradient.
 See [`lorenz/README.md`](lorenz/README.md).
 
 ### asteroids
@@ -90,21 +101,68 @@ See [`lorenz/README.md`](lorenz/README.md).
 Fetches live close-approach data from NASA's NeoWs API. Each asteroid becomes
 one note — pitch reflects miss distance, timbre distinguishes hazardous from
 safe. The GIF shows a top-down solar system view with asteroids revealed
-farthest-to-closest, coloured cyan (safe) or red (hazardous).
+farthest-to-closest, coloured cyan (safe) or red (hazardous). Accepts arbitrary
+date ranges and a musical scale argument.
 See [`asteroids/README.md`](asteroids/README.md).
+
+### cellular
+
+Two cellular automata: Conway's Game of Life (2D, toroidal, B3/S23 rule) and
+Wolfram's Rule 110 (1D, Turing-complete). Population dynamics are mapped to
+pitch, pan, and volume; extinction and explosion events trigger short tone bursts.
+See [`cellular/README.md`](cellular/README.md).
+
+### signal
+
+Demonstrates the discrete Fourier transform. Three modes — `chord` (sum of
+sinusoids), `sweep` (linear chirp), and `am` (amplitude modulation) — each
+generate a signal, corrupt it with Gaussian noise, recover it via
+frequency-domain filtering, and export the three stages as WAV files plus a
+spoken narrative. Unlike all other apps, the WAV output **is** the phenomenon
+rather than a sonification of something else.
+See [`signal/README.md`](signal/README.md).
+
+---
+
+## Config system
+
+Every project uses a four-layer configuration system:
+
+```
+$HardcodedDefaults  →  config/config.json  →  <app>/config.json  →  CLI --key=value
+```
+
+Inspect the fully merged config for any project:
+
+```sh
+wolframscript -file pendulum/main.wl -- --config-dump
+wolframscript -file cellular/main.wl -- --config-dump | python3 -m json.tool
+```
+
+Override any parameter at runtime using dot-separated key paths:
+
+```sh
+wolframscript -file pendulum/main.wl -- --simulation.mode=double
+wolframscript -file lorenz/main.wl -- --simulation.mode=rossler
+wolframscript -file cellular/main.wl -- --simulation.life.starting_pattern=gliderlgun
+wolframscript -file signal/main.wl -- --simulation.chord.noise_level=0.8
+wolframscript -file asteroids/main.wl -- --simulation.days_ahead=14
+```
+
+See [`docs/APPS.md`](docs/APPS.md) for a full listing of each app's config keys.
 
 ---
 
 ## stem-core
 
-All three projects load `stem-core` as a shared library before running. It
-provides:
+All five projects load `stem-core` as a shared library. It provides:
 
-- **`ScaleLookup`** — maps a data value to a musical frequency
-- **`StemSynthNote`** — additive-sine PCM synthesis with exponential decay
-- **`NormalizeBuffer`** / **`ExportAudioBuffer`** — headless-safe WAV export
-- **`ExportCSV`** / **`ExportGIF`** — file export helpers
-- **`STEMHeading`** / **`STEMPrintN`** / **`STEMSay`** — screen-reader-friendly console output
+- **Config** — `LoadConfig`, `GetCfg`, `DeepMerge` — four-layer config merging and safe key lookup
+- **Sonification pipeline** — `SonifyTrajectory`, `SpatialLayer`, `MotionLayer`, `EventLayer`, `MixLayers`, `RenderAudio`
+- **Scale and synth** — `ScaleLookup`, `StemSynthNote`, `NormalizeBuffer`, `ExportAudioBuffer`
+- **Export** — `ExportCSV`, `ExportGIF`
+- **Accessibility** — `STEMHeading`, `STEMSection`, `STEMPrintN`, `STEMDescribeCSV/WAV/GIF`, `STEMSay`
+- **Utils** — `EnsureDir`, `FmtN`, `LogError`
 
 See [`stem-core/README.md`](stem-core/README.md) for the full API and
 [`stem-core/AGENTS.md`](stem-core/AGENTS.md) for parameter details.
@@ -114,20 +172,24 @@ See [`stem-core/README.md`](stem-core/README.md) for the full API and
 ## Accessibility
 
 All projects run fully headlessly and write plain WAV files playable with
-`afplay`. A built-in accessibility layer formats every console output line as a
-self-contained announcement so VoiceOver reads it cleanly without splitting
-numbers across lines.
+`afplay`. Every console output line is a self-contained announcement so
+VoiceOver reads each item cleanly without splitting numbers across lines.
 
 To enable spoken announcements via the macOS `say` command alongside normal
 printed output, set `STEM_SPEAK=1` before running:
 
 ```sh
 STEM_SPEAK=1 wolframscript -file pendulum/main.wl
+STEM_SPEAK=1 wolframscript -file signal/main.wl
 ```
 
-For the complete VoiceOver + wolframscript workflow — Terminal setup, navigation
-shortcuts, and the full accessibility API — see
-[`docs/voiceover-wolframscript-guide.md`](docs/voiceover-wolframscript-guide.md).
+The `signal` app's `{mode}_narrative_full.wav` is the most accessible single
+output — it chains spoken text with the clean, noisy, and recovered signals so
+the entire Fourier demonstration can be followed by listening alone.
+
+For the complete VoiceOver + wolframscript workflow see
+[`docs/voiceover-wolframscript-guide.md`](docs/voiceover-wolframscript-guide.md)
+and [`stem-core/ACCESSIBILITY.md`](stem-core/ACCESSIBILITY.md).
 
 ---
 
