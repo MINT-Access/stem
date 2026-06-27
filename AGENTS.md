@@ -1,7 +1,17 @@
 # AGENTS.md — Guidance for Claude Code
 
-This file covers the monorepo as a whole. For per-project detail, see
-`<project>/AGENTS.md`. For the stem-core API, see `stem-core/AGENTS.md`.
+This file covers the monorepo as a whole. For per-project detail, see the
+`AGENTS.md` in each project directory. For the stem-core API, see
+`stem-core/AGENTS.md`.
+
+Per-project AGENTS files:
+- [`pendulum/AGENTS.md`](pendulum/AGENTS.md)
+- [`lorenz/AGENTS.md`](lorenz/AGENTS.md)
+- [`asteroids/AGENTS.md`](asteroids/AGENTS.md)
+- [`cellular/AGENTS.md`](cellular/AGENTS.md)
+- [`signal/AGENTS.md`](signal/AGENTS.md)
+- [`quantum/AGENTS.md`](quantum/AGENTS.md)
+- [`primes/AGENTS.md`](primes/AGENTS.md)
 
 ---
 
@@ -16,6 +26,7 @@ stem/
   cellular/         Cellular automata (Game of Life, Rule 110)
   signal/           Signal processing (Fourier analysis, direct audio output)
   quantum/          Quantum mechanics (coherent state QHO, particle-in-a-box)
+  primes/           Prime number patterns (Ulam spiral, prime gap rhythm)
   config/           Global config defaults (config.json)
   docs/             Workflow guides
 ```
@@ -46,6 +57,9 @@ wolframscript -file signal/main.wl -- --simulation.mode=sweep
 wolframscript -file quantum/main.wl                                      # QHO coherent state
 wolframscript -file quantum/main.wl -- --simulation.mode=box             # particle-in-a-box
 wolframscript -file quantum/main.wl -- --simulation.qho.alpha=3.0
+wolframscript -file primes/main.wl                                       # Ulam spiral (default)
+wolframscript -file primes/main.wl -- --simulation.mode=gaps             # prime gap rhythm
+wolframscript -file primes/main.wl -- --simulation.ulam.size=201
 ```
 
 `asteroids/main.wl` and `asteroids/experiment.wl` accept `[-- YYYY-MM-DD YYYY-MM-DD [Scale]]`.
