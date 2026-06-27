@@ -1,0 +1,39 @@
+{
+  "simulation": {
+    "mode": "qho",
+
+    "qho": {
+      "alpha":    2.0,
+      "omega":    1.0,
+      "n_modes":  20,
+      "x_range":  [-8.0, 8.0],
+      "n_points": 200,
+      "duration": 12.56637,
+      "timestep": 0.05
+    },
+
+    "box": {
+      "L":        10.0,
+      "n_modes":  10,
+      "x_range":  [0.0, 10.0],
+      "n_points": 200,
+      "duration": 20.0,
+      "timestep": 0.05
+    }
+  },
+
+  "animation": {
+    "frameRate":   10,
+    "imageWidth":  600,
+    "imageHeight": 300
+  },
+
+  "sonification": {
+    "scale":    "MinorPentatonic",
+    "duration": 10.0,
+    "pitch": {
+      "min_hz": 110,
+      "max_hz": 880
+    }
+  }
+}
