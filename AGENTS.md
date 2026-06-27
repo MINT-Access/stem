@@ -15,6 +15,7 @@ stem/
   asteroids/        Data project (NASA NeoWs API)
   cellular/         Cellular automata (Game of Life, Rule 110)
   signal/           Signal processing (Fourier analysis, direct audio output)
+  quantum/          Quantum mechanics (coherent state QHO, particle-in-a-box)
   config/           Global config defaults (config.json)
   docs/             Workflow guides
 ```
@@ -42,6 +43,9 @@ wolframscript -file cellular/main.wl                                     # Game 
 wolframscript -file cellular/main.wl -- --simulation.mode=rule110
 wolframscript -file signal/main.wl                                       # chord (default)
 wolframscript -file signal/main.wl -- --simulation.mode=sweep
+wolframscript -file quantum/main.wl                                      # QHO coherent state
+wolframscript -file quantum/main.wl -- --simulation.mode=box             # particle-in-a-box
+wolframscript -file quantum/main.wl -- --simulation.qho.alpha=3.0
 ```
 
 `asteroids/main.wl` and `asteroids/experiment.wl` accept `[-- YYYY-MM-DD YYYY-MM-DD [Scale]]`.
@@ -70,7 +74,7 @@ wolframscript -file lorenz/tests/test_model.wl
 wolframscript -file asteroids/tests/test_analyse.wl
 ```
 
-`cellular` and `signal` do not have test files. All existing test files exit 0 on
+`cellular`, `signal`, and `quantum` do not have test files. All existing test files exit 0 on
 success, 1 on failure.
 
 ---

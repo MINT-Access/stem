@@ -18,6 +18,7 @@ stem/
   asteroids/        NASA near-Earth asteroid tracker (live API data)
   cellular/         Conway's Game of Life and Wolfram Rule 110
   signal/           Fourier analysis demonstration (chord, sweep, AM)
+  quantum/          Quantum mechanics (coherent state QHO, particle-in-a-box)
   config/           Global config defaults (config.json)
   docs/             Workflow guides
 ```
@@ -57,6 +58,11 @@ wolframscript -file cellular/main.wl -- --simulation.mode=rule110
 wolframscript -file signal/main.wl                                       # chord (default)
 wolframscript -file signal/main.wl -- --simulation.mode=sweep
 wolframscript -file signal/main.wl -- --simulation.mode=am
+
+# Quantum mechanics
+wolframscript -file quantum/main.wl                                      # QHO coherent state
+wolframscript -file quantum/main.wl -- --simulation.mode=box             # particle-in-a-box
+wolframscript -file quantum/main.wl -- --simulation.qho.alpha=3.0        # larger coherent amplitude
 ```
 
 Each project writes outputs into its own directory:
@@ -64,7 +70,7 @@ Each project writes outputs into its own directory:
 | Project | Output dir | File types |
 |---------|-----------|------------|
 | pendulum, lorenz, asteroids | `data/` | CSV, GIF, WAV |
-| cellular, signal | `output/` | CSV, GIF, WAV (+ PNG for signal) |
+| cellular, signal, quantum | `output/` | CSV, GIF, WAV (+ PNG for signal and quantum) |
 
 Play audio on macOS:
 
@@ -74,6 +80,7 @@ afplay lorenz/data/lorenz_audio.wav
 afplay asteroids/data/asteroids_*.wav
 afplay cellular/output/life_rpentomino_audio.wav
 afplay signal/output/chord_narrative_full.wav
+afplay quantum/output/qho_audio.wav
 ```
 
 ---
@@ -122,6 +129,17 @@ spoken narrative. Unlike all other apps, the WAV output **is** the phenomenon
 rather than a sonification of something else.
 See [`signal/README.md`](signal/README.md).
 
+### quantum
+
+Simulates quantum mechanical wave-packet evolution in two exactly-solvable
+systems. `qho` mode evolves a coherent state |α⟩ in the quantum harmonic
+oscillator using a truncated Hermite-Gauss basis (ħ=m=1). `box` mode evolves
+an equal superposition of the ground state and first excited state in a
+particle-in-a-box. Both modes export an animated probability-density GIF, a
+3×3 snapshot PNG, and a time-series CSV of ⟨x⟩, Var(x), and speed. Stereo pan
+tracks mean position, pitch encodes position variance, and volume follows
+|d⟨x⟩/dt|.
+
 ---
 
 ## Config system
@@ -147,6 +165,7 @@ wolframscript -file lorenz/main.wl -- --simulation.mode=rossler
 wolframscript -file cellular/main.wl -- --simulation.life.starting_pattern=gliderlgun
 wolframscript -file signal/main.wl -- --simulation.chord.noise_level=0.8
 wolframscript -file asteroids/main.wl -- --simulation.days_ahead=14
+wolframscript -file quantum/main.wl -- --simulation.qho.alpha=3.0
 ```
 
 See [`docs/APPS.md`](docs/APPS.md) for a full listing of each app's config keys.
@@ -155,7 +174,7 @@ See [`docs/APPS.md`](docs/APPS.md) for a full listing of each app's config keys.
 
 ## stem-core
 
-All five projects load `stem-core` as a shared library. It provides:
+All six projects load `stem-core` as a shared library. It provides:
 
 - **Config** — `LoadConfig`, `GetCfg`, `DeepMerge` — four-layer config merging and safe key lookup
 - **Sonification pipeline** — `SonifyTrajectory`, `SpatialLayer`, `MotionLayer`, `EventLayer`, `MixLayers`, `RenderAudio`
