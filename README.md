@@ -161,6 +161,7 @@ prime triggers a short sine burst at a time proportional to its distance from pâ
 so twin primes (gap=2) produce near-simultaneous attacks and large gaps leave
 audible rests. A second WAV at quarter tempo stretches the rhythm so individual gap
 lengths become easier to count by ear.
+See [`primes/README.md`](primes/README.md).
 
 ---
 
