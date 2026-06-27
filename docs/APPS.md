@@ -65,11 +65,11 @@ wolframscript -file pendulum/main.wl -- --simulation.duration=30
 | File | Description |
 |------|-------------|
 | `data/simple_audio.wav` | Simple mode sonification |
-| `data/simple_pendulum.gif` | Simple pendulum animation |
-| `data/simple_pendulum.csv` | Angle and velocity time series |
+| `data/simple_animation.gif` | Simple pendulum animation |
+| `data/simple_results.csv` | Angle and velocity time series |
 | `data/double_audio.wav` | Double mode sonification |
-| `data/double_pendulum.gif` | Double pendulum animation |
-| `data/double_pendulum.csv` | Angles and velocities, both rods |
+| `data/double_animation.gif` | Double pendulum animation |
+| `data/double_results.csv` | Angles and velocities, both rods |
 
 ---
 
@@ -108,7 +108,7 @@ wolframscript -file lorenz/main.wl -- --simulation.lorenz.rho=35
 | File | Description |
 |------|-------------|
 | `data/lorenz_audio.wav` | Sonification of x(t) extrema events |
-| `data/lorenz_trajectory.gif` | Growing trajectory animation |
+| `data/lorenz_animation.gif` | Growing trajectory animation |
 | `data/lorenz_trajectory.csv` | x, y, z time series |
 
 ---
@@ -141,11 +141,13 @@ Valid scales: `MinorPentatonic` `MajorPentatonic` `Major` `Minor` `WholeTone` `P
 
 **Output files:**
 
+Output filenames include the date range, e.g. `asteroids_2026-06-21_2026-06-27.wav`.
+
 | File | Description |
 |------|-------------|
-| `data/asteroids_audio.wav` | Sonification (one note per asteroid) |
-| `data/asteroids_approach.gif` | Top-down solar system animation |
-| `data/asteroids_data.csv` | Per-asteroid data (distance, velocity, size) |
+| `data/asteroids_{start}_{end}.wav` | Sonification (one note per asteroid) |
+| `data/asteroids_{start}_{end}.gif` | Top-down solar system animation |
+| `data/asteroids_{start}_{end}.csv` | Per-asteroid data (distance, velocity, size) |
 
 **API key:** The DEMO_KEY allows ~30 requests/hour. For unrestricted access
 set `NASA_API_KEY` in your environment before running.
@@ -189,11 +191,12 @@ wolframscript -file cellular/main.wl -- --simulation.life.generations=500
 | File | Description |
 |------|-------------|
 | `output/life_rpentomino_audio.wav` | Game of Life sonification |
-| `output/life_rpentomino.gif` | Game of Life animation |
-| `output/life_rpentomino.csv` | Population per generation |
+| `output/life_rpentomino_animation.gif` | Game of Life animation |
+| `output/life_rpentomino_stats.csv` | Population per generation |
 | `output/rule110_audio.wav` | Rule 110 sonification |
-| `output/rule110.gif` | Rule 110 space-time diagram |
-| `output/rule110.csv` | Row density per generation |
+| `output/rule110_animation.gif` | Rule 110 animated space-time diagram |
+| `output/rule110_animation_spacetime.png` | Rule 110 static space-time image |
+| `output/rule110_stats.csv` | Row density per generation |
 
 ---
 
@@ -236,8 +239,11 @@ wolframscript -file signal/main.wl -- --simulation.chord.noise_level=0.8
 | `output/{mode}_noisy.wav` | Signal after noise is added |
 | `output/{mode}_recovered.wav` | Signal after Fourier filtering |
 | `output/{mode}_narrative_full.wav` | Spoken narrative + all three stages |
+| `output/{mode}_animation.gif` | Animated waveform/spectrum visualisation |
+| `output/{mode}_waveform.png` | Waveform comparison (clean vs noisy vs recovered) |
 | `output/{mode}_spectrum.png` | Frequency spectrum plot |
-| `output/{mode}_signal.csv` | Clean, noisy, and recovered sample arrays |
+| `output/{mode}_recovery.png` | SNR improvement visualisation |
+| `output/{mode}_spectrum.csv` | Frequency axis and power values |
 
 The `{mode}_narrative_full.wav` file is the most accessible output — it chains
 spoken introductions with audio playback of each stage so the demonstration

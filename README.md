@@ -69,7 +69,7 @@ Each project writes outputs into its own directory:
 Play audio on macOS:
 
 ```sh
-afplay pendulum/data/simple_audio.wav
+afplay pendulum/data/double_audio.wav
 afplay lorenz/data/lorenz_audio.wav
 afplay asteroids/data/asteroids_*.wav
 afplay cellular/output/life_rpentomino_audio.wav

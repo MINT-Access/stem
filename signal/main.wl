@@ -280,3 +280,6 @@ Which[
           "\" — expected \"chord\", \"sweep\", or \"am\"."];
     Exit[1]
 ];
+
+STEMSay["Complete. Play audio: afplay " <>
+  FileNameJoin[{$outDir, mode <> "_narrative_full.wav"}]]
