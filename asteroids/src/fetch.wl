@@ -12,9 +12,7 @@
      Returns a list of Associations, one per asteroid.
    ======================================================== *)
 
-(* LogError — write a one-line error to stderr.
-   Distinct from stem-core's 2-arg file-based LogError. *)
-LogError[msg_String] :=
+FetchError[msg_String] :=
   WriteString[$stderr, "[ERROR] " <> msg <> "\n"];
 
 
@@ -44,7 +42,7 @@ FetchRawJson[startDate_String, endDate_String] :=
     ];
 
     If[response === $Failed || StringLength[response] < 10,
-      LogError["Could not reach NASA API. Check your internet connection."];
+      FetchError["Could not reach NASA API. Check your internet connection."];
       Return[$Failed]
     ];
     response
@@ -146,12 +144,7 @@ FetchAsteroids[startDate_String, endDate_String] :=
     raw = FetchRawJson[startDate, endDate];
     If[raw === $Failed, Return[$Failed]];
 
-    json       = ImportString[raw, "JSON"];
-    (* ImportString returns nested lists-of-rules; convert in a single recursive pass *)
-    toAssoc[l : {__Rule}] := Association[Map[(First[#] -> toAssoc[Last[#]]) &, l]];
-    toAssoc[l_List]        := Map[toAssoc, l];
-    toAssoc[x_]            := x;
-    json = toAssoc[json];
+    json = ConfigToAssoc[ImportString[raw, "JSON"]];
     dateGroups = json["near_earth_objects"];
 
     (* Flatten all dates into one list *)

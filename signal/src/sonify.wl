@@ -17,18 +17,6 @@
    ======================================================== *)
 
 
-(* ExportMonoWAV
-   Normalise buffer to peakAmp and write a mono WAV file. *)
-
-ExportMonoWAV[buffer_List, filePath_String, sr_Integer, peakAmp_:0.95] :=
-  Module[{normalised, snd},
-    normalised = NormalizeBuffer[buffer, peakAmp];
-    EnsureDir[filePath];
-    snd = Sound[SampledSoundList[normalised, sr]];
-    Export[filePath, snd, "WAV"];
-    filePath
-  ]
-
 
 (* SpeakToBuffer
    Calls macOS `say` to synthesise speech and returns a mono PCM list
@@ -166,13 +154,13 @@ SonifySignal[analysis_Association, cfg_Association, outDir_String] :=
     narrativePath = FileNameJoin[{outDir, mode <> "_narrative_full.wav"}];
 
     (* ── Primary outputs: the three signal stages ── *)
-    ExportMonoWAV[clean,     cleanPath,  sr];
+    ExportAudioBuffer[NormalizeBuffer[clean,     0.95], cleanPath,  sr];
     STEMDescribeWAV[cleanPath, dur];
 
-    ExportMonoWAV[noisy,     noisyPath,  sr];
+    ExportAudioBuffer[NormalizeBuffer[noisy,     0.95], noisyPath,  sr];
     STEMDescribeWAV[noisyPath, dur];
 
-    ExportMonoWAV[recovered, recovPath,  sr];
+    ExportAudioBuffer[NormalizeBuffer[recovered, 0.95], recovPath,  sr];
     STEMDescribeWAV[recovPath, dur];
 
     (* ── Narrative WAV: speech + signals concatenated ── *)
@@ -196,6 +184,6 @@ SonifySignal[analysis_Association, cfg_Association, outDir_String] :=
       spSummary
     ];
 
-    ExportMonoWAV[fullNarrative, narrativePath, sr];
+    ExportAudioBuffer[NormalizeBuffer[fullNarrative, 0.95], narrativePath, sr];
     STEMDescribeWAV[narrativePath, N[Length[fullNarrative]] / sr]
   ]

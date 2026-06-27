@@ -49,27 +49,6 @@ GridToTrajectory[grid3D_List, cfg_Association] :=
   ]
 
 
-(* SynthBurst
-   Adds a short exponentially-decayed sine burst at sample index
-   `startIdx` into the mutable `buffer` list.
-   freq     — burst frequency in Hz
-   startIdx — 1-indexed sample position
-   sr       — sample rate
-   nSamples — total buffer length (for clipping) *)
-
-SynthBurst[buffer_List, freq_, startIdx_, sr_, nSamples_] :=
-  Module[{burstLen, endIdx, burst},
-    burstLen = Round[0.06 * sr];   (* 60 ms *)
-    endIdx   = Min[startIdx + burstLen - 1, nSamples];
-    burst    = 0.45 * Table[
-      Sin[2 Pi * freq * i / sr] * Exp[-8 i / burstLen],
-      {i, 0, endIdx - startIdx}
-    ];
-    ReplacePart[buffer,
-      Table[startIdx + i -> buffer[[startIdx + i]] + burst[[i + 1]],
-            {i, 0, endIdx - startIdx}]]
-  ]
-
 
 (* SonifyCellular
    Main entry point: produces a stereo WAV at outPath.

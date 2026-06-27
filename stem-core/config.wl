@@ -104,9 +104,14 @@ GetCfg[cfg_Association, keys_List, default_] :=
    Fold[DeepMerge, ...] silently skips missing layers.       *)
 
 LoadJsonConfig[path_String] :=
-  If[FileExistsQ[path],
-    ConfigToAssoc[Import[path, "JSON"]],
-    <||>
+  Module[{raw},
+    If[!FileExistsQ[path], Return[<||>]];
+    raw = Import[path, "JSON"];
+    If[raw === $Failed,
+      Print["[WARNING] Could not parse JSON: ", path, " — skipping."];
+      Return[<||>]
+    ];
+    ConfigToAssoc[raw]
   ]
 
 
@@ -193,42 +198,9 @@ $HardcodedDefaults = <|
     "colorScheme" -> "accessible"
   |>,
   "sonification" -> <|
-    "sampleRate" -> 44100,
-    "scale"      -> "MinorPentatonic",
-    "duration"   -> 10.0,
-    "spatial" -> <|
-      "enabled"  -> True,
-      "channels" -> 1,
-      "panAxis"  -> "x",
-      "panRange" -> {-1.0, 1.0}
-    |>,
-    "pitch" -> <|
-      "rootHz"  -> 220.0,
-      "octaves" -> 2,
-      "minHz"   -> 110,
-      "maxHz"   -> 880,
-      "scale"   -> "chromatic"
-    |>,
-    "volume" -> <|
-      "peak"      -> 0.95,
-      "normalize" -> True,
-      "minDb"     -> -24,
-      "maxDb"     -> 0
-    |>,
-    "motion" -> <|
-      "noteDuration"         -> 0.55,
-      "gapDuration"          -> 0.12,
-      "decayFrac"            -> 0.5,
-      "tremoloOnOscillation" -> True,
-      "noiseOnChaos"         -> True
-    |>,
-    "events" -> <|
-      "onStart"       -> Null,
-      "onComplete"    -> Null,
-      "enabled"       -> True,
-      "apexTone"      -> True,
-      "crossingClick" -> True
-    |>
+    "scale"    -> "MinorPentatonic",
+    "duration" -> 10.0,
+    "motion"   -> <| "noteDuration" -> 0.55, "gapDuration" -> 0.12 |>
   |>,
   "data" -> <|
     "logErrors"    -> True,
