@@ -1,6 +1,6 @@
 # STEM Apps — Quick Reference
 
-All five apps share the same invocation pattern and config system. This
+All six apps share the same invocation pattern and config system. This
 document covers CLI options, modes, config keys, and output files for each.
 
 ---
@@ -14,6 +14,7 @@ document covers CLI options, modes, config keys, and output files for each.
 | `asteroids` | NASA NeoWs API | — | `data/` | Yes |
 | `cellular` | Cellular automata | `life`, `rule110` | `output/` | No |
 | `signal` | Fourier analysis | `chord`, `sweep`, `am` | `output/` | No |
+| `quantum` | Quantum mechanics | `qho`, `box` | `output/` | No |
 
 ---
 
@@ -248,3 +249,55 @@ wolframscript -file signal/main.wl -- --simulation.chord.noise_level=0.8
 The `{mode}_narrative_full.wav` file is the most accessible output — it chains
 spoken introductions with audio playback of each stage so the demonstration
 can be followed by listening alone.
+
+---
+
+## quantum
+
+Simulates quantum mechanical wave-packet evolution in two exactly-solvable
+systems using a truncated energy-eigenstate basis (ħ=m=1 throughout).
+
+**Run:**
+```sh
+wolframscript -file quantum/main.wl
+wolframscript -file quantum/main.wl -- --simulation.mode=qho
+wolframscript -file quantum/main.wl -- --simulation.mode=box
+wolframscript -file quantum/main.wl -- --simulation.qho.alpha=3.0
+```
+
+**Key config keys (`quantum/config.json`):**
+
+| Key | Default | Description |
+|-----|---------|-------------|
+| `simulation.mode` | `"qho"` | `"qho"` or `"box"` |
+| `simulation.qho.alpha` | `2.0` | Coherent state amplitude α |
+| `simulation.qho.omega` | `1.0` | Oscillator frequency ω |
+| `simulation.qho.n_modes` | `20` | Number of Hermite-Gauss basis functions |
+| `simulation.qho.x_range` | `[-8.0, 8.0]` | Spatial grid extent |
+| `simulation.qho.n_points` | `200` | Spatial grid points |
+| `simulation.qho.duration` | `12.56637` | Simulation time (≈ 2π/ω, one period) |
+| `simulation.qho.timestep` | `0.05` | Time step |
+| `simulation.box.L` | `10.0` | Box length |
+| `simulation.box.n_modes` | `10` | Number of energy eigenstates in basis |
+| `simulation.box.n_points` | `200` | Spatial grid points |
+| `simulation.box.duration` | `20.0` | Simulation time |
+| `simulation.box.timestep` | `0.05` | Time step |
+| `sonification.pitch.min_hz` | `110` | Pitch at minimum variance |
+| `sonification.pitch.max_hz` | `880` | Pitch at maximum variance |
+
+**Output files (mode-prefixed, e.g. `qho_`):**
+
+| File | Description |
+|------|-------------|
+| `output/{mode}_density.gif` | Animated \|ψ(x,t)\|² (≤100 frames) |
+| `output/{mode}_density.png` | 3×3 snapshot grid at equal time intervals |
+| `output/{mode}_timeseries.csv` | Time series of ⟨x⟩, Var(x), and speed |
+| `output/{mode}_audio.wav` | Sonification: pan=⟨x⟩, pitch=Var(x), vol=\|d⟨x⟩/dt\| |
+| `output/{mode}_description.wav` | Spoken description of the quantum state |
+
+**Physics notes:**
+- QHO coherent state: ⟨E⟩ = ω(\|α\|² + ½). For α=2, ω=1: ⟨E⟩ = 4.5.
+- Box superposition: ⟨E⟩ = (E₁ + E₂)/2, where Eₙ = n²π²/(2L²).
+  For L=10: ⟨E⟩ ≈ 0.1234.
+- Normalisation ∫\|ψ\|²dx is verified at every 10th timestep; a warning
+  is printed if any sample deviates from 1 by more than 1%.
