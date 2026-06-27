@@ -100,11 +100,7 @@ Which[
 
     Print["[4/4] Sonifying..."];
     SonifyQuantum[solution, cfg, $outDir];
-    Print[""];
-
-    STEMHeading["Done"];
-    STEMSay["Complete. Play audio: afplay " <>
-      FileNameJoin[{$outDir, "qho_audio.wav"}]],
+    Print[""],
 
 
   (* ══════════════════════════════════════════════════════
@@ -155,11 +151,7 @@ Which[
 
     Print["[4/4] Sonifying..."];
     SonifyQuantum[solution, cfg, $outDir];
-    Print[""];
-
-    STEMHeading["Done"];
-    STEMSay["Complete. Play audio: afplay " <>
-      FileNameJoin[{$outDir, "box_audio.wav"}]],
+    Print[""],
 
 
   (* Unknown mode *)
@@ -167,4 +159,7 @@ Which[
     Print["Error: unknown simulation.mode \"", mode,
           "\" — expected \"qho\" or \"box\"."];
     Exit[1]
-]
+];
+
+STEMHeading["Done"];
+STEMSay["Complete. Play audio: afplay " <> FileNameJoin[{$outDir, mode <> "_audio.wav"}]]

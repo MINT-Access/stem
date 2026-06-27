@@ -22,34 +22,42 @@
    Calls macOS `say` to synthesise speech and returns a mono PCM list
    at the target sample rate.  Falls back to a short silence on any error.
 
-   `say` produces AIFF at ~22050 Hz by default.  We upsample 2x to 44100
-   by linear interpolation between adjacent samples. *)
+   `say -o` produces AIFF-C compressed audio. WL cannot reliably decode
+   AIFF-C in headless mode, so we run afconvert to produce a linear PCM
+   WAV before importing.  Upsamples 22050 -> 44100 Hz by linear interpolation. *)
 
 SpeakToBuffer[text_String, targetSr_Integer] :=
-  Module[{tmpPath, result, snd, data, silence, rawSr, upsampled},
-    silence = ConstantArray[0.0, Round[targetSr * 0.5]];   (* 0.5 s fallback *)
-    tmpPath = FileNameJoin[{$TemporaryDirectory,
-                "stem_say_" <> ToString[RandomInteger[999999]] <> ".aiff"}];
+  Module[{id, aiffPath, wavPath, result, conv, snd, data, rawSr, upsampled,
+          silence = ConstantArray[0.0, Round[targetSr * 0.5]]},
 
-    result = Quiet[RunProcess[{"say", "-o", tmpPath, text}]];
-    If[!AssociationQ[result] || result["ExitCode"] =!= 0 || !FileExistsQ[tmpPath],
+    id       = ToString[RandomInteger[999999]];
+    aiffPath = FileNameJoin[{$TemporaryDirectory, "stem_say_" <> id <> ".aiff"}];
+    wavPath  = FileNameJoin[{$TemporaryDirectory, "stem_say_" <> id <> ".wav"}];
+
+    result = Quiet[RunProcess[{"say", "-o", aiffPath, text}]];
+    If[!AssociationQ[result] || result["ExitCode"] =!= 0 ||
+       !FileExistsQ[aiffPath],
+      Quiet[DeleteFile /@ Select[{aiffPath, wavPath}, FileExistsQ]];
       Return[silence]];
 
-    snd = Quiet[Import[tmpPath]];
-    Quiet[DeleteFile[tmpPath]];
-
-    If[Head[snd] =!= Sound || Length[snd] < 1 ||
-       Head[snd[[1]]] =!= SampledSoundList,
+    (* Decompress AIFF-C to linear PCM WAV so WL can read the samples *)
+    conv = Quiet[RunProcess[{"afconvert", aiffPath, wavPath,
+                              "-d", "LEI16", "-f", "WAVE"}]];
+    Quiet[DeleteFile[aiffPath]];
+    If[!AssociationQ[conv] || conv["ExitCode"] =!= 0 || !FileExistsQ[wavPath],
+      Quiet[DeleteFile /@ Select[{wavPath}, FileExistsQ]];
       Return[silence]];
 
-    data  = Flatten[N[snd[[1, 1]]]];
-    rawSr = snd[[1, 2]];
+    snd = Quiet[Import[wavPath]];
 
+    (* AudioData lazily reads the file; extract before deleting *)
+    If[!AudioQ[snd], Quiet[DeleteFile[wavPath]]; Return[silence]];
+    data  = Quiet[Flatten[N[AudioData[snd]]]];
+    rawSr = Quiet[QuantityMagnitude[AudioSampleRate[snd]]];
+    Quiet[DeleteFile[wavPath]];
     If[!ListQ[data] || Length[data] === 0, Return[silence]];
 
-    (* Upsample if say produced 22050 Hz and we want 44100 Hz *)
     If[rawSr < targetSr,
-      (* Linear interpolation: interleave interpolated midpoints *)
       With[{ratio = Round[targetSr / rawSr]},
         If[ratio === 2,
           upsampled = Flatten[Transpose[{
@@ -57,11 +65,8 @@ SpeakToBuffer[text_String, targetSr_Integer] :=
             (Most[data] + Rest[data]) / 2.0
           }]];
           Append[upsampled, Last[data]],
-          data   (* unsupported ratio — return as-is *)
-        ]
-      ],
-      data   (* already at target rate *)
-    ]
+          data]],
+      data]
   ]
 
 

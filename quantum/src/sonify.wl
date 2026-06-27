@@ -12,8 +12,7 @@
 
      SonifyQuantum[solution, cfg, outDir]
        Runs the full audio pipeline. Outputs:
-         {mode}_audio.wav        — sonification via SonifyTrajectory
-         {mode}_description.wav  — spoken description (macOS say)
+         {mode}_audio.wav  — sonification via SonifyTrajectory
    ======================================================== *)
 
 
@@ -56,13 +55,11 @@ DensityToTrajectory[solution_Association] :=
 
 
 SonifyQuantum[solution_Association, cfg_Association, outDir_String] :=
-  Module[{mode, traj, tEnd, cfgSon, audioPath, descPath,
-          descText, descBuf, sr},
+  Module[{mode, traj, tEnd, cfgSon, audioPath},
 
     mode  = solution["mode"];
     traj  = DensityToTrajectory[solution];
     tEnd  = Last[solution["t"]];
-    sr    = 44100;
 
     (* Override sonification duration to match simulation time span *)
     cfgSon = DeepMerge[cfg,
@@ -72,76 +69,5 @@ SonifyQuantum[solution_Association, cfg_Association, outDir_String] :=
     STEMSay["Sonifying " <> mode <> " density trajectory"];
     EnsureDir[audioPath];
     SonifyTrajectory[traj, cfgSon, audioPath, {"apex", "crossing"}];
-    STEMDescribeWAV[audioPath, N[tEnd]];
-
-    (* Spoken description WAV using macOS say *)
-    descPath = FileNameJoin[{outDir, mode <> "_description.wav"}];
-    descText = Switch[mode,
-      "qho",
-        "Quantum harmonic oscillator, coherent state. " <>
-        "Mean energy " <>
-        ToString[NumberForm[solution["mean_energy"], {4, 3}]] <>
-        " natural units. " <>
-        "The wave packet oscillates classically without spreading. " <>
-        "Stereo pan follows mean position. " <>
-        "Volume follows instantaneous speed. " <>
-        "Pitch encodes the position variance.",
-      "box",
-        "Particle in a box. " <>
-        "Equal superposition of ground state and first excited state. " <>
-        "Mean energy " <>
-        ToString[NumberForm[solution["mean_energy"], {4, 3}]] <>
-        " natural units. " <>
-        "The wave packet oscillates between the walls. " <>
-        "Stereo pan follows mean position. " <>
-        "Volume follows instantaneous speed. " <>
-        "Pitch encodes the position variance.",
-      _,
-        "Quantum simulation. Mean energy " <>
-        ToString[NumberForm[solution["mean_energy"], {4, 3}]] <>
-        " natural units."
-    ];
-
-    descBuf = SpeakToBuffer[descText, sr];
-    EnsureDir[descPath];
-    ExportAudioBuffer[NormalizeBuffer[descBuf, 0.95], descPath, sr];
-    STEMDescribeWAV[descPath, N[Length[descBuf]] / sr]
-  ]
-
-
-(* SpeakToBuffer
-   Calls macOS `say` to synthesise speech and returns a mono PCM list
-   at targetSr. Falls back to 0.5 s silence on any error.
-   Upsamples 22050 -> 44100 Hz by linear interpolation. *)
-
-SpeakToBuffer[text_String, targetSr_Integer] :=
-  Module[{tmpPath, result, snd, data, rawSr, upsampled,
-          silence = ConstantArray[0.0, Round[targetSr * 0.5]]},
-
-    tmpPath = FileNameJoin[{$TemporaryDirectory,
-      "stem_q_" <> ToString[RandomInteger[999999]] <> ".aiff"}];
-
-    result = Quiet[RunProcess[{"say", "-o", tmpPath, text}]];
-    If[!AssociationQ[result] || result["ExitCode"] =!= 0 ||
-       !FileExistsQ[tmpPath], Return[silence]];
-
-    snd = Quiet[Import[tmpPath]];
-    Quiet[DeleteFile[tmpPath]];
-
-    If[Head[snd] =!= Sound || Length[snd] < 1 ||
-       Head[snd[[1]]] =!= SampledSoundList,
-      Return[silence]];
-
-    data  = Flatten[N[snd[[1, 1]]]];
-    rawSr = snd[[1, 2]];
-    If[!ListQ[data] || Length[data] === 0, Return[silence]];
-
-    If[rawSr < targetSr,
-      With[{ratio = Round[targetSr / rawSr]},
-        If[ratio === 2,
-          upsampled = Flatten[
-            Transpose[{Most[data], (Most[data] + Rest[data]) / 2.0}]];
-          Append[upsampled, Last[data]],
-          data]],
-      data]
+    STEMDescribeWAV[audioPath, N[tEnd]]
   ]
