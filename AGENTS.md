@@ -12,6 +12,7 @@ Per-project AGENTS files:
 - [`signal/AGENTS.md`](signal/AGENTS.md)
 - [`quantum/AGENTS.md`](quantum/AGENTS.md)
 - [`primes/AGENTS.md`](primes/AGENTS.md)
+- [`relativity/AGENTS.md`](relativity/AGENTS.md)
 
 ---
 
@@ -27,6 +28,7 @@ stem/
   signal/           Signal processing (Fourier analysis, direct audio output)
   quantum/          Quantum mechanics (coherent state QHO, particle-in-a-box)
   primes/           Prime number patterns (Ulam spiral, prime gap rhythm)
+  relativity/       General relativity (gravitational wave chirp, PN inspiral)
   config/           Global config defaults (config.json)
   docs/             Workflow guides
 ```
@@ -60,6 +62,9 @@ wolframscript -file quantum/main.wl -- --simulation.qho.alpha=3.0
 wolframscript -file primes/main.wl                                       # Ulam spiral (default)
 wolframscript -file primes/main.wl -- --simulation.mode=gaps             # prime gap rhythm
 wolframscript -file primes/main.wl -- --simulation.ulam.size=201
+wolframscript -file relativity/main.wl                                   # GW150914 (chirp, default)
+wolframscript -file relativity/main.wl -- --simulation.chirp.preset gw170817
+wolframscript -file relativity/main.wl -- --sonification.chirp.time_stretch 8
 ```
 
 `asteroids/main.wl` and `asteroids/experiment.wl` accept `[-- YYYY-MM-DD YYYY-MM-DD [Scale]]`.
@@ -88,8 +93,7 @@ wolframscript -file lorenz/tests/test_model.wl
 wolframscript -file asteroids/tests/test_analyse.wl
 ```
 
-`cellular`, `signal`, and `quantum` do not have test files. All existing test files exit 0 on
-success, 1 on failure.
+`cellular`, `signal`, `quantum`, `primes`, and `relativity` do not have test files. All existing test files exit 0 on success, 1 on failure.
 
 ---
 

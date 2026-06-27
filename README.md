@@ -20,6 +20,7 @@ stem/
   signal/           Fourier analysis demonstration (chord, sweep, AM)
   quantum/          Quantum mechanics (coherent state QHO, particle-in-a-box)
   primes/           Prime number patterns (Ulam spiral, prime gap rhythm)
+  relativity/       General relativity (gravitational wave chirp, PN inspiral)
   config/           Global config defaults (config.json)
   docs/             Workflow guides
 ```
@@ -70,6 +71,12 @@ wolframscript -file primes/main.wl                                       # Ulam 
 wolframscript -file primes/main.wl -- --simulation.mode=gaps             # prime gap rhythm
 wolframscript -file primes/main.wl -- --simulation.ulam.size=201         # larger spiral
 wolframscript -file primes/main.wl -- --simulation.gaps.count=10000      # more primes
+
+# Gravitational waves
+wolframscript -file relativity/main.wl                                   # GW150914 (36+29 M☉)
+wolframscript -file relativity/main.wl -- --simulation.chirp.preset gw170817
+wolframscript -file relativity/main.wl -- --simulation.chirp.mass1_solar 50 --simulation.chirp.mass2_solar 50
+wolframscript -file relativity/main.wl -- --sonification.chirp.time_stretch 8
 ```
 
 Each project writes outputs into its own directory:
@@ -77,7 +84,7 @@ Each project writes outputs into its own directory:
 | Project | Output dir | File types |
 |---------|-----------|------------|
 | pendulum, lorenz, asteroids | `data/` | CSV, GIF, WAV |
-| cellular, signal, quantum, primes | `output/` | CSV, GIF, WAV (+ PNG for signal, quantum, primes) |
+| cellular, signal, quantum, primes, relativity | `output/` | CSV, GIF, WAV (+ PNG for signal, quantum, primes, relativity) |
 
 Play audio on macOS:
 
@@ -90,6 +97,8 @@ afplay signal/output/chord_narrative_full.wav
 afplay quantum/output/qho_audio.wav
 afplay primes/output/ulam_audio.wav
 afplay primes/output/gaps_audio.wav
+afplay relativity/output/chirp.wav
+afplay relativity/output/gw170817.wav
 ```
 
 ---
@@ -163,6 +172,23 @@ audible rests. A second WAV at quarter tempo stretches the rhythm so individual 
 lengths become easier to count by ear.
 See [`primes/README.md`](primes/README.md).
 
+### relativity
+
+Simulates the gravitational wave strain from a binary inspiral using the
+post-Newtonian (PN) approximation — the same analytic model used to construct
+the matched filters that enabled LIGO's first detection. The strain h(t) is
+literally an audio waveform: a *chirp* sweeping upward in frequency and
+amplitude as the two bodies spiral together, ending in an abrupt merger
+followed by an exponentially damped ringdown at the quasi-normal mode frequency.
+Time-stretching makes the millisecond-scale signal clearly audible.
+
+Three preset comparison WAVs are produced automatically on every run:
+`gw150914.wav` (36+29 M☉ binary black hole, the 2015 LIGO event),
+`gw170817.wav` (1.17+1.36 M☉ neutron star merger, final 10 s of inspiral),
+and `stellar.wav` (10+8 M☉). Four physical correctness checks verify the PN
+formulas on each run and abort if they fail.
+See [`relativity/README.md`](relativity/README.md).
+
 ---
 
 ## Config system
@@ -189,6 +215,7 @@ wolframscript -file cellular/main.wl -- --simulation.life.starting_pattern=glide
 wolframscript -file signal/main.wl -- --simulation.chord.noise_level=0.8
 wolframscript -file asteroids/main.wl -- --simulation.days_ahead=14
 wolframscript -file quantum/main.wl -- --simulation.qho.alpha=3.0
+wolframscript -file relativity/main.wl -- --simulation.chirp.mass1_solar 50
 ```
 
 See [`docs/APPS.md`](docs/APPS.md) for a full listing of each app's config keys.
@@ -197,7 +224,7 @@ See [`docs/APPS.md`](docs/APPS.md) for a full listing of each app's config keys.
 
 ## stem-core
 
-All seven projects load `stem-core` as a shared library. It provides:
+All eight projects load `stem-core` as a shared library. It provides:
 
 - **Config** — `LoadConfig`, `GetCfg`, `DeepMerge` — four-layer config merging and safe key lookup
 - **Sonification pipeline** — `SonifyTrajectory`, `SpatialLayer`, `MotionLayer`, `EventLayer`, `MixLayers`, `RenderAudio`
