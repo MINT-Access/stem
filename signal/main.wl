@@ -22,10 +22,10 @@
 $projectRoot  = DirectoryName[$InputFileName];
 $stemCoreRoot = FileNameJoin[{$projectRoot, "..", "stem-core"}];
 Get[FileNameJoin[{$stemCoreRoot, "init.wl"}]];
-Get[FileNameJoin[{$projectRoot, "model.wl"}]];
-Get[FileNameJoin[{$projectRoot, "analyze.wl"}]];
-Get[FileNameJoin[{$projectRoot, "animate.wl"}]];
-Get[FileNameJoin[{$projectRoot, "sonify.wl"}]];
+Get[FileNameJoin[{$projectRoot, "src", "model.wl"}]];
+Get[FileNameJoin[{$projectRoot, "src", "analyze.wl"}]];
+Get[FileNameJoin[{$projectRoot, "src", "animate.wl"}]];
+Get[FileNameJoin[{$projectRoot, "src", "sonify.wl"}]];
 
 (* Pre-process CLI args: convert "--key value" pairs to "--key=value"
    so both conventions work (ParseCliOverrides in stem-core requires =). *)
