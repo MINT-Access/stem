@@ -55,6 +55,61 @@ SolveLorenz[params_Association] := Module[
 ]
 
 
+(* SolveRossler
+   The Rössler system (Rössler, 1976):
+       x'(t) = -y - z
+       y'(t) = x + a·y
+       z'(t) = b + z·(x - c)
+
+   With classic parameters a=0.2, b=0.2, c=5.7 the system
+   produces a strange attractor with a characteristic slow
+   outward spiral in the x-y plane and a sharp return via
+   z-excursions.  Not stiff, so no special solver method.
+
+   Input:  params — Association with keys:
+             A, B, C,
+             InitX, InitY, InitZ,
+             TimeEnd, TimeStep
+   Output: list of {t, x, y, z} quadruples (same structure
+           as SolveLorenz, so the rest of the pipeline is
+           attractor-agnostic). *)
+
+SolveRossler[params_Association] :=
+  Module[{a, b, c, x0, y0, z0, tEnd, dt, sol, times},
+
+    a    = params["A"];
+    b    = params["B"];
+    c    = params["C"];
+    x0   = params["InitX"];
+    y0   = params["InitY"];
+    z0   = params["InitZ"];
+    tEnd = params["TimeEnd"];
+    dt   = params["TimeStep"];
+
+    sol = NDSolve[
+      {
+        x'[t] == -y[t] - z[t],
+        y'[t] == x[t] + a * y[t],
+        z'[t] == b + z[t] * (x[t] - c),
+        x[0]  == x0,
+        y[0]  == y0,
+        z[0]  == z0
+      },
+      {x, y, z},
+      {t, 0, tEnd},
+      MaxStepSize -> dt
+    ];
+
+    times = Range[0, tEnd, dt];
+
+    {#,
+     x[#] /. sol[[1]],
+     y[#] /. sol[[1]],
+     z[#] /. sol[[1]]
+    } & /@ times
+  ]
+
+
 (* SolveLorenzPair
    Solves two trajectories with nearly identical initial conditions.
    Used to demonstrate sensitive dependence (butterfly effect).

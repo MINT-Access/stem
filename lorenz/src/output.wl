@@ -8,21 +8,22 @@
    Columns: time, x, y, z, speed (magnitude of velocity vector) *)
 
 ExportResults[solution_List, params_Association, filePath_String] :=
-  Module[{header, rows, allRows},
+  Module[{header, dt, vx, vy, vz, speeds, rows, allRows},
 
     header = {{"time_s", "x", "y", "z", "speed"}};
 
-    rows = {
-      #[[1]],                                          (* t   *)
-      #[[2]],                                          (* x   *)
-      #[[3]],                                          (* y   *)
-      #[[4]],                                          (* z   *)
-      Sqrt[                                            (* |v| *)
-        (params["Sigma"] * (#[[3]] - #[[2]]))^2 +
-        (#[[2]] * (params["Rho"] - #[[4]]) - #[[3]])^2 +
-        (#[[2]] * #[[3]] - params["Beta"] * #[[4]])^2
-      ]
-    } & /@ solution;
+    (* Generic speed via finite differences — works for any 3D attractor *)
+    dt     = solution[[2, 1]] - solution[[1, 1]];
+    vx     = Differences[solution[[All, 2]]] / dt;
+    vy     = Differences[solution[[All, 3]]] / dt;
+    vz     = Differences[solution[[All, 4]]] / dt;
+    speeds = Append[Sqrt[vx^2 + vy^2 + vz^2],
+                    Last[Sqrt[vx^2 + vy^2 + vz^2]]];
+
+    rows = MapThread[
+      {#1[[1]], #1[[2]], #1[[3]], #1[[4]], #2} &,
+      {solution, speeds}
+    ];
 
     allRows = Join[header, rows];
 
