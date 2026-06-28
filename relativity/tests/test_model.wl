@@ -74,11 +74,12 @@ expectedChirp = 30.0 * 2.0^(-1/5);
 AssertTrue["Equal-mass chirp mass matches m * 2^(-1/5) within 0.1%",
   Abs[model["chirp_mass_solar"] - expectedChirp] / expectedChirp < 0.001];
 
-(* Test 7: frequency monotonically increases up to the clipping point *)
-With[{freqs = model["frequency"]},
-  (* Find where clipping starts: freq reaches fMax *)
-  clipIdx = First[FirstPosition[freqs, _?(# >= 499.0 &), {Length[freqs]}]];
-  inspiral = freqs[[;; clipIdx]];
+(* Test 7: frequency monotonically increases through inspiral
+   Use merger_index to delimit the inspiral portion exactly — the ringdown
+   appends a constant QNM frequency that is lower than the inspiral peak,
+   so any threshold search on the full array would cross the boundary. *)
+With[{freqs = model["frequency"], mIdx = model["merger_index"]},
+  inspiral = freqs[[;; mIdx]];
   AssertTrue["GW frequency is monotonically increasing through inspiral",
     Min[Differences[inspiral]] >= -0.1]];
 
