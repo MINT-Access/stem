@@ -2,69 +2,93 @@
 
 ## Project overview
 
-General relativity simulation in Wolfram Language. Currently one mode — `chirp`
-— which computes the gravitational wave strain from a binary inspiral using the
-post-Newtonian (PN) approximation, exports an animated GIF revealing the waveform
-left-to-right, a static two-panel PNG, a time-series CSV, and four WAV files.
+General relativity simulation in Wolfram Language. Two modes:
 
-**Key distinction from all other apps:** the WAV output IS the gravitational wave.
-The strain h(t) is literally an audio waveform. There is no indirect sonification
-mapping — `SonifyTrajectory` is not used here.
+- **chirp** — gravitational wave strain from a binary inspiral (post-Newtonian
+  approximation). Exports chirp.gif, chirp.png, chirp_timeseries.csv, and four
+  WAV files. The strain h(t) IS the audio — no indirect sonification mapping.
+- **geodesic** — Schwarzschild test-particle and photon trajectories solved
+  numerically by NDSolve. Three orbit types: bound (elliptical; GR periapsis
+  precession), plunging (falls past horizon), photon (gravitational lensing).
+  Exports geodesic.gif, geodesic.png, geodesic_trajectory.csv, geodesic.wav.
 
-**SI units throughout the physics.** Constants G, c, M☉ are defined numerically.
-Never work in natural units (G = c = 1) for this app — the amplitude formula
-requires metric distance in metres.
+**Units discipline:**
+- `chirp` mode: SI throughout (G, c, M☉ defined numerically). Never use
+  natural units here — the amplitude formula requires metric distance in metres.
+- `geodesic` mode: dimensionless units (G = c = M = 1) for the integration.
+  All r in units of M; convert to r_s = 2M for display. Physical quantities
+  (Schwarzschild radius in km) computed from SI constants at the end.
 
 ## Project structure
 
-- `main.wl`              — Entry point; preset resolution; 4-step pipeline
-- `config.json`          — App defaults (chirp sub-config, presets, animation,
-                           sonification)
-- `src/model.wl`         — `ChirpModel[cfg]`
-                           Returns:
-                           `<| "time", "strain", "frequency", "amplitude",
-                              "merger_index", "chirp_mass_solar",
-                              "coalescence_time", "peak_frequency",
-                              "sample_rate", "mode" |>`
-- `src/animate.wl`       — `AnimateRelativity[model, cfg, outDir]`
-                           Exports `chirp.gif` (60 frames) + `chirp.png`
-- `src/sonify.wl`        — `ChirpToAudio[strain, srModel, srOut, timeStretch, freqShift]`,
-                           `SonifyPreset[pm1, pm2, pDistMpc, cfg, wavPath]`,
-                           `SonifyPreset[pm1, pm2, pDistMpc, cfg, wavPath, maxInspiral]`,
-                           `SonifyRelativity[model, cfg, outDir]`
-- `output/`              — All output files (not committed)
+- `main.wl`          — Mode dispatch (`Which[mode === "chirp", ..., mode === "geodesic", ...]`);
+                       preset resolution (chirp only); 4-step pipeline per mode
+- `config.json`      — All defaults: `simulation.{chirp, geodesic}`,
+                       `animation`, `sonification.{chirp, geodesic}`
+- `src/model.wl`     — `ChirpModel[cfg]`, `GeodesicModel[cfg]`
+- `src/animate.wl`   — `AnimateRelativity[model, cfg, outDir]`
+                       → dispatches to `AnimateGeodesic` when mode = "geodesic"
+- `src/sonify.wl`    — `SonifyRelativity[model, cfg, outDir]`
+                       → dispatches to `SonifyGeodesic` when mode = "geodesic"
+- `output/`          — All output files (not committed)
 
 ## How to run
 
 ```bash
-wolframscript -file main.wl                                        # GW150914 defaults
+# Chirp (default)
+wolframscript -file main.wl
 wolframscript -file main.wl -- --simulation.mode chirp
 wolframscript -file main.wl -- --simulation.chirp.preset gw170817
 wolframscript -file main.wl -- --simulation.chirp.mass1_solar 50
 wolframscript -file main.wl -- --sonification.chirp.time_stretch 8
+
+# Geodesic
+wolframscript -file main.wl -- --simulation.mode geodesic
+wolframscript -file main.wl -- --simulation.mode geodesic --simulation.geodesic.orbit_type plunging
+wolframscript -file main.wl -- --simulation.mode geodesic --simulation.geodesic.orbit_type photon
+wolframscript -file main.wl -- --simulation.geodesic.bound.angular_momentum_factor 0.70
+wolframscript -file main.wl -- --simulation.geodesic.photon.impact_parameter_factor 1.05
+
+# Both
 wolframscript -file main.wl -- --config-dump
 afplay output/chirp.wav
+afplay output/geodesic.wav
 ```
 
-CLI override format: `--key=value` (with `=`). Space-separated `--key value`
-is also accepted — main.wl pre-processes args before passing to `LoadConfig`.
+CLI override format: `--key=value` or space-separated `--key value` (both
+work — main.wl pre-processes args before passing to `LoadConfig`).
 
 ## Data flow
 
+### Chirp
 ```
 config → ChirpModel
            ↓
          model {time[], strain[], frequency[], amplitude[],
                 merger_index, chirp_mass_solar, coalescence_time,
-                peak_frequency, sample_rate, mode}
+                peak_frequency, sample_rate, mode="chirp"}
            ↙              ↓              ↘
   AnimateRelativity     CSV           SonifyRelativity
-  (chirp.gif,        (subsampled         ↓
-   chirp.png)        10th rows)    ChirpToAudio × 4
-                                  (chirp.wav + 3 preset WAVs)
+  (chirp.gif,        (10th rows)     → ChirpToAudio × 4
+   chirp.png)                          (chirp.wav + 3 presets)
 ```
 
-## Model Association shape
+### Geodesic
+```
+config → GeodesicModel (NDSolve)
+           ↓
+         model {tau[], r[], phi[], x[], y[], redshift[],
+                dphi_dtau[], omega_mean, merger_index,
+                r_min, r_max, r_start, L_tilde, E,
+                orbit_type, mass_solar, r_s_km,
+                tau_max, n_revolutions, mode="geodesic"}
+           ↙              ↓              ↘
+  AnimateGeodesic       CSV           SonifyGeodesic
+  (geodesic.gif,    (5000 rows)       (geodesic.wav)
+   geodesic.png)
+```
+
+## Model Association shape — ChirpModel
 
 | Key | Type | Description |
 |-----|------|-------------|
@@ -72,125 +96,160 @@ config → ChirpModel
 | `"strain"` | vector | h(t) — raw gravitational wave strain (~10⁻²¹) |
 | `"frequency"` | vector | f(t) — instantaneous GW frequency, Hz |
 | `"amplitude"` | vector | A(t) — strain amplitude envelope |
-| `"merger_index"` | Integer | Index of first ringdown sample in all arrays |
+| `"merger_index"` | Integer | Index of first ringdown sample |
 | `"chirp_mass_solar"` | Real | Chirp mass ℳ in solar masses |
-| `"coalescence_time"` | Real | t_c in seconds (duration of inspiral) |
+| `"coalescence_time"` | Real | t_c in seconds |
 | `"peak_frequency"` | Real | Maximum frequency reached before clipping |
 | `"sample_rate"` | Integer | Model sample rate (4096 Hz by default) |
 | `"mode"` | String | `"chirp"` |
 
-## Physics notes
+## Model Association shape — GeodesicModel
+
+All spatial coordinates in units of M (dimensionless). Convert to r_s by
+dividing by 2.
+
+| Key | Type | Description |
+|-----|------|-------------|
+| `"tau"` | vector | Proper-time (or affine parameter) array, units of M |
+| `"r"` | vector | Radial coordinate r/M |
+| `"phi"` | vector | Azimuthal angle, radians |
+| `"x"`, `"y"` | vectors | Cartesian equivalents: r·cos φ, r·sin φ (units of M) |
+| `"redshift"` | vector | √(1 − 2/r̃) — gravitational redshift factor |
+| `"dphi_dtau"` | vector | \|dφ/dτ\| — angular velocity, rad/M |
+| `"omega_mean"` | Real | Mean angular velocity (used to normalise audio pitch) |
+| `"merger_index"` | Integer | First index with r ≤ 2, or Length[r] if no crossing |
+| `"r_min"`, `"r_max"` | Real | Trajectory extrema, units of M |
+| `"r_start"` | Real | Initial r̃ = r_start_rs × 2 |
+| `"L_tilde"` | Real | Dimensionless angular momentum L/M (or impact parameter b) |
+| `"E"` | Real | Dimensionless energy (1 for photon) |
+| `"orbit_type"` | String | `"bound"` \| `"plunging"` \| `"photon"` |
+| `"mass_solar"` | Real | Black hole mass in solar masses |
+| `"r_s_km"` | Real | Schwarzschild radius in km |
+| `"tau_max"` | Real | Actual integration end, units of M |
+| `"n_revolutions"` | Real | Total φ / 2π |
+| `"mode"` | String | `"geodesic"` |
+
+## Physics notes — chirp mode
 
 ### Post-Newtonian frequency evolution
 
-The orbital frequency evolves as (Peters 1964):
-
     f(t) = (1/π) · (5/256)^(3/8) · ℳ_sec^(−5/8) · (t_c − t)^(−3/8)
 
-where τ = t_c − t is time remaining to merger and:
-
-    ℳ_sec = G · ℳ · M☉ / c³   (chirp mass in seconds)
-    ℳ = μ^(3/5) · M^(2/5)     (chirp mass in solar masses)
-    μ = m₁m₂/(m₁+m₂)
-
-Coalescence time from starting frequency f_min:
+    ℳ_sec = G · ℳ · M☉ / c³,  ℳ = μ^(3/5) · M^(2/5),  μ = m₁m₂/(m₁+m₂)
 
     t_c = (5/256) · ℳ_sec^(−5/3) · (π f_min)^(−8/3)
-
-Self-consistency check: substituting t_c back gives f(0) = f_min exactly.
-The `[PASS] Frequency at t=0` check verifies this within 25%.
 
 ### Strain amplitude
 
     A(t) = (4/D) · (ℳ_sec · c) · (π · ℳ_sec · f(t))^(2/3)
 
-where D is the luminosity distance in metres. Raw peak amplitude for GW150914
-is ~10⁻²¹; normalised to 0.9 peak for audio.
+### Ringdown (Echeverria 1989, a = 0)
 
-### Ringdown
+    f_qnm = c³ / (2π G M_final) · (1 − 0.63),  M_final = 0.95 M
+    τ_rd  = 10 G M_final / c³
 
-After merger the remnant black hole rings at its quasi-normal mode frequency
-(Echeverria 1989; non-spinning a = 0 approximation):
+### Physical correctness checks (abort on FAIL)
 
-    f_qnm = c³ / (2π G M_final) · (1 − 0.63)     (a = 0)
-    M_final = 0.95 M   (5% of total mass radiated)
+1. f(0) ≈ f_min within 25%
+2. f(t) monotonically non-decreasing to clipping point
+3. A(t) monotonically non-decreasing to clipping point
+4. Mean(h) ≈ 0 (no DC drift)
 
-Damped with timescale τ_rd = 10 G M_final / c³.
-For GW150914 (M = 65 M☉): f_qnm ≈ 194 Hz, τ_rd ≈ 3 ms.
+## Physics notes — geodesic mode
 
-### Physical correctness checks
+### Schwarzschild geodesic equations (M = 1, dimensionless)
 
-Four checks printed at each run (abort on FAIL):
-1. f(0) ≈ f_min within 25%  — verifies coalescence-time formula
-2. f(t) monotonically non-decreasing to clipping point  — verifies PN formula sign
-3. A(t) monotonically non-decreasing to clipping point  — verifies amplitude formula
-4. Mean(h) ≈ 0  — verifies phase accumulation has no DC drift
+Massive particle (proper time τ):
 
-Clipping point: index where f(t) first reaches `frequency_max_hz`. Monotonicity
-is only checked up to this index because clipped f saturates (plateau is fine).
+    r''(τ) = −1/r² + L̃²/r³ − 3L̃²/r⁴
+    φ'(τ)  = L̃/r²
 
-## Preset system
+Massless photon (affine parameter λ, E = 1, b = L):
 
-Defined in `config.json` under `simulation.chirp.presets`:
-- `gw150914` — 36+29 M☉ at 410 Mpc (LIGO first detection)
-- `gw170817` — 1.17+1.36 M☉ at 40 Mpc (neutron star merger)
-- `stellar`  — 10+8 M☉ at 100 Mpc
+    r''(λ) = b²/r³ − 3b²/r⁴
+    φ'(λ)  = b/r²
 
-Activated via `--simulation.chirp.preset <name>`. `main.wl` resolves the preset
-by merging `presets[name].{mass1, mass2, distance_mpc}` into `cfg` under
-`simulation.chirp.{mass1_solar, mass2_solar, distance_mpc}` before calling
-`ChirpModel`. The preset does not override other parameters (time_stretch, etc.).
+### Orbit types and initial conditions
 
-## Audio processing — `ChirpToAudio`
+**bound** — start at apoapsis r̃₀ = r_start_rs × 2 with dr/dτ = 0.
+Angular momentum: L̃ = f · √(r̃₀²/(r̃₀ − 3)), where f = angular_momentum_factor.
+Energy: E = √((1 − 2/r̃₀)(1 + L̃²/r̃₀²)).
+Orbit is bound iff L̃² > 12 (ISCO threshold). Default f = 0.85 satisfies this
+for r_start_rs = 10 (L̃² ≈ 17).
 
-Converts strain array at `srModel` Hz to audio at `srOut` Hz with optional
-time stretching and frequency shifting. Uses linear `Interpolation`.
+**plunging** — same equations. Default f = 0.30 gives L̃² ≈ 2.1 < 12 → no
+potential barrier → particle falls through the horizon. Integration stops at
+r < 2.01 via WhenEvent.
 
-- `timeStretch > 1` → longer duration (same pitch)
-- `freqShift > 1` → higher pitch, shorter duration
-- Net output duration = T_original × timeStretch / freqShift
-- For output sample k: t_phys = k / srOut × freqShift / timeStretch
+**photon** — start at r̃₀ with dr/dλ = −√(1 − (1 − 2/r̃₀)b²/r̃₀²).
+Critical impact parameter: b_crit = 3√3 ≈ 5.196 M (photon sphere at r = 3M).
+b > b_crit → deflected (escapes); b < b_crit → captured.
 
-Normalises to peak 0.9 regardless of raw strain magnitude.
+### Key radii (in units of M; divide by 2 for r_s)
 
-## GW170817 handling
+| Radius | r/M | r/r_s | Significance |
+|--------|-----|-------|--------------|
+| Event horizon | 2 | 1 | Schwarzschild radius |
+| Photon sphere | 3 | 1.5 | Unstable circular photon orbit |
+| ISCO | 6 | 3 | Innermost stable circular orbit (massive particles) |
 
-Coalescence time from 20 Hz is ~188 s → 769,807 inspiral samples. The model
-computes the full waveform. `SonifyPreset` for GW170817 passes `maxInspiral=10.0`
-to truncate to the final 10 s before merger for the WAV output (where the
-frequency sweep through the audio band is most dramatic: ~64 Hz → 500 Hz).
+### Sonification mapping
 
-All four physical correctness checks still pass for GW170817's full model.
+| Orbit type | Pitch | Amplitude |
+|------------|-------|-----------|
+| bound | ∝ dφ/dτ (orbital angular velocity) | redshift factor √(1−2/r̃) |
+| plunging | ∝ 1/√(1−2/r̃) (gravitational blueshift) | redshift factor (fades at horizon) |
+| photon | ∝ 1/√(1−2/r̃) | redshift factor |
+
+Mean pitch normalised to `pitch_base_hz` (default 220 Hz, A3) via `omega_mean`.
+
+## Chirp preset system
+
+Defined in `config.json` under `simulation.chirp.presets`. Activated via
+`--simulation.chirp.preset <name>`. `main.wl` merges the preset masses and
+distance into `cfg` before calling `ChirpModel`.
+
+## Animation reference circles (geodesic mode)
+
+All coordinates plotted in r_s units (r_s = 2M). Reference circles:
+
+- **Black filled disk** — event horizon at r = 1 r_s
+- **Dashed orange circle** — photon sphere at r = 1.5 r_s
+- **Dashed grey circle** — ISCO at r = 3 r_s (massive-particle modes only)
 
 ## Common pitfalls
 
-- **Underscore in Module variable names.** `Module[{Mchirp_sec, ...}]` fails:
-  WL parses `Mchirp_sec` as `Pattern[Mchirp, _sec]`, not a symbol. Use
-  camelCase: `MchirpSec`. This was a bug in an earlier revision; keep it fixed.
+- **Underscores in Module variable names.** `Module[{M_m, rS_m, ...}]` fails:
+  WL parses `M_m` as `Pattern[M, Blank[m]]`, not a symbol. Use camelCase or
+  no underscores: `Mm`, `rSm`. This was found during geodesic implementation.
 
-- **Optional argument syntax with `?test`.** `f[x_?NumericQ : 0.0]` misparsed
-  in some WL versions: the `:` binds to `NumericQ` (becomes `NumericQ:0.0` = a
-  `RuleDelayed`), not to the argument slot. Define two DownValues instead —
-  one without the optional arg (delegating to the other with the default value).
+- **`\[Subscript]` in strings.** `"r\[Subscript]s"` is not a valid Wolfram
+  named character — it raises `Syntax::sntufn`. Use plain text `"r_s"` in
+  frame labels instead.
 
-- **JSON integers vs. Wolfram reals.** `GetCfg` may return `4096` as Integer
-  or `4096.` as Real depending on JSON parser. `ExportAudioBuffer` from
-  synth.wl requires `sr_Integer`. Always `Round @ GetCfg[...]` on sample rates.
+- **Optional argument syntax with `?test`.** `f[x_?NumericQ : 0.0]` is
+  misparsed in some WL versions. Define two DownValues instead.
 
-- **`FirstPosition` returns a list.** `FirstPosition[list, pat]` = `{k}` for a
-  1D list. To extract the index use `pos[[1]]`, NOT `First[First[pos]]` (the
-  inner `First[integer]` fails with `First::normal`).
+- **JSON integers vs. Wolfram reals.** `GetCfg` may return `4096` as Integer.
+  Always `Round @ GetCfg[...]` on sample rates before passing to audio exports.
 
-- **`Min[Differences[arr]]` beats `And @@ Thread[arr >= val]` for large arrays.**
-  For GW170817 with 769k samples, `Thread` over differences prints a flood of
-  output. Use `Min[Differences[arr[[;;k]]]] >= -eps` directly.
+- **`FirstPosition` returns a list.** `FirstPosition[list, pat]` = `{k}`.
+  Extract the index with `pos[[1]]`, not `First[First[pos]]`.
 
-- **`SonifyTrajectory` is NOT used here.** Do not apply the three-layer
-  spatial/motion/event pipeline from sonification.wl to gravitational wave data.
+- **`Min[Differences[arr]]` beats `And @@ Thread[...]` for large arrays.**
+  For GW170817 with 769k samples, `Thread` floods output. Use `Min[Differences[arr[[;;k]]]] >= -eps`.
+
+- **`SonifyTrajectory` is NOT used in chirp mode.** Do not apply the
+  three-layer spatial/motion/event pipeline to gravitational wave data.
+
+- **NDSolve for geodesic: use `Quiet @`** to suppress harmless step-size
+  messages. The integration stops early via WhenEvent (plunging/photon), so
+  always read the actual domain back with `rFunc["Domain"][[1,2]]` rather
+  than assuming it reached `tau_max_m`.
 
 ## Output files
 
-All chirp-mode outputs share the prefix `chirp`:
+### Chirp mode
 
 | File | Description |
 |------|-------------|
@@ -198,9 +257,18 @@ All chirp-mode outputs share the prefix `chirp`:
 | `chirp.png` | Static two-panel: full strain waveform + frequency sweep |
 | `chirp.wav` | Main audio: time-stretched + normalised h(t) |
 | `chirp_timeseries.csv` | Every 10th sample: time_s, strain_h, frequency_hz, amplitude |
-| `gw150914.wav` | GW150914 preset at current time_stretch |
+| `gw150914.wav` | GW150914 preset |
 | `gw170817.wav` | GW170817 preset, last 10 s of inspiral |
-| `stellar.wav` | Stellar preset (10+8 M☉) |
+| `stellar.wav` | 10+8 M☉ preset |
+
+### Geodesic mode
+
+| File | Description |
+|------|-------------|
+| `geodesic.gif` | 60-frame animation: particle/photon moving along orbit |
+| `geodesic.png` | Static full-trajectory polar plot |
+| `geodesic.wav` | Sonified orbit (pitch = orbital ω or blueshift, amplitude = redshift) |
+| `geodesic_trajectory.csv` | Subsampled: tau_M, r_rs, phi_rad, x_rs, y_rs |
 
 ## Dependencies
 
