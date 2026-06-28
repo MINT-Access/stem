@@ -20,8 +20,10 @@ Get[FileNameJoin[{$projectRoot, "src", "animate.wl"}]];
 Get[FileNameJoin[{$projectRoot, "src", "sonify.wl"}]];
 
 (* --- Load config (exits here if --config-dump is present) --- *)
-$cliArgs = Select[Rest[$ScriptCommandLine], # =!= "--" &];
-cfg      = LoadConfig["asteroids", $cliArgs];
+$cliArgs          = Select[Rest[$ScriptCommandLine], # =!= "--" &];
+$noOrbitalElements = MemberQ[$cliArgs, "--no-orbital-elements"];
+$cliArgs          = Select[$cliArgs, # =!= "--no-orbital-elements" &];
+cfg               = LoadConfig["asteroids", $cliArgs];
 
 (* --- Positional args separated from --key=value flags --- *)
 $posArgs     = Select[$cliArgs, !StringStartsQ[#, "--"] &];
@@ -78,6 +80,14 @@ If[asteroids === $Failed,
 ];
 Print["  Retrieved ", Length[asteroids], " asteroids."];
 
+(* 1b. Orbital elements from JPL SBDB — skipped with --no-orbital-elements *)
+If[!$noOrbitalElements,
+  Print[""];
+  asteroids = FetchAllOrbitalElements[asteroids],
+  Print["  Orbital elements: skipped (--no-orbital-elements)."]
+];
+asteroids = AugmentAsteroidsWithAngles[asteroids];
+
 (* 2. Analyse + CSV *)
 Print[""];
 Print["[2/4] Analysing and exporting CSV..."];
@@ -85,7 +95,7 @@ PrintSummary[asteroids, startDate, endDate];
 outCSV = FileNameJoin[{$projectRoot, "data",
   "asteroids_" <> startDate <> "_" <> endDate <> ".csv"}];
 ExportResults[asteroids, outCSV];
-STEMDescribeCSV[outCSV, Length[asteroids], 12];
+STEMDescribeCSV[outCSV, Length[asteroids], 17];
 
 (* 3. Animation *)
 Print[""];

@@ -161,3 +161,144 @@ FetchAsteroids[startDate_String, endDate_String] :=
     (* Sort by miss distance, closest first *)
     SortBy[allAsteroids, #["missDistanceKm"] &]
   ]
+
+
+(* ========================================================
+   Orbital element fetching — JPL Small Body Database (SBDB) API
+   No API key required; rate-limited to 1 req/0.5 s.
+   ======================================================== *)
+
+$SBDBBaseUrl = "https://ssd-api.jpl.nasa.gov/sbdb.api";
+
+If[!ValueQ[$OrbitalElementsCache], $OrbitalElementsCache = <||>];
+
+
+(* ParseSBDBValue — convert a SBDB JSON string value to a machine real.
+   The SBDB API returns values like ".576..." (no leading zero); ToExpression
+   requires a leading zero, so we prepend "0" when the string starts with ".". *)
+
+ParseSBDBValue[s_String] :=
+  Module[{norm, v},
+    norm = If[StringStartsQ[s, "."], "0" <> s,
+            If[StringStartsQ[s, "-."], "-0" <> StringDrop[s, 1], s]];
+    v = Quiet[N @ ToExpression[norm]];
+    If[NumericQ[v], v, $Failed]
+  ]
+ParseSBDBValue[x_?NumericQ] := N[x]
+ParseSBDBValue[_] := $Failed
+
+
+(* FetchOrbitalElements
+   Fetches Keplerian elements from the JPL SBDB API for one asteroid.
+   spkid: SPK-ID string from the NeoWs "id" field.
+   Returns <| "e","a","i","om","w","ma","per","epoch_jd"[,"tp"] |>
+   or $Failed if the object is absent from the database or the request fails.
+   Results are cached by SPK-ID to avoid duplicate requests within a session. *)
+
+FetchOrbitalElements[spkid_String, name_String] :=
+  Module[{url, res, response, json, orbitObj, elems, elemAssoc,
+          e, a, i, om, w, ma, tp, per, epochJD, result},
+
+    If[KeyExistsQ[$OrbitalElementsCache, spkid],
+      Return[$OrbitalElementsCache[spkid]]
+    ];
+
+    Pause[0.5];
+
+    url = $SBDBBaseUrl <> "?des=" <> spkid <> "&full-prec=true";
+    Print["  Fetching orbital elements for ", name, " (", spkid, ")..."];
+
+    With[{r = RunProcess[{"curl", "-s", "--max-time", "30", url}]},
+      response = If[r["ExitCode"] === 0, r["StandardOutput"], $Failed]
+    ];
+
+    If[response === $Failed || StringLength[response] < 10,
+      $OrbitalElementsCache[spkid] = $Failed;
+      Return[$Failed]
+    ];
+
+    json = Quiet @ ConfigToAssoc[ImportString[response, "JSON"]];
+
+    If[!AssociationQ[json] || !KeyExistsQ[json, "orbit"],
+      $OrbitalElementsCache[spkid] = $Failed;
+      Return[$Failed]
+    ];
+
+    orbitObj = json["orbit"];
+
+    If[!AssociationQ[orbitObj] || !KeyExistsQ[orbitObj, "elements"],
+      $OrbitalElementsCache[spkid] = $Failed;
+      Return[$Failed]
+    ];
+
+    elems   = orbitObj["elements"];
+    epochJD = ParseSBDBValue[orbitObj["epoch"]];
+
+    If[!NumericQ[epochJD],
+      $OrbitalElementsCache[spkid] = $Failed;
+      Return[$Failed]
+    ];
+
+    elemAssoc = Association[
+      If[AssociationQ[#] && KeyExistsQ[#, "label"] && KeyExistsQ[#, "value"],
+        #["label"] -> ParseSBDBValue[#["value"]],
+        Nothing
+      ] & /@ elems
+    ];
+
+    (* SBDB uses "node" (Ω), "peri" (ω), "M" (mean anomaly), "period" *)
+    {e, a, i, om, w, ma, tp, per} =
+      Lookup[elemAssoc, {"e", "a", "i", "node", "peri", "M", "tp", "period"}, $Failed];
+
+    If[!AllTrue[{e, a, i, om, w, ma, per}, NumericQ],
+      $OrbitalElementsCache[spkid] = $Failed;
+      Return[$Failed]
+    ];
+
+    result = <|
+      "e"        -> e,
+      "a"        -> a,
+      "i"        -> i,
+      "om"       -> om,
+      "w"        -> w,
+      "ma"       -> ma,
+      "per"      -> per,
+      "epoch_jd" -> epochJD
+    |>;
+
+    If[NumericQ[tp], result = Append[result, "tp" -> tp]];
+
+    $OrbitalElementsCache[spkid] = result;
+    result
+  ]
+
+
+(* FetchAllOrbitalElements
+   Fetches orbital elements for every asteroid in the list, adding
+   "orbital_elements" -> Association | $Failed to each asteroid Association. *)
+
+FetchAllOrbitalElements[asteroids_List] :=
+  Module[{n, fetched, result},
+    n       = Length[asteroids];
+    fetched = 0;
+    Print["  Fetching orbital elements for ", n,
+          " asteroids from JPL SBDB..."];
+
+    result = Map[
+      Function[ast,
+        Module[{el},
+          el = FetchOrbitalElements[ast["id"], ast["name"]];
+          If[AssociationQ[el], fetched++];
+          Append[ast, "orbital_elements" -> el]
+        ]
+      ],
+      asteroids
+    ];
+
+    Print["  Orbital elements: ", fetched, " of ", n, " fetched successfully."];
+    If[n - fetched > 0,
+      Print["  ", n - fetched,
+            " asteroid(s) will use seeded random angle fallback."]
+    ];
+    result
+  ]

@@ -11,20 +11,26 @@ terminal via `wolframscript`.
 
 - `main.wl`              — Full pipeline for the last 7 days
 - `experiment.wl`        — Named presets (date ranges, filters, scales)
-- `src/fetch.wl`         — NASA NeoWs API fetch and JSON parsing
+- `src/fetch.wl`         — NASA NeoWs API fetch and JPL SBDB orbital elements
                            (`FetchAsteroidsMulti`, `FetchAsteroids`,
-                            `ChunkDateRange`, `FetchRawJson`, `ParseAsteroid`)
+                            `ChunkDateRange`, `FetchRawJson`, `ParseAsteroid`,
+                            `FetchOrbitalElements`, `FetchAllOrbitalElements`,
+                            `ParseSBDBValue`, `$OrbitalElementsCache`)
 - `src/analyse.wl`       — Filters and statistics
                            (`HazardousAsteroids`, `SafeAsteroids`,
                             `ClosestAsteroids`, `MissDistanceStats`,
                             `VelocityStats`, `SizeClass`, `SizeDistribution`,
                             `ToLunarDistances`, `ToEarthRadii`,
                             `ClosestApproachSummary`)
-- `src/output.wl`        — CSV export and console report
+- `src/output.wl`        — CSV export and console report — 17 columns
                            (`ExportResults`, `PrintSummary`)
-- `src/animate.wl`       — Solar system GIF (`ExportAnimation`)
+- `src/animate.wl`       — Orbital mechanics helpers + solar system GIF
+                           (`DateToJulianDate`, `SolveKepler`,
+                            `OrbitalToEcliptic2D`, `KeplerPosition`,
+                            `ComputeGeocentricAngle`, `AugmentAsteroidsWithAngles`,
+                            `ExportAnimation`, `$EarthOrbitalElements`)
 - `src/sonify.wl`        — Musical WAV (`ExportSonification`)
-- `tests/test_analyse.wl`— Offline unit tests (no API call)
+- `tests/test_analyse.wl`— Offline unit tests incl. orbital mechanics (no API call)
 - `data/`                — All outputs (not committed)
 
 ## How to run
@@ -33,9 +39,10 @@ terminal via `wolframscript`.
 wolframscript -file main.wl                                    # last 7 days, MinorPentatonic
 wolframscript -file main.wl -- 2026-01-01 2026-12-31           # full year, MinorPentatonic
 wolframscript -file main.wl -- 2026-01-01 2026-06-25 Phrygian  # date range + scale
+wolframscript -file main.wl -- 2026-06-20 2026-06-26 --no-orbital-elements  # skip SBDB fetch
 wolframscript -file experiment.wl                              # named preset
 wolframscript -file experiment.wl -- 2026-01-01 2026-06-25 WholeTone  # override dates + scale
-wolframscript -file tests/test_analyse.wl                      # offline tests
+wolframscript -file tests/test_analyse.wl                      # offline tests (incl. orbital mechanics)
 afplay data/asteroids_<dates>.wav                              # play audio on macOS
 ```
 
@@ -63,11 +70,24 @@ export NASA_API_KEY=your_key_here
 
 ## Data model
 
-Each asteroid is a Wolfram Association with keys:
-  id, name, approachDate, missDistanceKm, velocityKmS,
-  diamMinKm, diamMaxKm, diamMeanKm, isHazardous, absoluteMag
+Each asteroid is a Wolfram Association. Keys after the full pipeline:
+
+| Key | Source | Description |
+|-----|--------|-------------|
+| `id` | NeoWs | SPK-ID string (used as SBDB `des` parameter) |
+| `name` | NeoWs | Display name |
+| `approachDate` | NeoWs | "YYYY-MM-DD" |
+| `missDistanceKm` | NeoWs | Closest-approach distance in km |
+| `velocityKmS` | NeoWs | Relative velocity in km/s |
+| `diamMinKm`, `diamMaxKm`, `diamMeanKm` | NeoWs | Estimated diameter in km |
+| `isHazardous` | NeoWs | Boolean |
+| `absoluteMag` | NeoWs | H magnitude |
+| `orbital_elements` | SBDB | Association with e, a, i, om, w, ma, per, epoch_jd [, tp] — or $Failed |
+| `geocentricAngle` | animate.wl | Computed ecliptic angle (radians) in (-π, π]; seeded-random fallback |
 
 All lists are sorted by missDistanceKm ascending (closest first).
+`orbital_elements` and `geocentricAngle` are absent when `--no-orbital-elements` is passed
+(for backward compatibility, `ExportAnimation` falls back to seeded-random angles in that case).
 
 ## Sonification design
 
@@ -86,6 +106,30 @@ All lists are sorted by missDistanceKm ascending (closest first).
 - Cyan dots = safe, red dots = hazardous
 - Dot size proportional to log(diameter)
 - Asteroids revealed farthest → closest, final frame held 3 s
+- Angle from Keplerian orbital elements (JPL SBDB) via `AugmentAsteroidsWithAngles`;
+  seeded-random fallback (SeedRandom[42]) if elements unavailable
+
+## Orbital mechanics (src/animate.wl)
+
+Geocentric angle computation pipeline:
+
+1. `DateToJulianDate[dateStr]` — ISO date → Julian Date (noon UTC, proleptic Gregorian formula)
+2. `SolveKepler[M, e]` — Newton-Raphson, 50 iterations max, converges to 1e-10
+3. `OrbitalToEcliptic2D[x, y, i, om, w]` — perifocal → heliocentric ecliptic {X, Y} in AU
+   using the standard 3-angle rotation matrix (Ω, i, ω; all degrees)
+4. `KeplerPosition[elements, jd]` — heliocentric ecliptic {X, Y} for any elements Association;
+   uses `tp` (perihelion JD) if present, else propagates from `ma + epoch_jd`
+5. `ComputeGeocentricAngle[elements, dateStr]` — subtracts Earth's position (from
+   `$EarthOrbitalElements`, J2000 values) to give geocentric angle in (-π, π]
+6. `AugmentAsteroidsWithAngles[asteroids]` — generates seeded baseline first, then replaces
+   with computed angles where valid elements exist; always returns a full List
+
+SBDB field mapping (SBDB label → internal key stored in `orbital_elements`):
+- `node` → `om` (longitude of ascending node, degrees)
+- `peri` → `w` (argument of perihelion, degrees)
+- `M` → `ma` (mean anomaly at epoch, degrees)
+- `period` → `per` (orbital period, days)
+- `e`, `a`, `i`, `tp` → unchanged
 
 ## Constants (src/analyse.wl)
 

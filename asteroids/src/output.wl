@@ -13,23 +13,39 @@ ExportResults[asteroids_List, filePath_String] :=
       "id", "name", "approachDate",
       "missDistanceKm", "missDistanceLunarD",
       "velocityKmS", "diamMinKm", "diamMaxKm", "diamMeanKm",
-      "isHazardous", "absoluteMag", "sizeClass"
+      "isHazardous", "absoluteMag", "sizeClass",
+      "semi_major_axis_au", "eccentricity", "inclination_deg",
+      "orbital_period_days", "geocentric_angle_deg"
     }};
 
-    rows = {
-      #["id"],
-      #["name"],
-      #["approachDate"],
-      ToString[NumberForm[#["missDistanceKm"],    {10, 1}], OutputForm],
-      ToString[NumberForm[ToLunarDistances[#["missDistanceKm"]], {6, 3}], OutputForm],
-      ToString[NumberForm[#["velocityKmS"],       {6, 3}],  OutputForm],
-      ToString[NumberForm[#["diamMinKm"],         {6, 4}],  OutputForm],
-      ToString[NumberForm[#["diamMaxKm"],         {6, 4}],  OutputForm],
-      ToString[NumberForm[#["diamMeanKm"],        {6, 4}],  OutputForm],
-      If[#["isHazardous"], "yes", "no"],
-      ToString[NumberForm[#["absoluteMag"],       {5, 2}],  OutputForm],
-      SizeClass[#["diamMeanKm"]]
-    } & /@ asteroids;
+    rows = Function[ast,
+      Module[{el, hasEl, ang},
+        el    = Lookup[ast, "orbital_elements", $Failed];
+        hasEl = AssociationQ[el];
+        ang   = Lookup[ast, "geocentricAngle", $Failed];
+        {
+          ast["id"],
+          ast["name"],
+          ast["approachDate"],
+          ToString[NumberForm[ast["missDistanceKm"],    {10, 1}], OutputForm],
+          ToString[NumberForm[ToLunarDistances[ast["missDistanceKm"]], {6, 3}], OutputForm],
+          ToString[NumberForm[ast["velocityKmS"],       {6, 3}],  OutputForm],
+          ToString[NumberForm[ast["diamMinKm"],         {6, 4}],  OutputForm],
+          ToString[NumberForm[ast["diamMaxKm"],         {6, 4}],  OutputForm],
+          ToString[NumberForm[ast["diamMeanKm"],        {6, 4}],  OutputForm],
+          If[ast["isHazardous"], "yes", "no"],
+          ToString[NumberForm[ast["absoluteMag"],       {5, 2}],  OutputForm],
+          SizeClass[ast["diamMeanKm"]],
+          If[hasEl, ToString[NumberForm[Lookup[el,"a",  0], {6, 4}], OutputForm], ""],
+          If[hasEl, ToString[NumberForm[Lookup[el,"e",  0], {6, 4}], OutputForm], ""],
+          If[hasEl, ToString[NumberForm[Lookup[el,"i",  0], {6, 3}], OutputForm], ""],
+          If[hasEl, ToString[NumberForm[Lookup[el,"per",0], {8, 2}], OutputForm], ""],
+          If[NumericQ[ang],
+            ToString[NumberForm[ang / Degree, {6, 2}], OutputForm],
+            ""]
+        }
+      ]
+    ] /@ asteroids;
 
     allRows = Join[header, rows];
 

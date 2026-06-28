@@ -6,7 +6,7 @@
   "simulation": {
     "days_ahead": 7,
     "max_objects": 10,
-    "use_orbital_elements": false,
+    "use_orbital_elements": true,
     "api_cache_hours": 6,
     "fallback_to_cache": true
   },

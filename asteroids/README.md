@@ -65,6 +65,9 @@ wolframscript -file experiment.wl
 # Override the preset's date range from the command line
 NASA_API_KEY=your_key wolframscript -file experiment.wl -- 2026-01-01 2026-01-31
 
+# Skip orbital element fetch (faster, uses seeded random angles)
+wolframscript -file main.wl -- 2026-06-20 2026-06-26 --no-orbital-elements
+
 # Offline tests (no API call)
 wolframscript -file tests/test_analyse.wl
 
@@ -126,9 +129,13 @@ Available scales: `MinorPentatonic`, `MajorPentatonic`, `Major`, `Minor`,
 | Dot size | Proportional to log(mean diameter) |
 | Reveal order | Farthest → closest; final frame held 3 s |
 
-Only miss distance is known from the API — asteroid directions are not — so
-each dot is placed at the correct radial distance but at a fixed random angle
-(seeded at 42 for repeatability across runs).
+Asteroid directions are computed from Keplerian orbital elements fetched from
+the JPL Small Body Database API. Each asteroid's heliocentric position in the
+ecliptic plane is computed at the time of closest approach using standard
+Kepler equation solving (Newton-Raphson iteration), then converted to a
+geocentric angle by subtracting Earth's position at the same date. For the
+small number of asteroids whose orbital elements are not available in the
+database, a seeded random angle (seed 42) is used as a fallback.
 
 ## Project structure
 
@@ -136,13 +143,13 @@ each dot is placed at the correct radial distance but at a fixed random angle
     ├── main.wl                  Entry point
     ├── experiment.wl            Named presets
     ├── src/
-    │   ├── fetch.wl             NASA API fetch + JSON parse
+    │   ├── fetch.wl             NASA NeoWs API fetch + JPL SBDB orbital elements
     │   ├── analyse.wl           Filters and statistics
-    │   ├── output.wl            CSV export and console report
-    │   ├── animate.wl           Solar system GIF
+    │   ├── output.wl            CSV export (17 columns incl. orbital elements)
+    │   ├── animate.wl           Solar system GIF + orbital mechanics helpers
     │   └── sonify.wl            Musical WAV sonification
     ├── tests/
-    │   └── test_analyse.wl      Offline unit tests
+    │   └── test_analyse.wl      Offline unit tests (incl. orbital mechanics)
     ├── data/                    Output files (not committed)
     ├── AGENTS.md                Guidance for Claude Code
     └── README.md

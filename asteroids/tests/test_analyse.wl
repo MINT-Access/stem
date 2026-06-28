@@ -11,6 +11,7 @@ $projectRoot  = FileNameJoin[{DirectoryName[$InputFileName], ".."}];
 $stemCoreRoot = FileNameJoin[{$projectRoot, "..", "stem-core"}];
 Get[FileNameJoin[{$stemCoreRoot, "init.wl"}]];
 Get[FileNameJoin[{$projectRoot, "src", "analyse.wl"}]];
+Get[FileNameJoin[{$projectRoot, "src", "animate.wl"}]];
 
 passed = 0; failed = 0;
 
@@ -105,6 +106,65 @@ AssertTrue["Summary contains asteroid name",
 hazSummary = ClosestApproachSummary[testAsteroids[[2]]];
 AssertTrue["Hazardous summary includes warning",
   StringContainsQ[hazSummary, "HAZARDOUS"]];
+
+Print[""];
+Print["Running orbital mechanics tests (offline — no API call)..."];
+Print[""];
+
+(* Test 11: SolveKepler — verify solution satisfies M = E - e sin E *)
+Module[{e = 0.5, M = 1.0, E},
+  E = SolveKepler[M, e];
+  AssertTrue["Kepler: solution satisfies equation to 1e-10",
+    Abs[E - e*Sin[E] - M] < 1*^-10]
+];
+
+(* Test 12: OrbitalToEcliptic2D — identity when i=0, Ω=0, ω=0 *)
+Module[{res},
+  res = OrbitalToEcliptic2D[1.0, 2.0, 0.0, 0.0, 0.0];
+  AssertNear["OrbitalToEcliptic2D identity: x", res[[1]], 1.0];
+  AssertNear["OrbitalToEcliptic2D identity: y", res[[2]], 2.0]
+];
+
+(* Test 13: ComputeGeocentricAngle with 433 Eros elements — result in [-Pi, Pi] *)
+Module[{erosElements, angle},
+  erosElements = <|
+    "e"        -> 0.2229,
+    "a"        -> 1.4580,
+    "i"        -> 10.829,
+    "om"       -> 304.32,
+    "w"        -> 178.82,
+    "ma"       -> 321.39,
+    "per"      -> 643.219,
+    "epoch_jd" -> 2451545.0
+  |>;
+  angle = ComputeGeocentricAngle[erosElements, "2026-06-26"];
+  AssertTrue["ComputeGeocentricAngle: returns a real number",
+    NumericQ[angle]];
+  AssertTrue["ComputeGeocentricAngle: result in [-Pi, Pi]",
+    NumericQ[angle] && -Pi <= angle <= Pi]
+];
+
+(* Test 14: AugmentAsteroidsWithAngles fallback — $Failed elements yields valid random angle *)
+Module[{testAst, augmented, angle},
+  testAst = <|
+    "id"           -> "9999999",
+    "name"         -> "Test-Fallback",
+    "approachDate" -> "2026-06-26",
+    "missDistanceKm" -> 500000.0,
+    "velocityKmS"  -> 10.0,
+    "diamMinKm"    -> 0.1,
+    "diamMaxKm"    -> 0.2,
+    "diamMeanKm"   -> 0.15,
+    "isHazardous"  -> False,
+    "absoluteMag"  -> 23.0,
+    "orbital_elements" -> $Failed
+  |>;
+  augmented = AugmentAsteroidsWithAngles[{testAst}];
+  angle     = augmented[[1]]["geocentricAngle"];
+  AssertTrue["Fallback: geocentricAngle key present", KeyExistsQ[augmented[[1]], "geocentricAngle"]];
+  AssertTrue["Fallback: angle is numeric",  NumericQ[angle]];
+  AssertTrue["Fallback: angle in [0, 2Pi]", 0 <= angle <= 2*Pi]
+];
 
 Print[""];
 Print["Results: ", passed, " passed, ", failed, " failed."];
