@@ -1,9 +1,10 @@
 # stem-core
 
 Shared Wolfram Language library for the STEM sonification projects.
-Provides musical pitch mapping, PCM synthesis, file export helpers,
-and screen-reader-friendly console output used by the pendulum, lorenz,
-and asteroids simulations.
+Provides configuration loading, musical pitch mapping, PCM synthesis,
+sonification pipeline, file export helpers, and screen-reader-friendly
+console output used by all eight apps: pendulum, lorenz, asteroids,
+cellular, signal, quantum, primes, and relativity.
 
 ---
 
@@ -45,6 +46,11 @@ stem/
   pendulum/
   lorenz/
   asteroids/
+  cellular/
+  signal/
+  quantum/
+  primes/
+  relativity/
   docs/
 ```
 
@@ -73,6 +79,11 @@ in the global context.
 wolframscript -file pendulum/main.wl
 wolframscript -file lorenz/main.wl
 wolframscript -file asteroids/main.wl
+wolframscript -file cellular/main.wl
+wolframscript -file signal/main.wl
+wolframscript -file quantum/main.wl
+wolframscript -file primes/main.wl
+wolframscript -file relativity/main.wl
 ```
 
 Each project writes its outputs into its own `output/` directory (created
@@ -146,6 +157,7 @@ Key functions:
 |---|---|
 | `STEMHeading["text"]` | `=== text ===` |
 | `STEMSection["title"]` | `-- title --` |
+| `STEMBullet["text"]` | `  • text` |
 | `STEMPrintN["label", x, "unit", spec]` | `  label: value unit` |
 | `STEMDescribeCSV["path", nRows, nCols]` | `  CSV: nRows rows, nCols columns — path` |
 | `STEMDescribeGIF["path", nFrames, fps]` | `  Animation: nFrames frames at fps fps — path` |
@@ -176,4 +188,55 @@ For the full VoiceOver + wolframscript workflow, see
 
 ```wolfram
 $StemScales["WholeTone"]   (* {0, 2, 4, 6, 8, 10, 12, 14, 16, 18} *)
+```
+
+---
+
+## Configuration API
+
+stem-core manages a 4-layer config merge for all apps. See `AGENTS.md` for
+the full parameter reference.
+
+| Symbol | Description |
+|---|---|
+| `$HardcodedDefaults` | Base Association of all default values |
+| `LoadConfig[appName, cliArgs]` | Merges defaults → `config/config.json` → `<app>/config.json` → CLI overrides |
+| `DeepMerge[base, override]` | Recursively merges two Associations (override wins) |
+| `GetCfg[cfg, {key, path}, default]` | Safe nested key lookup with fallback |
+| `ParseCliOverrides[args]` | Converts `--key=value` strings into nested Associations; supports negative numbers |
+
+```wolfram
+cfg = LoadConfig["pendulum", $ScriptCommandLine];
+sr  = GetCfg[cfg, {"sonification", "sample_rate"}, 44100];
+```
+
+Print the merged config and exit (useful for debugging):
+
+```sh
+wolframscript -file pendulum/main.wl -- --config-dump
+```
+
+---
+
+## Sonification API
+
+`sonification.wl` provides a three-layer pipeline that converts any numeric
+trajectory into a stereo WAV file. Most apps call `SonifyTrajectory` directly;
+pendulum calls the individual layers to mix two pendulum bobs.
+
+| Function | Description |
+|---|---|
+| `SonifyTrajectory[traj, cfg, path, eventTypes]` | Single entry point: runs all three layers and writes the WAV |
+| `SpatialLayer[traj, cfg]` | Maps x-position to stereo pan; returns `<\|"left"→…, "right"→…\|>` |
+| `MotionLayer[traj, cfg]` | Maps speed to pitch via scale lookup; returns `<\|"buffer"→…\|>` |
+| `EventLayer[traj, cfg, eventTypes]` | Inserts accent tones at labelled events (e.g. `"apex"`, `"crossing"`); returns `<\|"buffer"→…\|>` |
+| `MixLayers[spatial, motion, event, cfg]` | Combines layers into a stereo matrix |
+| `RenderAudio[stereoData, cfg, path]` | Normalises and writes the WAV file |
+
+Trajectory format: `n × 5` matrix with columns `{t, x, y, z, speed}`.
+
+```wolfram
+traj   = (* n × 5 matrix *)
+outWAV = FileNameJoin[{$outDir, "audio.wav"}];
+SonifyTrajectory[traj, cfg, outWAV, {"apex", "crossing"}];
 ```

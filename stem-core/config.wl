@@ -122,19 +122,34 @@ LoadJsonConfig[path_String] :=
 
    Value coercion rules:
      "true"  → True   "false" → False
-     numeric → number   otherwise → string as-is
+     numeric (including negative) → number   otherwise → string as-is
 
    "--config-dump" and bare "--key" flags (no "=") are ignored
    here; "--config-dump" is handled separately in LoadConfig.
+   Unrecognised flags print a [WARNING] but are still passed through
+   so that app-specific bare flags (e.g. --no-orbital-elements) are
+   not accidentally silenced.
 
    Example:
      "--sonification.scale=Phrygian"
-       → <| "sonification" -> <| "scale" -> "Phrygian" |> |>  *)
+       → <| "sonification" -> <| "scale" -> "Phrygian" |> |>
+     "--simulation.simple.angle_deg=-30"
+       → <| "simulation" -> <| "simple" -> <| "angle_deg" -> -30 |> |> |>  *)
+
+$numericPattern = ("-" | "") ~~ NumberString;
 
 ParseCliOverrides[args_List] :=
-  Module[{kvArgs, parsed},
-    kvArgs = Select[args,
-      StringStartsQ[#, "--"] && StringContainsQ[#, "="] &];
+  Module[{kvArgs, bareFlags, parsed},
+    kvArgs    = Select[args, StringStartsQ[#, "--"] && StringContainsQ[#, "="] &];
+    bareFlags = Select[args,
+      StringStartsQ[#, "--"] && !StringContainsQ[#, "="] &&
+      # =!= "--config-dump" &];
+    If[Length[bareFlags] > 0,
+      Scan[
+        Print["[WARNING] Unrecognised CLI flag (no value): ", #] &,
+        bareFlags
+      ]
+    ];
     parsed = Map[
       Function[arg,
         Module[{stripped, parts, keyPath, rawVal, value, keys},
@@ -143,10 +158,10 @@ ParseCliOverrides[args_List] :=
           keyPath  = parts[[1]];
           rawVal   = If[Length[parts] > 1, parts[[2]], "true"];
           value    = Which[
-            rawVal === "true",              True,
-            rawVal === "false",             False,
-            StringMatchQ[rawVal, NumberString], ToExpression[rawVal],
-            True,                           rawVal
+            rawVal === "true",                       True,
+            rawVal === "false",                      False,
+            StringMatchQ[rawVal, $numericPattern],   ToExpression[rawVal],
+            True,                                    rawVal
           ];
           (* Build a nested Association from dot-separated path *)
           keys = StringSplit[keyPath, "."];

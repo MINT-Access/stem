@@ -1,8 +1,9 @@
 # stem-core — Agent & API Reference
 
-stem-core is a shared Wolfram Language library for the STEM sonification projects
-(pendulum, lorenz, asteroids). It consolidates duplicated helpers into four modules
-loaded through a single entry point.
+stem-core is a shared Wolfram Language library for all eight STEM sonification
+projects: pendulum, lorenz, asteroids, cellular, signal, quantum, primes, and
+relativity. It consolidates shared helpers into seven modules loaded through a
+single entry point.
 
 ---
 
@@ -22,11 +23,13 @@ and loads the four modules in dependency order:
 
 ```
 utils.wl  →  scales.wl  →  synth.wl  →  export.wl  →  accessibility.wl
+  →  config.wl  →  sonification.wl
 ```
 
 `synth.wl` and `export.wl` both call `EnsureDir` from `utils.wl`;
-`accessibility.wl` calls `FmtN` from `utils.wl`. Nothing requires a later module,
-so the order is fixed and must not be changed.
+`accessibility.wl` calls `FmtN` from `utils.wl`. `config.wl` calls `DeepMerge`
+internally. Nothing requires a later module, so the order is fixed and must not
+be changed.
 
 ---
 
@@ -302,6 +305,120 @@ ExportGIF[frames, "output/animation.gif"]        (* default 25 fps *)
 
 ---
 
+### config.wl — 4-layer configuration merge
+
+All projects call `LoadConfig` at startup to produce a single merged
+`Association` that subsequent code reads via `GetCfg`.
+
+Merge order (each layer wins over the previous):
+
+```
+$HardcodedDefaults
+  → config/config.json      (root-level shared overrides)
+  → <app>/config.json       (app-specific defaults)
+  → CLI --key=value args    (runtime overrides)
+```
+
+#### `$HardcodedDefaults`
+Base Association with safe values for every known key. Apps that want a key
+to exist regardless of whether their config.json is present rely on this layer.
+
+#### `LoadConfig[appName_String, cliArgs_List]`
+Performs the four-layer merge. `appName` is used to resolve
+`<app>/config.json`. `cliArgs` is typically `Rest[$ScriptCommandLine]` (drop
+the script path). If `"--config-dump"` is in `cliArgs`, prints the merged
+config as a JSON string and exits.
+
+```wolfram
+cfg = LoadConfig["pendulum", Rest[$ScriptCommandLine]];
+```
+
+#### `DeepMerge[base_Association, override_Association]`
+Recursively merges two Associations. Nested keys in `override` replace the
+corresponding keys in `base`; keys absent from `override` are kept from
+`base`. Use this in experiments.wl to apply a preset config on top of the
+default config.
+
+```wolfram
+cfg = DeepMerge[cfg, <|"simulation" -> <|"mode" -> "double"|>|>];
+```
+
+#### `GetCfg[cfg_Association, keyPath_List, default_]`
+Safe nested lookup. `keyPath` is a list of string keys. Returns `default` if
+any key in the path is absent.
+
+```wolfram
+nSteps = GetCfg[cfg, {"simulation", "simple", "steps"}, 1000];
+scale  = GetCfg[cfg, {"sonification", "scale"}, "MinorPentatonic"];
+```
+
+#### `ParseCliOverrides[args_List]`
+Converts `--key=value` and `--section.key=value` strings into a nested
+Association ready for `DeepMerge`. Value coercion:
+- `"true"` / `"false"` → `True` / `False`
+- numeric strings (including negative, e.g. `"-30"`) → number via `ToExpression`
+- everything else → string
+
+Bare flags without `=` (other than `--config-dump`) print a `[WARNING]` line
+but are otherwise ignored; apps that recognise bare flags should strip them
+from `cliArgs` before calling `LoadConfig`.
+
+```wolfram
+(* --simulation.simple.angle_deg=-30  →  <|"simulation"→<|"simple"→<|"angle_deg"→-30|>|>|> *)
+overrides = ParseCliOverrides[Rest[$ScriptCommandLine]];
+```
+
+---
+
+### sonification.wl — Three-layer audio pipeline
+
+Converts any numeric trajectory into a stereo WAV file through three
+independent mixing layers. Apps that need standard behavior call
+`SonifyTrajectory`; apps that need custom mixing (e.g. pendulum, which mixes
+two bobs) call the individual layer functions directly.
+
+**Trajectory format**: `n × 5` real matrix with columns
+`{t, x, y, z, speed}`. `t` is time, `x` controls pan, `speed` controls pitch.
+`y` and `z` are available to event detectors.
+
+#### `SonifyTrajectory[traj, cfg, outPath, eventTypes]`
+Single entry point. Runs `SpatialLayer`, `MotionLayer`, `EventLayer`, and
+`MixLayers`, then calls `RenderAudio` to write the WAV.
+
+| Argument | Type | Description |
+|---|---|---|
+| `traj` | `MatrixQ` | `n × 5` trajectory matrix |
+| `cfg` | `Association` | Merged config (must contain `"sonification"` key) |
+| `outPath` | `String` | Output file path, e.g. `"output/audio.wav"` |
+| `eventTypes` | `List` | Which events to accent, e.g. `{"apex", "crossing"}` |
+
+```wolfram
+SonifyTrajectory[traj, cfg, FileNameJoin[{$outDir, "audio.wav"}], {"apex"}];
+```
+
+#### `SpatialLayer[traj, cfg]`
+Maps the `x` column of `traj` to stereo pan. Returns
+`<|"left" → buffer, "right" → buffer|>`.
+
+#### `MotionLayer[traj, cfg]`
+Maps the `speed` column to musical pitch via `ScaleLookup`. Returns
+`<|"buffer" → samples|>`.
+
+#### `EventLayer[traj, cfg, eventTypes]`
+Detects labelled events in the trajectory (apex, zero-crossing, etc.) and
+inserts brief accent tones. Returns `<|"buffer" → samples|>`. Recognised
+event type strings: `"apex"`, `"crossing"`.
+
+#### `MixLayers[spatial, motion, event, cfg]`
+Combines the three layer outputs into a stereo matrix. Returns a
+`2 × n_samples` matrix.
+
+#### `RenderAudio[stereoData, cfg, outPath]`
+Normalises `stereoData` and writes it as a WAV file via `ExportAudioBuffer`.
+Returns `outPath`.
+
+---
+
 ## VoiceOver / terminal context
 
 All output is file-based (CSV, GIF, WAV). The library contains no calls to
@@ -340,7 +457,9 @@ init.wl
  ├── scales.wl         (no deps)
  ├── synth.wl          ← utils.wl  (EnsureDir)
  ├── export.wl         ← utils.wl  (EnsureDir)
- └── accessibility.wl  ← utils.wl  (FmtN)
+ ├── accessibility.wl  ← utils.wl  (FmtN)
+ ├── config.wl         ← (self-contained; calls DeepMerge internally)
+ └── sonification.wl   ← scales.wl (ScaleLookup), synth.wl (ExportAudioBuffer)
 ```
 
 Projects may call any public symbol after loading `init.wl`. They must not
