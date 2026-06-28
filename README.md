@@ -109,6 +109,33 @@ afplay relativity/output/geodesic.wav
 
 ---
 
+## Demo
+
+Run all eight apps with their most interesting presets and collect outputs into `demo/`:
+
+```sh
+wolframscript -file demo.wl
+```
+
+With spoken announcements:
+```sh
+STEM_SPEAK=1 wolframscript -file demo.wl
+```
+
+With NASA asteroid data (requires API key):
+```sh
+NASA_API_KEY=$NASA_API_KEY wolframscript -file demo.wl
+```
+
+Check whether a previous demo run completed successfully:
+```sh
+wolframscript -file demo.wl -- --check-only
+```
+
+Outputs are collected in `demo/` with a written report at `demo/demo-report.md`.
+
+---
+
 ## Projects
 
 ### pendulum
