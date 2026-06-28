@@ -20,7 +20,7 @@ stem/
   signal/           Fourier analysis demonstration (chord, sweep, AM)
   quantum/          Quantum mechanics (coherent state QHO, particle-in-a-box)
   primes/           Prime number patterns (Ulam spiral, prime gap rhythm)
-  relativity/       General relativity (gravitational wave chirp, PN inspiral)
+  relativity/       General relativity (chirp: PN binary inspiral; geodesic: Schwarzschild orbits)
   config/           Global config defaults (config.json)
   docs/             Workflow guides
 ```
@@ -72,11 +72,16 @@ wolframscript -file primes/main.wl -- --simulation.mode=gaps             # prime
 wolframscript -file primes/main.wl -- --simulation.ulam.size=201         # larger spiral
 wolframscript -file primes/main.wl -- --simulation.gaps.count=10000      # more primes
 
-# Gravitational waves
+# Gravitational waves — chirp mode
 wolframscript -file relativity/main.wl                                   # GW150914 (36+29 M☉)
 wolframscript -file relativity/main.wl -- --simulation.chirp.preset gw170817
 wolframscript -file relativity/main.wl -- --simulation.chirp.mass1_solar 50 --simulation.chirp.mass2_solar 50
 wolframscript -file relativity/main.wl -- --sonification.chirp.time_stretch 8
+
+# Gravitational waves — geodesic mode (Schwarzschild black hole)
+wolframscript -file relativity/main.wl -- --simulation.mode geodesic    # bound orbit (default)
+wolframscript -file relativity/main.wl -- --simulation.mode geodesic --simulation.geodesic.orbit_type plunging
+wolframscript -file relativity/main.wl -- --simulation.mode geodesic --simulation.geodesic.orbit_type photon
 ```
 
 Each project writes outputs into its own directory:
@@ -99,6 +104,7 @@ afplay primes/output/ulam_audio.wav
 afplay primes/output/gaps_audio.wav
 afplay relativity/output/chirp.wav
 afplay relativity/output/gw170817.wav
+afplay relativity/output/geodesic.wav
 ```
 
 ---
@@ -174,19 +180,24 @@ See [`primes/README.md`](primes/README.md).
 
 ### relativity
 
-Simulates the gravitational wave strain from a binary inspiral using the
-post-Newtonian (PN) approximation — the same analytic model used to construct
-the matched filters that enabled LIGO's first detection. The strain h(t) is
-literally an audio waveform: a *chirp* sweeping upward in frequency and
-amplitude as the two bodies spiral together, ending in an abrupt merger
-followed by an exponentially damped ringdown at the quasi-normal mode frequency.
-Time-stretching makes the millisecond-scale signal clearly audible.
+Two modes of general relativity simulation.
 
-Three preset comparison WAVs are produced automatically on every run:
-`gw150914.wav` (36+29 M☉ binary black hole, the 2015 LIGO event),
-`gw170817.wav` (1.17+1.36 M☉ neutron star merger, final 10 s of inspiral),
-and `stellar.wav` (10+8 M☉). Four physical correctness checks verify the PN
-formulas on each run and abort if they fail.
+**chirp** — gravitational wave strain from a binary inspiral using the
+post-Newtonian (PN) approximation, the same analytic model behind LIGO's
+matched filters. The strain h(t) is literally an audio waveform: a *chirp*
+sweeping upward in frequency and amplitude, ending in an abrupt merger
+followed by an exponentially damped ringdown. Three preset comparison WAVs
+are produced automatically (`gw150914`, `gw170817`, `stellar`). Four physical
+correctness checks verify the PN formulas on each run and abort if they fail.
+
+**geodesic** — test-particle and photon orbits around a Schwarzschild black
+hole, integrated numerically by NDSolve. Three orbit types: `bound` (elliptical
+orbit; GR periapsis precession traces a rosette), `plunging` (particle spirals
+past the event horizon in finite proper time), `photon` (light deflected by
+gravity — impact parameter controls deflection vs. capture). Each orbit is
+visualised as a polar plot showing the event horizon, photon sphere, and ISCO,
+and sonified with pitch mapped to the orbital angular frequency or gravitational
+blueshift depending on orbit type.
 See [`relativity/README.md`](relativity/README.md).
 
 ---

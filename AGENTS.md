@@ -28,7 +28,7 @@ stem/
   signal/           Signal processing (Fourier analysis, direct audio output)
   quantum/          Quantum mechanics (coherent state QHO, particle-in-a-box)
   primes/           Prime number patterns (Ulam spiral, prime gap rhythm)
-  relativity/       General relativity (gravitational wave chirp, PN inspiral)
+  relativity/       General relativity (chirp: PN binary inspiral; geodesic: Schwarzschild orbits)
   config/           Global config defaults (config.json)
   docs/             Workflow guides
 ```
@@ -65,6 +65,9 @@ wolframscript -file primes/main.wl -- --simulation.ulam.size=201
 wolframscript -file relativity/main.wl                                   # GW150914 (chirp, default)
 wolframscript -file relativity/main.wl -- --simulation.chirp.preset gw170817
 wolframscript -file relativity/main.wl -- --sonification.chirp.time_stretch 8
+wolframscript -file relativity/main.wl -- --simulation.mode geodesic    # bound orbit (default)
+wolframscript -file relativity/main.wl -- --simulation.mode geodesic --simulation.geodesic.orbit_type plunging
+wolframscript -file relativity/main.wl -- --simulation.mode geodesic --simulation.geodesic.orbit_type photon
 ```
 
 `asteroids/main.wl` and `asteroids/experiment.wl` accept `[-- YYYY-MM-DD YYYY-MM-DD [Scale]]`.
