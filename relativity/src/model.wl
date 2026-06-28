@@ -179,3 +179,243 @@ ChirpModel[cfg_Association] :=
      "sample_rate"      -> sampleRate,
      "mode"             -> "chirp" |>
 ]
+
+
+(* ========================================================
+   GeodesicModel — Schwarzschild geodesic for test particle or photon
+
+   orbit_type = "bound":    massive particle elliptical orbit
+                            (GR periapsis precession produces a rosette)
+   orbit_type = "plunging": massive particle spiralling past event horizon
+   orbit_type = "photon":   photon trajectory (gravitational lensing)
+
+   Integration in dimensionless units: r̃ = r/M, τ̃ = τ/M.
+   Schwarzschild radius r_s = 2M, so r̃ = 2 corresponds to the horizon.
+
+   Returns an Association:
+     "tau"           — proper-time array (units of M)
+     "r"             — radial coordinate (units of M)
+     "phi"           — azimuthal angle (radians)
+     "x", "y"        — Cartesian equivalents (units of M)
+     "redshift"      — sqrt(1−2/r̃), gravitational redshift factor
+     "dphi_dtau"     — dφ/dτ angular velocity (rad/M)
+     "omega_mean"    — mean |dφ/dτ| over the trajectory
+     "merger_index"  — first index with r̃ ≤ 2, or Length[r] if no crossing
+     "r_min","r_max" — trajectory extrema (units of M)
+     "r_start"       — initial r̃ (units of M)
+     "L_tilde"       — dimensionless angular momentum L/M
+     "E"             — dimensionless energy
+     "orbit_type"    — "bound" | "plunging" | "photon"
+     "mass_solar"    — black hole mass in solar masses
+     "r_s_km"        — Schwarzschild radius in km
+     "tau_max"       — actual integration end (units of M)
+     "n_revolutions" — total φ / 2π
+     "mode"          — "geodesic"
+   ======================================================== *)
+
+GeodesicModel[cfg_Association] :=
+  Module[{
+    G, c, Msun,
+    massSolar, orbitType, tauMaxM, nSteps,
+    rStartRs, lFactor, bFactor,
+    Mm, rSm,
+    rTilde0, lCirc, LTilde, ETilde, bCrit, bTilde, v0, lambdaMax,
+    sol, rFunc, phiFunc, tauEnd,
+    tauArr, rArr, phiArr, xArr, yArr,
+    redshiftArr, dphiArr, dtauArr, omegaMean,
+    mergerIdx, rMin, rMax, nRevolutions
+  },
+
+  G    = 6.674*^-11;
+  c    = 2.998*^8;
+  Msun = 1.989*^30;
+
+  massSolar = N @ GetCfg[cfg, {"simulation","geodesic","mass_solar"},   10.0];
+  orbitType =     GetCfg[cfg, {"simulation","geodesic","orbit_type"}, "bound"];
+  tauMaxM   = N @ GetCfg[cfg, {"simulation","geodesic","tau_max_m"},  3000.0];
+  nSteps    =     GetCfg[cfg, {"simulation","geodesic","n_steps"},     50000];
+
+  Mm  = G * massSolar * Msun / c^2;   (* gravitational radius G·M/c² in metres *)
+  rSm = 2.0 * Mm;                    (* Schwarzschild radius in metres *)
+
+  Print["-- Schwarzschild geodesic parameters --"];
+  STEMPrintN["Mass",              massSolar,    "M\[SmallCircle]", {5,2}];
+  STEMPrintN["Schwarzschild r_s", rSm / 1000, "km",              {8,3}];
+  Print["  Orbit type: ", orbitType];
+  Print[""];
+
+  Which[
+
+    (* ── Bound massive-particle elliptical orbit ── *)
+    orbitType === "bound",
+      rStartRs = N @ GetCfg[cfg, {"simulation","geodesic","bound","r_start_rs"},             10.0];
+      lFactor  = N @ GetCfg[cfg, {"simulation","geodesic","bound","angular_momentum_factor"}, 0.85];
+      rTilde0  = rStartRs * 2.0;   (* r̃₀ = r₀/M = r_start_rs · r_s/M = r_start_rs · 2 *)
+
+      If[rTilde0 <= 6.0,
+        Print["Error: r_start_rs must be > 3 for bound orbit (ISCO at r̃=6). Got r̃₀=", rTilde0];
+        Exit[1]
+      ];
+
+      lCirc  = Sqrt[rTilde0^2 / (rTilde0 - 3.0)];   (* L̃ for circular orbit at r̃₀ *)
+      LTilde = N[lFactor * lCirc];
+      ETilde = N[Sqrt[(1.0 - 2.0/rTilde0) * (1.0 + LTilde^2/rTilde0^2)]];
+
+      If[LTilde^2 < 12.0,
+        Print["  Warning: L̃² = ", FmtN[LTilde^2, {5,3}],
+              " < 12 (ISCO threshold). Orbit may plunge. ",
+              "Increase r_start_rs or angular_momentum_factor."]
+      ];
+
+      Print["  r̃₀ = ", FmtN[rTilde0, {5,2}], " M  =  ", FmtN[rTilde0/2.0, {5,2}], " r_s"];
+      STEMPrintN["L̃",            LTilde, "M",      {6,4}];
+      STEMPrintN["L̃_circ(r̃₀)",  lCirc,  "M",      {6,4}];
+      STEMPrintN["E",             ETilde, "(dim)",  {7,6}];
+      Print[""];
+
+      (* Massive-particle geodesic equations (M=1, proper time τ):
+           r''(τ) = −1/r² + L̃²/r³ − 3L̃²/r⁴
+           φ'(τ)  = L̃/r²
+         Start at apoapsis r̃₀ with dr/dτ = 0. *)
+      sol = Quiet @ NDSolve[
+        {r''[\[Tau]] == -1.0/r[\[Tau]]^2 + LTilde^2/r[\[Tau]]^3 - 3.0*LTilde^2/r[\[Tau]]^4,
+         \[Phi]'[\[Tau]] == LTilde / r[\[Tau]]^2,
+         r[0] == rTilde0, r'[0] == 0.0, \[Phi][0] == 0.0,
+         WhenEvent[r[\[Tau]] < 2.01, "StopIntegration"]},
+        {r, \[Phi]}, {\[Tau], 0, tauMaxM},
+        MaxSteps -> 6*nSteps, PrecisionGoal -> 6, AccuracyGoal -> 6
+      ];
+      rFunc   = r        /. First[sol];
+      phiFunc = \[Phi]   /. First[sol];
+      tauEnd  = rFunc["Domain"][[1, 2]],
+
+    (* ── Plunging massive-particle orbit ── *)
+    orbitType === "plunging",
+      rStartRs = N @ GetCfg[cfg, {"simulation","geodesic","plunging","r_start_rs"},             10.0];
+      lFactor  = N @ GetCfg[cfg, {"simulation","geodesic","plunging","angular_momentum_factor"}, 0.30];
+      rTilde0  = rStartRs * 2.0;
+      lCirc    = If[rTilde0 > 3.0, Sqrt[rTilde0^2 / (rTilde0 - 3.0)], 1.0];
+      LTilde   = N[lFactor * lCirc];
+      ETilde   = N[Sqrt[(1.0 - 2.0/rTilde0) * (1.0 + LTilde^2/rTilde0^2)]];
+
+      Print["  r̃₀ = ", FmtN[rTilde0, {5,2}], " M  =  ", FmtN[rTilde0/2.0, {5,2}], " r_s"];
+      STEMPrintN["L̃",  LTilde, "M",     {6,4}];
+      STEMPrintN["E",   ETilde, "(dim)", {7,6}];
+      Print["  L̃² = ", FmtN[LTilde^2, {5,3}],
+            If[LTilde^2 < 12.0, " < 12 — no potential barrier, particle plunges.",
+                                 " > 12 — potential barrier present (unexpected for plunging mode)."]];
+      Print[""];
+
+      sol = Quiet @ NDSolve[
+        {r''[\[Tau]] == -1.0/r[\[Tau]]^2 + LTilde^2/r[\[Tau]]^3 - 3.0*LTilde^2/r[\[Tau]]^4,
+         \[Phi]'[\[Tau]] == LTilde / r[\[Tau]]^2,
+         r[0] == rTilde0, r'[0] == 0.0, \[Phi][0] == 0.0,
+         WhenEvent[r[\[Tau]] < 2.01, "StopIntegration"]},
+        {r, \[Phi]}, {\[Tau], 0, tauMaxM},
+        MaxSteps -> 6*nSteps, PrecisionGoal -> 6, AccuracyGoal -> 6
+      ];
+      rFunc   = r        /. First[sol];
+      phiFunc = \[Phi]   /. First[sol];
+      tauEnd  = rFunc["Domain"][[1, 2]];
+      LTilde  = LTilde;
+      ETilde  = ETilde,
+
+    (* ── Photon orbit (massless, affine parameter λ) ── *)
+    orbitType === "photon",
+      rStartRs = N @ GetCfg[cfg, {"simulation","geodesic","photon","r_start_rs"},              50.0];
+      bFactor  = N @ GetCfg[cfg, {"simulation","geodesic","photon","impact_parameter_factor"}, 1.5];
+      rTilde0  = rStartRs * 2.0;
+      bCrit    = N[3.0 * Sqrt[3.0]];   (* critical impact parameter = 3√3 M ≈ 5.196 M *)
+      bTilde   = N[bFactor * bCrit];
+      LTilde   = bTilde;
+      ETilde   = 1.0;
+      (* Initial dr/dλ (photon moving inward): (dr/dλ)² = 1 − (1−2/r₀)·b²/r₀² *)
+      v0       = N[-Sqrt[Max[0.0, 1.0 - (1.0 - 2.0/rTilde0)*bTilde^2/rTilde0^2]]];
+      lambdaMax = N[4.0 * rTilde0];   (* affine-parameter range; generously covers one pass *)
+
+      Print["  r̃₀ = ", FmtN[rTilde0, {5,2}], " M  =  ", FmtN[rTilde0/2.0, {5,2}], " r_s"];
+      STEMPrintN["b_crit",           bCrit,  "M", {5,3}];
+      STEMPrintN["Impact parameter b", bTilde, "M", {5,3}];
+      Print["  b/b_crit = ", FmtN[bFactor, {4,2}],
+            "  →  ", If[bFactor > 1.0, "deflected (escapes)", "captured (absorbed)"]];
+      Print[""];
+
+      (* Massless geodesic equations (M=1, affine parameter λ, E=1, L̃=b):
+           r''(λ) = b²/r³ − 3b²/r⁴
+           φ'(λ)  = b/r²
+         Photon enters from r̃₀ moving inward (dr/dλ < 0). *)
+      sol = Quiet @ NDSolve[
+        {r''[\[Lambda]] == bTilde^2/r[\[Lambda]]^3 - 3.0*bTilde^2/r[\[Lambda]]^4,
+         \[Phi]'[\[Lambda]] == bTilde / r[\[Lambda]]^2,
+         r[0] == rTilde0, r'[0] == v0, \[Phi][0] == 0.0,
+         WhenEvent[r[\[Lambda]] < 2.01, "StopIntegration"]},
+        {r, \[Phi]}, {\[Lambda], 0, lambdaMax},
+        MaxSteps -> 6*nSteps, PrecisionGoal -> 6, AccuracyGoal -> 6
+      ];
+      rFunc   = r        /. First[sol];
+      phiFunc = \[Phi]   /. First[sol];
+      tauEnd  = rFunc["Domain"][[1, 2]],
+
+    True,
+      Print["Error: unknown geodesic orbit_type \"", orbitType,
+            "\" — expected bound, plunging, or photon."];
+      Exit[1]
+  ];
+
+  (* ── Sample solution at nSteps uniformly-spaced points ── *)
+  tauArr  = N @ Subdivide[0.0, tauEnd, nSteps - 1];
+  rArr    = rFunc[tauArr];
+  phiArr  = phiFunc[tauArr];
+  xArr    = N[rArr * Cos[phiArr]];
+  yArr    = N[rArr * Sin[phiArr]];
+
+  (* Gravitational redshift factor as seen from infinity *)
+  redshiftArr = N @ Sqrt @ Clip[1.0 - 2.0/rArr, {0.0, 1.0}];
+
+  (* Angular velocity: central differences; prepend 0 for first point *)
+  dtauArr  = N @ Differences[tauArr];
+  dphiArr  = Prepend[N @ Abs[Differences[phiArr]] / dtauArr, 0.0];
+  omegaMean = N @ Mean[Rest[dphiArr]];
+
+  mergerIdx = With[{pos = FirstPosition[rArr, _?(# <= 2.0 &)]},
+    If[MissingQ[pos] || Length[pos] === 0, Length[rArr], pos[[1]]]
+  ];
+
+  rMin = N @ Min[rArr];
+  rMax = N @ Max[rArr];
+  nRevolutions = N[Last[phiArr] / (2.0 Pi)];
+
+  Print["-- Geodesic summary --"];
+  STEMPrintN["τ_max integrated",  tauEnd,           "M",   {8,2}];
+  STEMPrintN["r_min",             rMin / 2.0,       "r_s", {6,3}];
+  STEMPrintN["r_max",             rMax / 2.0,       "r_s", {6,2}];
+  STEMPrintN["Δφ total",          Last[phiArr],     "rad", {7,3}];
+  STEMPrintN["Revolutions",       nRevolutions,     "",    {5,2}];
+  If[mergerIdx < Length[rArr],
+    STEMPrintN["Horizon crossing τ", tauArr[[mergerIdx]], "M", {7,2}]
+  ];
+  Print[""];
+
+  <|
+    "tau"           -> tauArr,
+    "r"             -> rArr,
+    "phi"           -> phiArr,
+    "x"             -> xArr,
+    "y"             -> yArr,
+    "redshift"      -> redshiftArr,
+    "dphi_dtau"     -> dphiArr,
+    "omega_mean"    -> omegaMean,
+    "merger_index"  -> mergerIdx,
+    "r_min"         -> rMin,
+    "r_max"         -> rMax,
+    "r_start"       -> rTilde0,
+    "L_tilde"       -> LTilde,
+    "E"             -> ETilde,
+    "orbit_type"    -> orbitType,
+    "mass_solar"    -> massSolar,
+    "r_s_km"        -> rSm / 1000.0,
+    "tau_max"       -> tauEnd,
+    "n_revolutions" -> nRevolutions,
+    "mode"          -> "geodesic"
+  |>
+]

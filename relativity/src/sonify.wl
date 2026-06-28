@@ -131,7 +131,9 @@ SonifyRelativity[model_Association, cfg_Association, outDir_String] :=
     mainPath, audio
   },
 
-  mode      = model["mode"];
+  mode = model["mode"];
+  If[mode === "geodesic", Return @ SonifyGeodesic[model, cfg, outDir]];
+
   strain    = model["strain"];
   mergerIdx = model["merger_index"];
   srModel   = Round @ model["sample_rate"];
@@ -186,5 +188,112 @@ SonifyRelativity[model_Association, cfg_Association, outDir_String] :=
     "Audio duration: " <> ToString[NumberForm[audioDur, {4,2}]] <> " seconds. " <>
     "Listen for rising pitch and amplitude ending in abrupt merger, " <>
     "followed by fading ringdown."
+  ]
+]
+
+
+(* ── SonifyGeodesic ──────────────────────────────────────
+   Sonify a Schwarzschild geodesic trajectory.
+
+   Pitch mapping (per orbit_type):
+     bound    — frequency ∝ dφ/dτ (orbital angular velocity)
+                The tone wobbles as the particle speeds up near periapsis
+                and slows near apoapsis; GR periapsis advance is audible
+                as a slow drift in the wobble pattern.
+     plunging — frequency ∝ 1/√(1−2/r̃)  (gravitational blueshift);
+                amplitude ∝ redshift → fades to silence at the horizon.
+     photon   — same blueshift pitch as plunging; amplitude constant
+                (deflected photon: frequency blips up then back down).
+
+   All modes normalised so the mean pitch lands at pitch_base_hz.
+   ─────────────────────────────────────────────────────────── *)
+
+SonifyGeodesic[model_Association, cfg_Association, outDir_String] :=
+  Module[{
+    orbitType, tauArr, rArr, dphiArr, redshiftArr, omegaMean,
+    n,
+    srOut, pitchBase, durS,
+    nAudio, idxArr,
+    fAudio, fMean, ampArr, phaseArr, hAudio, peak, eps,
+    wavPath
+  },
+
+  orbitType   = model["orbit_type"];
+  tauArr      = model["tau"];
+  rArr        = model["r"];
+  dphiArr     = model["dphi_dtau"];
+  redshiftArr = model["redshift"];
+  omegaMean   = model["omega_mean"];
+  n           = Length[tauArr];
+
+  srOut     = Round @ GetCfg[cfg, {"sonification","sample_rate"},              44100];
+  pitchBase = N @ GetCfg[cfg, {"sonification","geodesic","pitch_base_hz"}, 220.0];
+  durS      = N @ GetCfg[cfg, {"sonification","geodesic","duration_s"},     10.0];
+
+  nAudio = Round[durS * srOut];
+  eps    = 1.0*^-8;
+
+  (* Map each audio sample linearly to a model array index *)
+  idxArr = Clip[Round[N @ Range[0, nAudio-1] * (n-1) / (nAudio-1)] + 1, {1, n}];
+
+  (* Compute instantaneous pitch and amplitude arrays *)
+  Which[
+    orbitType === "bound",
+      (* Pitch ∝ angular velocity; mean maps to pitch_base_hz *)
+      fAudio = N[pitchBase * dphiArr[[idxArr]] / Max[omegaMean, eps]];
+      ampArr = N[redshiftArr[[idxArr]]],    (* mild redshift variation ~89-95% *)
+
+    orbitType === "plunging",
+      (* Pitch rises as r→2 (blueshift); amplitude fades to 0 at horizon *)
+      fAudio = N[pitchBase / Sqrt[Clip[1.0 - 2.0/rArr[[idxArr]], {eps, 1.0}]]];
+      fMean  = N @ Mean[fAudio];
+      fAudio = N[pitchBase * fAudio / Max[fMean, eps]];  (* normalise mean to pitchBase *)
+      ampArr = N[redshiftArr[[idxArr]]],
+
+    orbitType === "photon",
+      (* Pitch follows gravitational blueshift; amplitude stays constant *)
+      fAudio = N[pitchBase / Sqrt[Clip[1.0 - 2.0/rArr[[idxArr]], {eps, 1.0}]]];
+      fMean  = N @ Mean[fAudio];
+      fAudio = N[pitchBase * fAudio / Max[fMean, eps]];
+      ampArr = N[redshiftArr[[idxArr]]],
+
+    True,
+      fAudio = ConstantArray[pitchBase, nAudio];
+      ampArr = ConstantArray[1.0, nAudio]
+  ];
+
+  (* Clip to a safe audible range *)
+  fAudio = Clip[fAudio, {20.0, 8000.0}];
+
+  (* Integrate phase: Φ[k] = 2π · Σᵢ f[i] · Δt_audio *)
+  phaseArr = N[2.0 Pi * Accumulate[fAudio] * (durS / nAudio)];
+  hAudio   = ampArr * Sin[phaseArr];
+
+  (* Normalise to peak 0.9 *)
+  peak = Max[Abs[hAudio]];
+  If[peak > 0.0, hAudio = 0.9 * hAudio / peak];
+
+  wavPath = FileNameJoin[{outDir, "geodesic.wav"}];
+  EnsureDir[wavPath];
+  ExportAudioBuffer[hAudio, wavPath, srOut];
+  STEMDescribeWAV[wavPath, durS];
+
+  Print[""];
+  STEMSay[
+    "Geodesic audio ready. Orbit type: " <> orbitType <> ". " <>
+    Switch[orbitType,
+      "bound",
+        "Pitch follows orbital angular frequency — hear the particle speed up at " <>
+        "periapsis and slow at apoapsis. GR periapsis advance shifts the wobble pattern " <>
+        "slightly each orbit, producing a slow drift.",
+      "plunging",
+        "Pitch rises as the particle blueshifts falling toward the event horizon. " <>
+        "Amplitude fades to silence as gravitational redshift suppresses the signal.",
+      "photon",
+        "Pitch follows the gravitational blueshift as the photon passes near the " <>
+        "black hole and deflects back out.",
+      _,
+        "Pitch follows orbital angular frequency."
+    ]
   ]
 ]

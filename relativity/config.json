@@ -1,7 +1,7 @@
 {
   "version": 1,
   "app": "relativity",
-  "description": "General relativity: gravitational wave chirp from binary inspiral (post-Newtonian model)",
+  "description": "General relativity: gravitational wave chirp (PN inspiral) and Schwarzschild geodesic orbits",
 
   "simulation": {
     "mode": "chirp",
@@ -21,6 +21,26 @@
         "gw170817": { "mass1":  1.17, "mass2":  1.36, "distance_mpc":  40.0 },
         "stellar":  { "mass1": 10.0,  "mass2":  8.0,  "distance_mpc": 100.0 }
       }
+    },
+
+    "geodesic": {
+      "mass_solar":  10.0,
+      "orbit_type":  "bound",
+      "tau_max_m":   3000.0,
+      "n_steps":     50000,
+
+      "bound": {
+        "r_start_rs":              10.0,
+        "angular_momentum_factor":  0.85
+      },
+      "plunging": {
+        "r_start_rs":              10.0,
+        "angular_momentum_factor":  0.30
+      },
+      "photon": {
+        "r_start_rs":              50.0,
+        "impact_parameter_factor":  1.5
+      }
     }
   },
 
@@ -37,6 +57,11 @@
       "time_stretch":     4.0,
       "frequency_shift":  1.0,
       "amplitude_scale":  1.0
+    },
+
+    "geodesic": {
+      "pitch_base_hz": 220.0,
+      "duration_s":     10.0
     }
   }
 }

@@ -47,7 +47,9 @@ AnimateRelativity[model_Association, cfg_Association, outDir_String] :=
     mergerLine, mergerT
   },
 
-  mode      = model["mode"];
+  mode = model["mode"];
+  If[mode === "geodesic", Return @ AnimateGeodesic[model, cfg, outDir]];
+
   tFull     = model["time"];
   hFull     = model["strain"];
   fFull     = model["frequency"];
@@ -210,6 +212,135 @@ AnimateRelativity[model_Association, cfg_Association, outDir_String] :=
       ImageSize  -> {width, height}
     ],
     "PNG"];
+
+  Print["  Exported PNG: ", pngPath]
+]
+
+
+(* ── AnimateGeodesic ──────────────────────────────────── *)
+
+AnimateGeodesic[model_Association, cfg_Association, outDir_String] :=
+  Module[{
+    orbitType, tauArr, rArr, phiArr, n, tauEnd,
+    xRs, yRs, rMaxRs, plotRange,
+    fps, width,
+    nFrames, frameIndices, frames,
+    orbitColor, particleColor,
+    bhDisk, photonSphereCircle, iscoCircle,
+    revealXY, dotXY, fi,
+    gifPath, pngPath
+  },
+
+  orbitType = model["orbit_type"];
+  tauArr    = model["tau"];
+  rArr      = model["r"];
+  phiArr    = model["phi"];
+  n         = Length[tauArr];
+
+  (* Convert to r_s units: r_s = 2M, so r/r_s = r̃/2 *)
+  xRs = model["x"] / 2.0;
+  yRs = model["y"] / 2.0;
+
+  fps   = GetCfg[cfg, {"animation","fps"},   30];
+  width = GetCfg[cfg, {"animation","width"}, 800];
+
+  rMaxRs    = model["r_max"] / 2.0 * 1.18;   (* axis half-extent in r_s *)
+  plotRange = {{-rMaxRs, rMaxRs}, {-rMaxRs, rMaxRs}};
+
+  orbitColor = Switch[orbitType,
+    "bound",    RGBColor[0.25, 0.78, 1.0],
+    "plunging", RGBColor[1.0,  0.38, 0.12],
+    "photon",   RGBColor[0.82, 0.95, 0.22],
+    _,          RGBColor[0.5,  0.9,  0.5]
+  ];
+  particleColor = RGBColor[1.0, 1.0, 0.3];
+
+  (* Reference circles drawn as Graphics primitives in r_s units *)
+  bhDisk = {Black, Disk[{0.0, 0.0}, 1.0]};   (* event horizon: r = 1 r_s = 2M *)
+  photonSphereCircle = {
+    Directive[Dashed, RGBColor[1.0, 0.55, 0.15], Thickness[0.002]],
+    Circle[{0.0, 0.0}, 1.5]                   (* photon sphere: r = 1.5 r_s = 3M *)
+  };
+  iscoCircle = If[orbitType =!= "photon",
+    {Directive[Dashed, GrayLevel[0.42], Thickness[0.0015]],
+     Circle[{0.0, 0.0}, 3.0]},                (* ISCO: r = 3 r_s = 6M *)
+    {}
+  ];
+
+  (* ── Animated GIF: 60 frames revealing the trajectory ── *)
+  nFrames      = 60;
+  frameIndices = Clip[Round @ Subdivide[1, n, nFrames], {1, n}];
+
+  frames = Map[
+    Function[fi,
+      revealXY = Transpose[{xRs[[;; fi]], yRs[[;; fi]]}];
+      dotXY    = {xRs[[fi]], yRs[[fi]]};
+      Graphics[
+        {
+          {GrayLevel[0.07], Rectangle[{-rMaxRs, -rMaxRs}, {rMaxRs, rMaxRs}]},
+          bhDisk, photonSphereCircle, iscoCircle,
+          {Directive[orbitColor, Thickness[0.002]], Line[revealXY]},
+          {PointSize[0.022], particleColor, Point[dotXY]}
+        },
+        PlotRange  -> plotRange,
+        Background -> GrayLevel[0.07],
+        Frame      -> True, FrameStyle -> White,
+        FrameLabel -> {{Style["y  (r_s)", White, 9], None},
+                       {Style["x  (r_s)", White, 9], None}},
+        LabelStyle -> White,
+        PlotLabel  -> Style[
+          Switch[orbitType,
+            "bound",    "Schwarzschild geodesic — bound orbit (GR periapsis precession)",
+            "plunging", "Schwarzschild geodesic — plunging orbit (past event horizon)",
+            "photon",   "Schwarzschild geodesic — photon (gravitational lensing)",
+            _,          "Schwarzschild geodesic"],
+          White, 10],
+        ImageSize -> {width, width}
+      ]
+    ],
+    frameIndices
+  ];
+
+  gifPath = FileNameJoin[{outDir, "geodesic.gif"}];
+  ExportGIF[frames, gifPath, fps];
+  STEMDescribeGIF[gifPath, nFrames, fps];
+
+  (* ── Static PNG: full trajectory ── *)
+  Print["  Exporting static PNG..."];
+  pngPath = FileNameJoin[{outDir, "geodesic.png"}];
+  EnsureDir[pngPath];
+
+  Export[pngPath,
+    Graphics[
+      {
+        {GrayLevel[0.07], Rectangle[{-rMaxRs, -rMaxRs}, {rMaxRs, rMaxRs}]},
+        bhDisk, photonSphereCircle, iscoCircle,
+        {Directive[orbitColor, Thickness[0.0018]],
+         Line @ Transpose[{xRs, yRs}]},
+        (* labels *)
+        Text[Style["event horizon",  GrayLevel[0.65], 8],  {0.0, 1.12},   {0, -1}],
+        Text[Style["photon sphere",  RGBColor[1.0, 0.7, 0.4], 8], {1.6, 0.0}, {-1, 0}],
+        If[orbitType =!= "photon",
+          Text[Style["ISCO", GrayLevel[0.55], 8], {3.1, 0.0}, {-1, 0}],
+          Nothing]
+      },
+      PlotRange  -> plotRange,
+      Background -> GrayLevel[0.07],
+      Frame      -> True, FrameStyle -> White,
+      FrameLabel -> {{Style["y  (r_s)", White, 9], None},
+                     {Style["x  (r_s)", White, 9], None}},
+      LabelStyle -> White,
+      PlotLabel  -> Style[
+        Switch[orbitType,
+          "bound",    "Schwarzschild bound orbit — GR periapsis precession (rosette)",
+          "plunging", "Schwarzschild plunging orbit — particle crosses event horizon",
+          "photon",   "Photon geodesic — gravitational lensing by Schwarzschild BH",
+          _,          "Schwarzschild geodesic"],
+        White, 11],
+      ImageSize -> {width, width}
+    ],
+    "PNG"
+  ];
 
   Print["  Exported PNG: ", pngPath]
 ]

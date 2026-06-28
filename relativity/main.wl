@@ -7,23 +7,31 @@
      wolframscript -file main.wl [-- [--key=value ...]]
      wolframscript -file main.wl -- --config-dump
      wolframscript -file main.wl -- --simulation.mode chirp
-     wolframscript -file main.wl -- --simulation.chirp.preset gw170817
-     wolframscript -file main.wl -- --simulation.chirp.mass1_solar 50
-     wolframscript -file main.wl -- --sonification.chirp.time_stretch 8
+     wolframscript -file main.wl -- --simulation.mode geodesic
 
    Modes:
-     chirp — gravitational wave chirp from binary inspiral (PN approximation)
-             models GW150914-class events; geodesic mode added in next session
+     chirp    — gravitational wave chirp from binary inspiral (PN approximation)
+     geodesic — Schwarzschild geodesic: bound orbit / plunging / photon lensing
 
-   CLI flags accepted:
-     --config-dump
-     --simulation.mode
+   CLI flags — chirp mode:
      --simulation.chirp.mass1_solar
      --simulation.chirp.mass2_solar
      --simulation.chirp.distance_mpc
-     --simulation.chirp.preset        (gw150914 | gw170817 | stellar)
+     --simulation.chirp.preset              (gw150914 | gw170817 | stellar)
      --sonification.chirp.time_stretch
      --sonification.chirp.frequency_shift
+
+   CLI flags — geodesic mode:
+     --simulation.geodesic.orbit_type       (bound | plunging | photon)
+     --simulation.geodesic.mass_solar
+     --simulation.geodesic.bound.r_start_rs
+     --simulation.geodesic.bound.angular_momentum_factor
+     --simulation.geodesic.plunging.r_start_rs
+     --simulation.geodesic.plunging.angular_momentum_factor
+     --simulation.geodesic.photon.r_start_rs
+     --simulation.geodesic.photon.impact_parameter_factor
+     --sonification.geodesic.pitch_base_hz
+     --sonification.geodesic.duration_s
    ======================================================== *)
 
 $projectRoot  = DirectoryName[$InputFileName];
@@ -141,22 +149,89 @@ Which[
     Print[""],
 
 
+  (* ══════════════════════════════════════════════════════
+     GEODESIC MODE — Schwarzschild test-particle / photon orbit
+     ══════════════════════════════════════════════════════ *)
+  mode === "geodesic",
+
+    With[{
+      orbitType = GetCfg[cfg, {"simulation","geodesic","orbit_type"}, "bound"],
+      mass      = GetCfg[cfg, {"simulation","geodesic","mass_solar"},  10.0]
+    },
+
+    STEMHeading["General Relativity: Schwarzschild Geodesic"];
+    Print["  orbit_type = ", orbitType, "   mass = ", mass, " M\[SmallCircle]"];
+    Print[""];
+
+    STEMSay["Computing Schwarzschild geodesic"];
+    Print["[1/4] Computing trajectory..."];
+    model = GeodesicModel[cfg];
+    Print[""];
+
+    Print["[2/4] Exporting trajectory CSV..."];
+    With[{
+      csvPath = FileNameJoin[{$outDir, "geodesic_trajectory.csv"}],
+      tArr    = model["tau"],
+      rArr    = model["r"],
+      phiArr  = model["phi"],
+      xArr    = model["x"],
+      yArr    = model["y"]
+    },
+      With[{
+        step = Max[1, Round[Length[tArr] / 5000]],
+        rows = Table[
+          {tArr[[k]], N[rArr[[k]]/2.0], phiArr[[k]],
+           N[xArr[[k]]/2.0], N[yArr[[k]]/2.0]},
+          {k, 1, Length[tArr], Max[1, Round[Length[tArr]/5000]]}]},
+        ExportCSV[
+          Join[{{"tau_M", "r_rs", "phi_rad", "x_rs", "y_rs"}}, rows],
+          csvPath];
+        STEMDescribeCSV[csvPath, Length[rows], 5]
+      ]
+    ];
+    Print[""];
+
+    Print["[3/4] Rendering animation..."];
+    STEMSay["Rendering geodesic animation"];
+    AnimateRelativity[model, cfg, $outDir];
+    Print[""];
+
+    Print["[4/4] Sonifying..."];
+    STEMSay["Sonifying geodesic"];
+    SonifyRelativity[model, cfg, $outDir];
+    Print[""]
+    ],
+
+
   (* Unknown mode *)
   True,
     Print["Error: unknown simulation.mode \"", mode,
-          "\" — expected \"chirp\"."];
+          "\" — expected \"chirp\" or \"geodesic\"."];
     Exit[1]
 ];
 
 Print[""];
 STEMHeading["Done"];
-STEMSay["Relativity complete. Chirp mass " <>
-  ToString[NumberForm[N @ model["chirp_mass_solar"], {4,1}]] <>
-  " solar masses. Frequency sweep " <>
-  ToString[Round[N @ First[model["frequency"]]]] <>
-  " to " <>
-  ToString[Round[N @ model["peak_frequency"]]] <>
-  " hertz. Merger at " <>
-  ToString[NumberForm[N @ model["coalescence_time"], {5,3}]] <>
-  " seconds. Play audio: afplay " <>
-  FileNameJoin[{$outDir, "chirp.wav"}]]
+If[mode === "chirp",
+  STEMSay["Relativity complete. Chirp mass " <>
+    ToString[NumberForm[N @ model["chirp_mass_solar"], {4,1}]] <>
+    " solar masses. Frequency sweep " <>
+    ToString[Round[N @ First[model["frequency"]]]] <>
+    " to " <>
+    ToString[Round[N @ model["peak_frequency"]]] <>
+    " hertz. Merger at " <>
+    ToString[NumberForm[N @ model["coalescence_time"], {5,3}]] <>
+    " seconds. Play audio: afplay " <>
+    FileNameJoin[{$outDir, "chirp.wav"}]],
+  (* geodesic *)
+  STEMSay["Geodesic complete. " <>
+    ToString[model["orbit_type"]] <> " orbit around " <>
+    ToString[NumberForm[N @ model["mass_solar"], {4,1}]] <>
+    " M\[SmallCircle] black hole (r_s = " <>
+    ToString[NumberForm[N @ model["r_s_km"], {5,2}]] <> " km). " <>
+    "r_min = " <> ToString[NumberForm[N @ (model["r_min"]/2.0), {4,2}]] <> " r_s. " <>
+    "Total \[Phi] = " <> ToString[NumberForm[N @ Last[model["phi"]], {5,2}]] <> " rad (" <>
+    ToString[NumberForm[N @ model["n_revolutions"], {4,2}]] <> " revolutions). " <>
+    "Play audio: afplay " <>
+    FileNameJoin[{$outDir, "geodesic.wav"}]]
+]
