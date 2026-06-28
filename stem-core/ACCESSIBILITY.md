@@ -35,7 +35,7 @@ Each app follows the same structure:
 | `STEMDescribeCSV[path, rows, cols]` | `  Exported CSV: output/out.csv — 12 rows, 5 cols` | Export confirmation |
 | `STEMDescribeWAV[path, dur]` | `  Exported WAV: output/out.wav — 3.5 s` | Export confirmation |
 | `STEMDescribeGIF[path, nFrames, fps]` | `  Exported GIF: output/out.gif — 300 frames @ 10 fps` | Export confirmation |
-| `STEMSay["..."]` | `Complete. Play audio: afplay output/out.wav` | Final announcement |
+| `STEMSay["..."]` | `Solving pendulum ODE` / `Complete. Play audio: afplay …` | Intermediate phase + final announcement |
 
 Every line is a self-contained statement — no multi-line spans, no raw
 `NumberForm` superscripts. VoiceOver can navigate forward/backward one
@@ -50,10 +50,18 @@ directly from the terminal:
 
 ```sh
 afplay pendulum/output/simple_audio.wav
+afplay pendulum/output/double_audio.wav
 afplay lorenz/output/lorenz_audio.wav
+afplay lorenz/output/rossler_audio.wav
 afplay asteroids/output/asteroids_recent.wav
 afplay cellular/output/life_rpentomino_audio.wav
 afplay signal/output/chord_clean.wav
+afplay quantum/output/qho_audio.wav
+afplay quantum/output/box_audio.wav
+afplay primes/output/ulam_audio.wav
+afplay primes/output/gaps_audio.wav
+afplay relativity/output/chirp.wav
+afplay relativity/output/geodesic.wav
 ```
 
 The `signal` app produces the most accessible single file:
@@ -121,7 +129,10 @@ Prints a one-line GIF export confirmation with frame count and frame rate.
 
 ### `STEMSay[text]`
 Prints `text` and, if `$STEMSpeakEnabled` is `True`, calls `say text` via the
-macOS speech synthesiser. Used for the final completion message.
+macOS speech synthesiser. Used for intermediate phase announcements (e.g.
+"Solving pendulum ODE", "Rendering animation") and for the final completion
+message ("Complete. Play audio: afplay …"). All 8 apps emit both intermediate
+and final `STEMSay` calls.
 
 ### `$STEMSpeakEnabled`
 `True` when the environment variable `STEM_SPEAK=1` was set at load time.

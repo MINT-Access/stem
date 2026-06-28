@@ -16,6 +16,10 @@ and a musical WAV sonification.
 # Full run: CSV + GIF + WAV
 wolframscript -file main.wl
 
+# Both --key=value and --key value (space form) are accepted
+wolframscript -file main.wl -- --simulation.mode=double
+wolframscript -file main.wl -- --simulation.mode double
+
 # Parameter experiments (baseline, long/short pendulum, large angle, moon gravity, pushed)
 wolframscript -file experiments.wl
 
@@ -25,11 +29,21 @@ wolframscript -file tests/test_model.wl
 
 ## Outputs
 
+**Simple mode** (`--simulation.mode=simple`):
+
 | File | Description |
 |------|-------------|
-| `output/results.csv` | Time, angle, velocity, energy per time step |
-| `output/pendulum_animation.gif` | Looping animated GIF of the pendulum |
-| `output/pendulum_audio.wav` | Musical sonification (A minor pentatonic, WAV) |
+| `output/simple_results.csv` | Time, angle, velocity, energy per time step |
+| `output/simple_animation.gif` | Looping animated GIF of the pendulum |
+| `output/simple_audio.wav` | Musical sonification (A minor pentatonic, WAV) |
+
+**Double mode** (`--simulation.mode=double`, default):
+
+| File | Description |
+|------|-------------|
+| `output/double_results.csv` | Time, angles and velocities for both rods |
+| `output/double_animation.gif` | Looping animated GIF, both bobs |
+| `output/double_audio.wav` | Binaural sonification, left/right bob in separate channels |
 
 ## Sonification
 
@@ -88,7 +102,9 @@ output/            — Output directory (not committed)
 as a self-contained announcement. Headings use `STEMHeading`; the six
 `PrintSummary` values (steps, max/min angle, initial/final/drift energy) use
 `STEMPrintN`; export confirmations use `STEMDescribeCSV`, `STEMDescribeGIF`,
-and `STEMDescribeWAV`; the final line uses `STEMSay`.
+and `STEMDescribeWAV`. `STEMSay` is called at each pipeline phase (ODE solve,
+animation, sonification) and as the final completion message with an `afplay`
+command.
 
 To also hear a spoken announcement when the run finishes, set `STEM_SPEAK=1`
 before running:

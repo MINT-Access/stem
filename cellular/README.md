@@ -34,13 +34,14 @@ computable process — yet has a deceptively simple definition.
 # Default (Game of Life, R-pentomino seed)
 wolframscript -file main.wl
 
-# Game of Life with different starting patterns
+# Game of Life with different starting patterns (--key=value and --key value both accepted)
 wolframscript -file main.wl -- --simulation.mode=life --simulation.life.starting_pattern=rpentomino
 wolframscript -file main.wl -- --simulation.mode=life --simulation.life.starting_pattern=gliderlgun
 wolframscript -file main.wl -- --simulation.mode=life --simulation.life.starting_pattern=random
 
 # Rule 110
 wolframscript -file main.wl -- --simulation.mode=rule110
+wolframscript -file main.wl -- --simulation.mode rule110
 
 # Inspect merged config
 wolframscript -file main.wl -- --config-dump
@@ -108,7 +109,9 @@ Audio duration is 0.1 seconds per generation (30 s for 300 Life generations,
 Step numbers `[1/4]` through `[4/4]` mark each pipeline stage. A cellular
 automata summary with population statistics is printed after simulation.
 `STEMDescribeCSV`, `STEMDescribeWAV`, and `STEMDescribeGIF` confirm each
-export. The final line uses `STEMSay`.
+export. `STEMSay` announces each phase ("Starting Game of Life…",
+"Rendering animation", "Synthesising audio") and the final completion
+message with an `afplay` command.
 
 To enable speech at each stage, set `STEM_SPEAK=1`:
 

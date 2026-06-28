@@ -68,6 +68,10 @@ NASA_API_KEY=your_key wolframscript -file experiment.wl -- 2026-01-01 2026-01-31
 # Skip orbital element fetch (faster, uses seeded random angles)
 wolframscript -file main.wl -- 2026-06-20 2026-06-26 --no-orbital-elements
 
+# Config overrides — both --key=value and --key value (space form) accepted
+wolframscript -file main.wl -- --simulation.days_ahead=14
+wolframscript -file main.wl -- --simulation.days_ahead 14
+
 # Offline tests (no API call)
 wolframscript -file tests/test_analyse.wl
 
@@ -162,7 +166,9 @@ count and hazardous count in `PrintSummary` use `STEMPrintN`, as do the
 Min/Max/Mean velocity lines; miss distance lines mix km and LD on one line
 and remain as bare `Print`; export confirmations use `STEMDescribeCSV`
 (1 row per asteroid, 12 columns), `STEMDescribeGIF`, and `STEMDescribeWAV`;
-the final line uses `STEMSay`.
+`STEMSay` announces each pipeline phase ("Fetching asteroid data from NASA",
+"Analysing trajectory data", "Rendering solar system animation", "Synthesising
+audio") and the final completion message with an `afplay` command.
 
 To also hear a spoken announcement when the run finishes, set `STEM_SPEAK=1`
 before running:

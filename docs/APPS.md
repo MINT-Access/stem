@@ -10,7 +10,7 @@ document covers CLI options, modes, config keys, and output files for each.
 | App | Domain | Modes | Output dir | Has live data? |
 |-----|--------|-------|-----------|---------------|
 | `pendulum` | Physics ODE | `simple`, `double` | `output/` | No |
-| `lorenz` | Strange attractor | `lorenz`, `rossler`, `chen` | `output/` | No |
+| `lorenz` | Strange attractor | `lorenz`, `rossler` | `output/` | No |
 | `asteroids` | NASA NeoWs API | — | `output/` | Yes |
 | `cellular` | Cellular automata | `life`, `rule110` | `output/` | No |
 | `signal` | Fourier analysis | `chord`, `sweep`, `am` | `output/` | No |
@@ -28,7 +28,9 @@ Every app uses a four-layer config:
 $HardcodedDefaults → config/config.json → <app>/config.json → CLI --key=value
 ```
 
-Keys use dot notation for nesting. CLI overrides are `--key.subkey=value`.
+Keys use dot notation for nesting. CLI overrides accept both
+`--key.subkey=value` and `--key.subkey value` (space form) — all 8 apps
+support both conventions.
 Dump the active config without running the simulation:
 
 ```sh
@@ -86,7 +88,6 @@ frame.
 ```sh
 wolframscript -file lorenz/main.wl
 wolframscript -file lorenz/main.wl -- --simulation.mode=rossler
-wolframscript -file lorenz/main.wl -- --simulation.mode=chen
 wolframscript -file lorenz/main.wl -- --simulation.lorenz.rho=35
 ```
 
@@ -94,7 +95,7 @@ wolframscript -file lorenz/main.wl -- --simulation.lorenz.rho=35
 
 | Key | Default | Description |
 |-----|---------|-------------|
-| `simulation.mode` | `"lorenz"` | `"lorenz"`, `"rossler"`, or `"chen"` |
+| `simulation.mode` | `"lorenz"` | `"lorenz"` or `"rossler"` |
 | `simulation.duration` | `40.0` | Integration time |
 | `simulation.timestep` | `0.005` | ODE step size |
 | `simulation.lorenz.sigma` | `10.0` | Lorenz σ parameter |

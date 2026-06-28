@@ -26,8 +26,12 @@ diverge completely: this is the "butterfly effect".
 ## Usage
 
 ```bash
-# Full run: CSV + GIF + WAV
+# Full run: CSV + GIF + WAV (Lorenz mode, default)
 wolframscript -file main.wl
+
+# Rössler attractor — both forms accepted
+wolframscript -file main.wl -- --simulation.mode=rossler
+wolframscript -file main.wl -- --simulation.mode rossler
 
 # Experiment with presets
 wolframscript -file experiment.wl
@@ -37,6 +41,7 @@ wolframscript -file tests/test_model.wl
 
 # Play sonification (macOS)
 afplay output/lorenz_audio.wav
+afplay output/rossler_audio.wav
 ```
 
 ## Outputs
@@ -118,8 +123,9 @@ as a self-contained announcement. Headings use `STEMHeading`; the step count
 in `PrintSummary` uses `STEMPrintN`; the x/y/z range lines carry two values
 each and remain as bare `Print`; export confirmations use `STEMDescribeCSV`
 (1 row per step, 5 columns), `STEMDescribeGIF` (150 frames at 30 fps), and
-`STEMDescribeWAV` (duration from `params["TimeEnd"]`); the final line uses
-`STEMSay`.
+`STEMDescribeWAV` (duration from `params["TimeEnd"]`). `STEMSay` is called at
+each pipeline phase (ODE solve, animation, sonification) and as the final
+completion message with an `afplay` command.
 
 To also hear a spoken announcement when the run finishes, set `STEM_SPEAK=1`
 before running:
