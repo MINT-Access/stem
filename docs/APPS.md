@@ -1,6 +1,6 @@
 # STEM Apps — Quick Reference
 
-All seven apps share the same invocation pattern and config system. This
+All eight apps share the same invocation pattern and config system. This
 document covers CLI options, modes, config keys, and output files for each.
 
 ---
@@ -16,6 +16,7 @@ document covers CLI options, modes, config keys, and output files for each.
 | `signal` | Fourier analysis | `chord`, `sweep`, `am` | `output/` | No |
 | `quantum` | Quantum mechanics | `qho`, `box` | `output/` | No |
 | `primes` | Prime number patterns | `ulam`, `gaps` | `output/` | No |
+| `relativity` | General relativity | `chirp`, `geodesic` | `output/` | No |
 
 ---
 
@@ -358,3 +359,102 @@ wolframscript -file primes/main.wl -- --simulation.gaps.count=10000
   All relative gap ratios are preserved exactly.
 - baseDuration = 30 × 120 / tempo\_bpm seconds. At tempo=120: base ≈ 30 s, slow ≈ 120 s.
 - For 5000 primes: mean gap ≈ 9.72, largest gap = 72, twin prime pairs = 680.
+
+---
+
+## relativity
+
+Two modes of general relativity simulation. `chirp` models gravitational wave
+emission from a binary inspiral (post-Newtonian approximation). `geodesic`
+integrates test-particle and photon orbits in the Schwarzschild metric via
+NDSolve.
+
+**Run — chirp mode:**
+```sh
+wolframscript -file relativity/main.wl                                      # GW150914 (default)
+wolframscript -file relativity/main.wl -- --simulation.mode chirp
+wolframscript -file relativity/main.wl -- --simulation.chirp.preset gw170817
+wolframscript -file relativity/main.wl -- --simulation.chirp.preset stellar
+wolframscript -file relativity/main.wl -- --simulation.chirp.mass1_solar 50
+wolframscript -file relativity/main.wl -- --simulation.chirp.mass2_solar 50
+wolframscript -file relativity/main.wl -- --simulation.chirp.distance_mpc 200
+wolframscript -file relativity/main.wl -- --sonification.chirp.time_stretch 8
+```
+
+**Run — geodesic mode:**
+```sh
+wolframscript -file relativity/main.wl -- --simulation.mode geodesic          # bound orbit (default)
+wolframscript -file relativity/main.wl -- --simulation.mode geodesic --simulation.geodesic.orbit_type plunging
+wolframscript -file relativity/main.wl -- --simulation.mode geodesic --simulation.geodesic.orbit_type photon
+wolframscript -file relativity/main.wl -- --simulation.geodesic.mass_solar 30
+wolframscript -file relativity/main.wl -- --simulation.geodesic.bound.r_start_rs 15
+wolframscript -file relativity/main.wl -- --simulation.geodesic.bound.angular_momentum_factor 0.70
+wolframscript -file relativity/main.wl -- --simulation.geodesic.photon.impact_parameter_factor 1.05
+```
+
+**Key config keys — chirp (`relativity/config.json`):**
+
+| Key | Default | Description |
+|-----|---------|-------------|
+| `simulation.mode` | `"chirp"` | `"chirp"` or `"geodesic"` |
+| `simulation.chirp.mass1_solar` | `36.0` | Primary mass (M☉) |
+| `simulation.chirp.mass2_solar` | `29.0` | Secondary mass (M☉) |
+| `simulation.chirp.distance_mpc` | `410.0` | Luminosity distance (Mpc) |
+| `simulation.chirp.sample_rate` | `4096` | Model sample rate (Hz) |
+| `simulation.chirp.frequency_min_hz` | `20.0` | Starting GW frequency |
+| `simulation.chirp.frequency_max_hz` | `500.0` | Clip frequency (PN breaks down near merger) |
+| `simulation.chirp.ringdown_duration` | `0.05` | Ringdown duration in seconds |
+| `simulation.chirp.preset` | `""` | `"gw150914"`, `"gw170817"`, or `"stellar"` |
+| `sonification.chirp.time_stretch` | `4.0` | Slow-down factor for audio |
+| `sonification.chirp.frequency_shift` | `1.0` | Pitch shift multiplier |
+
+**Key config keys — geodesic (`relativity/config.json`):**
+
+| Key | Default | Description |
+|-----|---------|-------------|
+| `simulation.geodesic.mass_solar` | `10.0` | Black hole mass (M☉) |
+| `simulation.geodesic.orbit_type` | `"bound"` | `"bound"`, `"plunging"`, or `"photon"` |
+| `simulation.geodesic.tau_max_m` | `3000.0` | Max proper time / affine param (units of M) |
+| `simulation.geodesic.n_steps` | `50000` | Sample points in output arrays |
+| `simulation.geodesic.bound.r_start_rs` | `10.0` | Starting radius (Schwarzschild radii) |
+| `simulation.geodesic.bound.angular_momentum_factor` | `0.85` | L / L_circ at r_start; < 1 makes orbit elliptical |
+| `simulation.geodesic.plunging.r_start_rs` | `10.0` | Starting radius (Schwarzschild radii) |
+| `simulation.geodesic.plunging.angular_momentum_factor` | `0.30` | Low L ensures L² < 12 (no potential barrier) |
+| `simulation.geodesic.photon.r_start_rs` | `50.0` | Starting radius (Schwarzschild radii) |
+| `simulation.geodesic.photon.impact_parameter_factor` | `1.5` | b / b_crit; > 1 deflects, < 1 captures |
+| `sonification.geodesic.pitch_base_hz` | `220.0` | Mean pitch mapped to this frequency (Hz) |
+| `sonification.geodesic.duration_s` | `10.0` | Audio output duration in seconds |
+
+**Output files — chirp mode:**
+
+| File | Description |
+|------|-------------|
+| `output/chirp.gif` | 60-frame animation revealing waveform + frequency dot |
+| `output/chirp.png` | Static two-panel: full strain waveform + frequency sweep |
+| `output/chirp.wav` | Main audio: h(t) time-stretched and normalised to 0.9 peak |
+| `output/chirp_timeseries.csv` | Every 10th sample: time_s, strain_h, frequency_hz, amplitude |
+| `output/gw150914.wav` | GW150914 preset (36+29 M☉, 410 Mpc) |
+| `output/gw170817.wav` | GW170817 preset — last 10 s of neutron-star inspiral |
+| `output/stellar.wav` | Stellar preset (10+8 M☉, 100 Mpc) |
+
+**Output files — geodesic mode:**
+
+| File | Description |
+|------|-------------|
+| `output/geodesic.gif` | 60-frame animation of particle/photon moving along orbit |
+| `output/geodesic.png` | Static full-trajectory polar plot with reference circles |
+| `output/geodesic.wav` | Sonified orbit (10 s); pitch = orbital ω or blueshift, amplitude = redshift |
+| `output/geodesic_trajectory.csv` | Subsampled trajectory: tau_M, r_rs, phi_rad, x_rs, y_rs |
+
+**Notes:**
+- Chirp audio: the strain h(t) is literally the WAV data — no indirect
+  sonification. Three preset WAVs are always produced alongside the main output.
+- Geodesic audio pitch mapping by orbit type:
+  - `bound` — pitch ∝ dφ/dτ (orbital angular velocity); wobbles fast at periapsis, slow at apoapsis
+  - `plunging` — pitch ∝ 1/√(1 − 2M/r) (gravitational blueshift); rises as particle falls
+  - `photon` — same blueshift formula; brief frequency blip as photon passes closest approach
+- Amplitude for all geodesic modes is modulated by √(1 − 2M/r) (gravitational redshift);
+  most dramatic for plunging, where it fades to silence at the event horizon.
+- Key radii (1 r_s = 2M): event horizon at 1 r_s, photon sphere at 1.5 r_s, ISCO at 3 r_s.
+- Bound orbit requires angular_momentum_factor giving L̃² > 12; the app warns if this is violated.
+- Four physical correctness checks run on every chirp invocation and abort the run on failure.
