@@ -5,6 +5,8 @@
    Usage: wolframscript -file main.wl [-- [--key=value ...]]
           wolframscript -file main.wl -- --config-dump
           wolframscript -file main.wl -- --simulation.mode rossler
+          wolframscript -file main.wl -- --simulation.mode=rossler
+          Note: --key value (space) also accepted in addition to --key=value.
    ======================================================== *)
 
 $projectRoot  = DirectoryName[$InputFileName];
@@ -15,8 +17,27 @@ Get[FileNameJoin[{$projectRoot, "src", "output.wl"}]];
 Get[FileNameJoin[{$projectRoot, "src", "animate.wl"}]];
 Get[FileNameJoin[{$projectRoot, "src", "sonify.wl"}]];
 
+(* Pre-process CLI args: convert "--key value" pairs to "--key=value"
+   so both conventions work (ParseCliOverrides in stem-core requires =). *)
+$rawArgs = Select[Rest[$ScriptCommandLine], # =!= "--" &];
+$cliArgs = Module[{result = {}, i = 1, arg, next},
+  While[i <= Length[$rawArgs],
+    arg = $rawArgs[[i]];
+    If[StringStartsQ[arg, "--"] && !StringContainsQ[arg, "="] &&
+       arg =!= "--config-dump" &&
+       i < Length[$rawArgs] &&
+       !StringStartsQ[$rawArgs[[i + 1]], "--"],
+      next = $rawArgs[[i + 1]];
+      AppendTo[result, arg <> "=" <> next];
+      i += 2,
+      AppendTo[result, arg];
+      i++
+    ]
+  ];
+  result
+];
+
 (* --- Load config (exits here if --config-dump is present) --- *)
-$cliArgs = Select[Rest[$ScriptCommandLine], # =!= "--" &];
 cfg  = LoadConfig["lorenz", $cliArgs];
 mode = GetCfg[cfg, {"simulation","mode"}, "lorenz"];
 
@@ -50,6 +71,7 @@ Which[
     Print[""];
 
     Print["[1/4] Solving Lorenz ODE..."];
+    STEMSay["Solving Lorenz ODE"];
     solution = SolveLorenz[params];
     Print["  Computed ", Length[solution], " steps."];
     PrintSummary[solution, params];
@@ -62,12 +84,14 @@ Which[
     Print[""];
 
     Print["[3/4] Rendering animation..."];
+    STEMSay["Rendering animation"];
     outGIF = FileNameJoin[{$projectRoot, "output", "lorenz_animation.gif"}];
     ExportAnimation[solution, outGIF, 30, 150, "Lorenz Attractor"];
     STEMDescribeGIF[outGIF, 150, 30];
     Print[""];
 
     Print["[4/4] Synthesising audio..."];
+    STEMSay["Synthesising audio"];
     outWAV = FileNameJoin[{$projectRoot, "output", "lorenz_audio.wav"}];
     ExportSonification[solution, params, cfg, outWAV];
     STEMDescribeWAV[outWAV, solution[[-1, 1]]];
@@ -101,6 +125,7 @@ Which[
     Print[""];
 
     Print["[1/4] Solving Rossler ODE..."];
+    STEMSay["Solving Rossler ODE"];
     solution = SolveRossler[params];
     Print["  Computed ", Length[solution], " steps."];
     PrintSummary[solution, params];
@@ -113,12 +138,14 @@ Which[
     Print[""];
 
     Print["[3/4] Rendering animation..."];
+    STEMSay["Rendering animation"];
     outGIF = FileNameJoin[{$projectRoot, "output", "rossler_animation.gif"}];
     ExportAnimation[solution, outGIF, 30, 150, "Rossler Attractor"];
     STEMDescribeGIF[outGIF, 150, 30];
     Print[""];
 
     Print["[4/4] Synthesising audio..."];
+    STEMSay["Synthesising audio"];
     outWAV = FileNameJoin[{$projectRoot, "output", "rossler_audio.wav"}];
     ExportSonification[solution, params, cfg, outWAV];
     STEMDescribeWAV[outWAV, solution[[-1, 1]]];
@@ -126,7 +153,7 @@ Which[
 
   (* ===== Unknown mode ===== *)
   True,
-    Print["Error: unknown simulation.mode \"", mode, "\" -- expected lorenz or rossler."];
+    Print["Error: unknown simulation.mode \"", mode, "\" — expected \"lorenz\" or \"rossler\"."];
     Exit[1]
 
 ];

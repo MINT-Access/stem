@@ -6,6 +6,7 @@
      wolframscript -file main.wl [-- [--key=value ...]]
      wolframscript -file main.wl -- --config-dump
      wolframscript -file main.wl -- --simulation.mode=rule110
+     wolframscript -file main.wl -- --simulation.mode rule110     # space form also accepted
      wolframscript -file main.wl -- --simulation.life.starting_pattern=gliderlgun
    ======================================================== *)
 
@@ -17,8 +18,27 @@ Get[FileNameJoin[{$projectRoot, "src", "output.wl"}]];
 Get[FileNameJoin[{$projectRoot, "src", "animate.wl"}]];
 Get[FileNameJoin[{$projectRoot, "src", "sonify.wl"}]];
 
+(* Pre-process CLI args: convert "--key value" pairs to "--key=value"
+   so both conventions work (ParseCliOverrides in stem-core requires =). *)
+$rawArgs = Select[Rest[$ScriptCommandLine], # =!= "--" &];
+$cliArgs = Module[{result = {}, i = 1, arg, next},
+  While[i <= Length[$rawArgs],
+    arg = $rawArgs[[i]];
+    If[StringStartsQ[arg, "--"] && !StringContainsQ[arg, "="] &&
+       arg =!= "--config-dump" &&
+       i < Length[$rawArgs] &&
+       !StringStartsQ[$rawArgs[[i + 1]], "--"],
+      next = $rawArgs[[i + 1]];
+      AppendTo[result, arg <> "=" <> next];
+      i += 2,
+      AppendTo[result, arg];
+      i++
+    ]
+  ];
+  result
+];
+
 (* --- Load config (exits here if --config-dump is present) --- *)
-$cliArgs = Select[Rest[$ScriptCommandLine], # =!= "--" &];
 cfg  = LoadConfig["cellular", $cliArgs];
 mode = GetCfg[cfg, {"simulation","mode"}, "life"];
 

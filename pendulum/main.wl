@@ -3,8 +3,9 @@
 (* ========================================================
    Pendulum Simulation — Unified Entry Point
    Usage:
-     wolframscript -file run.wl                         # double pendulum (config default)
+     wolframscript -file run.wl                                   # double pendulum (config default)
      wolframscript -file run.wl -- --simulation.mode=simple
+     wolframscript -file run.wl -- --simulation.mode simple       # space form also accepted
      wolframscript -file run.wl -- --config-dump
      wolframscript -file run.wl -- --simulation.double.angle1_deg=150
    ======================================================== *)
@@ -17,8 +18,27 @@ Get[FileNameJoin[{$projectRoot, "src", "output.wl"}]];
 Get[FileNameJoin[{$projectRoot, "src", "animate.wl"}]];
 Get[FileNameJoin[{$projectRoot, "src", "sonify.wl"}]];
 
+(* Pre-process CLI args: convert "--key value" pairs to "--key=value"
+   so both conventions work (ParseCliOverrides in stem-core requires =). *)
+$rawArgs = Select[Rest[$ScriptCommandLine], # =!= "--" &];
+$cliArgs = Module[{result = {}, i = 1, arg, next},
+  While[i <= Length[$rawArgs],
+    arg = $rawArgs[[i]];
+    If[StringStartsQ[arg, "--"] && !StringContainsQ[arg, "="] &&
+       arg =!= "--config-dump" &&
+       i < Length[$rawArgs] &&
+       !StringStartsQ[$rawArgs[[i + 1]], "--"],
+      next = $rawArgs[[i + 1]];
+      AppendTo[result, arg <> "=" <> next];
+      i += 2,
+      AppendTo[result, arg];
+      i++
+    ]
+  ];
+  result
+];
+
 (* --- Load config (exits here if --config-dump is present) --- *)
-$cliArgs = Select[Rest[$ScriptCommandLine], # =!= "--" &];
 cfg  = LoadConfig["pendulum", $cliArgs];
 mode = GetCfg[cfg, {"simulation","mode"}, "simple"];
 
@@ -50,6 +70,7 @@ Which[
     Print[""];
 
     Print["[1/4] Solving ODE..."];
+    STEMSay["Solving pendulum ODE"];
     solution = SolvePendulum[params];
     Print["  Computed ", Length[solution], " time steps."];
     Print[""];
@@ -62,12 +83,14 @@ Which[
     Print[""];
 
     Print["[3/4] Generating animation..."];
+    STEMSay["Generating animation"];
     outGIF = FileNameJoin[{$projectRoot, "output", "simple_animation.gif"}];
     nFrames = ExportAnimation[solution, params, outGIF, 25, 1.0];
     STEMDescribeGIF[outGIF, nFrames, 25];
     Print[""];
 
     Print["[4/4] Generating sonification..."];
+    STEMSay["Synthesising audio"];
     outWAV = FileNameJoin[{$projectRoot, "output", "simple_audio.wav"}];
     ExportSonification[solution, params, cfg, outWAV];
     STEMDescribeWAV[outWAV, solution[[-1, 1]]];
@@ -96,6 +119,7 @@ Which[
     ];
 
     Print["[1/4] Solving double pendulum ODE..."];
+    STEMSay["Solving double pendulum ODE"];
     solution = DoublePendulumModel[cfg];
     Print["  Computed ", Length[solution], " time steps."];
     With[
@@ -113,12 +137,14 @@ Which[
     Print[""];
 
     Print["[3/4] Generating animation..."];
+    STEMSay["Generating animation"];
     outGIF = FileNameJoin[{$projectRoot, "output", "double_animation.gif"}];
     nFrames = AnimateDoublePendulum[solution, cfg, outGIF];
     STEMDescribeGIF[outGIF, nFrames, 25];
     Print[""];
 
     Print["[4/4] Generating sonification..."];
+    STEMSay["Synthesising audio"];
     outWAV = FileNameJoin[{$projectRoot, "output", "double_audio.wav"}];
     SonifyDoublePendulum[solution, cfg, outWAV];
     STEMDescribeWAV[outWAV, solution[[-1, 1]]];

@@ -9,7 +9,6 @@
     "timestep": 0.005,
     "lorenz":   { "sigma": 10.0, "rho": 28.0, "beta": 2.6667 },
     "rossler":  { "a": 0.2,  "b": 0.2,  "c": 5.7  },
-    "chen":     { "a": 35.0, "b": 3.0,  "c": 28.0 },
     "initial_conditions": [0.1, 0.0, 0.0]
   },
 
