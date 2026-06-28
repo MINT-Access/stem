@@ -178,6 +178,44 @@ All code must run correctly via `wolframscript -file` with no display server.
 
 ---
 
+## Demo script (demo.wl)
+
+`demo.wl` at the repo root runs all 8 apps with their most compelling presets and
+collects every output into `demo/<appname>/`. It also writes `demo/demo-report.md`
+(machine-readable run report) and `demo/README.md` (listening guide).
+
+```sh
+wolframscript -file demo.wl                        # full run (~3–4 min)
+STEM_SPEAK=1 wolframscript -file demo.wl           # with speech
+NASA_API_KEY=... wolframscript -file demo.wl       # include live asteroids
+wolframscript -file demo.wl -- --check-only        # verify a previous run
+```
+
+**Architecture** — `demo.wl` loads each app's `main.wl` inline using
+`Get[appMainWl]` inside a `Block[{$projectRoot, $stemCoreRoot, ..., $ScriptCommandLine = cliArgs}]`.
+This avoids spawning child `wolframscript` processes, which would fail due to
+Wolfram Engine's single-kernel licence constraint. App output is suppressed
+(redirected to `/dev/null`) so only demo's own structured status lines are printed.
+
+**`demo/` is gitignored** — it is generated output, not source. Do not add
+source files or `AGENTS.md` there; any file placed in `demo/` will be
+overwritten or deleted on the next `wolframscript -file demo.wl` run.
+
+**When editing `demo.wl`:**
+- The `$demoApps` list near the top defines the preset for each app — edit here
+  to change which mode or args are used.
+- `cliArgs` in each app Association mirrors what `$ScriptCommandLine` would be
+  when the app's `main.wl` is run standalone; `Rest[$ScriptCommandLine]` inside
+  the app sees these args exactly as if it were invoked from the shell.
+- Do not use `Return[]` inside `Scan[Function[...]]` — in WL, `Return` propagates
+  through `Module` and exits the entire `Scan`, not just the current iteration.
+  Use `If/Else` nesting instead (as the current code does).
+- Do not open `/dev/null` inside the per-app loop — it can only be opened once
+  per wolframscript session. The script opens `$nullSink` once before `Scan` and
+  reuses it for every app.
+
+---
+
 ## Where new code belongs
 
 | If you are adding… | Put it in… |
