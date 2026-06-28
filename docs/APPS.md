@@ -127,6 +127,7 @@ automatically.
 wolframscript -file asteroids/main.wl                          # last 7 days
 wolframscript -file asteroids/main.wl -- 2026-01-01 2026-12-31 # explicit range
 wolframscript -file asteroids/main.wl -- 2026-01-01 2026-06-25 Phrygian
+wolframscript -file asteroids/main.wl -- 2026-06-20 2026-06-26 --no-orbital-elements
 ```
 
 Positional arguments: `[-- YYYY-MM-DD YYYY-MM-DD [Scale]]`
@@ -139,6 +140,7 @@ Valid scales: `MinorPentatonic` `MajorPentatonic` `Major` `Minor` `WholeTone` `P
 |-----|---------|-------------|
 | `simulation.days_ahead` | `7` | Days from today when no dates given |
 | `simulation.max_objects` | `10` | Max asteroids to sonify |
+| `simulation.use_orbital_elements` | `true` | Fetch Keplerian elements from JPL SBDB for real angles |
 | `sonification.pitch.min_hz` | `150` | Miss-distance → pitch low bound |
 | `sonification.pitch.max_hz` | `900` | Miss-distance → pitch high bound |
 
@@ -149,11 +151,20 @@ Output filenames include the date range, e.g. `asteroids_2026-06-21_2026-06-27.w
 | File | Description |
 |------|-------------|
 | `data/asteroids_{start}_{end}.wav` | Sonification (one note per asteroid) |
-| `data/asteroids_{start}_{end}.gif` | Top-down solar system animation |
-| `data/asteroids_{start}_{end}.csv` | Per-asteroid data (distance, velocity, size) |
+| `data/asteroids_{start}_{end}.gif` | Top-down solar system animation with computed directions |
+| `data/asteroids_{start}_{end}.csv` | 17 columns: distance, velocity, size, orbital elements, geocentric angle |
 
 **API key:** The DEMO_KEY allows ~30 requests/hour. For unrestricted access
 set `NASA_API_KEY` in your environment before running.
+
+**Notes:**
+- Asteroid directions are computed from Keplerian elements fetched from the JPL Small Body
+  Database (SBDB) API — no key required. Each asteroid's heliocentric ecliptic position is
+  solved at closest-approach date using Newton-Raphson Kepler equation solving, then
+  converted to a geocentric angle. Pass `--no-orbital-elements` to skip this step and use
+  seeded random angles instead (faster, offline-safe).
+- The SBDB fetch rate-limits itself to 1 request per 0.5 s. A 7-day run (~40 asteroids)
+  takes ~20 s for the orbital elements step.
 
 ---
 
