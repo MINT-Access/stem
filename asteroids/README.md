@@ -72,7 +72,7 @@ wolframscript -file main.wl -- 2026-06-20 2026-06-26 --no-orbital-elements
 wolframscript -file tests/test_analyse.wl
 
 # Play the sonification (macOS)
-afplay data/asteroids_<start>_<end>.wav
+afplay output/asteroids_<start>_<end>.wav
 ```
 
 With `DEMO_KEY` the NASA API allows 30 requests/hour; a multi-month range stays
@@ -150,7 +150,7 @@ database, a seeded random angle (seed 42) is used as a fallback.
     │   └── sonify.wl            Musical WAV sonification
     ├── tests/
     │   └── test_analyse.wl      Offline unit tests (incl. orbital mechanics)
-    ├── data/                    Output files (not committed)
+    ├── output/                    Output files (not committed)
     ├── AGENTS.md                Guidance for Claude Code
     └── README.md
 

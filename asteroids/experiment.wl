@@ -142,21 +142,21 @@ If[Length[asteroids] == 0,
 Print[""];
 Print["[2/4] Summary + CSV..."];
 PrintSummary[asteroids, startDate, endDate];
-outCSV = FileNameJoin[{$projectRoot, "data",
+outCSV = FileNameJoin[{$projectRoot, "output",
   "asteroids_" <> label <> ".csv"}];
 ExportResults[asteroids, outCSV];
 Print["  CSV: ", outCSV];
 
 Print[""];
 Print["[3/4] Animation..."];
-outGIF = FileNameJoin[{$projectRoot, "data",
+outGIF = FileNameJoin[{$projectRoot, "output",
   "asteroids_" <> label <> ".gif"}];
 ExportAnimation[asteroids, outGIF, startDate, endDate, 10];
 Print["  GIF: ", outGIF];
 
 Print[""];
 Print["[4/4] Sonification..."];
-outWAV = FileNameJoin[{$projectRoot, "data",
+outWAV = FileNameJoin[{$projectRoot, "output",
   "asteroids_" <> label <> ".wav"}];
 ExportSonification[asteroids, outWAV, "Scale" -> scaleName];
 Print["  WAV: ", outWAV];

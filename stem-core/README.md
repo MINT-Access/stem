@@ -75,19 +75,19 @@ wolframscript -file lorenz/main.wl
 wolframscript -file asteroids/main.wl
 ```
 
-Each project writes its outputs into its own `data/` directory (created
+Each project writes its outputs into its own `output/` directory (created
 automatically if absent). Typical outputs:
 
 | File | Description |
 |---|---|
-| `data/*.csv` | Trajectory / measurement data |
-| `data/*.gif` | Looping animation |
-| `data/*.wav` | Sonification audio |
+| `output/*.csv` | Trajectory / measurement data |
+| `output/*.gif` | Looping animation |
+| `output/*.wav` | Sonification audio |
 
 Preview audio on macOS:
 
 ```sh
-afplay pendulum/data/pendulum_audio.wav
+afplay pendulum/output/double_audio.wav
 ```
 
 ---
@@ -107,12 +107,12 @@ STEMHeading["My Simulation"];
 data = Table[{t, Sin[t]}, {t, 0, 2 Pi, 0.01}];
 
 (* --- export --- *)
-outCSV = "data/results.csv";
+outCSV = "output/results.csv";
 ExportCSV[Prepend[data, {"t", "y"}], outCSV];
 STEMDescribeCSV[outCSV, Length[data], 2];
 
 frames = (* list of Graphics objects, one per frame *);
-outGIF = "data/animation.gif";
+outGIF = "output/animation.gif";
 ExportGIF[frames, outGIF, 25];
 STEMDescribeGIF[outGIF, Length[frames], 25];
 
@@ -121,7 +121,7 @@ notes = StemSynthNote[
   0.3, 0.7
 ] & /@ data;
 
-outWAV = "data/output.wav";
+outWAV = "output/audio.wav";
 ExportAudioBuffer[NormalizeBuffer[Total[notes]], outWAV];
 STEMDescribeWAV[outWAV];
 

@@ -107,14 +107,14 @@ PrintSummary[solution, params];
 Print[""];
 
 Print["[2/4] CSV..."];
-outCSV = FileNameJoin[{$projectRoot, "data",
+outCSV = FileNameJoin[{$projectRoot, "output",
   "lorenz_trajectory_" <> label <> ".csv"}];
 ExportResults[solution, params, outCSV];
 Print["  ", outCSV];
 Print[""];
 
 Print["[3/4] Animation..."];
-outGIF = FileNameJoin[{$projectRoot, "data",
+outGIF = FileNameJoin[{$projectRoot, "output",
   "lorenz_animation_" <> label <> ".gif"}];
 If[dualAnim,
   Module[{sol2},
@@ -129,7 +129,7 @@ Print["  ", outGIF];
 Print[""];
 
 Print["[4/4] Sonification..."];
-outWAV = FileNameJoin[{$projectRoot, "data",
+outWAV = FileNameJoin[{$projectRoot, "output",
   "lorenz_audio_" <> label <> ".wav"}];
 ExportSonification[solution, outWAV, "Scale" -> scaleName];
 Print["  ", outWAV];

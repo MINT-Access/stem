@@ -2,7 +2,7 @@
   "version": "1.0.0",
 
   "output": {
-    "directory": "data",
+    "directory": "output",
     "csv": true,
     "gif": true,
     "wav": true,
@@ -41,7 +41,7 @@
 
   "data": {
     "logErrors": true,
-    "logPath": "data/errors.log",
+    "logPath": "output/errors.log",
     "csvDelimiter": ",",
     "decimalPlaces": 6
   }

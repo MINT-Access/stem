@@ -173,7 +173,7 @@ ParseCliOverrides[args_List] :=
 $HardcodedDefaults = <|
   "version" -> "1.0.0",
   "output" -> <|
-    "directory" -> "data",
+    "directory" -> "output",
     "csv"       -> True,
     "gif"       -> True,
     "wav"       -> True,
@@ -204,7 +204,7 @@ $HardcodedDefaults = <|
   |>,
   "data" -> <|
     "logErrors"    -> True,
-    "logPath"      -> "data/errors.log",
+    "logPath"      -> "output/errors.log",
     "csvDelimiter" -> ",",
     "decimalPlaces" -> 6
   |>

@@ -17,7 +17,7 @@ musical WAV sonification.
 - `src/animate.wl`   — Animated GIF export (`ExportAnimation`, `PendulumFrame`).
 - `src/sonify.wl`    — Musical WAV export (`FindZeroCrossings`, `ExportSonification`).
 - `tests/test_model.wl` — Unit tests for the physics and solver.
-- `data/`            — Output directory. Do not commit this directory.
+- `output/`            — Output directory. Do not commit this directory.
 
 ## How to run
 
@@ -25,7 +25,7 @@ musical WAV sonification.
 # Full run: CSV + GIF + WAV
 wolframscript -file main.wl
 
-# Parameter experiments (produces named files in data/)
+# Parameter experiments (produces named files in output/)
 wolframscript -file experiments.wl
 
 # Tests only
@@ -36,9 +36,9 @@ wolframscript -file tests/test_model.wl
 
 | File                          | Description                            |
 |-------------------------------|----------------------------------------|
-| data/results.csv              | Time, angle, velocity, energy per step |
-| data/pendulum_animation.gif   | Looping animated GIF of the pendulum   |
-| data/pendulum_audio.wav       | Musical sonification as WAV audio      |
+| output/results.csv              | Time, angle, velocity, energy per step |
+| output/pendulum_animation.gif   | Looping animated GIF of the pendulum   |
+| output/pendulum_audio.wav       | Musical sonification as WAV audio      |
 
 ## Conventions
 

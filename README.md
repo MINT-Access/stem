@@ -89,15 +89,14 @@ Each project writes outputs into its own directory:
 
 | Project | Output dir | File types |
 |---------|-----------|------------|
-| pendulum, lorenz, asteroids | `data/` | CSV, GIF, WAV |
-| cellular, signal, quantum, primes, relativity | `output/` | CSV, GIF, WAV (+ PNG for signal, quantum, primes, relativity) |
+| all eight apps | `output/` | CSV, GIF, WAV (+ PNG for signal, quantum, primes, relativity) |
 
 Play audio on macOS:
 
 ```sh
-afplay pendulum/data/double_audio.wav
-afplay lorenz/data/lorenz_audio.wav
-afplay asteroids/data/asteroids_*.wav
+afplay pendulum/output/double_audio.wav
+afplay lorenz/output/lorenz_audio.wav
+afplay asteroids/output/asteroids_*.wav
 afplay cellular/output/life_rpentomino_audio.wav
 afplay signal/output/chord_narrative_full.wav
 afplay quantum/output/qho_audio.wav

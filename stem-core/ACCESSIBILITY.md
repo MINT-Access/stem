@@ -32,10 +32,10 @@ Each app follows the same structure:
 | `STEMSection["..."]` | `-- Miss Distance --` | Sub-section marker |
 | `STEMBullet["..."]` | `  * 2026-06-20: 3 asteroids` | List item |
 | `STEMPrintN["label", x, "unit", spec]` | `  mean: 42.3 km` | One numeric value per line |
-| `STEMDescribeCSV[path, rows, cols]` | `  Exported CSV: data/out.csv — 12 rows, 5 cols` | Export confirmation |
-| `STEMDescribeWAV[path, dur]` | `  Exported WAV: data/out.wav — 3.5 s` | Export confirmation |
-| `STEMDescribeGIF[path, nFrames, fps]` | `  Exported GIF: data/out.gif — 300 frames @ 10 fps` | Export confirmation |
-| `STEMSay["..."]` | `Complete. Play audio: afplay data/out.wav` | Final announcement |
+| `STEMDescribeCSV[path, rows, cols]` | `  Exported CSV: output/out.csv — 12 rows, 5 cols` | Export confirmation |
+| `STEMDescribeWAV[path, dur]` | `  Exported WAV: output/out.wav — 3.5 s` | Export confirmation |
+| `STEMDescribeGIF[path, nFrames, fps]` | `  Exported GIF: output/out.gif — 300 frames @ 10 fps` | Export confirmation |
+| `STEMSay["..."]` | `Complete. Play audio: afplay output/out.wav` | Final announcement |
 
 Every line is a self-contained statement — no multi-line spans, no raw
 `NumberForm` superscripts. VoiceOver can navigate forward/backward one
@@ -49,9 +49,9 @@ Each app prints an `afplay` command in its final `STEMSay` line. Copy it
 directly from the terminal:
 
 ```sh
-afplay pendulum/data/simple_audio.wav
-afplay lorenz/data/lorenz_audio.wav
-afplay asteroids/data/asteroids_audio.wav
+afplay pendulum/output/simple_audio.wav
+afplay lorenz/output/lorenz_audio.wav
+afplay asteroids/output/asteroids_recent.wav
 afplay cellular/output/life_rpentomino_audio.wav
 afplay signal/output/chord_clean.wav
 ```

@@ -55,20 +55,20 @@ Which[
     Print[""];
 
     Print["[2/4] Exporting CSV..."];
-    outCSV = FileNameJoin[{$projectRoot, "data", "simple_results.csv"}];
+    outCSV = FileNameJoin[{$projectRoot, "output", "simple_results.csv"}];
     ExportResults[solution, params, outCSV];
     STEMDescribeCSV[outCSV, Length[solution], 5];
     PrintSummary[solution, params];
     Print[""];
 
     Print["[3/4] Generating animation..."];
-    outGIF = FileNameJoin[{$projectRoot, "data", "simple_animation.gif"}];
+    outGIF = FileNameJoin[{$projectRoot, "output", "simple_animation.gif"}];
     nFrames = ExportAnimation[solution, params, outGIF, 25, 1.0];
     STEMDescribeGIF[outGIF, nFrames, 25];
     Print[""];
 
     Print["[4/4] Generating sonification..."];
-    outWAV = FileNameJoin[{$projectRoot, "data", "simple_audio.wav"}];
+    outWAV = FileNameJoin[{$projectRoot, "output", "simple_audio.wav"}];
     ExportSonification[solution, params, cfg, outWAV];
     STEMDescribeWAV[outWAV, solution[[-1, 1]]];
     Print[""],
@@ -107,19 +107,19 @@ Which[
     Print[""];
 
     Print["[2/4] Exporting CSV..."];
-    outCSV = FileNameJoin[{$projectRoot, "data", "double_results.csv"}];
+    outCSV = FileNameJoin[{$projectRoot, "output", "double_results.csv"}];
     ExportDoublePendulumResults[solution, outCSV];
     STEMDescribeCSV[outCSV, Length[solution], 5];
     Print[""];
 
     Print["[3/4] Generating animation..."];
-    outGIF = FileNameJoin[{$projectRoot, "data", "double_animation.gif"}];
+    outGIF = FileNameJoin[{$projectRoot, "output", "double_animation.gif"}];
     nFrames = AnimateDoublePendulum[solution, cfg, outGIF];
     STEMDescribeGIF[outGIF, nFrames, 25];
     Print[""];
 
     Print["[4/4] Generating sonification..."];
-    outWAV = FileNameJoin[{$projectRoot, "data", "double_audio.wav"}];
+    outWAV = FileNameJoin[{$projectRoot, "output", "double_audio.wav"}];
     SonifyDoublePendulum[solution, cfg, outWAV];
     STEMDescribeWAV[outWAV, solution[[-1, 1]]];
     Print[""],

@@ -92,7 +92,7 @@ asteroids = AugmentAsteroidsWithAngles[asteroids];
 Print[""];
 Print["[2/4] Analysing and exporting CSV..."];
 PrintSummary[asteroids, startDate, endDate];
-outCSV = FileNameJoin[{$projectRoot, "data",
+outCSV = FileNameJoin[{$projectRoot, "output",
   "asteroids_" <> startDate <> "_" <> endDate <> ".csv"}];
 ExportResults[asteroids, outCSV];
 STEMDescribeCSV[outCSV, Length[asteroids], 17];
@@ -100,7 +100,7 @@ STEMDescribeCSV[outCSV, Length[asteroids], 17];
 (* 3. Animation *)
 Print[""];
 Print["[3/4] Rendering solar system animation..."];
-outGIF = FileNameJoin[{$projectRoot, "data",
+outGIF = FileNameJoin[{$projectRoot, "output",
   "asteroids_" <> startDate <> "_" <> endDate <> ".gif"}];
 ExportAnimation[asteroids, outGIF, startDate, endDate, 10];
 STEMDescribeGIF[outGIF, Length[asteroids] + 30, 10];
@@ -108,7 +108,7 @@ STEMDescribeGIF[outGIF, Length[asteroids] + 30, 10];
 (* 4. Sonification *)
 Print[""];
 Print["[4/4] Synthesising audio..."];
-outWAV = FileNameJoin[{$projectRoot, "data",
+outWAV = FileNameJoin[{$projectRoot, "output",
   "asteroids_" <> startDate <> "_" <> endDate <> ".wav"}];
 trajDuration = ExportSonification[asteroids, cfg, outWAV];
 STEMDescribeWAV[outWAV, trajDuration];

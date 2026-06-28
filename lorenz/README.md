@@ -36,16 +36,16 @@ wolframscript -file experiment.wl
 wolframscript -file tests/test_model.wl
 
 # Play sonification (macOS)
-afplay data/lorenz_audio.wav
+afplay output/lorenz_audio.wav
 ```
 
 ## Outputs
 
 | File                              | Description                          |
 |-----------------------------------|--------------------------------------|
-| data/lorenz_trajectory.csv        | t, x, y, z, speed at each step      |
-| data/lorenz_animation.gif         | Animated butterfly attractor (x-z)   |
-| data/lorenz_audio.wav             | Musical sonification of x(t)         |
+| output/lorenz_trajectory.csv        | t, x, y, z, speed at each step      |
+| output/lorenz_animation.gif         | Animated butterfly attractor (x-z)   |
+| output/lorenz_audio.wav             | Musical sonification of x(t)         |
 
 ## Sonification
 
@@ -107,7 +107,7 @@ visualise how quickly they diverge.
     │   └── sonify.wl        Musical WAV sonification
     ├── tests/
     │   └── test_model.wl    Unit tests
-    ├── data/                Output directory (not committed)
+    ├── output/                Output directory (not committed)
     ├── AGENTS.md            Guidance for Claude Code
     └── README.md
 

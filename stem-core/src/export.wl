@@ -11,7 +11,7 @@
    Returns filePath on success.
 
    rows     — list of lists, first element is the header row
-   filePath — destination path, e.g. "data/results.csv" *)
+   filePath — destination path, e.g. "output/results.csv" *)
 
 ExportCSV[rows_List, filePath_String] :=
   (EnsureDir[filePath];
@@ -25,7 +25,7 @@ ExportCSV[rows_List, filePath_String] :=
    Returns filePath on success.
 
    frames    — list of Graphics or GraphicsGrid objects
-   filePath  — destination path, e.g. "data/animation.gif"
+   filePath  — destination path, e.g. "output/animation.gif"
    frameRate — playback speed in frames per second (default 25) *)
 
 ExportGIF[frames_List, filePath_String, frameRate_:25] :=

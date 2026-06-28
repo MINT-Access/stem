@@ -7,7 +7,7 @@
 
    Usage (called from main.wl or standalone):
      Get["src/animate.wl"]
-     ExportAnimation[solution, params, "data/pendulum_animation.gif"]
+     ExportAnimation[solution, params, "output/pendulum_animation.gif"]
    ======================================================== *)
 
 
@@ -165,7 +165,7 @@ AnimateDoublePendulum[solution_List, cfg_Association, outPath_String] :=
    Parameters:
      solution  — output of SolvePendulum (list of {t, angle, velocity})
      params    — the simulation parameters Association
-     filePath  — destination path, e.g. "data/pendulum_animation.gif"
+     filePath  — destination path, e.g. "output/pendulum_animation.gif"
      frameRate — frames per second in the GIF (default 25)
      speedup   — playback speed multiplier (default 1.0, try 2.0 to go faster) *)
 

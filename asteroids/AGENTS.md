@@ -31,7 +31,7 @@ terminal via `wolframscript`.
                             `ExportAnimation`, `$EarthOrbitalElements`)
 - `src/sonify.wl`        — Musical WAV (`ExportSonification`)
 - `tests/test_analyse.wl`— Offline unit tests incl. orbital mechanics (no API call)
-- `data/`                — All outputs (not committed)
+- `output/`                — All outputs (not committed)
 
 ## How to run
 
@@ -43,7 +43,7 @@ wolframscript -file main.wl -- 2026-06-20 2026-06-26 --no-orbital-elements  # sk
 wolframscript -file experiment.wl                              # named preset
 wolframscript -file experiment.wl -- 2026-01-01 2026-06-25 WholeTone  # override dates + scale
 wolframscript -file tests/test_analyse.wl                      # offline tests (incl. orbital mechanics)
-afplay data/asteroids_<dates>.wav                              # play audio on macOS
+afplay output/asteroids_<dates>.wav                              # play audio on macOS
 ```
 
 CLI args for `main.wl` and `experiment.wl`: `[-- YYYY-MM-DD YYYY-MM-DD [Scale]]`

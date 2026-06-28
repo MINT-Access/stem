@@ -17,7 +17,7 @@ butterfly-shaped attractor, and a musical WAV sonification.
 - `src/animate.wl`        — GIF export (`ExportAnimation`, `ExportDualAnimation`)
 - `src/sonify.wl`         — WAV export (`ExportSonification`)
 - `tests/test_model.wl`   — Unit tests
-- `data/`                 — All output files (not committed)
+- `output/`                 — All output files (not committed)
 
 ## How to run
 
@@ -25,7 +25,7 @@ butterfly-shaped attractor, and a musical WAV sonification.
 wolframscript -file main.wl          # full run
 wolframscript -file experiment.wl    # experiment with presets
 wolframscript -file tests/test_model.wl
-afplay data/lorenz_audio.wav         # play audio on macOS
+afplay output/lorenz_audio.wav         # play audio on macOS
 ```
 
 ## Parameters (passed as Association)

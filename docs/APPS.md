@@ -9,9 +9,9 @@ document covers CLI options, modes, config keys, and output files for each.
 
 | App | Domain | Modes | Output dir | Has live data? |
 |-----|--------|-------|-----------|---------------|
-| `pendulum` | Physics ODE | `simple`, `double` | `data/` | No |
-| `lorenz` | Strange attractor | `lorenz`, `rossler`, `chen` | `data/` | No |
-| `asteroids` | NASA NeoWs API | — | `data/` | Yes |
+| `pendulum` | Physics ODE | `simple`, `double` | `output/` | No |
+| `lorenz` | Strange attractor | `lorenz`, `rossler`, `chen` | `output/` | No |
+| `asteroids` | NASA NeoWs API | — | `output/` | Yes |
 | `cellular` | Cellular automata | `life`, `rule110` | `output/` | No |
 | `signal` | Fourier analysis | `chord`, `sweep`, `am` | `output/` | No |
 | `quantum` | Quantum mechanics | `qho`, `box` | `output/` | No |
@@ -67,12 +67,12 @@ wolframscript -file pendulum/main.wl -- --simulation.duration=30
 
 | File | Description |
 |------|-------------|
-| `data/simple_audio.wav` | Simple mode sonification |
-| `data/simple_animation.gif` | Simple pendulum animation |
-| `data/simple_results.csv` | Angle and velocity time series |
-| `data/double_audio.wav` | Double mode sonification |
-| `data/double_animation.gif` | Double pendulum animation |
-| `data/double_results.csv` | Angles and velocities, both rods |
+| `output/simple_audio.wav` | Simple mode sonification |
+| `output/simple_animation.gif` | Simple pendulum animation |
+| `output/simple_results.csv` | Angle and velocity time series |
+| `output/double_audio.wav` | Double mode sonification |
+| `output/double_animation.gif` | Double pendulum animation |
+| `output/double_results.csv` | Angles and velocities, both rods |
 
 ---
 
@@ -110,9 +110,9 @@ wolframscript -file lorenz/main.wl -- --simulation.lorenz.rho=35
 
 | File | Description |
 |------|-------------|
-| `data/lorenz_audio.wav` | Sonification of x(t) extrema events |
-| `data/lorenz_animation.gif` | Growing trajectory animation |
-| `data/lorenz_trajectory.csv` | x, y, z time series |
+| `output/lorenz_audio.wav` | Sonification of x(t) extrema events |
+| `output/lorenz_animation.gif` | Growing trajectory animation |
+| `output/lorenz_trajectory.csv` | x, y, z time series |
 
 ---
 
@@ -150,9 +150,9 @@ Output filenames include the date range, e.g. `asteroids_2026-06-21_2026-06-27.w
 
 | File | Description |
 |------|-------------|
-| `data/asteroids_{start}_{end}.wav` | Sonification (one note per asteroid) |
-| `data/asteroids_{start}_{end}.gif` | Top-down solar system animation with computed directions |
-| `data/asteroids_{start}_{end}.csv` | 17 columns: distance, velocity, size, orbital elements, geocentric angle |
+| `output/asteroids_{start}_{end}.wav` | Sonification (one note per asteroid) |
+| `output/asteroids_{start}_{end}.gif` | Top-down solar system animation with computed directions |
+| `output/asteroids_{start}_{end}.csv` | 17 columns: distance, velocity, size, orbital elements, geocentric angle |
 
 **API key:** The DEMO_KEY allows ~30 requests/hour. For unrestricted access
 set `NASA_API_KEY` in your environment before running.

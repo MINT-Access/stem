@@ -6,7 +6,7 @@
    Run individual experiments or all of them:
      wolframscript -file experiments.wl
 
-   Each experiment produces its own GIF and WAV in data/
+   Each experiment produces its own GIF and WAV in output/
    so you can compare them side by side.
    ======================================================== *)
 
@@ -33,9 +33,9 @@ RunExperiment[name_String, params_Association] :=
 
     sol = SolvePendulum[params];
 
-    gifFile = FileNameJoin[{$projectRoot, "data",
+    gifFile = FileNameJoin[{$projectRoot, "output",
                 name <> "_animation.gif"}];
-    wavFile = FileNameJoin[{$projectRoot, "data",
+    wavFile = FileNameJoin[{$projectRoot, "output",
                 name <> "_audio.wav"}];
 
     ExportAnimation[sol, params, gifFile, 25, 1.0];
@@ -124,4 +124,4 @@ RunExperiment["pushed", <|
 
 
 Print[""];
-Print["=== All experiments complete. Files are in data/ ==="];
+Print["=== All experiments complete. Files are in output/ ==="];

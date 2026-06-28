@@ -90,7 +90,7 @@ ComputePlotRange[solution_List] :=
    Builds frames and writes an animated GIF.
 
    solution  — output of SolveLorenz
-   filePath  — destination, e.g. "data/lorenz_animation.gif"
+   filePath  — destination, e.g. "output/lorenz_animation.gif"
    frameRate — GIF fps (default 30)
    nFrames   — total number of frames (default 120)
    title     — optional label shown on the animation *)

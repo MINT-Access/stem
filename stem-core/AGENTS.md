@@ -40,7 +40,7 @@ Safe to call repeatedly. Called internally by `ExportCSV`, `ExportGIF`,
 `ExportAudioBuffer`, and `LogError`.
 
 ```wolfram
-EnsureDir["data/results.csv"]   (* creates "data/" if absent *)
+EnsureDir["output/results.csv"]   (* creates "output/" if absent *)
 ```
 
 #### `FmtN[x_?NumericQ, spec_:4]`
@@ -64,7 +64,7 @@ Creates the log directory if it does not exist. Opens the file in append mode so
 existing entries are preserved.
 
 ```wolfram
-LogError["API request failed", "data/errors.log"]
+LogError["API request failed", "output/errors.log"]
 ```
 
 ---
@@ -138,8 +138,8 @@ terminal configurations cause VoiceOver to skip non-ASCII punctuation.
 Prints a single line confirming a CSV export. `nRows` excludes the header row.
 
 ```wolfram
-STEMDescribeCSV["data/results.csv", 1001, 5]
-(* →  "  CSV: 1001 rows, 5 columns — data/results.csv" *)
+STEMDescribeCSV["output/results.csv", 1001, 5]
+(* →  "  CSV: 1001 rows, 5 columns — output/results.csv" *)
 ```
 
 ##### `STEMDescribeWAV[filePath_String]`
@@ -148,7 +148,7 @@ Prints a single line confirming a WAV export. Pass `durationSec` when the
 simulation duration is known at the call site.
 
 ```wolfram
-STEMDescribeWAV["data/audio.wav", 10.0]   (* →  "  Audio: 10.0 s — data/audio.wav" *)
+STEMDescribeWAV["output/audio.wav", 10.0]   (* →  "  Audio: 10.0 s — output/audio.wav" *)
 ```
 
 ##### `STEMDescribeGIF[filePath_String]`
@@ -156,8 +156,8 @@ STEMDescribeWAV["data/audio.wav", 10.0]   (* →  "  Audio: 10.0 s — data/audi
 Prints a single line confirming a GIF export.
 
 ```wolfram
-STEMDescribeGIF["data/anim.gif", 150, 30]
-(* →  "  Animation: 150 frames at 30 fps — data/anim.gif" *)
+STEMDescribeGIF["output/anim.gif", 150, 30]
+(* →  "  Animation: 150 frames at 30 fps — output/anim.gif" *)
 ```
 
 #### Speech integration
@@ -270,7 +270,7 @@ correctly in headless `wolframscript` sessions on all supported platforms — se
 the **VoiceOver / terminal context** section below.
 
 ```wolfram
-ExportAudioBuffer[audio, "data/output.wav"]
+ExportAudioBuffer[audio, "output/audio.wav"]
 ```
 
 ---
@@ -284,7 +284,7 @@ Creates the output directory if needed. Returns `filePath`.
 ```wolfram
 ExportCSV[
   {{"time", "angle"}, {0.0, 0.4}, {0.01, 0.39}},
-  "data/results.csv"
+  "output/results.csv"
 ]
 ```
 
@@ -296,8 +296,8 @@ GIF. Creates the output directory if needed. Returns `filePath`.
 as `1.0 / frameRate`.
 
 ```wolfram
-ExportGIF[frames, "data/animation.gif", 30]   (* 30 fps *)
-ExportGIF[frames, "data/animation.gif"]        (* default 25 fps *)
+ExportGIF[frames, "output/animation.gif", 30]   (* 30 fps *)
+ExportGIF[frames, "output/animation.gif"]        (* default 25 fps *)
 ```
 
 ---

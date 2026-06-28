@@ -27,9 +27,9 @@ wolframscript -file tests/test_model.wl
 
 | File | Description |
 |------|-------------|
-| `data/results.csv` | Time, angle, velocity, energy per time step |
-| `data/pendulum_animation.gif` | Looping animated GIF of the pendulum |
-| `data/pendulum_audio.wav` | Musical sonification (A minor pentatonic, WAV) |
+| `output/results.csv` | Time, angle, velocity, energy per time step |
+| `output/pendulum_animation.gif` | Looping animated GIF of the pendulum |
+| `output/pendulum_audio.wav` | Musical sonification (A minor pentatonic, WAV) |
 
 ## Sonification
 
@@ -79,7 +79,7 @@ src/output.wl    — CSV export and console summary
 src/animate.wl   — Animated GIF export
 src/sonify.wl    — WAV audio export
 tests/           — Unit tests
-data/            — Output directory (not committed)
+output/            — Output directory (not committed)
 ```
 
 ## Console output

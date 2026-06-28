@@ -56,19 +56,19 @@ Which[
     Print[""];
 
     Print["[2/4] Exporting trajectory data..."];
-    outCSV = FileNameJoin[{$projectRoot, "data", "lorenz_trajectory.csv"}];
+    outCSV = FileNameJoin[{$projectRoot, "output", "lorenz_trajectory.csv"}];
     ExportResults[solution, params, outCSV];
     STEMDescribeCSV[outCSV, Length[solution], 5];
     Print[""];
 
     Print["[3/4] Rendering animation..."];
-    outGIF = FileNameJoin[{$projectRoot, "data", "lorenz_animation.gif"}];
+    outGIF = FileNameJoin[{$projectRoot, "output", "lorenz_animation.gif"}];
     ExportAnimation[solution, outGIF, 30, 150, "Lorenz Attractor"];
     STEMDescribeGIF[outGIF, 150, 30];
     Print[""];
 
     Print["[4/4] Synthesising audio..."];
-    outWAV = FileNameJoin[{$projectRoot, "data", "lorenz_audio.wav"}];
+    outWAV = FileNameJoin[{$projectRoot, "output", "lorenz_audio.wav"}];
     ExportSonification[solution, params, cfg, outWAV];
     STEMDescribeWAV[outWAV, solution[[-1, 1]]];
     Print[""],
@@ -107,19 +107,19 @@ Which[
     Print[""];
 
     Print["[2/4] Exporting trajectory data..."];
-    outCSV = FileNameJoin[{$projectRoot, "data", "rossler_trajectory.csv"}];
+    outCSV = FileNameJoin[{$projectRoot, "output", "rossler_trajectory.csv"}];
     ExportResults[solution, params, outCSV];
     STEMDescribeCSV[outCSV, Length[solution], 5];
     Print[""];
 
     Print["[3/4] Rendering animation..."];
-    outGIF = FileNameJoin[{$projectRoot, "data", "rossler_animation.gif"}];
+    outGIF = FileNameJoin[{$projectRoot, "output", "rossler_animation.gif"}];
     ExportAnimation[solution, outGIF, 30, 150, "Rossler Attractor"];
     STEMDescribeGIF[outGIF, 150, 30];
     Print[""];
 
     Print["[4/4] Synthesising audio..."];
-    outWAV = FileNameJoin[{$projectRoot, "data", "rossler_audio.wav"}];
+    outWAV = FileNameJoin[{$projectRoot, "output", "rossler_audio.wav"}];
     ExportSonification[solution, params, cfg, outWAV];
     STEMDescribeWAV[outWAV, solution[[-1, 1]]];
     Print[""],

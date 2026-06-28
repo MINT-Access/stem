@@ -46,7 +46,7 @@ wolframscript -file main.wl
 
 Substitute `<project>` with `pendulum`, `lorenz`, or `asteroids`.
 
-The script writes output files to `<project>/data/` as it runs. It does **not**
+The script writes output files to `<project>/output/` as it runs. It does **not**
 open any GUI windows, play audio through the speakers, or require a display server,
 so it is safe to run in a standard VoiceOver terminal session.
 
@@ -64,13 +64,13 @@ Each project follows a four-stage pattern:
   ...
 
 [2/4] Stage description...
-  CSV: N rows, C columns — data/output.csv
+  CSV: N rows, C columns — output/output.csv
 
 [3/4] Stage description...
-  Animation: N frames at F fps — data/output.gif
+  Animation: N frames at F fps — output/output.gif
 
 [4/4] Stage description...
-  Audio: D.D s — data/output.wav
+  Audio: D.D s — output/output.wav
 
 === Done ===
 ```
@@ -86,7 +86,7 @@ beginning with `  *` are list items.
 After the script finishes, play the generated WAV file:
 
 ```
-afplay data/<output>.wav
+afplay output/<output>.wav
 ```
 
 `afplay` routes through VoiceOver's audio channel on macOS, so you hear the
@@ -96,7 +96,7 @@ AirPods, or a Braille display's audio jack).
 To adjust volume without leaving the terminal:
 
 ```
-afplay -v 0.5 data/<output>.wav    # 50 % volume
+afplay -v 0.5 output/<output>.wav    # 50 % volume
 ```
 
 ---
@@ -195,7 +195,7 @@ VO = Control-Option (the VoiceOver modifier key).
 Run `wolframscript -version` to confirm the engine is installed and licensed.
 
 **No audio file produced**
-Check `data/errors.log` in the project directory. The asteroids project requires
+Check `output/errors.log` in the project directory. The asteroids project requires
 a NASA API key in `$NASAAPIKEY`; the pendulum and lorenz projects have no external
 dependencies.
 
