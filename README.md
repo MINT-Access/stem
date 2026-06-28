@@ -1,5 +1,7 @@
 # stem
 
+[![Version](https://img.shields.io/badge/version-1.0.0-blue.svg)](RELEASE_NOTES_v1.0.0.md)
+[![Wolfram Language](https://img.shields.io/badge/Wolfram_Language-13%2B-DD1100.svg)](https://www.wolfram.com/engine/)
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](LICENSE)
 
 A monorepo of Wolfram Language physics simulations, data projects, and signal
@@ -106,6 +108,8 @@ afplay relativity/output/chirp.wav
 afplay relativity/output/gw170817.wav
 afplay relativity/output/geodesic.wav
 ```
+
+See [RELEASE_NOTES_v1.0.0.md](RELEASE_NOTES_v1.0.0.md) for full app descriptions, physics notes, and listening guides.
 
 ---
 
