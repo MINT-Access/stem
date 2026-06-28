@@ -51,6 +51,7 @@ wolframscript -file lorenz/main.wl
 wolframscript -file asteroids/main.wl                                    # last 7 days
 wolframscript -file asteroids/main.wl -- 2026-01-01 2026-12-31           # full year
 wolframscript -file asteroids/main.wl -- 2026-01-01 2026-06-25 Phrygian  # date range + scale
+wolframscript -file asteroids/main.wl -- 2026-06-20 2026-06-26 --no-orbital-elements
 
 # Cellular automata
 wolframscript -file cellular/main.wl                                     # Game of Life, R-pentomino
@@ -132,8 +133,9 @@ See [`lorenz/README.md`](lorenz/README.md).
 Fetches live close-approach data from NASA's NeoWs API. Each asteroid becomes
 one note — pitch reflects miss distance, timbre distinguishes hazardous from
 safe. The GIF shows a top-down solar system view with asteroids revealed
-farthest-to-closest, coloured cyan (safe) or red (hazardous). Accepts arbitrary
-date ranges and a musical scale argument.
+farthest-to-closest, coloured cyan (safe) or red (hazardous). Asteroid
+directions are computed from Keplerian orbital elements fetched from the JPL
+Small Body Database. Accepts arbitrary date ranges and a musical scale argument.
 See [`asteroids/README.md`](asteroids/README.md).
 
 ### cellular

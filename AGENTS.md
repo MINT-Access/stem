@@ -52,6 +52,7 @@ wolframscript -file lorenz/main.wl
 wolframscript -file asteroids/main.wl                                    # last 7 days, MinorPentatonic
 wolframscript -file asteroids/main.wl -- 2026-01-01 2026-12-31           # full year
 wolframscript -file asteroids/main.wl -- 2026-01-01 2026-06-25 Phrygian  # date range + scale
+wolframscript -file asteroids/main.wl -- 2026-06-20 2026-06-26 --no-orbital-elements
 wolframscript -file cellular/main.wl                                     # Game of Life, R-pentomino
 wolframscript -file cellular/main.wl -- --simulation.mode=rule110
 wolframscript -file signal/main.wl                                       # chord (default)
