@@ -24,6 +24,11 @@ velocities, and sizes, and turns the data into:
 - Internet connection (to fetch from NASA)
 - `stem-core` (sibling directory `../stem-core`) — loaded automatically by `main.wl`
 
+**Note:** security software that performs HTTPS inspection (e.g. Kaspersky)
+can intercept the NASA API calls and return a response that fails JSON parsing,
+causing the run to abort with "could not fetch data." If you see that error and
+your API key is correct, try disabling HTTPS scanning for `api.nasa.gov`.
+
 A free NASA API key from https://api.nasa.gov is required for sustained
 use. The default `DEMO_KEY` works at 30 requests/hour; for anything
 beyond that, register for a free key and set it as an environment
