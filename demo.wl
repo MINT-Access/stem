@@ -146,7 +146,7 @@ Scan[
   Function[app,
     Module[{
       appName, preset, cliArgs, expected, listenFor,
-      appDir, appOutputDir, demoAppDir, appMainWl,
+      appDir, appOutputDir, demoAppDir, demoAppOutputDir, appMainWl,
       t0, duration,
       outputFiles, copiedFiles, fileInfo,
       missing, failed, status, note,
@@ -158,25 +158,26 @@ Scan[
       cliArgs      = app["cliArgs"];
       expected     = app["expected"];
       listenFor    = app["listenFor"];
-      appDir       = FileNameJoin[{$demoProjectRoot, appName}];
-      appOutputDir = FileNameJoin[{appDir, "output"}];
-      demoAppDir   = FileNameJoin[{$demoDir, appName}];
-      appMainWl    = FileNameJoin[{appDir, "main.wl"}];
+      appDir           = FileNameJoin[{$demoProjectRoot, appName}];
+      appOutputDir     = FileNameJoin[{appDir, "output"}];
+      demoAppDir       = FileNameJoin[{$demoDir, appName}];
+      demoAppOutputDir = FileNameJoin[{demoAppDir, "output"}];
+      appMainWl        = FileNameJoin[{appDir, "main.wl"}];
 
       If[$checkOnly,
 
         (* ── CHECK-ONLY BRANCH ──────────────────────────────── *)
         STEMHeading["Check: " <> appName];
-        demoFiles = If[DirectoryQ[demoAppDir],
-          Select[FileNames["*", demoAppDir], !DirectoryQ[#] &],
+        demoFiles = If[DirectoryQ[demoAppOutputDir],
+          Select[FileNames["*", demoAppOutputDir], !DirectoryQ[#] &],
           {}
         ];
         With[{allOk = Length[demoFiles] > 0 &&
                       AllTrue[demoFiles, FileByteCount[#] > 0 &]},
           status = If[allOk, "PASS", "FAIL"];
           note   = If[allOk,
-            ToString[Length[demoFiles]] <> " file(s) in demo/" <> appName <> "/",
-            "demo/" <> appName <> "/ is missing or empty"
+            ToString[Length[demoFiles]] <> " file(s) in demo/" <> appName <> "/output/",
+            "demo/" <> appName <> "/output/ is missing or empty"
           ];
           Print["  ", status, "  ", appName, " \[LongDash] ", note];
           AppendTo[$demoResults,
@@ -206,7 +207,8 @@ Scan[
 
         , (* ── RUN INLINE VIA Get + Block ─────────────────── *)
 
-          If[!DirectoryQ[demoAppDir], CreateDirectory[demoAppDir]];
+          If[!DirectoryQ[demoAppDir],       CreateDirectory[demoAppDir]];
+          If[!DirectoryQ[demoAppOutputDir], CreateDirectory[demoAppOutputDir]];
 
           Print[""];
           STEMHeading["Demo " <> ToString[Length[$demoResults] + 1] <>
@@ -259,11 +261,11 @@ Scan[
             {}
           ];
 
-          (* Copy to demo/<appname>/ *)
+          (* Copy to demo/<appname>/output/ — mirrors the structure of a normal run *)
           copiedFiles = {};
           Scan[
             Function[srcFile,
-              With[{dest = FileNameJoin[{demoAppDir, FileNameTake[srcFile]}]},
+              With[{dest = FileNameJoin[{demoAppOutputDir, FileNameTake[srcFile]}]},
                 If[FileExistsQ[dest], DeleteFile[dest]];
                 CopyFile[srcFile, dest];
                 AppendTo[copiedFiles, dest]
@@ -411,7 +413,7 @@ If[!$checkOnly,
       If[r["status"] === "PASS",
         Scan[Function[f,
                If[StringEndsQ[f["path"], ".wav"],
-                  rl["afplay demo/" <> r["name"] <> "/" <> FileNameTake[f["path"]]]]],
+                  rl["afplay demo/" <> r["name"] <> "/output/" <> FileNameTake[f["path"]]]]],
              r["files"]]]],
     $demoResults];
   rl["```"]; rl[""];
@@ -478,13 +480,13 @@ If[!$checkOnly,
   dl["## Playing audio"]; dl[""];
   dl["From the project root:"]; dl[""];
   dl["```sh"];
-  dl["afplay demo/signal/chord_narrative_full.wav"];
-  dl["afplay demo/pendulum/double_audio.wav"];
-  dl["afplay demo/cellular/life_rpentomino_audio.wav"];
-  dl["afplay demo/primes/gaps_slow.wav"];
-  dl["afplay demo/quantum/qho_audio.wav"];
-  dl["afplay demo/lorenz/rossler_audio.wav"];
-  dl["afplay demo/relativity/chirp.wav"];
+  dl["afplay demo/signal/output/chord_narrative_full.wav"];
+  dl["afplay demo/pendulum/output/double_audio.wav"];
+  dl["afplay demo/cellular/output/life_rpentomino_audio.wav"];
+  dl["afplay demo/primes/output/gaps_slow.wav"];
+  dl["afplay demo/quantum/output/qho_audio.wav"];
+  dl["afplay demo/lorenz/output/rossler_audio.wav"];
+  dl["afplay demo/relativity/output/chirp.wav"];
   dl["```"]; dl[""];
   dl["## Re-running"]; dl[""];
   dl["```sh"];
