@@ -13,7 +13,10 @@
    ======================================================== *)
 
 FetchError[msg_String] :=
-  WriteString[$stderr, "[ERROR] " <> msg <> "\n"];
+  If[StreamQ[$stderr],
+    WriteString[$stderr, "[ERROR] " <> msg <> "\n"],
+    Print["[ERROR] " <> msg]
+  ];
 
 
 If[!ValueQ[$NasaApiKey],
