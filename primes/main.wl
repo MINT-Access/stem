@@ -177,4 +177,4 @@ Which[
 ];
 
 STEMHeading["Done"];
-STEMSay["Complete. Play audio: afplay " <> FileNameJoin[{$outDir, mode <> "_audio.wav"}]]
+STEMSay["Complete. Play audio: " <> STEMPlayCmd[FileNameJoin[{$outDir, mode <> "_audio.wav"}]]]

@@ -1,18 +1,24 @@
-# VoiceOver + wolframscript Guide
+# Screen Reader + wolframscript Guide
 
-This guide explains how to run the STEM sonification projects with macOS VoiceOver
-active in Terminal, what to expect from each project's stdout output, and how to
+This guide explains how to run the STEM sonification projects with a screen reader
+active in a terminal, what to expect from each project's stdout output, and how to
 enable spoken announcements through the accessibility layer built into stem-core.
+
+> **Platform note:** This guide was originally written for macOS VoiceOver. The
+> same projects work on Linux (with Orca) and Windows (with Narrator). See the
+> platform-specific sections at the end of each topic for Linux and Windows
+> equivalents.
 
 ---
 
 ## Prerequisites
 
-| Requirement | Version |
-|---|---|
-| macOS | 12 Monterey or later |
-| Wolfram Engine / Mathematica | 13.x or later (for `wolframscript`) |
-| VoiceOver | Built-in to macOS |
+| Requirement | macOS | Linux | Windows |
+|---|---|---|---|
+| Wolfram Engine | 13.x+ | 13.x+ | 13.x+ |
+| Screen reader | VoiceOver (built-in) | Orca (`sudo apt install orca`) | Narrator (built-in) |
+| Audio player | `afplay` (built-in) | `aplay` (`sudo apt install alsa-utils`) | Windows Media Player (built-in) |
+| TTS for STEM_SPEAK | `say` (built-in) | `espeak-ng` (`sudo apt install espeak-ng`) | System.Speech (built-in) |
 
 Verify `wolframscript` is on your PATH:
 
@@ -23,7 +29,9 @@ wolframscript --version
 
 ---
 
-## Starting VoiceOver in Terminal
+## Starting your screen reader in Terminal
+
+### macOS — VoiceOver
 
 1. Press **Command-F5** to toggle VoiceOver on or off.
 2. Open **Terminal** (or iTerm2). VoiceOver reads each new stdout line as it arrives.
@@ -32,6 +40,18 @@ wolframscript --version
 
 **Tip**: use a profile with a light background and high-contrast text so sighted
 collaborators can also read the output; VoiceOver is unaffected by colour scheme.
+
+### Linux — Orca
+
+Orca reads terminal output in GNOME Terminal and other VTE-based terminals. Start
+Orca with `orca &` or enable it via Accessibility settings. Orca reads each new
+stdout line as it arrives, the same way VoiceOver does on macOS.
+
+### Windows — Narrator
+
+Narrator is built into Windows 10/11. Press **Windows+Ctrl+Enter** to toggle it.
+Open **Command Prompt** or **Windows Terminal** — Narrator reads each new line of
+output. For best results use Windows Terminal with a high-contrast theme.
 
 ---
 
@@ -85,36 +105,49 @@ beginning with `  *` are list items.
 
 After the script finishes, play the generated WAV file:
 
-```
+```sh
+# macOS — afplay routes through VoiceOver's audio channel, so you hear it
+# through whichever device VoiceOver is using (speakers, AirPods, etc.)
 afplay output/<output>.wav
-```
 
-`afplay` routes through VoiceOver's audio channel on macOS, so you hear the
-sonification through whatever output device VoiceOver is using (speakers,
-AirPods, or a Braille display's audio jack).
-
-To adjust volume without leaving the terminal:
-
-```
+# Adjust volume without leaving the terminal (macOS only)
 afplay -v 0.5 output/<output>.wav    # 50 % volume
+
+# Linux — aplay uses ALSA; paplay uses PulseAudio (alternative)
+aplay output/<output>.wav
+
+# Windows PowerShell — blocks until playback completes
+(New-Object Media.SoundPlayer 'output\<output>.wav').PlaySync()
+# Or: Start-Process wmplayer output\<output>.wav
 ```
 
 ---
 
 ## Enabling spoken announcements
 
-stem-core includes an optional `say` integration controlled by the `STEM_SPEAK`
+stem-core includes optional TTS integration controlled by the `STEM_SPEAK`
 environment variable. Set it to `1` before running any project:
 
 ```sh
+# macOS / Linux
 STEM_SPEAK=1 wolframscript -file main.wl
+
+# Windows PowerShell
+$env:STEM_SPEAK = "1"; wolframscript -file main.wl
 ```
 
-When `STEM_SPEAK=1`, calls to `STEMSay` inside `main.wl` speak the text
-through the macOS `say` command in addition to printing it. This is useful when
-you want a spoken "done" announcement without monitoring the terminal actively.
+When `STEM_SPEAK=1`, calls to `STEMSay` speak the text through the platform TTS
+engine in addition to printing it. This is useful when you want a spoken "done"
+announcement without monitoring the terminal actively.
 
-The variable defaults to unset so normal script runs are silent.
+| Platform | TTS engine | Prerequisite |
+|---|---|---|
+| macOS | `say` | Built in |
+| Linux | `espeak-ng` (preferred) or `espeak` | `sudo apt install espeak-ng` |
+| Windows | System.Speech (PowerShell) | Built into Windows 10/11 |
+
+If the TTS tool is not found on Linux, a one-time warning is printed and the
+app continues silently. The variable defaults to unset so normal runs are silent.
 
 ---
 
@@ -169,12 +202,15 @@ STEMSay["text"]     (* Print + optional say *)
 ```
 
 `STEMSay` always prints its argument. When `$STEMSpeakEnabled` is `True` it also
-invokes the macOS `say` command. The function is safe to call unconditionally —
+speaks through the platform TTS engine (`say` on macOS, `espeak-ng`/`espeak` on
+Linux, System.Speech on Windows). The function is safe to call unconditionally —
 enabling or disabling speech only requires setting or unsetting `STEM_SPEAK`.
 
 ---
 
-## VoiceOver navigation shortcuts in Terminal
+## Screen reader navigation shortcuts in Terminal
+
+### macOS — VoiceOver
 
 | Key | Action |
 |---|---|
@@ -186,6 +222,26 @@ enabling or disabling speech only requires setting or unsetting `STEM_SPEAK`.
 | Command-K | Clear Terminal scroll buffer |
 
 VO = Control-Option (the VoiceOver modifier key).
+
+### Linux — Orca
+
+| Key | Action |
+|---|---|
+| Insert-A | Read all from current position |
+| Insert-Home | Jump to top |
+| Insert-End | Jump to bottom |
+| Insert-Up / Insert-Down | Move by line |
+
+### Windows — Narrator
+
+| Key | Action |
+|---|---|
+| Narrator+M | Start reading from here |
+| Ctrl | Stop reading |
+| Narrator+Up / Narrator+Down | Move by line |
+| Narrator+F | Find text |
+
+Narrator key = Caps Lock or Insert (configurable).
 
 ---
 
@@ -199,9 +255,11 @@ Check `output/errors.log` in the project directory. The asteroids project requir
 a NASA API key in `$NASAAPIKEY`; the pendulum and lorenz projects have no external
 dependencies.
 
-**`say` does not speak**
-Confirm `STEM_SPEAK=1` is set in the shell environment and that the `say` binary
-is present (`which say`). On non-macOS systems, leave `STEM_SPEAK` unset.
+**TTS does not speak**
+Confirm `STEM_SPEAK=1` is set. On macOS, check that `say` is present (`which say`).
+On Linux, install `espeak-ng` (`sudo apt install espeak-ng`) — without it the app
+prints a warning and continues silently. On Windows, System.Speech is built into
+Windows 10/11; if unavailable, leave `STEM_SPEAK` unset.
 
 **VoiceOver reads numbers as individual digits**
 This happens when scientific notation like `3.498e-07` is split across multiple

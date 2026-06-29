@@ -163,4 +163,4 @@ Print["  WAV: ", outWAV];
 
 Print[""];
 Print["=== Done ==="];
-Print["Play:  afplay ", outWAV];
+Print["Play:  ", STEMPlayCmd[outWAV]];

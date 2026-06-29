@@ -46,9 +46,18 @@ wolframscript -file main.wl -- --simulation.mode rule110
 # Inspect merged config
 wolframscript -file main.wl -- --config-dump
 
-# Play audio (macOS)
+# Play audio
+# macOS
 afplay output/life_rpentomino_audio.wav
 afplay output/rule110_audio.wav
+
+# Linux
+aplay output/life_rpentomino_audio.wav
+aplay output/rule110_audio.wav
+
+# Windows PowerShell
+Start-Process wmplayer output\life_rpentomino_audio.wav
+Start-Process wmplayer output\rule110_audio.wav
 ```
 
 ## Starting patterns (Game of Life)
@@ -111,7 +120,7 @@ automata summary with population statistics is printed after simulation.
 `STEMDescribeCSV`, `STEMDescribeWAV`, and `STEMDescribeGIF` confirm each
 export. `STEMSay` announces each phase ("Starting Game of Life…",
 "Rendering animation", "Synthesising audio") and the final completion
-message with an `afplay` command.
+message with the platform-appropriate play command.
 
 To enable speech at each stage, set `STEM_SPEAK=1`:
 

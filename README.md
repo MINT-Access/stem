@@ -31,11 +31,59 @@ stem/
 
 ## Prerequisites
 
-- **Wolfram Engine** (free) or **Mathematica** 13+
-- `wolframscript` on your PATH
+### Wolfram Engine
+
+Download the free **Wolfram Engine** from https://www.wolfram.com/engine/ and
+follow the installer for your platform. `wolframscript` is included in the
+installer on all three platforms — no separate download needed.
+
+Activate the free licence when prompted (requires a Wolfram account).
+
+Verify your installation:
 
 ```sh
+# macOS / Linux
 wolframscript -version
+
+# Windows (Command Prompt or PowerShell)
+wolframscript -version
+```
+
+### Platform-specific audio tools
+
+| Platform | Tool | Install |
+|---|---|---|
+| macOS | `afplay` | Built into macOS — no install needed |
+| Linux | `aplay` | `sudo apt install alsa-utils` (Debian/Ubuntu) · `sudo dnf install alsa-utils` (Fedora) |
+| Linux (alt) | `paplay` | `sudo apt install pulseaudio-utils` |
+| Windows | Windows Media Player | Built into Windows 10/11 — no install needed |
+
+### Platform-specific text-to-speech (optional — `STEM_SPEAK=1` only)
+
+| Platform | Tool | Install |
+|---|---|---|
+| macOS | `say` | Built into macOS |
+| Linux | `espeak-ng` | `sudo apt install espeak-ng` · `sudo dnf install espeak-ng` |
+| Windows | System.Speech | Built into Windows 10/11 (PowerShell 5.1+) |
+
+TTS is disabled by default. If the tool is missing the app prints a warning and continues.
+
+### NASA API key (asteroids app only — optional)
+
+Register for a free key at https://api.nasa.gov/. The built-in `DEMO_KEY` works
+at 30 requests/hour; a personal key removes that limit.
+
+Set the key as an environment variable before running:
+
+```sh
+# macOS / Linux — add to ~/.zshrc or ~/.bashrc to persist
+export NASA_API_KEY=your_key_here
+
+# Windows PowerShell — set for the current session
+$env:NASA_API_KEY = "your_key_here"
+
+# Windows — set permanently via System Properties → Environment Variables
+# Variable name: NASA_API_KEY   Value: your_key_here
 ```
 
 ---
@@ -93,20 +141,29 @@ Each project writes outputs into its own directory:
 |---------|-----------|------------|
 | all eight apps | `output/` | CSV, GIF, WAV (+ PNG for signal, quantum, primes, relativity) |
 
-Play audio on macOS:
+Play audio:
 
 ```sh
+# macOS
+afplay signal/output/chord_narrative_full.wav
 afplay pendulum/output/double_audio.wav
 afplay lorenz/output/lorenz_audio.wav
 afplay asteroids/output/asteroids_*.wav
 afplay cellular/output/life_rpentomino_audio.wav
-afplay signal/output/chord_narrative_full.wav
 afplay quantum/output/qho_audio.wav
 afplay primes/output/ulam_audio.wav
 afplay primes/output/gaps_audio.wav
 afplay relativity/output/chirp.wav
 afplay relativity/output/gw170817.wav
 afplay relativity/output/geodesic.wav
+
+# Linux — replace afplay with aplay
+aplay signal/output/chord_narrative_full.wav
+aplay pendulum/output/double_audio.wav
+
+# Windows PowerShell — replace afplay with Start-Process wmplayer
+Start-Process wmplayer signal\output\chord_narrative_full.wav
+Start-Process wmplayer pendulum\output\double_audio.wav
 ```
 
 See [RELEASE_NOTES_v1.0.0.md](RELEASE_NOTES_v1.0.0.md) for full app descriptions, physics notes, and listening guides.
@@ -123,12 +180,20 @@ wolframscript -file demo.wl
 
 With spoken announcements:
 ```sh
+# macOS / Linux
 STEM_SPEAK=1 wolframscript -file demo.wl
+
+# Windows PowerShell
+$env:STEM_SPEAK = "1"; wolframscript -file demo.wl
 ```
 
 With NASA asteroid data (requires API key):
 ```sh
+# macOS / Linux
 NASA_API_KEY=$NASA_API_KEY wolframscript -file demo.wl
+
+# Windows PowerShell
+$env:NASA_API_KEY = "your_key_here"; wolframscript -file demo.wl
 ```
 
 Check whether a previous demo run completed successfully:
@@ -283,17 +348,26 @@ See [`stem-core/README.md`](stem-core/README.md) for the full API and
 
 ## Accessibility
 
-All projects run fully headlessly and write plain WAV files playable with
-`afplay`. Every console output line is a self-contained announcement so
-VoiceOver reads each item cleanly without splitting numbers across lines.
+All projects run fully headlessly and write plain WAV files. Every console
+output line is a self-contained announcement so screen readers (VoiceOver on
+macOS, Orca on Linux, Narrator on Windows) read each item cleanly without
+splitting numbers across lines.
 
-To enable spoken announcements via the macOS `say` command alongside normal
-printed output, set `STEM_SPEAK=1` before running:
+To enable spoken announcements alongside normal printed output, set
+`STEM_SPEAK=1` before running:
 
 ```sh
+# macOS / Linux
 STEM_SPEAK=1 wolframscript -file pendulum/main.wl
 STEM_SPEAK=1 wolframscript -file signal/main.wl
+
+# Windows PowerShell
+$env:STEM_SPEAK = "1"; wolframscript -file pendulum/main.wl
 ```
+
+Platform TTS: macOS uses `say`, Linux uses `espeak-ng` (install with
+`sudo apt install espeak-ng`), Windows uses the built-in System.Speech.
+If TTS is unavailable the app prints a warning and continues silently.
 
 The `signal` app's `{mode}_narrative_full.wav` is the most accessible single
 output — it chains spoken text with the clean, noisy, and recovered signals so

@@ -35,7 +35,12 @@ beyond that, register for a free key and set it as an environment
 variable before running:
 
 ```bash
+# macOS / Linux
 export NASA_API_KEY=your_key_here
+
+# Windows PowerShell
+$env:NASA_API_KEY = "your_key_here"
+# Or set permanently: System Properties → Environment Variables
 ```
 
 Never hardcode the key in source files — always pass it via the
@@ -80,8 +85,15 @@ wolframscript -file main.wl -- --simulation.days_ahead 14
 # Offline tests (no API call)
 wolframscript -file tests/test_analyse.wl
 
-# Play the sonification (macOS)
+# Play the sonification
+# macOS
 afplay output/asteroids_<start>_<end>.wav
+
+# Linux
+aplay output/asteroids_<start>_<end>.wav
+
+# Windows PowerShell
+Start-Process wmplayer output\asteroids_<start>_<end>.wav
 ```
 
 With `DEMO_KEY` the NASA API allows 30 requests/hour; a multi-month range stays
@@ -173,13 +185,18 @@ and remain as bare `Print`; export confirmations use `STEMDescribeCSV`
 (1 row per asteroid, 12 columns), `STEMDescribeGIF`, and `STEMDescribeWAV`;
 `STEMSay` announces each pipeline phase ("Fetching asteroid data from NASA",
 "Analysing trajectory data", "Rendering solar system animation", "Synthesising
-audio") and the final completion message with an `afplay` command.
+audio") and the final completion message with the platform-appropriate play command.
 
 To also hear a spoken announcement when the run finishes, set `STEM_SPEAK=1`
 before running:
 
 ```sh
+# macOS / Linux
 STEM_SPEAK=1 NASA_API_KEY=your_key wolframscript -file main.wl
+
+# Windows PowerShell
+$env:STEM_SPEAK = "1"; $env:NASA_API_KEY = "your_key"
+wolframscript -file main.wl
 ```
 
 See [`docs/voiceover-wolframscript-guide.md`](../docs/voiceover-wolframscript-guide.md)

@@ -357,8 +357,17 @@ If[$nSkipped > 0, Print["Skipped:        ", $nSkipped]];
 If[!$checkOnly,
 
   $reportPath = FileNameJoin[{$demoDir, "demo-report.md"}];
-  $osVersion  = StringTrim[
-    RunProcess[{"sw_vers", "-productVersion"}, "StandardOutput"]];
+  $osVersion  = Switch[$OperatingSystem,
+    "MacOSX",
+      StringTrim[RunProcess[{"sw_vers", "-productVersion"}, "StandardOutput"]],
+    "Unix",
+      StringTrim[RunProcess[{"uname", "-sr"}, "StandardOutput"]],
+    "Windows",
+      StringTrim[RunProcess[{"powershell", "-NoProfile", "-Command",
+        "[System.Environment]::OSVersion.VersionString"}, "StandardOutput"]],
+    _,
+      $SystemID
+  ];
 
   $rl = {};
   rl[s_] := AppendTo[$rl, s];
@@ -406,7 +415,10 @@ If[!$checkOnly,
              r["files"]]; rl[""]]],
     $demoResults];
   rl["## Audio Guide"]; rl[""];
-  rl["All audio files are playable with `afplay` on macOS:"]; rl[""];
+  rl["All audio files are in `demo/<app>/output/`. Play them with:"]; rl[""];
+  rl["- macOS: `afplay demo/<app>/output/<file>.wav`"];
+  rl["- Linux: `aplay demo/<app>/output/<file>.wav`"];
+  rl["- Windows: `Start-Process wmplayer demo\\<app>\\output\\<file>.wav`"]; rl[""];
   rl["```sh"];
   Scan[
     Function[r,
@@ -425,9 +437,12 @@ If[!$checkOnly,
   rl[""];
   rl["## Re-running"]; rl[""];
   rl["```sh"];
-  rl["wolframscript -file demo.wl                             # full run"];
-  rl["NASA_API_KEY=$NASA_API_KEY wolframscript -file demo.wl  # with asteroids"];
-  rl["wolframscript -file demo.wl -- --check-only             # verify outputs"];
+  rl["wolframscript -file demo.wl                                    # full run"];
+  rl["# macOS / Linux:"];
+  rl["NASA_API_KEY=$NASA_API_KEY wolframscript -file demo.wl         # with asteroids"];
+  rl["# Windows PowerShell:"];
+  rl["# $env:NASA_API_KEY='your_key'; wolframscript -file demo.wl"];
+  rl["wolframscript -file demo.wl -- --check-only                    # verify outputs"];
   rl["```"];
   Export[$reportPath, StringRiffle[$rl, "\n"], "Text"];
   Print[""];
@@ -478,7 +493,7 @@ If[!$checkOnly,
   dl["   Binary black hole merger (GW150914). Rising pitch and amplitude,"];
   dl["   abrupt merger, fading ringdown. This is what LIGO heard on 14 Sep 2015."]; dl[""];
   dl["## Playing audio"]; dl[""];
-  dl["From the project root:"]; dl[""];
+  dl["From the project root (macOS):"]; dl[""];
   dl["```sh"];
   dl["afplay demo/signal/output/chord_narrative_full.wav"];
   dl["afplay demo/pendulum/output/double_audio.wav"];
@@ -488,12 +503,16 @@ If[!$checkOnly,
   dl["afplay demo/lorenz/output/rossler_audio.wav"];
   dl["afplay demo/relativity/output/chirp.wav"];
   dl["```"]; dl[""];
+  dl["Linux: replace `afplay` with `aplay`. " <>
+     "Windows PowerShell: `Start-Process wmplayer demo\\signal\\output\\chord_narrative_full.wav`"]; dl[""];
   dl["## Re-running"]; dl[""];
   dl["```sh"];
   dl["# Full demo (re-runs all apps, overwrites this directory)"];
   dl["wolframscript -file demo.wl"]; dl[""];
-  dl["# With NASA asteroid data"];
+  dl["# With NASA asteroid data (macOS / Linux)"];
   dl["NASA_API_KEY=$NASA_API_KEY wolframscript -file demo.wl"]; dl[""];
+  dl["# Windows PowerShell"];
+  dl["# $env:NASA_API_KEY='your_key'; wolframscript -file demo.wl"]; dl[""];
   dl["# Verify outputs from a previous run without re-running"];
   dl["wolframscript -file demo.wl -- --check-only"];
   dl["```"];

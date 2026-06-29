@@ -33,7 +33,8 @@ stem-core/
     export.wl      ← ExportCSV, ExportGIF
     accessibility.wl ← STEMHeading, STEMSection, STEMBullet, STEMPrintN,
                        STEMDescribeCSV, STEMDescribeWAV, STEMDescribeGIF,
-                       $STEMSpeakEnabled, STEMSay
+                       $STEMSpeakEnabled, STEMSay,
+                       STEMPlayCmd, STEMPlay
   README.md
   AGENTS.md        ← full API reference
 ```
@@ -95,10 +96,17 @@ automatically if absent). Typical outputs:
 | `output/*.gif` | Looping animation |
 | `output/*.wav` | Sonification audio |
 
-Preview audio on macOS:
+Preview audio:
 
 ```sh
+# macOS
 afplay pendulum/output/double_audio.wav
+
+# Linux
+aplay pendulum/output/double_audio.wav
+
+# Windows PowerShell
+Start-Process wmplayer pendulum\output\double_audio.wav
 ```
 
 ---

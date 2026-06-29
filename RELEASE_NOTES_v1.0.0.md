@@ -1,6 +1,10 @@
 # v1.0.0 — Accessible STEM Simulations in Wolfram Language
 
-This is the first release of **stem**: eight physics and mathematics simulations that run entirely from the terminal, each producing a CSV data file, an animated GIF, and — most importantly — a WAV audio file you can play with `afplay`. The project is developed by [MINT Access](https://www.mintaccess.ch/), a Swiss organisation that partners with universities, publishers, and companies serving the university sector to make teaching and research in STEM fields more accessible. What makes it different from other scientific simulation projects is that accessibility is not an afterthought: the audio output is the primary result, not a bonus. Every app is designed so that a blind user listening through headphones experiences the same scientific content as a sighted user watching the animation — and in several cases, the audio reveals structure that the visual cannot.
+> **Note:** v1.0.0 was macOS-only. Cross-platform support (Linux, Windows) was
+> added after this release. On Linux use `aplay` instead of `afplay`; on Windows
+> PowerShell use `Start-Process wmplayer`. See the root `README.md` for details.
+
+This is the first release of **stem**: eight physics and mathematics simulations that run entirely from the terminal, each producing a CSV data file, an animated GIF, and — most importantly — a WAV audio file you can play with `afplay` (macOS). The project is developed by [MINT Access](https://www.mintaccess.ch/), a Swiss organisation that partners with universities, publishers, and companies serving the university sector to make teaching and research in STEM fields more accessible. What makes it different from other scientific simulation projects is that accessibility is not an afterthought: the audio output is the primary result, not a bonus. Every app is designed so that a blind user listening through headphones experiences the same scientific content as a sighted user watching the animation — and in several cases, the audio reveals structure that the visual cannot.
 
 ---
 

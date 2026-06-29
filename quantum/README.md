@@ -39,9 +39,18 @@ wolframscript -file main.wl -- --simulation.qho.omega=2.0
 # Inspect merged config
 wolframscript -file main.wl -- --config-dump
 
-# Play sonification (macOS)
+# Play sonification
+# macOS
 afplay output/qho_audio.wav
 afplay output/box_audio.wav
+
+# Linux
+aplay output/qho_audio.wav
+aplay output/box_audio.wav
+
+# Windows PowerShell
+Start-Process wmplayer output\qho_audio.wav
+Start-Process wmplayer output\box_audio.wav
 ```
 
 ## Modes

@@ -221,8 +221,8 @@ If[mode === "chirp",
     ToString[Round[N @ model["peak_frequency"]]] <>
     " hertz. Merger at " <>
     ToString[NumberForm[N @ model["coalescence_time"], {5,3}]] <>
-    " seconds. Play audio: afplay " <>
-    FileNameJoin[{$outDir, "chirp.wav"}]],
+    " seconds. Play audio: " <>
+    STEMPlayCmd[FileNameJoin[{$outDir, "chirp.wav"}]]],
   (* geodesic *)
   STEMSay["Geodesic complete. " <>
     ToString[model["orbit_type"]] <> " orbit around " <>
@@ -232,6 +232,6 @@ If[mode === "chirp",
     "r_min = " <> ToString[NumberForm[N @ (model["r_min"]/2.0), {4,2}]] <> " r_s. " <>
     "Total \[Phi] = " <> ToString[NumberForm[N @ Last[model["phi"]], {5,2}]] <> " rad (" <>
     ToString[NumberForm[N @ model["n_revolutions"], {4,2}]] <> " revolutions). " <>
-    "Play audio: afplay " <>
-    FileNameJoin[{$outDir, "geodesic.wav"}]]
+    "Play audio: " <>
+    STEMPlayCmd[FileNameJoin[{$outDir, "geodesic.wav"}]]]
 ]

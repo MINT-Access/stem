@@ -19,38 +19,73 @@
 
 
 (* SpeakToBuffer
-   Calls macOS `say` to synthesise speech and returns a mono PCM list
-   at the target sample rate.  Falls back to a short silence on any error.
+   Synthesises speech and returns a mono PCM list at the target sample rate.
+   Falls back to a short silence on any error or if TTS is unavailable.
 
-   `say -o` produces AIFF-C compressed audio. WL cannot reliably decode
-   AIFF-C in headless mode, so we run afconvert to produce a linear PCM
-   WAV before importing.  Upsamples 22050 -> 44100 Hz by linear interpolation. *)
+   Platform support:
+     macOS   — `say -o file.aiff` then `afconvert` to linear PCM WAV
+     Linux   — `espeak-ng -w file.wav` (preferred) or `espeak -w file.wav`
+     Windows — PowerShell System.Speech.Synthesis.SpeechSynthesizer to WAV
+
+   Upsamples to targetSr by linear interpolation when the TTS engine
+   outputs at a lower sample rate (e.g. 22050 → 44100 Hz). *)
 
 SpeakToBuffer[text_String, targetSr_Integer] :=
-  Module[{id, aiffPath, wavPath, result, conv, snd, data, rawSr, upsampled,
+  Module[{id, wavPath, snd, data, rawSr, upsampled,
           silence = ConstantArray[0.0, Round[targetSr * 0.5]]},
 
-    id       = ToString[RandomInteger[999999]];
-    aiffPath = FileNameJoin[{$TemporaryDirectory, "stem_say_" <> id <> ".aiff"}];
-    wavPath  = FileNameJoin[{$TemporaryDirectory, "stem_say_" <> id <> ".wav"}];
+    id      = ToString[RandomInteger[999999]];
+    wavPath = FileNameJoin[{$TemporaryDirectory, "stem_say_" <> id <> ".wav"}];
 
-    result = Quiet[RunProcess[{"say", "-o", aiffPath, text}]];
-    If[!AssociationQ[result] || result["ExitCode"] =!= 0 ||
-       !FileExistsQ[aiffPath],
-      Quiet[DeleteFile /@ Select[{aiffPath, wavPath}, FileExistsQ]];
-      Return[silence]];
+    Switch[$OperatingSystem,
 
-    (* Decompress AIFF-C to linear PCM WAV so WL can read the samples *)
-    conv = Quiet[RunProcess[{"afconvert", aiffPath, wavPath,
-                              "-d", "LEI16", "-f", "WAVE"}]];
-    Quiet[DeleteFile[aiffPath]];
-    If[!AssociationQ[conv] || conv["ExitCode"] =!= 0 || !FileExistsQ[wavPath],
-      Quiet[DeleteFile /@ Select[{wavPath}, FileExistsQ]];
-      Return[silence]];
+      (* ── macOS: say → AIFF-C → afconvert → WAV ── *)
+      "MacOSX",
+        Module[{aiffPath, result, conv},
+          aiffPath = FileNameJoin[{$TemporaryDirectory, "stem_say_" <> id <> ".aiff"}];
+          result = Quiet[RunProcess[{"say", "-o", aiffPath, text}]];
+          If[!AssociationQ[result] || result["ExitCode"] =!= 0 ||
+             !FileExistsQ[aiffPath],
+            Quiet[DeleteFile /@ Select[{aiffPath, wavPath}, FileExistsQ]];
+            Return[silence]];
+          conv = Quiet[RunProcess[{"afconvert", aiffPath, wavPath,
+                                    "-d", "LEI16", "-f", "WAVE"}]];
+          Quiet[DeleteFile[aiffPath]];
+          If[!AssociationQ[conv] || conv["ExitCode"] =!= 0 || !FileExistsQ[wavPath],
+            Quiet[DeleteFile /@ Select[{wavPath}, FileExistsQ]];
+            Return[silence]]],
 
+      (* ── Linux: espeak-ng or espeak → WAV directly ── *)
+      "Unix",
+        Module[{result},
+          result = Quiet[RunProcess[{"espeak-ng", "-w", wavPath, text}]];
+          If[!AssociationQ[result] || result["ExitCode"] =!= 0 || !FileExistsQ[wavPath],
+            result = Quiet[RunProcess[{"espeak", "-w", wavPath, text}]]];
+          If[!AssociationQ[result] || result["ExitCode"] =!= 0 || !FileExistsQ[wavPath],
+            Quiet[DeleteFile /@ Select[{wavPath}, FileExistsQ]];
+            Return[silence]]],
+
+      (* ── Windows: PowerShell SpeechSynthesizer → WAV ── *)
+      "Windows",
+        Module[{psCmd, result},
+          psCmd = "Add-Type -AssemblyName System.Speech; " <>
+                  "$s = New-Object System.Speech.Synthesis.SpeechSynthesizer; " <>
+                  "$s.SetOutputToWaveFile('" <>
+                  StringReplace[wavPath, "\\" -> "/"] <> "'); " <>
+                  "$s.Speak('" <> StringReplace[text, "'" -> "''"] <> "'); " <>
+                  "$s.SetOutputToDefaultAudioDevice()";
+          result = Quiet[RunProcess[{"powershell", "-NoProfile", "-Command", psCmd}]];
+          If[!AssociationQ[result] || result["ExitCode"] =!= 0 || !FileExistsQ[wavPath],
+            Quiet[DeleteFile /@ Select[{wavPath}, FileExistsQ]];
+            Return[silence]]],
+
+      (* ── Unknown platform: return silence ── *)
+      _,
+        Return[silence]
+    ];
+
+    (* Common path: import the WAV, extract samples, upsample if needed *)
     snd = Quiet[Import[wavPath]];
-
-    (* AudioData lazily reads the file; extract before deleting *)
     If[!AudioQ[snd], Quiet[DeleteFile[wavPath]]; Return[silence]];
     data  = Quiet[Flatten[N[AudioData[snd]]]];
     rawSr = Quiet[QuantityMagnitude[AudioSampleRate[snd]]];

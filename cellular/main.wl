@@ -146,4 +146,4 @@ Which[
 ];
 
 STEMHeading["Done"];
-STEMSay["Complete. Play audio: afplay " <> outWAV];
+STEMSay["Complete. Play audio: " <> STEMPlayCmd[outWAV]];

@@ -2,7 +2,8 @@
    stem-core/src/accessibility.wl — Screen-reader-friendly output
 
    All public functions (STEM prefix) print a single complete
-   line to stdout so VoiceOver reads each chunk as one unit.
+   line to stdout so VoiceOver / Orca / Narrator reads each
+   chunk as one unit.
 
    Requires: utils.wl (for FmtN)
 
@@ -11,6 +12,7 @@
      2. Structured announcements — STEMHeading, STEMSection, STEMBullet
      3. Export metadata        — STEMDescribeCSV, STEMDescribeWAV, STEMDescribeGIF
      4. Speech integration     — $STEMSpeakEnabled, STEMSay
+     5. Audio playback         — STEMPlayCmd, STEMPlay
    ======================================================== *)
 
 
@@ -95,24 +97,98 @@ STEMDescribeGIF[filePath_String, nFrames_Integer, fps_?NumericQ] :=
   Print["  Animation: ", nFrames, " frames at ", fps, " fps — ", filePath]
 
 
-(* ── 4. Speech integration (optional, macOS only) ─────────── *)
+(* ── 4. Speech integration (optional) ───────────────────── *)
 
 (* $STEMSpeakEnabled
    Read from the STEM_SPEAK environment variable at load time.
-   Set STEM_SPEAK=1 before running any project to enable the macOS `say`
-   command alongside normal Print output; any other value (or unset) leaves
-   speech disabled. *)
+   Set STEM_SPEAK=1 to enable TTS alongside normal Print output.
+   Platform support:
+     macOS   — built-in `say` command
+     Linux   — espeak-ng (preferred) or espeak; skips gracefully if absent
+     Windows — PowerShell System.Speech.Synthesis.SpeechSynthesizer *)
 
 $STEMSpeakEnabled = Environment["STEM_SPEAK"] === "1"
+
+(* One-time warning flag so the "TTS not found" message prints only once. *)
+$STEMSayWarned = False;
 
 
 (* STEMSay
    Prints text as a single stdout line.
-   When $STEMSpeakEnabled is True, also passes text to the macOS `say`
-   command so it is spoken aloud through the system voice.
-   RunProcess blocks until speech completes and avoids shell quoting issues. *)
+   When $STEMSpeakEnabled is True, also speaks text via a platform-
+   appropriate TTS engine.  Falls back silently on any error. *)
 
 STEMSay[text_String] :=
   (Print[text];
    If[$STEMSpeakEnabled,
-     RunProcess[{"/usr/bin/say", text}]])
+     Switch[$OperatingSystem,
+
+       "MacOSX",
+         Quiet[RunProcess[{"/usr/bin/say", text}]],
+
+       "Unix",
+         Module[{r},
+           (* Try espeak-ng first, then espeak *)
+           r = Quiet[RunProcess[{"espeak-ng", text}]];
+           If[!AssociationQ[r] || r["ExitCode"] =!= 0,
+             r = Quiet[RunProcess[{"espeak", text}]]];
+           If[(!AssociationQ[r] || r["ExitCode"] =!= 0) && !$STEMSayWarned,
+             $STEMSayWarned = True;
+             Print["[WARNING] STEM_SPEAK=1 but neither espeak-ng nor espeak found. " <>
+                   "Install with: sudo apt install espeak-ng"]]],
+
+       "Windows",
+         (* Use PowerShell System.Speech — built into Windows 10/11 *)
+         Quiet[RunProcess[{"powershell", "-NoProfile", "-Command",
+           "Add-Type -AssemblyName System.Speech; " <>
+           "$s = New-Object System.Speech.Synthesis.SpeechSynthesizer; " <>
+           "$s.Speak('" <> StringReplace[text, "'" -> "''"] <> "')"}]],
+
+       _,
+         If[!$STEMSayWarned,
+           $STEMSayWarned = True;
+           Print["[WARNING] STEM_SPEAK=1 but platform \"",
+                 $OperatingSystem, "\" has no TTS configured"]]
+     ]
+   ])
+
+
+(* ── 5. Audio playback ───────────────────────────────────── *)
+
+(* STEMPlayCmd
+   Returns the platform-appropriate terminal command string to play a WAV
+   file.  Used in completion messages so users know how to play the output.
+
+   macOS   → "afplay <file>"
+   Linux   → "aplay <file>"
+   Windows → "Start-Process wmplayer \"<file>\"" *)
+
+STEMPlayCmd[filePath_String] :=
+  Switch[$OperatingSystem,
+    "MacOSX",  "afplay " <> filePath,
+    "Unix",    "aplay "  <> filePath,
+    "Windows", "Start-Process wmplayer \"" <> filePath <> "\"",
+    _,         "afplay " <> filePath
+  ]
+
+
+(* STEMPlay
+   Plays a WAV file using the platform's audio command.
+   Blocks on macOS (afplay) and Windows (SoundPlayer.PlaySync);
+   on Linux aplay also blocks. Skips silently on unrecognised platforms. *)
+
+STEMPlay[filePath_String] :=
+  Switch[$OperatingSystem,
+    "MacOSX",
+      Quiet[RunProcess[{"afplay", filePath}]],
+    "Unix",
+      Quiet[RunProcess[{"aplay", filePath}]],
+    "Windows",
+      Quiet[RunProcess[{"powershell", "-NoProfile", "-Command",
+        "(New-Object Media.SoundPlayer '" <>
+        StringReplace[filePath, "\\" -> "/"] <>
+        "').PlaySync()"}]],
+    _,
+      Print["[WARNING] STEMPlay: platform \"", $OperatingSystem,
+            "\" not recognised; could not play ", filePath]
+  ]

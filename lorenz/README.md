@@ -39,9 +39,18 @@ wolframscript -file experiment.wl
 # Tests
 wolframscript -file tests/test_model.wl
 
-# Play sonification (macOS)
+# Play sonification
+# macOS
 afplay output/lorenz_audio.wav
 afplay output/rossler_audio.wav
+
+# Linux
+aplay output/lorenz_audio.wav
+aplay output/rossler_audio.wav
+
+# Windows PowerShell
+Start-Process wmplayer output\lorenz_audio.wav
+Start-Process wmplayer output\rossler_audio.wav
 ```
 
 ## Outputs
@@ -125,7 +134,7 @@ each and remain as bare `Print`; export confirmations use `STEMDescribeCSV`
 (1 row per step, 5 columns), `STEMDescribeGIF` (150 frames at 30 fps), and
 `STEMDescribeWAV` (duration from `params["TimeEnd"]`). `STEMSay` is called at
 each pipeline phase (ODE solve, animation, sonification) and as the final
-completion message with an `afplay` command.
+completion message with the platform-appropriate play command.
 
 To also hear a spoken announcement when the run finishes, set `STEM_SPEAK=1`
 before running:

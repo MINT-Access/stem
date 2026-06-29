@@ -51,10 +51,21 @@ wolframscript -file main.wl -- --simulation.gaps.count=10000
 # Inspect merged config
 wolframscript -file main.wl -- --config-dump
 
-# Play sonification (macOS)
+# Play sonification
+# macOS
 afplay output/ulam_audio.wav
 afplay output/gaps_audio.wav
 afplay output/gaps_slow.wav
+
+# Linux
+aplay output/ulam_audio.wav
+aplay output/gaps_audio.wav
+aplay output/gaps_slow.wav
+
+# Windows PowerShell
+Start-Process wmplayer output\ulam_audio.wav
+Start-Process wmplayer output\gaps_audio.wav
+Start-Process wmplayer output\gaps_slow.wav
 ```
 
 ## Modes

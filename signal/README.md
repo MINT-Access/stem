@@ -41,8 +41,15 @@ wolframscript -file main.wl -- --config-dump
 # Override a parameter
 wolframscript -file main.wl -- --simulation.chord.noise_level=0.7
 
-# Play the accessible narrative (macOS)
+# Play the accessible narrative
+# macOS
 afplay output/chord_narrative_full.wav
+
+# Linux
+aplay output/chord_narrative_full.wav
+
+# Windows PowerShell
+Start-Process wmplayer output\chord_narrative_full.wav
 ```
 
 ## Modes

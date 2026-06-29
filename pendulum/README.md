@@ -103,8 +103,9 @@ as a self-contained announcement. Headings use `STEMHeading`; the six
 `PrintSummary` values (steps, max/min angle, initial/final/drift energy) use
 `STEMPrintN`; export confirmations use `STEMDescribeCSV`, `STEMDescribeGIF`,
 and `STEMDescribeWAV`. `STEMSay` is called at each pipeline phase (ODE solve,
-animation, sonification) and as the final completion message with an `afplay`
-command.
+animation, sonification) and as the final completion message with the
+platform-appropriate play command (`afplay` on macOS, `aplay` on Linux,
+`Start-Process wmplayer` on Windows).
 
 To also hear a spoken announcement when the run finishes, set `STEM_SPEAK=1`
 before running:
