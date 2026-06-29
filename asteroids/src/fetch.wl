@@ -147,7 +147,23 @@ FetchAsteroids[startDate_String, endDate_String] :=
     raw = FetchRawJson[startDate, endDate];
     If[raw === $Failed, Return[$Failed]];
 
-    json = ConfigToAssoc[ImportString[raw, "JSON"]];
+    json = Quiet @ ConfigToAssoc[ImportString[raw, "JSON"]];
+
+    (* Guard against API error responses (rate limit, bad key, etc.) *)
+    If[!AssociationQ[json],
+      FetchError["Could not parse API response as JSON."];
+      Return[$Failed]
+    ];
+    If[!KeyExistsQ[json, "near_earth_objects"],
+      FetchError["Unexpected API response — missing 'near_earth_objects'.\n" <>
+        If[KeyExistsQ[json, "error"],
+          "  API error: " <> ToString[json["error"]],
+          "  Raw response (first 200 chars): " <> StringTake[raw, UpTo[200]]
+        ]
+      ];
+      Return[$Failed]
+    ];
+
     dateGroups = json["near_earth_objects"];
 
     (* Flatten all dates into one list *)
