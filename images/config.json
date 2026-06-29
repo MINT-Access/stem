@@ -1,0 +1,13 @@
+{
+  "simulation": {
+    "mode": "brightness",
+    "images": {
+      "size": 64,
+      "input_file": "",
+      "test_image": "gaussian",
+      "freq_min": 200,
+      "freq_max": 2000,
+      "note_duration": 0.05
+    }
+  }
+}

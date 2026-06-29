@@ -22,6 +22,7 @@ stem/
   signal/           Fourier analysis demonstration (chord, sweep, AM)
   quantum/          Quantum mechanics (coherent state QHO, particle-in-a-box)
   primes/           Prime number patterns (Ulam spiral, prime gap rhythm)
+  images/           2D image sonification via Hilbert curve traversal (brightness, colour, HSB modes)
   relativity/       General relativity (chirp: PN binary inspiral; geodesic: Schwarzschild orbits)
   config/           Global config defaults (config.json)
   docs/             Workflow guides

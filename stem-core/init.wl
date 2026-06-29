@@ -16,6 +16,7 @@
      accessibility.wl — STEMHeading, STEMSection, STEMBullet, STEMPrintN,
                         STEMDescribeCSV, STEMDescribeWAV, STEMDescribeGIF,
                         $STEMSpeakEnabled, STEMSay
+     hilbert.wl       — HilbertTraversalOrder
      config.wl        — LoadConfig, DeepMerge, GetCfg, $HardcodedDefaults
      sonification.wl  — SonifyTrajectory, SpatialLayer, MotionLayer,
                         EventLayer, MixLayers, RenderAudio
@@ -28,5 +29,6 @@ Get[FileNameJoin[{$stemCoreRoot, "src", "scales.wl"}]];
 Get[FileNameJoin[{$stemCoreRoot, "src", "synth.wl"}]];
 Get[FileNameJoin[{$stemCoreRoot, "src", "export.wl"}]];
 Get[FileNameJoin[{$stemCoreRoot, "src", "accessibility.wl"}]];
+Get[FileNameJoin[{$stemCoreRoot, "src", "hilbert.wl"}]];
 Get[FileNameJoin[{$stemCoreRoot, "config.wl"}]];
 Get[FileNameJoin[{$stemCoreRoot, "sonification.wl"}]];

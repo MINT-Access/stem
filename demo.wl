@@ -3,7 +3,7 @@
 (* ================================================================
    demo.wl  —  STEM project showcase and regression test
 
-   Runs all 8 apps with their most compelling presets, collects
+   Runs all 9 apps with their most compelling presets, collects
    all outputs into demo/, and writes demo/demo-report.md.
 
    Each app is loaded inline via Get+Block rather than spawning
@@ -110,6 +110,17 @@ $demoApps = {
                     "output/gaps_animation.gif", "output/gaps_stats.csv"},
     "listenFor" -> "gaps_slow.wav at quarter tempo — twin-prime pairs as double-attacks; " <>
                    "large gaps leave audible rests"
+  |>,
+  <|
+    "name"      -> "images",
+    "preset"    -> "brightness mode, 2D Gaussian test image (64x64)",
+    "cliArgs"   -> {"main.wl", "--", "--simulation.mode=brightness"},
+    "expected"  -> {"output/images_brightness_audio.wav",
+                    "output/images_brightness.gif",
+                    "output/images_brightness_data.csv"},
+    "listenFor" -> "A smooth sweep from low pitch (dark edges) to high pitch " <>
+                   "(bright Gaussian peak) \[LongDash] the Hilbert curve makes " <>
+                   "spatially adjacent pixels adjacent in time"
   |>,
   <|
     "name"      -> "relativity",
@@ -455,7 +466,7 @@ If[!$checkOnly,
 
   dl["# STEM Demo"]; dl[""];
   dl["This directory contains outputs from a single run of `../demo.wl`,"];
-  dl["which exercises all 8 STEM apps with their most scientifically and"];
+  dl["which exercises all 9 STEM apps with their most scientifically and"];
   dl["acoustically compelling presets."]; dl[""];
   dl["Generated: " <> DateString[]]; dl[""];
   dl["## Contents"]; dl[""];
@@ -489,7 +500,12 @@ If[!$checkOnly,
   dl["7. **asteroids** \[LongDash] any `asteroids_*.wav`"];
   dl["   Each note is one asteroid this week: pitch = miss distance,"];
   dl["   bright timbre = hazardous. Live data, always different."]; dl[""];
-  dl["8. **relativity** \[LongDash] `chirp.wav`"];
+  dl["8. **images** \[LongDash] `images_brightness_audio.wav`"];
+  dl["   A 2D Gaussian cloud sonified via Hilbert curve traversal."];
+  dl["   Dark edges map to low pitch; the bright central peak maps to high pitch."];
+  dl["   Spatial structure becomes temporal structure \[LongDash] the Hilbert"];
+  dl["   locality property means nearby pixels sound nearby in time."]; dl[""];
+  dl["9. **relativity** \[LongDash] `chirp.wav`"];
   dl["   Binary black hole merger (GW150914). Rising pitch and amplitude,"];
   dl["   abrupt merger, fading ringdown. This is what LIGO heard on 14 Sep 2015."]; dl[""];
   dl["## Playing audio"]; dl[""];
@@ -501,6 +517,7 @@ If[!$checkOnly,
   dl["afplay demo/primes/output/gaps_slow.wav"];
   dl["afplay demo/quantum/output/qho_audio.wav"];
   dl["afplay demo/lorenz/output/rossler_audio.wav"];
+  dl["afplay demo/images/output/images_brightness_audio.wav"];
   dl["afplay demo/relativity/output/chirp.wav"];
   dl["```"]; dl[""];
   dl["Linux: replace `afplay` with `aplay`. " <>

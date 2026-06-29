@@ -2,9 +2,10 @@
 
 Shared Wolfram Language library for the STEM sonification projects.
 Provides configuration loading, musical pitch mapping, PCM synthesis,
-sonification pipeline, file export helpers, and screen-reader-friendly
-console output used by all eight apps: pendulum, lorenz, asteroids,
-cellular, signal, quantum, primes, and relativity.
+sonification pipeline, Hilbert curve traversal, file export helpers,
+and screen-reader-friendly console output used by all nine apps:
+pendulum, lorenz, asteroids, cellular, signal, quantum, primes,
+images, and relativity.
 
 ---
 
@@ -35,6 +36,7 @@ stem-core/
                        STEMDescribeCSV, STEMDescribeWAV, STEMDescribeGIF,
                        $STEMSpeakEnabled, STEMSay,
                        STEMPlayCmd, STEMPlay
+    hilbert.wl     ← HilbertTraversalOrder
   README.md
   AGENTS.md        ← full API reference
 ```
@@ -51,6 +53,7 @@ stem/
   signal/
   quantum/
   primes/
+  images/
   relativity/
   docs/
 ```
@@ -222,6 +225,27 @@ Print the merged config and exit (useful for debugging):
 
 ```sh
 wolframscript -file pendulum/main.wl -- --config-dump
+```
+
+---
+
+## Hilbert Traversal API
+
+`hilbert.wl` provides spatial traversal for 2D image sonification.
+
+| Function | Description |
+|---|---|
+| `HilbertTraversalOrder[n]` | Returns list of 4^n `{col, row}` pairs (1-based) for a 2^n × 2^n grid in Hilbert curve order |
+
+The traversal visits every pixel exactly once with the locality-preserving
+property: pixels adjacent in the list are also nearby in 2D space. This
+lets spatial image structure (gradients, blobs) become temporal audio
+structure (smooth sweeps, held notes).
+
+```wolfram
+trav = HilbertTraversalOrder[6];  (* 64x64 grid: list of 4096 {col, row} pairs *)
+Length[trav]                       (* 4096 *)
+trav[[1]]                          (* {1, 1}  — top-left corner *)
 ```
 
 ---
