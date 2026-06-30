@@ -97,7 +97,7 @@ $demoApps = {
   |>,
   <|
     "name"      -> "waves",
-    "preset"    -> "ripple mode, 4 listening points, circular membrane",
+    "preset"    -> "ripple mode, 6 listening points, circular membrane",
     "cliArgs"   -> {"main.wl", "--", "--simulation.mode=ripple"},
     "expected"  -> {"output/ripple_audio.wav",
                     "output/ripple.gif",
