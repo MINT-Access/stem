@@ -204,7 +204,7 @@ SonifySignal[analysis_Association, cfg_Association, outDir_String] :=
     STEMDescribeWAV[recovPath, dur];
 
     (* ── Narrative WAV: speech + signals concatenated ── *)
-    Print["  Building narrative WAV (requires macOS say)..."];
+    Print["  Building narrative WAV (TTS: say / espeak-ng / PowerShell)..."];
     texts   = NarrativeText[analysis, mode];
     silence = ConstantArray[0.0, Round[sr * 0.4]];   (* 0.4 s pause *)
 
