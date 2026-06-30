@@ -1,0 +1,11 @@
+{
+  "simulation": {
+    "mode": "spectrum",
+    "cosmology": {
+      "source": "simulated",
+      "l_max": 2000,
+      "sky_resolution": 64,
+      "time_stretch": 1.0
+    }
+  }
+}

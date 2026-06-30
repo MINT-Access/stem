@@ -3,7 +3,7 @@
 (* ================================================================
    demo.wl  —  STEM project showcase and regression test
 
-   Runs all 9 apps with their most compelling presets, collects
+   Runs all 10 apps with their most compelling presets, collects
    all outputs into demo/, and writes demo/demo-report.md.
 
    Each app is loaded inline via Get+Block rather than spawning
@@ -130,6 +130,18 @@ $demoApps = {
     "expected"  -> {"output/chirp.wav", "output/chirp.gif"},
     "listenFor" -> "chirp.wav — rising pitch and amplitude, abrupt merger, fading ringdown; " <>
                    "this is what LIGO heard on 14 September 2015"
+  |>,
+  <|
+    "name"      -> "cosmology",
+    "preset"    -> "CMB acoustic peaks, spectrum mode, simulated LCDM",
+    "cliArgs"   -> {"main.wl", "--", "--simulation.mode=spectrum",
+                    "--simulation.cosmology.source=simulated"},
+    "expected"  -> {"output/cmb_spectrum_audio.wav",
+                    "output/cmb_spectrum.png",
+                    "output/cmb_spectrum_data.csv"},
+    "listenFor" -> "cmb_spectrum_audio.wav — hear the Sachs-Wolfe plateau give way " <>
+                   "to the first acoustic peak swell at l\[TildeEqual]220, then the " <>
+                   "second and third harmonics fading into the Silk damping tail"
   |>
 };
 
@@ -466,7 +478,7 @@ If[!$checkOnly,
 
   dl["# STEM Demo"]; dl[""];
   dl["This directory contains outputs from a single run of `../demo.wl`,"];
-  dl["which exercises all 9 STEM apps with their most scientifically and"];
+  dl["which exercises all 10 STEM apps with their most scientifically and"];
   dl["acoustically compelling presets."]; dl[""];
   dl["Generated: " <> DateString[]]; dl[""];
   dl["## Contents"]; dl[""];
@@ -508,6 +520,11 @@ If[!$checkOnly,
   dl["9. **relativity** \[LongDash] `chirp.wav`"];
   dl["   Binary black hole merger (GW150914). Rising pitch and amplitude,"];
   dl["   abrupt merger, fading ringdown. This is what LIGO heard on 14 Sep 2015."]; dl[""];
+  dl["10. **cosmology** \[LongDash] `cmb_spectrum_audio.wav`"];
+  dl["   The CMB angular power spectrum from l=2 to l=2000. Hear the"];
+  dl["   Sachs-Wolfe plateau give way to the first acoustic peak (l\[TildeEqual]220),"];
+  dl["   then the second and third harmonics fading into the Silk damping tail."];
+  dl["   The oldest light in the universe \[LongDash] the Big Bang's afterglow."]; dl[""];
   dl["## Playing audio"]; dl[""];
   dl["From the project root (macOS):"]; dl[""];
   dl["```sh"];
@@ -519,6 +536,7 @@ If[!$checkOnly,
   dl["afplay demo/lorenz/output/rossler_audio.wav"];
   dl["afplay demo/images/output/images_brightness_audio.wav"];
   dl["afplay demo/relativity/output/chirp.wav"];
+  dl["afplay demo/cosmology/output/cmb_spectrum_audio.wav"];
   dl["```"]; dl[""];
   dl["Linux: replace `afplay` with `aplay`. " <>
      "Windows PowerShell: `Start-Process wmplayer demo\\signal\\output\\chord_narrative_full.wav`"]; dl[""];
