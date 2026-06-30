@@ -3,7 +3,7 @@
 (* ================================================================
    demo.wl  —  STEM project showcase and regression test
 
-   Runs all 10 apps with their most compelling presets, collects
+   Runs all 11 apps with their most compelling presets, collects
    all outputs into demo/, and writes demo/demo-report.md.
 
    Each app is loaded inline via Get+Block rather than spawning
@@ -94,6 +94,18 @@ $demoApps = {
                     "output/chord_recovered.wav", "output/chord_narrative_full.wav"},
     "listenFor" -> "chord_narrative_full.wav — spoken guide to Fourier analysis; " <>
                    "hear the chord buried in noise then recovered by the DFT"
+  |>,
+  <|
+    "name"      -> "waves",
+    "preset"    -> "ripple mode, 4 listening points, circular membrane",
+    "cliArgs"   -> {"main.wl", "--", "--simulation.mode=ripple"},
+    "expected"  -> {"output/ripple_audio.wav",
+                    "output/ripple.gif",
+                    "output/ripple.png",
+                    "output/ripple_data.csv"},
+    "listenFor" -> "ripple_audio.wav \[LongDash] four wavefront arrivals sweep left-to-right " <>
+                   "in stereo as the expanding ring reaches each listening point in sequence; " <>
+                   "reflected waves return from the boundary shortly after"
   |>,
   <|
     "name"      -> "quantum",
@@ -478,7 +490,7 @@ If[!$checkOnly,
 
   dl["# STEM Demo"]; dl[""];
   dl["This directory contains outputs from a single run of `../demo.wl`,"];
-  dl["which exercises all 10 STEM apps with their most scientifically and"];
+  dl["which exercises all 11 STEM apps with their most scientifically and"];
   dl["acoustically compelling presets."]; dl[""];
   dl["Generated: " <> DateString[]]; dl[""];
   dl["## Contents"]; dl[""];
@@ -494,33 +506,37 @@ If[!$checkOnly,
   dl["1. **signal** \[LongDash] `chord_narrative_full.wav`"];
   dl["   A spoken guide that explains Fourier analysis while you hear it happen."];
   dl["   Start here to understand what sonification means before the physics apps."]; dl[""];
-  dl["2. **pendulum** \[LongDash] `double_audio.wav`"];
+  dl["2. **waves** \[LongDash] `ripple_audio.wav`"];
+  dl["   The spatial companion to signal: where signal covers the frequency domain,"];
+  dl["   waves covers spatial propagation. Four wavefront arrivals sweep left-to-right"];
+  dl["   in stereo as an expanding ring crosses each listening point in sequence."]; dl[""];
+  dl["3. **pendulum** \[LongDash] `double_audio.wav`"];
   dl["   Two pendulum bobs in binaural stereo. Deterministic physics that sounds"];
   dl["   chaotic \[LongDash] the double pendulum cannot be predicted long-term."]; dl[""];
-  dl["3. **cellular** \[LongDash] `life_rpentomino_audio.wav`"];
+  dl["4. **cellular** \[LongDash] `life_rpentomino_audio.wav`"];
   dl["   The R-pentomino starts with 5 cells and grows chaotically for 300 generations."];
   dl["   Hear population rise, stabilise, and settle."]; dl[""];
-  dl["4. **primes** \[LongDash] `gaps_slow.wav`"];
+  dl["5. **primes** \[LongDash] `gaps_slow.wav`"];
   dl["   5000 prime gaps at quarter tempo. Twin-prime pairs (gap=2) sound as"];
   dl["   near-simultaneous double-attacks; large gaps leave audible rests."]; dl[""];
-  dl["5. **quantum** \[LongDash] `qho_audio.wav`"];
+  dl["6. **quantum** \[LongDash] `qho_audio.wav`"];
   dl["   A coherent-state wave packet oscillating in a harmonic potential."];
   dl["   Pitch follows mean position \[LongDash] smooth, periodic, and exact."]; dl[""];
-  dl["6. **lorenz** \[LongDash] `rossler_audio.wav`"];
+  dl["7. **lorenz** \[LongDash] `rossler_audio.wav`"];
   dl["   The R\[ODoubleDot]ssler attractor sonified. More melodic than Lorenz, almost"];
   dl["   improvisational \[LongDash] structured but never repeating."]; dl[""];
-  dl["7. **asteroids** \[LongDash] any `asteroids_*.wav`"];
+  dl["8. **asteroids** \[LongDash] any `asteroids_*.wav`"];
   dl["   Each note is one asteroid this week: pitch = miss distance,"];
   dl["   bright timbre = hazardous. Live data, always different."]; dl[""];
-  dl["8. **images** \[LongDash] `images_brightness_audio.wav`"];
+  dl["9. **images** \[LongDash] `images_brightness_audio.wav`"];
   dl["   A 2D Gaussian cloud sonified via Hilbert curve traversal."];
   dl["   Dark edges map to low pitch; the bright central peak maps to high pitch."];
   dl["   Spatial structure becomes temporal structure \[LongDash] the Hilbert"];
   dl["   locality property means nearby pixels sound nearby in time."]; dl[""];
-  dl["9. **relativity** \[LongDash] `chirp.wav`"];
+  dl["10. **relativity** \[LongDash] `chirp.wav`"];
   dl["   Binary black hole merger (GW150914). Rising pitch and amplitude,"];
   dl["   abrupt merger, fading ringdown. This is what LIGO heard on 14 Sep 2015."]; dl[""];
-  dl["10. **cosmology** \[LongDash] `cmb_spectrum_audio.wav`"];
+  dl["11. **cosmology** \[LongDash] `cmb_spectrum_audio.wav`"];
   dl["   The CMB angular power spectrum from l=2 to l=2000. Hear the"];
   dl["   Sachs-Wolfe plateau give way to the first acoustic peak (l\[TildeEqual]220),"];
   dl["   then the second and third harmonics fading into the Silk damping tail."];
@@ -529,6 +545,7 @@ If[!$checkOnly,
   dl["From the project root (macOS):"]; dl[""];
   dl["```sh"];
   dl["afplay demo/signal/output/chord_narrative_full.wav"];
+  dl["afplay demo/waves/output/ripple_audio.wav"];
   dl["afplay demo/pendulum/output/double_audio.wav"];
   dl["afplay demo/cellular/output/life_rpentomino_audio.wav"];
   dl["afplay demo/primes/output/gaps_slow.wav"];

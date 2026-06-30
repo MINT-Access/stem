@@ -1,0 +1,14 @@
+{
+  "simulation": {
+    "mode": "ripple",
+    "waves": {
+      "wave_speed": 1.0,
+      "membrane_radius": 1.0,
+      "tank_width": 2.0,
+      "tank_height": 1.0,
+      "source_frequency": 2.0,
+      "duration": 4.0,
+      "listening_points": 4
+    }
+  }
+}
