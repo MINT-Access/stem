@@ -3,7 +3,7 @@
 (* ================================================================
    demo.wl  —  STEM project showcase and regression test
 
-   Runs all 11 apps with their most compelling presets, collects
+   Runs all 12 apps with their most compelling presets, collects
    all outputs into demo/, and writes demo/demo-report.md.
 
    Each app is loaded inline via Get+Block rather than spawning
@@ -76,6 +76,16 @@ $demoApps = {
     "cliArgs"   -> {"main.wl"},
     "expected"  -> {},  (* date-stamped filenames vary; verified by checking output/ contents *)
     "listenFor" -> "Each asteroid is one note — pitch = miss distance, bright timbre = hazardous"
+  |>,
+  <|
+    "name"      -> "lagrange",
+    "preset"    -> "L4 libration, Sun-Jupiter \[Mu]=0.000954, 6 orbital periods",
+    "cliArgs"   -> {"main.wl", "--", "--simulation.mode=l4"},
+    "expected"  -> {"output/l4_audio.wav", "output/l4.gif",
+                    "output/l4.png", "output/l4_trajectory.csv"},
+    "listenFor" -> "l4_audio.wav \[LongDash] pitch follows angular velocity as the test " <>
+                   "particle librates around Jupiter's L4 Trojan point; pan sweeps with " <>
+                   "x-position in the co-rotating frame; accent tones mark each closest approach"
   |>,
   <|
     "name"      -> "cellular",
@@ -490,7 +500,7 @@ If[!$checkOnly,
 
   dl["# STEM Demo"]; dl[""];
   dl["This directory contains outputs from a single run of `../demo.wl`,"];
-  dl["which exercises all 11 STEM apps with their most scientifically and"];
+  dl["which exercises all 12 STEM apps with their most scientifically and"];
   dl["acoustically compelling presets."]; dl[""];
   dl["Generated: " <> DateString[]]; dl[""];
   dl["## Contents"]; dl[""];
@@ -528,15 +538,20 @@ If[!$checkOnly,
   dl["8. **asteroids** \[LongDash] any `asteroids_*.wav`"];
   dl["   Each note is one asteroid this week: pitch = miss distance,"];
   dl["   bright timbre = hazardous. Live data, always different."]; dl[""];
-  dl["9. **images** \[LongDash] `images_brightness_audio.wav`"];
+  dl["9. **lagrange** \[LongDash] `l4_audio.wav`"];
+  dl["   A test particle librating around Jupiter's L4 Trojan point in the Sun-Jupiter"];
+  dl["   co-rotating frame. Pitch follows angular velocity; pan sweeps with x-position."];
+  dl["   Accent tones mark the libration rhythm. The particle stays bounded \[LongDash]"];
+  dl["   the reason real Trojan asteroids exist at L4 and L5 but not L1."]; dl[""];
+  dl["10. **images** \[LongDash] `images_brightness_audio.wav`"];
   dl["   A 2D Gaussian cloud sonified via Hilbert curve traversal."];
   dl["   Dark edges map to low pitch; the bright central peak maps to high pitch."];
   dl["   Spatial structure becomes temporal structure \[LongDash] the Hilbert"];
   dl["   locality property means nearby pixels sound nearby in time."]; dl[""];
-  dl["10. **relativity** \[LongDash] `chirp.wav`"];
+  dl["11. **relativity** \[LongDash] `chirp.wav`"];
   dl["   Binary black hole merger (GW150914). Rising pitch and amplitude,"];
   dl["   abrupt merger, fading ringdown. This is what LIGO heard on 14 Sep 2015."]; dl[""];
-  dl["11. **cosmology** \[LongDash] `cmb_spectrum_audio.wav`"];
+  dl["12. **cosmology** \[LongDash] `cmb_spectrum_audio.wav`"];
   dl["   The CMB angular power spectrum from l=2 to l=2000. Hear the"];
   dl["   Sachs-Wolfe plateau give way to the first acoustic peak (l\[TildeEqual]220),"];
   dl["   then the second and third harmonics fading into the Silk damping tail."];
@@ -551,6 +566,8 @@ If[!$checkOnly,
   dl["afplay demo/primes/output/gaps_slow.wav"];
   dl["afplay demo/quantum/output/qho_audio.wav"];
   dl["afplay demo/lorenz/output/rossler_audio.wav"];
+  dl["afplay demo/asteroids/output/*.wav"];
+  dl["afplay demo/lagrange/output/l4_audio.wav"];
   dl["afplay demo/images/output/images_brightness_audio.wav"];
   dl["afplay demo/relativity/output/chirp.wav"];
   dl["afplay demo/cosmology/output/cmb_spectrum_audio.wav"];

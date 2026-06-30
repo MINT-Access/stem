@@ -1,0 +1,11 @@
+{
+  "simulation": {
+    "mode": "l4",
+    "lagrange": {
+      "mass_ratio": 0.000954,
+      "perturbation": 0.02,
+      "duration_periods": 6,
+      "preset": "sun_jupiter"
+    }
+  }
+}
