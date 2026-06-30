@@ -1,6 +1,6 @@
 # STEM Apps — Quick Reference
 
-All eight apps share the same invocation pattern and config system. This
+All twelve apps share the same invocation pattern and config system. This
 document covers CLI options, modes, config keys, and output files for each.
 
 ---
@@ -17,6 +17,10 @@ document covers CLI options, modes, config keys, and output files for each.
 | `quantum` | Quantum mechanics | `qho`, `box` | `output/` | No |
 | `primes` | Prime number patterns | `ulam`, `gaps` | `output/` | No |
 | `relativity` | General relativity | `chirp`, `geodesic` | `output/` | No |
+| `images` | 2D image sonification | `brightness`, `colour`, `hsb` | `output/` | No |
+| `cosmology` | CMB power spectrum | `spectrum`, `sky` | `output/` | Optional (Planck) |
+| `waves` | 2D wave propagation | `ripple`, `interference` | `output/` | No |
+| `lagrange` | CR3BP Lagrange points | `l4`, `l5`, `l1` | `output/` | No |
 
 ---
 
@@ -29,7 +33,7 @@ $HardcodedDefaults → config/config.json → <app>/config.json → CLI --key=va
 ```
 
 Keys use dot notation for nesting. CLI overrides accept both
-`--key.subkey=value` and `--key.subkey value` (space form) — all 8 apps
+`--key.subkey=value` and `--key.subkey value` (space form) — all 12 apps
 support both conventions.
 Dump the active config without running the simulation:
 
@@ -470,3 +474,215 @@ wolframscript -file relativity/main.wl -- --simulation.geodesic.photon.impact_pa
 - Key radii (1 r_s = 2M): event horizon at 1 r_s, photon sphere at 1.5 r_s, ISCO at 3 r_s.
 - Bound orbit requires angular_momentum_factor giving L̃² > 12; the app warns if this is violated.
 - Four physical correctness checks run on every chirp invocation and abort the run on failure.
+
+---
+
+## images
+
+Converts 2D images into audio via Hilbert curve traversal. Three modes encode
+pixel data as pitch, with the Hilbert locality property ensuring spatial gradients
+become smooth temporal sweeps.
+
+**Run:**
+```sh
+wolframscript -file images/main.wl                                       # brightness mode (default)
+wolframscript -file images/main.wl -- --simulation.mode=colour
+wolframscript -file images/main.wl -- --simulation.mode=hsb
+wolframscript -file images/main.wl -- --simulation.images.test_image=temperature
+wolframscript -file images/main.wl -- --simulation.images.test_image=quantum
+wolframscript -file images/main.wl -- --simulation.images.input_file=myimage.png
+wolframscript -file images/main.wl -- --simulation.images.size=128
+```
+
+**Key config keys (`images/config.json`):**
+
+| Key | Default | Description |
+|-----|---------|-------------|
+| `simulation.mode` | `"brightness"` | `"brightness"`, `"colour"`, or `"hsb"` |
+| `simulation.images.size` | `64` | Grid side length (image resized to size×size; must be a power of 2) |
+| `simulation.images.input_file` | `""` | Path to a user image file (empty = use built-in test image) |
+| `simulation.images.test_image` | `"gaussian"` | Built-in test image: `"gaussian"`, `"temperature"`, or `"quantum"` |
+| `simulation.images.freq_min` | `200` | Lowest frequency in Hz (brightness and colour modes) |
+| `simulation.images.freq_max` | `2000` | Highest frequency in Hz (brightness and colour modes) |
+| `simulation.images.note_duration` | `0.05` | Duration of each pixel's note in seconds |
+
+**Output files (mode-prefixed):**
+
+| File | Description |
+|------|-------------|
+| `output/images_{mode}_audio.wav` | Sonification audio |
+| `output/images_{mode}.gif` | 32-frame Hilbert traversal animation |
+| `output/images_{mode}_data.csv` | Per-pixel table: hilbert_index, col, row, brightness, hue, saturation, frequency_assigned |
+| `output/images_{mode}.png` | The processed (resized) source image |
+
+**Notes:**
+- In `colour` mode, pixels are quantised to the nearest of 10 named colours (black, grey, red,
+  orange, yellow, green, cyan, blue, violet, white), each with a fixed pitch on a C major scale
+  (C3–C5). Consecutive pixels of the same colour merge into a single held note.
+- In `hsb` mode, hue → left-channel frequency (100–3900 Hz), brightness → right-channel
+  frequency (100–3900 Hz), saturation → amplitude of both channels.
+- Audio duration = size² × note_duration seconds (e.g. 64×64 at 50 ms = ~205 s).
+  Reduce `note_duration` or `size` for faster exploration.
+
+---
+
+## cosmology
+
+Sonifies the CMB angular power spectrum. Spectrum mode traverses ℓ values as
+notes; sky mode traverses a simulated 2D temperature map via Hilbert curve.
+Optionally fetches real Planck 2018 data.
+
+**Run:**
+```sh
+wolframscript -file cosmology/main.wl                                    # spectrum mode, simulated
+wolframscript -file cosmology/main.wl -- --simulation.mode=sky
+wolframscript -file cosmology/main.wl -- --simulation.cosmology.source=planck   # real Planck data
+wolframscript -file cosmology/main.wl -- --simulation.cosmology.l_max=1000
+wolframscript -file cosmology/main.wl -- --simulation.cosmology.sky_resolution=128
+```
+
+**Key config keys (`cosmology/config.json`):**
+
+| Key | Default | Description |
+|-----|---------|-------------|
+| `simulation.mode` | `"spectrum"` | `"spectrum"` or `"sky"` |
+| `simulation.cosmology.source` | `"simulated"` | `"simulated"` or `"planck"` (fetches from Planck Legacy Archive) |
+| `simulation.cosmology.l_max` | `2000` | Maximum multipole ℓ |
+| `simulation.cosmology.sky_resolution` | `64` | Sky patch grid side length (power of 2); affects sky mode only |
+| `simulation.cosmology.time_stretch` | `1.0` | Audio duration multiplier |
+
+**Output files — spectrum mode:**
+
+| File | Description |
+|------|-------------|
+| `output/cmb_spectrum_audio.wav` | Spectrum sonification: each multipole ℓ mapped to a note |
+| `output/cmb_spectrum.png` | D_ℓ vs log ℓ power spectrum plot with peak markers |
+| `output/cmb_spectrum_data.csv` | ℓ, C_ℓ, D_ℓ, is_peak per row |
+
+**Output files — sky mode:**
+
+| File | Description |
+|------|-------------|
+| `output/cmb_sky_audio.wav` | Sky map sonification via Hilbert traversal |
+| `output/cmb_sky.gif` | 32-frame animated Hilbert traversal of the sky patch |
+| `output/cmb_sky.png` | Static false-colour temperature map |
+| `output/cmb_sky_data.csv` | Per-pixel temperature and assigned frequency |
+
+**Notes:**
+- Simulated source: analytic approximation (5 Gaussian peaks + Sachs-Wolfe plateau) matching
+  Planck 2018 peak positions and approximate amplitudes. Not a Boltzmann code output.
+- Planck source: fetches the official Planck 2018 best-fit TT spectrum (D_ℓ, ℓ=2 to 2508)
+  from the Planck Legacy Archive. Falls back to simulated if the fetch fails.
+- Four sanity checks run in spectrum mode: spectrum non-negative, at least three peaks found,
+  first peak in expected ℓ range, peak amplitudes decreasing as expected.
+
+---
+
+## waves
+
+Solves the 2D wave equation via FEM (Wolfram's `NDSolveValue` on a spatial
+`Region`) and sonifies displacement at listening points.
+
+**Run:**
+```sh
+wolframscript -file waves/main.wl                                        # ripple mode (default)
+wolframscript -file waves/main.wl -- --simulation.mode=interference
+wolframscript -file waves/main.wl -- --simulation.waves.wave_speed=1.5
+wolframscript -file waves/main.wl -- --simulation.waves.source_frequency=3.0
+wolframscript -file waves/main.wl -- --simulation.waves.listening_points=8
+```
+
+**Key config keys (`waves/config.json`):**
+
+| Key | Default | Description |
+|-----|---------|-------------|
+| `simulation.mode` | `"ripple"` | `"ripple"` or `"interference"` |
+| `simulation.waves.wave_speed` | `1.0` | Wave speed c (larger → faster propagation, wider fringe spacing) |
+| `simulation.waves.membrane_radius` | `1.0` | Radius of circular membrane (ripple mode) |
+| `simulation.waves.tank_width` | `2.0` | Width of rectangular tank (interference mode) |
+| `simulation.waves.tank_height` | `1.0` | Height of rectangular tank (interference mode) |
+| `simulation.waves.source_frequency` | `2.0` | Driving frequency of point sources in Hz (interference mode) |
+| `simulation.waves.duration` | `4.0` | Simulation time in seconds |
+| `simulation.waves.listening_points` | `6` | Number of radial listening points (ripple mode) |
+
+**Output files:**
+
+| File | Description |
+|------|-------------|
+| `output/ripple_audio.wav` | Sonified wavefront arrivals at each listening point |
+| `output/ripple.gif` | Animated displacement field — expanding circular wavefront |
+| `output/ripple.png` | 3D surface plot of displacement at the final time step |
+| `output/ripple_data.csv` | Displacement time series at all listening points |
+| `output/interference_audio.wav` | LP sweeping through constructive/destructive fringe bands |
+| `output/interference.gif` | Animated interference pattern (yellow dot = moving LP, green = sources) |
+| `output/interference.png` | Final-frame fringe pattern |
+| `output/interference_data.csv` | LP position, displacement, and fixed-LP reference over time |
+
+**Notes:**
+- Ripple mode: stereo pan places the closest listening point hard left, most distant hard right;
+  the sequence of wavefront arrivals sweeps left to right across the stereo field.
+- Interference mode: a moving listening point sweeps perpendicular to the source axis; stereo
+  pan tracks its physical x-position.
+- Four sanity checks run on every execution: amplitude bounded, wavefront arrival time matches
+  distance/speed, causality (inner point receives wavefront first), Dirichlet boundary near zero.
+
+---
+
+## lagrange
+
+Integrates test-particle motion in the circular restricted three-body problem
+(CR3BP) via NDSolve with WhenEvent for early-stop escape detection.
+
+**Run:**
+```sh
+wolframscript -file lagrange/main.wl                                     # L4 libration, Sun-Jupiter
+wolframscript -file lagrange/main.wl -- --simulation.mode=l5
+wolframscript -file lagrange/main.wl -- --simulation.mode=l1             # L1 saddle escape
+wolframscript -file lagrange/main.wl -- --simulation.lagrange.preset=earth_moon
+wolframscript -file lagrange/main.wl -- --simulation.lagrange.perturbation=0.05
+wolframscript -file lagrange/main.wl -- --simulation.lagrange.duration_periods=12
+```
+
+Named presets: `sun_jupiter` (μ = 0.000954, default), `earth_moon` (μ = 0.012151),
+`sun_earth` (μ = 3.003×10⁻⁶).
+
+**Key config keys (`lagrange/config.json`):**
+
+| Key | Default | Description |
+|-----|---------|-------------|
+| `simulation.mode` | `"l4"` | `"l4"`, `"l5"`, or `"l1"` |
+| `simulation.lagrange.preset` | `"sun_jupiter"` | Named mass-ratio preset (overrides `mass_ratio`) |
+| `simulation.lagrange.mass_ratio` | `0.000954` | μ = m₂/(m₁+m₂); set directly or via preset |
+| `simulation.lagrange.perturbation` | `0.02` | Initial displacement from the Lagrange point (co-rotating units) |
+| `simulation.lagrange.duration_periods` | `6` | Integration duration in orbital periods (l4/l5 modes) |
+
+**Output files — l4 and l5 modes:**
+
+| File | Description |
+|------|-------------|
+| `output/l4_audio.wav` | Sonified libration — pitch from angular velocity, pan from x-position |
+| `output/l4.gif` | 32-frame animated trajectory in the co-rotating frame |
+| `output/l4.png` | Full static trajectory with primaries and all 5 Lagrange points |
+| `output/l4_trajectory.csv` | 600 rows × 9 columns: t, x, y, vx, vy, omega, r1, r2, dist_to_L4 |
+| `output/l5_audio.wav` | Same for L5 mode |
+| `output/l5.gif` | Animated L5 trajectory |
+| `output/l5.png` | L5 static plot |
+| `output/l5_trajectory.csv` | L5 trajectory data |
+
+**Output files — l1 mode:**
+
+| File | Description |
+|------|-------------|
+| `output/l1_audio.wav` | Sonified escape — wider pitch range (55–1760 Hz) for dramatic dynamics |
+| `output/l1.gif` | Animated escape trajectory |
+| `output/l1.png` | Full escape trajectory static plot |
+| `output/l1_trajectory.csv` | 500 rows × 9 columns: t, x, y, vx, vy, omega, r1, r2, dist_to_L1 |
+
+**Notes:**
+- Sonification: pitch ∝ angular velocity ω = (xẏ−yẋ)/(x²+y²); pan ∝ x-position;
+  volume ∝ 1/min(r₁,r₂)+0.01 (proximity to nearest primary). l4/l5: 110–880 Hz; l1: 55–1760 Hz.
+- Four sanity checks run on every execution: Jacobi constant drift < 0.5%, L4/L5 equilateral
+  geometry (r₁=r₂=1 to 10⁻⁵), bounded motion (max dist from L-point < 1.5 units) or escape
+  confirmed (distance grew > 3×), no escape from barycentre (max dist < 2.5 units) or early stop.
+- The `$mu` global is set in `main.wl` before any src/ functions are called; EOM helpers in
+  `src/model.wl` use `$mu` via delayed evaluation.

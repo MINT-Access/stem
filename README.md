@@ -24,6 +24,9 @@ stem/
   primes/           Prime number patterns (Ulam spiral, prime gap rhythm)
   images/           2D image sonification via Hilbert curve traversal (brightness, colour, HSB modes)
   relativity/       General relativity (chirp: PN binary inspiral; geodesic: Schwarzschild orbits)
+  cosmology/        CMB angular power spectrum and sky map sonification
+  waves/            2D wave propagation and interference (FEM simulation)
+  lagrange/         Circular restricted three-body problem, Lagrange point orbits
   config/           Global config defaults (config.json)
   docs/             Workflow guides
 ```
@@ -134,13 +137,36 @@ wolframscript -file relativity/main.wl -- --sonification.chirp.time_stretch 8
 wolframscript -file relativity/main.wl -- --simulation.mode geodesic    # bound orbit (default)
 wolframscript -file relativity/main.wl -- --simulation.mode geodesic --simulation.geodesic.orbit_type plunging
 wolframscript -file relativity/main.wl -- --simulation.mode geodesic --simulation.geodesic.orbit_type photon
+
+# CMB power spectrum sonification
+wolframscript -file cosmology/main.wl                                    # spectrum mode, simulated ΛCDM
+wolframscript -file cosmology/main.wl -- --simulation.mode=sky           # sky map via Hilbert traversal
+wolframscript -file cosmology/main.wl -- --simulation.cosmology.source=planck  # real Planck 2018 data
+
+# 2D wave propagation (FEM)
+wolframscript -file waves/main.wl                                        # ripple mode (circular membrane)
+wolframscript -file waves/main.wl -- --simulation.mode=interference      # two-source interference pattern
+wolframscript -file waves/main.wl -- --simulation.waves.wave_speed=1.5   # faster propagation
+wolframscript -file waves/main.wl -- --simulation.waves.source_frequency=3.0
+
+# Lagrange point orbits (CR3BP)
+wolframscript -file lagrange/main.wl                                     # L4 libration, Sun-Jupiter
+wolframscript -file lagrange/main.wl -- --simulation.mode=l5             # L5 libration
+wolframscript -file lagrange/main.wl -- --simulation.mode=l1             # L1 saddle-point escape
+wolframscript -file lagrange/main.wl -- --simulation.lagrange.preset=earth_moon
+
+# 2D image sonification
+wolframscript -file images/main.wl                                       # brightness mode, Gaussian test image
+wolframscript -file images/main.wl -- --simulation.mode=colour           # colour mode
+wolframscript -file images/main.wl -- --simulation.mode=hsb              # full HSB stereo mode
+wolframscript -file images/main.wl -- --simulation.images.test_image=temperature
 ```
 
 Each project writes outputs into its own directory:
 
 | Project | Output dir | File types |
 |---------|-----------|------------|
-| all eight apps | `output/` | CSV, GIF, WAV (+ PNG for signal, quantum, primes, relativity) |
+| all twelve apps | `output/` | CSV, GIF, WAV (+ PNG for signal, quantum, primes, relativity, images, cosmology, waves, lagrange) |
 
 Play audio:
 
@@ -157,6 +183,12 @@ afplay primes/output/gaps_audio.wav
 afplay relativity/output/chirp.wav
 afplay relativity/output/gw170817.wav
 afplay relativity/output/geodesic.wav
+afplay cosmology/output/cmb_spectrum_audio.wav
+afplay waves/output/ripple_audio.wav
+afplay waves/output/interference_audio.wav
+afplay lagrange/output/l4_audio.wav
+afplay lagrange/output/l1_audio.wav
+afplay images/output/images_brightness_audio.wav
 
 # Linux — replace afplay with aplay
 aplay signal/output/chord_narrative_full.wav
@@ -173,7 +205,7 @@ See [RELEASE_NOTES_v1.0.0.md](RELEASE_NOTES_v1.0.0.md) for full app descriptions
 
 ## Demo
 
-Run all eight apps with their most interesting presets and collect outputs into `demo/`:
+Run all twelve apps with their most interesting presets and collect outputs into `demo/`:
 
 ```sh
 wolframscript -file demo.wl
@@ -202,7 +234,7 @@ Check whether a previous demo run completed successfully:
 wolframscript -file demo.wl -- --check-only
 ```
 
-Outputs are collected in `demo/` with a written report at `demo/demo-report.md`.
+Outputs are collected in `demo/` with a written report at `demo/demo-report.md`. A full run takes approximately 3–4 minutes.
 
 ---
 
@@ -298,6 +330,62 @@ and sonified with pitch mapped to the orbital angular frequency or gravitational
 blueshift depending on orbit type.
 See [`relativity/README.md`](relativity/README.md).
 
+### cosmology
+
+Sonifies the Cosmic Microwave Background (CMB) angular power spectrum — the
+oldest light in the universe. Two modes: `spectrum` traverses the angular power
+spectrum from ℓ = 2 to ℓ = 2000, mapping each multipole to a note so the
+Sachs-Wolfe plateau, the first acoustic peak near ℓ ≈ 220, and the Silk damping
+tail are directly audible. `sky` generates a flat-sky Gaussian random field from
+the spectrum and traverses it pixel by pixel in Hilbert curve order, making the
+spatial temperature pattern of the CMB sound as a correlated noise texture.
+Both modes accept a `--simulation.cosmology.source=planck` flag to fetch the
+actual Planck 2018 best-fit spectrum from the Planck Legacy Archive (internet
+required). The PNG output shows the power spectrum with peak markers.
+See [`cosmology/README.md`](cosmology/README.md).
+
+### waves
+
+Solves the 2D wave equation using the finite element method (`NDSolveValue` on
+a spatial `Region`). Two modes: `ripple` places a Gaussian impulse at the centre
+of a circular membrane and records the wavefront as it reaches a set of listening
+points at increasing distances — the stereo sweep of arrivals from left to right
+makes the propagation speed directly audible. `interference` drives two coherent
+point sources in a rectangular tank and sweeps a listening point across the
+resulting fringe pattern — constructive and destructive fringes produce swells
+and silences in the audio. Four sanity checks (numerical stability, arrival time,
+causality, Dirichlet boundary) run on every execution.
+See [`waves/README.md`](waves/README.md).
+
+### lagrange
+
+Integrates test-particle trajectories in the circular restricted three-body
+problem (CR3BP) in the co-rotating reference frame. Three modes: `l4` and `l5`
+place a particle near the stable triangular Lagrange points and let it librate
+in a tadpole pattern for six orbital periods — the bounded, quasi-periodic orbit
+of Jupiter's Trojan asteroids. `l1` places a particle near the unstable L1
+saddle point, where it escapes within one to three orbital periods along the
+unstable manifold. In all modes, pitch maps to instantaneous angular velocity
+around the barycentre, pan to x-position in the co-rotating frame, and volume
+to inverse distance to the nearest primary. Named presets cover Sun-Jupiter,
+Earth-Moon, and Sun-Earth systems.
+See [`lagrange/README.md`](lagrange/README.md).
+
+### images
+
+Converts 2D images into audio via Hilbert curve traversal. The Hilbert curve
+visits every pixel in locality-preserving order — pixels adjacent in the audio
+timeline are also spatially nearby — so spatial gradients become smooth pitch
+sweeps and sharp edges become abrupt jumps. Three sonification modes: `brightness`
+maps grayscale intensity linearly to frequency (simplest, best for first-time
+listeners); `colour` maps each pixel to the nearest of ten named colours, each
+with a fixed musical pitch (good for categorical images); `hsb` encodes hue,
+saturation, and brightness simultaneously in left frequency, right frequency, and
+amplitude (most information-dense). Three built-in scientific test images are
+included: a 2D Gaussian, a false-colour temperature map, and a quantum
+probability density.
+See [`images/README.md`](images/README.md).
+
 ---
 
 ## Config system
@@ -333,7 +421,7 @@ See [`docs/APPS.md`](docs/APPS.md) for a full listing of each app's config keys.
 
 ## stem-core
 
-All eight projects load `stem-core` as a shared library. It provides:
+All twelve projects load `stem-core` as a shared library. It provides:
 
 - **Config** — `LoadConfig`, `GetCfg`, `DeepMerge` — four-layer config merging and safe key lookup
 - **Sonification pipeline** — `SonifyTrajectory`, `SpatialLayer`, `MotionLayer`, `EventLayer`, `MixLayers`, `RenderAudio`

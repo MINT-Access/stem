@@ -4,6 +4,12 @@ Simulates and sonifies test-particle motion in the circular restricted three-bod
 problem (CR3BP), making the stability and instability of the five Lagrange points
 audible.
 
+## Requirements
+
+- Mathematica or the free Wolfram Engine
+- `wolframscript` on your PATH
+- `stem-core` (sibling directory `../stem-core`) — loaded automatically by `main.wl`
+
 ## The physics: the co-rotating frame
 
 Two massive bodies — a primary (e.g. the Sun) and a secondary (e.g. Jupiter) —
@@ -126,9 +132,9 @@ a horseshoe).  The audio ends when the particle is clearly gone.
 2. **L4/L5 geometry** — both points satisfy `|L4−P₁| = |L4−P₂| = 1` (equilateral
    triangle, exact from Euler's result)
 3. **Bounded motion** (l4/l5) — maximum distance from the Lagrange point stays
-   below 0.5 units; **Escape** (l1) — distance from L1 grows by factor > 3×
-4. **Quasi-periodicity** (l4/l5) — start-to-end distance after 6 orbital periods
-   < 0.3 units; **Early stop** (l1) — WhenEvent terminates integration before the
+   below 1.5 units; **Escape** (l1) — distance from L1 grows by factor > 3×
+4. **No escape** (l4/l5) — maximum distance from the barycentre stays below
+   2.5 units; **Early stop** (l1) — WhenEvent terminates integration before the
    nominal end time (confirms escape actually occurred)
 
 ## Mass parameter presets
@@ -166,15 +172,45 @@ afplay lagrange/output/l1_audio.wav
 
 | File | Description |
 |------|-------------|
-| `l4_audio.wav` | Sonified L4 libration — pitch from angular velocity |
-| `l4.gif` | Animated trajectory in the co-rotating frame (all 5 Lagrange points shown) |
-| `l4.png` | Full trajectory static plot with primaries and Lagrange points |
-| `l4_trajectory.csv` | Time series: position, velocity, angular velocity, distance to L4 |
-| `l5_audio.wav` | Same for L5 |
-| `l5.gif` | Animated L5 trajectory |
-| `l5.png` | L5 static plot |
-| `l5_trajectory.csv` | L5 trajectory data |
-| `l1_audio.wav` | Sonified L1 escape — dramatic pitch change as particle departs |
-| `l1.gif` | Animated escape trajectory |
-| `l1.png` | Full escape trajectory |
-| `l1_trajectory.csv` | Escape trajectory data |
+| `output/l4_audio.wav` | Sonified L4 libration — pitch from angular velocity |
+| `output/l4.gif` | Animated trajectory in the co-rotating frame (all 5 Lagrange points shown) |
+| `output/l4.png` | Full trajectory static plot with primaries and Lagrange points |
+| `output/l4_trajectory.csv` | Time series: position, velocity, angular velocity, distance to L4 |
+| `output/l5_audio.wav` | Same for L5 |
+| `output/l5.gif` | Animated L5 trajectory |
+| `output/l5.png` | L5 static plot |
+| `output/l5_trajectory.csv` | L5 trajectory data |
+| `output/l1_audio.wav` | Sonified L1 escape — dramatic pitch change as particle departs |
+| `output/l1.gif` | Animated escape trajectory |
+| `output/l1.png` | Full escape trajectory |
+| `output/l1_trajectory.csv` | Escape trajectory data |
+
+## Project structure
+
+```
+lagrange/
+  main.wl           — Entry point (thin orchestrator)
+  experiments.wl    — Curated preset runs
+  config.json       — App defaults
+  src/
+    model.wl        — FindLagrangePoints, GeometryCheck, LibrationModel, EscapeModel
+    sonify.wl       — SonifyLibration, SonifyEscape
+    animate.wl      — AnimateLibration, AnimateEscape (GIF + PNG)
+    output.wl       — ExportLibrationData, ExportEscapeData
+  tests/
+    test_model.wl   — Unit tests (Jacobi constant, L4/L5 geometry, sanity check values)
+  output/           — Output files (not committed)
+  README.md
+  AGENTS.md
+```
+
+## Console output
+
+Step numbers `[1/4]` through `[4/4]` mark each pipeline stage. Sanity check
+results print `[PASS]` or `[FAIL]` with the measured value. Export confirmations
+use `STEMDescribeWAV`, `STEMDescribeGIF`, and `STEMDescribeCSV`. Set
+`STEM_SPEAK=1` for spoken stage announcements:
+
+```sh
+STEM_SPEAK=1 wolframscript -file lagrange/main.wl
+```

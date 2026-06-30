@@ -3,6 +3,12 @@
 Simulates and sonifies 2D wave propagation using the finite element method,
 making the physics of expanding wavefronts and interference patterns audible.
 
+## Requirements
+
+- Mathematica or the free Wolfram Engine
+- `wolframscript` on your PATH
+- `stem-core` (sibling directory `../stem-core`) — loaded automatically by `main.wl`
+
 ## The physics: the wave equation
 
 The motion of any 2D wave — a ripple on water, a struck drum membrane, sound
@@ -140,4 +146,33 @@ afplay waves/output/interference_audio.wav
 | Tank width/height | `simulation.waves.tank_width/height` | 2.0/1.0 | Tank geometry |
 | Source frequency | `simulation.waves.source_frequency` | 2.0 Hz | Fringe spacing ∝ c/freq (λ = c/f) |
 | Duration | `simulation.waves.duration` | 4.0 s | Simulation time (longer allows more reflections and pattern development) |
-| Listening points | `simulation.waves.listening_points` | 4 | Number of radial LPs in ripple mode |
+| Listening points | `simulation.waves.listening_points` | 6 | Number of radial LPs in ripple mode |
+
+## Project structure
+
+```
+waves/
+  main.wl           — Entry point (thin orchestrator)
+  experiments.wl    — Curated preset runs
+  config.json       — App defaults
+  src/
+    model.wl        — RippleModel, InterferenceModel (FEM solvers + sanity checks)
+    sonify.wl       — SonifyRipple, SonifyInterference
+    animate.wl      — AnimateRipple, AnimateInterference (GIF + PNG)
+    output.wl       — ExportRippleData, ExportInterferenceData
+  tests/
+    test_model.wl   — Unit tests (FEM solve, sanity check values, model Association shape)
+  output/           — Output files (not committed)
+  README.md
+  AGENTS.md
+```
+
+## Console output
+
+Step numbers `[1/4]` through `[4/4]` mark each pipeline stage. Sanity check
+results print `[PASS]` or `[FAIL]`. Export confirmations use `STEMDescribeWAV`,
+`STEMDescribeGIF`, `STEMDescribeCSV`. Set `STEM_SPEAK=1` for spoken announcements:
+
+```sh
+STEM_SPEAK=1 wolframscript -file waves/main.wl
+```

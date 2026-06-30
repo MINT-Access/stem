@@ -3,6 +3,13 @@
 Sonifies the Cosmic Microwave Background (CMB) angular power spectrum,
 making the acoustic peaks of the early universe audible.
 
+## Requirements
+
+- Mathematica or the free Wolfram Engine
+- `wolframscript` on your PATH
+- `stem-core` (sibling directory `../stem-core`) — loaded automatically by `main.wl`
+- Internet access only if using `--simulation.cosmology.source=planck`
+
 ## What is the CMB?
 
 The Cosmic Microwave Background is the oldest light in the universe —
@@ -167,14 +174,55 @@ wolframscript -file cosmology/main.wl -- \
 afplay cosmology/output/cmb_spectrum_audio.wav
 ```
 
+## Config keys
+
+| Key | Default | Description |
+|-----|---------|-------------|
+| `simulation.mode` | `"spectrum"` | `"spectrum"` or `"sky"` |
+| `simulation.cosmology.source` | `"simulated"` | `"simulated"` or `"planck"` |
+| `simulation.cosmology.l_max` | `2000` | Maximum multipole ℓ |
+| `simulation.cosmology.sky_resolution` | `64` | Sky patch grid side length (power of 2; sky mode only) |
+| `simulation.cosmology.time_stretch` | `1.0` | Audio duration multiplier |
+
 ## Output files
 
 | File | Description |
 |------|-------------|
-| `cmb_spectrum_audio.wav` | Spectrum sonification (spectrum mode) |
-| `cmb_spectrum.png` | D_ℓ vs log ℓ plot with peak markers |
-| `cmb_spectrum_data.csv` | l, C_l, D_l, is_peak table |
-| `cmb_sky_audio.wav` | Sky map sonification (sky mode) |
-| `cmb_sky.gif` | Animated Hilbert traversal of the sky patch |
-| `cmb_sky.png` | Static false-colour temperature map |
-| `cmb_sky_data.csv` | Per-pixel temperature and frequency table |
+| `output/cmb_spectrum_audio.wav` | Spectrum sonification (spectrum mode) |
+| `output/cmb_spectrum.png` | D_ℓ vs log ℓ plot with peak markers |
+| `output/cmb_spectrum_data.csv` | l, C_l, D_l, is_peak per row |
+| `output/cmb_sky_audio.wav` | Sky map sonification (sky mode) |
+| `output/cmb_sky.gif` | 32-frame animated Hilbert traversal of the sky patch |
+| `output/cmb_sky.png` | Static false-colour temperature map |
+| `output/cmb_sky_data.csv` | Per-pixel temperature and assigned frequency |
+
+## Project structure
+
+```
+cosmology/
+  main.wl           — Entry point (thin orchestrator)
+  experiments.wl    — Curated preset runs
+  config.json       — App defaults
+  src/
+    fetch.wl        — FetchPlanckSpectrum (Planck Legacy Archive HTTP fetch)
+    model.wl        — SimulatedDl, LoadSpectrum, CMBPhysicsChecks, GenerateSkyMap
+    sonify.wl       — SonifySpectrum, SonifySkyMap
+    animate.wl      — AnimateSpectrum (PNG), AnimateSky (GIF)
+    output.wl       — ExportSpectrumData, ExportSkyData
+  tests/
+    test_model.wl   — Unit tests (spectrum shape, peak detection, sky map generation)
+  output/           — Output files (not committed)
+  README.md
+  AGENTS.md
+```
+
+## Console output
+
+Step numbers `[1/4]` through `[4/4]` mark each pipeline stage. Sanity check
+results print `[PASS]` or `[FAIL]` with the measured value. Export confirmations
+use `STEMDescribeWAV`, `STEMDescribeGIF`, and `STEMDescribeCSV`. Set
+`STEM_SPEAK=1` for spoken stage announcements:
+
+```sh
+STEM_SPEAK=1 wolframscript -file cosmology/main.wl
+```

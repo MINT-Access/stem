@@ -237,10 +237,19 @@ reduce audio duration when large image regions have uniform colour.
 
 ```
 images/
-  main.wl       — Entry point (all simulation logic)
-  config.json   — App defaults
-  output/       — Output files (not committed)
+  main.wl           — Entry point (thin orchestrator)
+  experiments.wl    — Curated preset runs
+  config.json       — App defaults
+  src/
+    model.wl        — LoadSourceImage, ComputeImageTraversal, colour palette
+    sonify.wl       — SonifyImageMode (brightness / colour / hsb dispatch)
+    animate.wl      — AnimateImageTraversal (32-frame GIF)
+    output.wl       — ExportImageData, ExportImagePNG
+  tests/
+    test_model.wl   — Unit tests (palette shape, traversal correctness)
+  output/           — Output files (not committed)
   README.md
+  AGENTS.md
 ```
 
 ## Console output

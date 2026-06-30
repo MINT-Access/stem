@@ -3,9 +3,9 @@
 Shared Wolfram Language library for the STEM sonification projects.
 Provides configuration loading, musical pitch mapping, PCM synthesis,
 sonification pipeline, Hilbert curve traversal, file export helpers,
-and screen-reader-friendly console output used by all nine apps:
+and screen-reader-friendly console output used by all twelve apps:
 pendulum, lorenz, asteroids, cellular, signal, quantum, primes,
-images, and relativity.
+images, relativity, cosmology, waves, and lagrange.
 
 ---
 
@@ -55,6 +55,9 @@ stem/
   primes/
   images/
   relativity/
+  cosmology/
+  waves/
+  lagrange/
   docs/
 ```
 
@@ -88,6 +91,10 @@ wolframscript -file signal/main.wl
 wolframscript -file quantum/main.wl
 wolframscript -file primes/main.wl
 wolframscript -file relativity/main.wl
+wolframscript -file images/main.wl
+wolframscript -file cosmology/main.wl
+wolframscript -file waves/main.wl
+wolframscript -file lagrange/main.wl
 ```
 
 Each project writes its outputs into its own `output/` directory (created

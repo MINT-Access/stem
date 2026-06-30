@@ -13,6 +13,10 @@ Per-project AGENTS files:
 - [`quantum/AGENTS.md`](quantum/AGENTS.md)
 - [`primes/AGENTS.md`](primes/AGENTS.md)
 - [`relativity/AGENTS.md`](relativity/AGENTS.md)
+- [`images/AGENTS.md`](images/AGENTS.md)
+- [`cosmology/AGENTS.md`](cosmology/AGENTS.md)
+- [`waves/AGENTS.md`](waves/AGENTS.md)
+- [`lagrange/AGENTS.md`](lagrange/AGENTS.md)
 
 ---
 
@@ -29,6 +33,10 @@ stem/
   quantum/          Quantum mechanics (coherent state QHO, particle-in-a-box)
   primes/           Prime number patterns (Ulam spiral, prime gap rhythm)
   relativity/       General relativity (chirp: PN binary inspiral; geodesic: Schwarzschild orbits)
+  images/           Image sonification (Hilbert curve traversal; brightness / colour / hsb modes)
+  cosmology/        CMB power spectrum sonification (spectrum + sky modes)
+  waves/            2D wave propagation FEM (ripple + interference modes)
+  lagrange/         CR3BP Lagrange points (l1 escape, l4/l5 libration)
   config/           Global config defaults (config.json)
   docs/             Workflow guides
 ```
@@ -69,6 +77,20 @@ wolframscript -file relativity/main.wl -- --sonification.chirp.time_stretch 8
 wolframscript -file relativity/main.wl -- --simulation.mode geodesic    # bound orbit (default)
 wolframscript -file relativity/main.wl -- --simulation.mode geodesic --simulation.geodesic.orbit_type plunging
 wolframscript -file relativity/main.wl -- --simulation.mode geodesic --simulation.geodesic.orbit_type photon
+wolframscript -file images/main.wl                                       # brightness mode, Gaussian (default)
+wolframscript -file images/main.wl -- --simulation.mode=colour
+wolframscript -file images/main.wl -- --simulation.mode=hsb
+wolframscript -file images/main.wl -- --simulation.images.test_image=temperature
+wolframscript -file cosmology/main.wl                                    # CMB power spectrum (default)
+wolframscript -file cosmology/main.wl -- --simulation.mode=sky
+wolframscript -file cosmology/main.wl -- --simulation.cosmology.source=planck  # requires internet
+wolframscript -file waves/main.wl                                        # ripple mode (default)
+wolframscript -file waves/main.wl -- --simulation.mode=interference
+wolframscript -file waves/main.wl -- --simulation.waves.wave_speed=1.5
+wolframscript -file lagrange/main.wl                                     # L4 libration (default)
+wolframscript -file lagrange/main.wl -- --simulation.mode=l5
+wolframscript -file lagrange/main.wl -- --simulation.mode=l1
+wolframscript -file lagrange/main.wl -- --simulation.lagrange.preset=earth_moon
 ```
 
 `asteroids/main.wl` and `asteroids/experiment.wl` accept `[-- YYYY-MM-DD YYYY-MM-DD [Scale]]`.
@@ -95,6 +117,10 @@ Tests (run from the `stem/` root or from within the project directory):
 wolframscript -file pendulum/tests/test_model.wl
 wolframscript -file lorenz/tests/test_model.wl
 wolframscript -file asteroids/tests/test_analyse.wl
+wolframscript -file images/tests/test_model.wl
+wolframscript -file cosmology/tests/test_model.wl
+wolframscript -file waves/tests/test_model.wl
+wolframscript -file lagrange/tests/test_model.wl
 ```
 
 `cellular`, `signal`, `quantum`, `primes`, and `relativity` do not have test files. All existing test files exit 0 on success, 1 on failure.
@@ -180,7 +206,7 @@ All code must run correctly via `wolframscript -file` with no display server.
 
 ## Demo script (demo.wl)
 
-`demo.wl` at the repo root runs all 8 apps with their most compelling presets and
+`demo.wl` at the repo root runs all 12 apps with their most compelling presets and
 collects every output into `demo/<appname>/`. It also writes `demo/demo-report.md`
 (machine-readable run report) and `demo/README.md` (listening guide).
 
@@ -213,6 +239,42 @@ overwritten or deleted on the next `wolframscript -file demo.wl` run.
 - Do not open `/dev/null` inside the per-app loop — it can only be opened once
   per wolframscript session. The script opens `$nullSink` once before `Scan` and
   reuses it for every app.
+
+---
+
+## Sonification paradigms
+
+The 12 apps use two distinct sonification strategies:
+
+**Trajectory-based** (`SonifyTrajectory` pipeline in `stem-core/src/sonification.wl`):
+pendulum, lorenz, asteroids, cellular, quantum, primes, relativity, waves, lagrange.
+A simulation produces an `n × 5` matrix `{t, x, y, z, speed}`. The three pipeline
+layers (SpatialLayer → MotionLayer → EventLayer) map position to stereo pan, speed to
+pitch, and labelled events to accent tones, then mix to a stereo WAV.
+
+**Spatial-field-based** (`HilbertTraversalOrder` from `stem-core/src/hilbert.wl`):
+images, cosmology.
+A 2D spatial field (an image or a sky temperature map) is visited in Hilbert curve
+order so that spatially adjacent pixels become temporally adjacent notes. Pitch and
+volume are derived from the pixel value at each step (brightness, colour index, CMB
+temperature, etc.). This paradigm does not use `SonifyTrajectory`.
+
+---
+
+## Sanity check pattern
+
+Since `relativity`, all new apps run exactly **four numbered sanity checks** before
+exporting, printing `[PASS]` or `[FAIL]` for each. The checks are app-specific but
+follow the same structural contract:
+
+1. A numerical accuracy check (e.g. Jacobi constant drift, energy conservation)
+2. A geometry or analytical reference check (exact formula vs. computed result)
+3. A physics outcome check for the "stable" mode (e.g. bounded motion)
+4. A physics outcome check for the "unstable" mode (e.g. escape confirmed)
+
+Apps that implement this: `relativity`, `cosmology`, `waves`, `lagrange`.
+Earlier apps (`pendulum` through `primes`) pre-date the pattern and use ad-hoc checks.
+New apps should follow the four-check pattern.
 
 ---
 
