@@ -100,3 +100,31 @@ Avoid: "musical", "melodic" (unless describing a specific deliberate musical map
 ---
 
 *Last updated: 2026-07-03*
+
+---
+
+## dynamical/ app — post-implementation items
+
+### 6. demo_html.wl — add dynamical/ section
+
+**Issue:** demo_html.wl was written before the dynamical/ app existed. It needs a new `appMeta` entry for the logistic map.
+
+**Fix:** Add to `appMeta` in `demo_html.wl`:
+- Title: "Logistic Map — Period-Doubling Route to Chaos"
+- Description: the logistic map story, r sweep from order to chaos
+- Listening guide: "Listen for the rhythm doubling, then doubling again, before dissolving into chaos. The sudden three-note rhythm near the end is the period-3 window — an island of order guaranteed to exist by mathematics."
+- Primary WAV: sweep_audio.wav
+- Audio label: "Listen — bifurcation sweep, r = 2.5 → 4.0"
+- GIF: sweep.gif
+- CLI: wolframscript -file dynamical/main.wl
+- Position: after lorenz, before cellular (matching demo.wl order)
+
+### 7. Stage 2/3 consolidation needed for dynamical/
+
+**Issue:** dynamical/ was added after the consolidation pass. Before the next release tag it needs:
+- Verified inclusion in demo.wl and demo-report.md
+- docs/APPS.md entry for dynamical/ with all config keys
+- Root README.md updated: repo layout diagram, Quick Start examples, Projects section, afplay examples
+- demo_html.wl updated (see item 6 above)
+
+**Scope:** One targeted Claude Code consolidation session covering dynamical/ and images/ enhancements together, before next release tag.
