@@ -1,0 +1,21 @@
+{
+  "version": 1,
+  "app": "dynamical",
+  "description": "Logistic map and its period-doubling route to chaos",
+
+  "simulation": {
+    "mode": "sweep",
+    "dynamical": {
+      "r_start": 2.5,
+      "r_end": 4.0,
+      "r_steps": 500,
+      "r": 3.8,
+      "preset": "",
+      "n_transient": 200,
+      "n_attractor": 100,
+      "n_iterations": 300,
+      "note_duration": 0.08,
+      "x0": 0.5
+    }
+  }
+}
