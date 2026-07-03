@@ -1,8 +1,9 @@
 #!/usr/bin/env wolframscript
 
 (* images/experiments.wl — Curated preset runs for image sonification.
-   Each experiment calls the main entry point with a specific configuration
-   and writes its outputs to images/output/. *)
+   Each experiment calls the main pipeline with a specific configuration
+   and writes its outputs to images/output/, including a prepended
+   spoken intro, mirroring main.wl's behaviour exactly. *)
 
 $projectRoot  = DirectoryName[$InputFileName];
 $stemCoreRoot = FileNameJoin[{$projectRoot, "..", "stem-core"}];
@@ -11,28 +12,38 @@ Get[FileNameJoin[{$projectRoot, "src", "model.wl"}]];
 Get[FileNameJoin[{$projectRoot, "src", "sonify.wl"}]];
 Get[FileNameJoin[{$projectRoot, "src", "animate.wl"}]];
 Get[FileNameJoin[{$projectRoot, "src", "output.wl"}]];
+Get[FileNameJoin[{$projectRoot, "src", "speech.wl"}]];
 
 $outDir = FileNameJoin[{$projectRoot, "output"}];
 If[!DirectoryQ[$outDir], CreateDirectory[$outDir]];
 
 RunExperiment[name_String, overrides_Association] :=
   Module[{cfg, mode, imgSizeCfg, inputFile, testImage, freqMin, freqMax,
-          noteDur, sr, imgN, imgSize, processedImg, srcDesc, model,
-          freqAssigned, outWAV, outGIF, outCSV, outPNG},
+          brightnessScale, brightnessGamma, noteDurationBase, scanDirectionCfg,
+          sr, imgN, imgSize, travMode, processedImg, srcDesc, model,
+          sonifyResult, channels, freqAssigned, colourStats,
+          sonificationDurSec, introText, introBuffer, pauseBuffer,
+          finalBuffer, finalLeft, finalRight, totalDurSec,
+          outWAV, outGIF, outCSV, outPNG},
     Print[""];
     STEMHeading["Experiment: " <> name];
     cfg = DeepMerge[
       LoadConfig["images", {}],
       overrides
     ];
-    mode       = GetCfg[cfg, {"simulation","mode"},                  "brightness"];
-    imgSizeCfg = GetCfg[cfg, {"simulation","images","size"},          64];
-    inputFile  = GetCfg[cfg, {"simulation","images","input_file"},    ""];
-    testImage  = GetCfg[cfg, {"simulation","images","test_image"},    "gaussian"];
-    freqMin    = N @ GetCfg[cfg, {"simulation","images","freq_min"},  200];
-    freqMax    = N @ GetCfg[cfg, {"simulation","images","freq_max"},  2000];
-    noteDur    = N @ GetCfg[cfg, {"simulation","images","note_duration"}, 0.05];
-    sr         = GetCfg[cfg, {"sonification","sample_rate"}, 44100];
+    mode             = GetCfg[cfg, {"simulation","mode"},                     "brightness"];
+    imgSizeCfg       = GetCfg[cfg, {"simulation","images","size"},             64];
+    inputFile        = GetCfg[cfg, {"simulation","images","input_file"},       ""];
+    testImage        = GetCfg[cfg, {"simulation","images","test_image"},       "gaussian"];
+    freqMin          = N @ GetCfg[cfg, {"simulation","images","freq_min"},     200];
+    freqMax          = N @ GetCfg[cfg, {"simulation","images","freq_max"},     2000];
+    brightnessScale  = GetCfg[cfg, {"simulation","images","brightness_scale"}, "log"];
+    brightnessGamma  = N @ GetCfg[cfg, {"simulation","images","brightness_gamma"}, 1.0];
+    noteDurationBase = N @ GetCfg[cfg, {"simulation","images","note_duration_base"}, 0.02];
+    scanDirectionCfg = GetCfg[cfg, {"simulation","images","scan_direction"},   "hilbert"];
+    sr               = GetCfg[cfg, {"sonification","sample_rate"}, 44100];
+
+    travMode = If[mode === "scan_horizontal", "raster", scanDirectionCfg];
     imgN    = Min[8, Round[Log2[N[imgSizeCfg]]]];
     imgSize = 2^imgN;
 
@@ -42,9 +53,39 @@ RunExperiment[name_String, overrides_Association] :=
     outPNG = FileNameJoin[{$outDir, name <> ".png"}];
 
     {processedImg, srcDesc} = LoadSourceImage[inputFile, testImage, imgSize];
-    model = ComputeImageTraversal[processedImg, imgN];
-    freqAssigned = SonifyImageMode[mode, model, freqMin, freqMax, noteDur, sr, outWAV];
-    AnimateImageTraversal[model, outGIF];
+    model = ComputeImageTraversal[processedImg, imgN, travMode];
+
+    sonifyResult = SonifyImageMode[mode, model, freqMin, freqMax, noteDurationBase, sr,
+                                    brightnessScale, brightnessGamma];
+    channels     = sonifyResult["channels"];
+    freqAssigned = sonifyResult["freqAssigned"];
+    colourStats  = sonifyResult["colourStats"];
+
+    sonificationDurSec = N[model["nPixels"] * noteDurationBase];
+    introText = BuildIntroText[mode, srcDesc,
+      ImageDimensions[processedImg][[1]], ImageDimensions[processedImg][[2]],
+      brightnessScale, sonificationDurSec, colourStats];
+    introBuffer = BuildIntroBuffer[introText, sr];
+    introBuffer = If[Length[introBuffer] > 0, NormalizeBuffer[introBuffer, 0.95], introBuffer];
+    pauseBuffer = If[Length[introBuffer] > 0, ConstantArray[0.0, Round[sr * 0.4]], {}];
+
+    If[Length[channels] === 1,
+      finalBuffer = Join[introBuffer, pauseBuffer, channels[[1]]];
+      ExportAudioBuffer[finalBuffer, outWAV, sr];
+      totalDurSec = N[Length[finalBuffer]] / sr,
+
+      finalLeft  = Join[introBuffer, pauseBuffer, channels[[1]]];
+      finalRight = Join[introBuffer, pauseBuffer, channels[[2]]];
+      EnsureDir[outWAV];
+      Export[outWAV, Sound[SampledSoundList[{finalLeft, finalRight}, sr]], "WAV"];
+      totalDurSec = N[Length[finalLeft]] / sr
+    ];
+    STEMDescribeWAV[outWAV, totalDurSec];
+
+    If[mode === "scan_horizontal",
+      AnimateRasterScan[model, outGIF],
+      AnimateImageTraversal[model, outGIF]
+    ];
     ExportImageData[model, freqAssigned, outCSV];
     ExportImagePNG[model, outPNG];
     Print["  Experiment done: ", name]
@@ -53,7 +94,7 @@ RunExperiment[name_String, overrides_Association] :=
 
 (* ── Experiments ────────────────────────────────────────────────────── *)
 
-(* 1. Brightness — smooth Gaussian gradient: linear pitch sweep *)
+(* 1. Brightness — smooth Gaussian gradient: log pitch sweep (default scale) *)
 RunExperiment["brightness_gaussian", <|
   "simulation" -> <|
     "mode" -> "brightness",
@@ -61,7 +102,7 @@ RunExperiment["brightness_gaussian", <|
   |>
 |>];
 
-(* 2. Colour — temperature map: concentric colour bands -> musical scale *)
+(* 2. Colour — temperature map: concentric colour bands -> spectral palette *)
 RunExperiment["colour_temperature", <|
   "simulation" -> <|
     "mode" -> "colour",
@@ -69,7 +110,7 @@ RunExperiment["colour_temperature", <|
   |>
 |>];
 
-(* 3. HSB — quantum probability density: four lobes, rich stereo texture *)
+(* 3. HSB — quantum probability density: four lobes, pitch+timbre texture *)
 RunExperiment["hsb_quantum", <|
   "simulation" -> <|
     "mode" -> "hsb",
@@ -106,7 +147,7 @@ RunExperiment["brightness_narrow_range", <|
   |>
 |>];
 
-(* 7. HSB — temperature map: colour structure audible in both stereo channels *)
+(* 7. HSB — temperature map: colour structure audible in pitch and timbre *)
 RunExperiment["hsb_temperature", <|
   "simulation" -> <|
     "mode" -> "hsb",
@@ -121,8 +162,68 @@ RunExperiment["brightness_fast_notes", <|
     "images" -> <|
       "test_image" -> "gaussian",
       "size" -> 32,
-      "note_duration" -> 0.02
+      "note_duration_base" -> 0.01
     |>
+  |>
+|>];
+
+(* 9. Scan horizontal — same Gaussian image as experiment 1: listen to
+   this first, then brightness_gaussian, to hear the Hilbert locality
+   improvement directly (per LISTENING_GUIDE.md's recommended sequence). *)
+RunExperiment["scan_horizontal_gaussian", <|
+  "simulation" -> <|
+    "mode" -> "scan_horizontal",
+    "images" -> <|"test_image" -> "gaussian", "size" -> 32|>
+  |>
+|>];
+
+(* 10. Brightness — linear scale override, for direct comparison against
+   the log-scale default (experiment 1). *)
+RunExperiment["brightness_linear_gaussian", <|
+  "simulation" -> <|
+    "mode" -> "brightness",
+    "images" -> <|
+      "test_image" -> "gaussian",
+      "size" -> 32,
+      "brightness_scale" -> "linear"
+    |>
+  |>
+|>];
+
+(* 11. Brightness — log scale with gamma=2.5: compresses highlights, so
+   only the brightest central pixels reach the top of the frequency range. *)
+RunExperiment["brightness_gamma_compressed", <|
+  "simulation" -> <|
+    "mode" -> "brightness",
+    "images" -> <|
+      "test_image" -> "gaussian",
+      "size" -> 32,
+      "brightness_scale" -> "log",
+      "brightness_gamma" -> 2.5
+    |>
+  |>
+|>];
+
+(* 12. Colour — slower scan (note_duration_base=0.05): held notes in
+   colour mode become long enough to comfortably count by ear. *)
+RunExperiment["colour_slow_scan", <|
+  "simulation" -> <|
+    "mode" -> "colour",
+    "images" -> <|
+      "test_image" -> "temperature",
+      "size" -> 32,
+      "note_duration_base" -> 0.05
+    |>
+  |>
+|>];
+
+(* 13. HSB — 64x64 quantum image: large enough to trigger the 25/50/75%
+   quadrant orientation clicks and hear the dark-vs-bright timbre
+   contrast across a longer traversal. *)
+RunExperiment["hsb_timbre_demo", <|
+  "simulation" -> <|
+    "mode" -> "hsb",
+    "images" -> <|"test_image" -> "quantum", "size" -> 64|>
   |>
 |>];
 

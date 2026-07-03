@@ -36,3 +36,37 @@ AnimateImageTraversal[model_Association, outGIF_String] :=
 
     ExportGIF[gifFrames, outGIF, 10]
   ];
+
+(* Render a 32-frame GIF of a simple horizontal sweep line moving down the
+   image row by row — the pedagogical scan_horizontal mode's counterpart
+   to AnimateImageTraversal's Hilbert path, so the visual matches the
+   simpler raster traversal this mode sonifies. *)
+AnimateRasterScan[model_Association, outGIF_String] :=
+  Module[{nGIFFrames = 32, processedImg, imgSize,
+          displayData, rowsAt, gifFrames},
+    processedImg = model["img"];
+    imgSize      = model["imgSize"];
+
+    displayData = Reverse @ ImageData[ColorConvert[processedImg, "RGB"]];
+    rowsAt = Table[Max[1, Round[k * imgSize / nGIFFrames]], {k, nGIFFrames}];
+
+    gifFrames = Table[
+      With[{row = rowsAt[[k]], yPos = imgSize - rowsAt[[k]] + 0.5},
+        Graphics[{
+          Raster[displayData, {{0, 0}, {imgSize, imgSize}}],
+          (* Already-scanned rows, shaded to show progress *)
+          {Opacity[0.35], White, Rectangle[{0, imgSize - row}, {imgSize, imgSize}]},
+          (* Current scan line *)
+          {Opacity[0.9], RGBColor[1.0, 0.25, 0.0], Thick,
+           Line[{{0, yPos}, {imgSize, yPos}}]}
+        },
+        PlotRange    -> {{0, imgSize}, {0, imgSize}},
+        ImagePadding -> None,
+        AspectRatio  -> 1,
+        ImageSize    -> 256]
+      ],
+      {k, nGIFFrames}
+    ];
+
+    ExportGIF[gifFrames, outGIF, 10]
+  ];

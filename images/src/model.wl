@@ -1,19 +1,87 @@
-(* images/src/model.wl — Image loading and Hilbert traversal *)
+(* images/src/model.wl — Image loading, spectral palette, and traversal *)
 
-(* Colour palette: 10 named colours with fixed musical pitches (C2-E5).
-   Used by colour mode and referenced in the CSV export. *)
+(* Spectral colour palette: 8 named colours ordered by position in the
+   visible light spectrum (violet = shortest wavelength, red = longest),
+   plus white (broadband/saturated) and black (absent/zero) as endpoints.
+   Each colour has a fixed musical pitch drawn from recognisable diatonic
+   note names spanning roughly two octaves from C3, consistent with the
+   scale-based (not chord-based) pitch mapping used by other stem apps.
+   Black is mapped to freq 0.0, which SonifyImageMode treats as silence. *)
 $imgPalette = {
-  <| "name" -> "black",  "rgb" -> {0.00, 0.00, 0.00}, "freq" -> 130.81 |>,
-  <| "name" -> "grey",   "rgb" -> {0.50, 0.50, 0.50}, "freq" -> 164.81 |>,
-  <| "name" -> "red",    "rgb" -> {0.90, 0.10, 0.10}, "freq" -> 196.00 |>,
-  <| "name" -> "orange", "rgb" -> {1.00, 0.50, 0.00}, "freq" -> 220.00 |>,
-  <| "name" -> "yellow", "rgb" -> {1.00, 0.90, 0.00}, "freq" -> 261.63 |>,
-  <| "name" -> "green",  "rgb" -> {0.10, 0.80, 0.10}, "freq" -> 329.63 |>,
-  <| "name" -> "cyan",   "rgb" -> {0.00, 0.80, 0.80}, "freq" -> 392.00 |>,
-  <| "name" -> "blue",   "rgb" -> {0.10, 0.10, 0.90}, "freq" -> 440.00 |>,
-  <| "name" -> "violet", "rgb" -> {0.50, 0.00, 0.90}, "freq" -> 523.25 |>,
-  <| "name" -> "white",  "rgb" -> {1.00, 1.00, 1.00}, "freq" -> 659.25 |>
+  <| "name" -> "violet", "rgb" -> {0.50, 0.00, 0.50}, "freq" -> 130.81, "spectral_position" -> 1 |>,
+  <| "name" -> "blue",   "rgb" -> {0.00, 0.00, 1.00}, "freq" -> 146.83, "spectral_position" -> 2 |>,
+  <| "name" -> "cyan",   "rgb" -> {0.00, 1.00, 1.00}, "freq" -> 174.61, "spectral_position" -> 3 |>,
+  <| "name" -> "green",  "rgb" -> {0.00, 0.50, 0.00}, "freq" -> 196.00, "spectral_position" -> 4 |>,
+  <| "name" -> "yellow", "rgb" -> {1.00, 1.00, 0.00}, "freq" -> 220.00, "spectral_position" -> 5 |>,
+  <| "name" -> "orange", "rgb" -> {1.00, 0.50, 0.00}, "freq" -> 261.63, "spectral_position" -> 6 |>,
+  <| "name" -> "red",    "rgb" -> {1.00, 0.00, 0.00}, "freq" -> 293.66, "spectral_position" -> 7 |>,
+  <| "name" -> "white",  "rgb" -> {1.00, 1.00, 1.00}, "freq" -> 392.00, "spectral_position" -> 8 |>,
+  <| "name" -> "black",  "rgb" -> {0.00, 0.00, 0.00}, "freq" -> 0.0,    "spectral_position" -> 9 |>
 };
+
+(* PaletteLabColors
+   Precomputes each palette entry's RGB colour converted to LABColor.
+   Call once per run and reuse across all pixels — converting per-pixel
+   is unnecessary since the palette itself never changes during a run. *)
+PaletteLabColors[palette_List] :=
+  Map[ColorConvert[RGBColor @@ #["rgb"], "LAB"] &, palette];
+
+(* NearestPaletteIndexLab
+   Fast per-pixel lookup: rgbPixel is a 3-element {r,g,b} list; paletteLab
+   is the precomputed list from PaletteLabColors. Uses ColorDistance in
+   the perceptually uniform Lab colour space (rather than Euclidean RGB
+   distance) so the nearest-neighbour match tracks human colour
+   perception, consistent with Rao's compareColor[] approach. *)
+NearestPaletteIndexLab[rgbPixel_List, paletteLab_List] :=
+  Module[{pixLab, distances},
+    pixLab    = ColorConvert[RGBColor @@ Take[rgbPixel, 3], "LAB"];
+    distances = Map[ColorDistance[pixLab, #] &, paletteLab];
+    First[Ordering[distances, 1]]
+  ];
+
+(* NearestPaletteIndex
+   Convenience wrapper for callers (tests, one-off lookups) that don't
+   already have a precomputed paletteLab list. Per-pixel sonification
+   code should call NearestPaletteIndexLab directly with a precomputed
+   paletteLab to avoid reconverting the palette on every pixel. *)
+NearestPaletteIndex[rgbPixel_List, palette_List] :=
+  NearestPaletteIndexLab[rgbPixel, PaletteLabColors[palette]];
+
+(* ColourRunsFromIndices
+   Splits a sequence of palette indices into consecutive equal-value runs.
+   Each run becomes one held note in colour mode — a uniform-colour
+   sequence of any length collapses to exactly one run. *)
+ColourRunsFromIndices[idxSeq_List] := Split[idxSeq];
+
+(* BrightnessToFreq
+   Maps a grayscale brightness value in [0,1] to a frequency in Hz.
+
+   scaleType "linear" — freqMin + b*(freqMax - freqMin)   (previous behaviour)
+   scaleType "log"    — freqMin * (freqMax/freqMin)^(b^gamma)
+                         Matches the logarithmic way human hearing
+                         perceives frequency. gamma > 1 compresses
+                         highlights (bright end spread out less);
+                         gamma < 1 compresses shadows.
+   Boundary values match exactly at b=0 (-> freqMin) and b=1 (-> freqMax)
+   for both scale types. *)
+BrightnessToFreq[b_?NumericQ, freqMin_?NumericQ, freqMax_?NumericQ,
+                 Optional[scaleType_String, "log"],
+                 Optional[gamma_?NumericQ, 1.0]] :=
+  Switch[scaleType,
+    "log",    freqMin * (freqMax / freqMin)^(b^gamma),
+    "linear", freqMin + b * (freqMax - freqMin),
+    _,        freqMin + b * (freqMax - freqMin)
+  ];
+
+(* RasterTraversalOrder
+   Returns the list of {col, row} pixel coordinates (1-based) visited by
+   a simple left-to-right, top-to-bottom raster scan of a 2^n x 2^n grid.
+   Used by scan_horizontal mode as a deliberately simpler alternative to
+   the Hilbert traversal, so a listener can compare the two directly. *)
+RasterTraversalOrder[n_Integer?Positive] :=
+  Module[{size = 2^n},
+    Flatten[Table[{col, row}, {row, 1, size}, {col, 1, size}], 1]
+  ];
 
 (* Load or generate the source image and resize to imgSize x imgSize.
    Returns {processedImg, description_string}. *)
@@ -87,14 +155,19 @@ LoadSourceImage[inputFile_String, testImage_String, imgSize_Integer] :=
     {ImageResize[rawImg, {imgSize, imgSize}], desc}
   ];
 
-(* Compute Hilbert curve traversal and extract per-pixel channel arrays.
+(* Compute the pixel traversal order and extract per-pixel channel arrays.
+   scanDirection selects "hilbert" (default; locality-preserving) or
+   "raster" (simple row-major scan, used by scan_horizontal mode).
    Returns an Association with all data needed by sonify, animate, and output. *)
-ComputeImageTraversal[processedImg_Image, imgN_Integer] :=
+ComputeImageTraversal[processedImg_Image, imgN_Integer, scanDirection_String : "hilbert"] :=
   Module[{traversal, nPixels, imgSize,
           greyData, hsbData, rgbData,
           pixBright, pixHue, pixSat},
     imgSize   = 2^imgN;
-    traversal = HilbertTraversalOrder[imgN];
+    traversal = If[scanDirection === "raster",
+      RasterTraversalOrder[imgN],
+      HilbertTraversalOrder[imgN]
+    ];
     nPixels   = Length[traversal];
     greyData  = ImageData[ColorConvert[processedImg, "Grayscale"]];
     hsbData   = ImageData[ColorConvert[processedImg, "HSB"]];
@@ -103,14 +176,15 @@ ComputeImageTraversal[processedImg_Image, imgN_Integer] :=
     pixHue    = Table[hsbData[[ traversal[[i,2]], traversal[[i,1]], 1 ]], {i, nPixels}];
     pixSat    = Table[hsbData[[ traversal[[i,2]], traversal[[i,1]], 2 ]], {i, nPixels}];
     <|
-      "img"       -> processedImg,
-      "imgN"      -> imgN,
-      "imgSize"   -> imgSize,
-      "traversal" -> traversal,
-      "nPixels"   -> nPixels,
-      "pixBright" -> pixBright,
-      "pixHue"    -> pixHue,
-      "pixSat"    -> pixSat,
-      "rgbData"   -> rgbData
+      "img"           -> processedImg,
+      "imgN"          -> imgN,
+      "imgSize"       -> imgSize,
+      "scanDirection" -> scanDirection,
+      "traversal"     -> traversal,
+      "nPixels"       -> nPixels,
+      "pixBright"     -> pixBright,
+      "pixHue"        -> pixHue,
+      "pixSat"        -> pixSat,
+      "rgbData"       -> rgbData
     |>
   ];
