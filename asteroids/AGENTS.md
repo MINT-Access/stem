@@ -4,7 +4,7 @@
 
 Near-Earth Asteroid Tracker in Wolfram Language. Fetches live data from
 NASA's NeoWs API, analyses close approaches, exports CSV, an animated
-solar system GIF, and a musical WAV sonification. Runs entirely from the
+solar system GIF, and a WAV sonification. Runs entirely from the
 terminal via `wolframscript`.
 
 ## Project structure
@@ -29,7 +29,7 @@ terminal via `wolframscript`.
                             `OrbitalToEcliptic2D`, `KeplerPosition`,
                             `ComputeGeocentricAngle`, `AugmentAsteroidsWithAngles`,
                             `ExportAnimation`, `$EarthOrbitalElements`)
-- `src/sonify.wl`        — Musical WAV (`ExportSonification`)
+- `src/sonify.wl`        — WAV sonification (`ExportSonification`)
 - `tests/test_analyse.wl`— Offline unit tests incl. orbital mechanics (no API call)
 - `output/`                — All outputs (not committed)
 

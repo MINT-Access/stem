@@ -294,7 +294,7 @@ Order 6 covers 64×64; order 7 covers 128×128.
 5. **Colour mode note merging**: `ColourRunsFromIndices` (== `Split`) groups
    consecutive equal elements. For images with smooth gradients nearly all
    colour runs are length 1, so the run-length encoding provides little
-   compression but keeps the musical phrasing structure.
+   compression but keeps the phrasing structure intact.
 
 6. **Black = silence, not a special case**: the black palette entry has
    `freq -> 0.0`. `StemSynthNote` naturally produces an all-zero buffer

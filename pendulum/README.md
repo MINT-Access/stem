@@ -2,7 +2,7 @@
 
 A pendulum physics simulation written in Wolfram Language, runnable entirely
 from the terminal via `wolframscript`. Produces CSV data, an animated GIF,
-and a musical WAV sonification.
+and a WAV sonification.
 
 ## Requirements
 
@@ -35,7 +35,7 @@ wolframscript -file tests/test_model.wl
 |------|-------------|
 | `output/simple_results.csv` | Time, angle, velocity, energy per time step |
 | `output/simple_animation.gif` | Looping animated GIF of the pendulum |
-| `output/simple_audio.wav` | Musical sonification (A minor pentatonic, WAV) |
+| `output/simple_audio.wav` | Sonification (A minor pentatonic scale, WAV) |
 
 **Double mode** (`--simulation.mode=double`, default):
 

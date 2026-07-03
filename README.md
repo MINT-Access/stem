@@ -1,6 +1,6 @@
 # stem
 
-[![Version](https://img.shields.io/badge/version-1.1.0-blue.svg)](RELEASE_NOTES_v1.1.0.md)
+[![Version](https://img.shields.io/badge/version-1.2.0-blue.svg)](RELEASE_NOTES_v1.2.0.md)
 [![Wolfram Language](https://img.shields.io/badge/Wolfram_Language-13%2B-DD1100.svg)](https://www.wolfram.com/engine/)
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](LICENSE)
 
@@ -17,6 +17,7 @@ stem/
   stem-core/        Shared library: config, sonification pipeline, PCM synthesis, file export
   pendulum/         Simple and double pendulum ODE simulation
   lorenz/           Lorenz and Rössler strange attractor simulation
+  dynamical/        Logistic map and period-doubling route to chaos
   asteroids/        NASA near-Earth asteroid tracker (live API data)
   cellular/         Conway's Game of Life and Wolfram Rule 110
   signal/           Fourier analysis demonstration (chord, sweep, AM)
@@ -101,6 +102,11 @@ Run any project from the `stem/` root:
 wolframscript -file pendulum/main.wl
 wolframscript -file lorenz/main.wl
 
+# Logistic map — period-doubling route to chaos
+wolframscript -file dynamical/main.wl                                      # sweep mode, r 2.5→4.0
+wolframscript -file dynamical/main.wl -- --simulation.mode=iterate         # iterate at r=3.8
+wolframscript -file dynamical/main.wl -- --simulation.dynamical.preset=period3_window
+
 # Live NASA asteroid data
 wolframscript -file asteroids/main.wl                                    # last 7 days
 wolframscript -file asteroids/main.wl -- 2026-01-01 2026-12-31           # full year
@@ -157,16 +163,18 @@ wolframscript -file lagrange/main.wl -- --simulation.lagrange.preset=earth_moon
 
 # 2D image sonification
 wolframscript -file images/main.wl                                       # brightness mode, Gaussian test image
+wolframscript -file images/main.wl -- --simulation.mode=scan_horizontal  # pedagogical scan
 wolframscript -file images/main.wl -- --simulation.mode=colour           # colour mode
 wolframscript -file images/main.wl -- --simulation.mode=hsb              # full HSB stereo mode
 wolframscript -file images/main.wl -- --simulation.images.test_image=temperature
+wolframscript -file images/main.wl -- --simulation.images.brightness_scale=log
 ```
 
 Each project writes outputs into its own directory:
 
 | Project | Output dir | File types |
 |---------|-----------|------------|
-| all twelve apps | `output/` | CSV, GIF, WAV (+ PNG for signal, quantum, primes, relativity, images, cosmology, waves, lagrange) |
+| all thirteen apps | `output/` | CSV, GIF, WAV (+ PNG for signal, quantum, primes, relativity, images, cosmology, waves, lagrange) |
 
 Play audio:
 
@@ -175,6 +183,8 @@ Play audio:
 afplay signal/output/chord_narrative_full.wav
 afplay pendulum/output/double_audio.wav
 afplay lorenz/output/lorenz_audio.wav
+afplay dynamical/output/sweep_audio.wav
+afplay dynamical/output/iterate_audio.wav
 afplay asteroids/output/asteroids_*.wav
 afplay cellular/output/life_rpentomino_audio.wav
 afplay quantum/output/qho_audio.wav
@@ -199,13 +209,13 @@ Start-Process wmplayer signal\output\chord_narrative_full.wav
 Start-Process wmplayer pendulum\output\double_audio.wav
 ```
 
-See [RELEASE_NOTES_v1.1.0.md](RELEASE_NOTES_v1.1.0.md) for full app descriptions, physics notes, and listening guides.
+See [RELEASE_NOTES_v1.2.0.md](RELEASE_NOTES_v1.2.0.md) for full app descriptions, physics notes, and listening guides.
 
 ---
 
 ## Demo
 
-Run all twelve apps with their most interesting presets and collect outputs into `demo/`:
+Run all thirteen apps with their most interesting presets and collect outputs into `demo/`:
 
 ```sh
 wolframscript -file demo.wl
@@ -234,7 +244,7 @@ Check whether a previous demo run completed successfully:
 wolframscript -file demo.wl -- --check-only
 ```
 
-Outputs are collected in `demo/` with a written report at `demo/demo-report.md`. A full run takes approximately 3–4 minutes.
+Outputs are collected in `demo/` with a written report at `demo/demo-report.md`. A full run takes approximately four minutes (measured: 13/13 apps, 3 min 45 s total).
 
 ---
 
@@ -255,6 +265,26 @@ trajectory trigger pitched notes; spatial position controls the stereo pan. The
 GIF renders the growing trajectory in x-z projection with a
 blue→cyan→orange→red colour gradient.
 See [`lorenz/README.md`](lorenz/README.md).
+
+### dynamical
+
+Sonifies the logistic map, x_{n+1} = r·x_n·(1−x_n), and its period-doubling
+route to chaos. `sweep` mode traverses r from 2.5 to 4.0, sonifying the
+long-term attractor at each step — the rhythm audibly doubles at r≈3.0,
+doubles again, and dissolves into chaos, with a distinct island of order (a
+clean three-note rhythm) at the period-3 window near r≈3.83, guaranteed to
+exist by the Li-Yorke theorem ("period three implies chaos"). `iterate` mode
+fixes r (or a named preset — `fixed_point`, `period2`, `period4`,
+`period3_window`, `chaos`) and sonifies the map's actual time evolution,
+transient included, as a directly countable rhythm: period-4 genuinely
+sounds like a four-note cycle. Four correctness checks run on every
+invocation, including locating the first three period-doubling bifurcation
+points numerically and verifying their ratio against the universal
+Feigenbaum constant (δ≈4.669) — a number that governs the route to chaos in
+any smooth one-dimensional map, not just this one. The sweep mode GIF
+animates the classic bifurcation diagram being drawn progressively, with a
+moving cursor and dashed lines marking the three named events.
+See [`dynamical/README.md`](dynamical/README.md).
 
 ### asteroids
 
@@ -376,15 +406,23 @@ See [`lagrange/README.md`](lagrange/README.md).
 Converts 2D images into audio via Hilbert curve traversal. The Hilbert curve
 visits every pixel in locality-preserving order — pixels adjacent in the audio
 timeline are also spatially nearby — so spatial gradients become smooth pitch
-sweeps and sharp edges become abrupt jumps. Three sonification modes: `brightness`
-maps grayscale intensity linearly to frequency (simplest, best for first-time
-listeners); `colour` maps each pixel to the nearest of ten named colours, each
-with a fixed musical pitch (good for categorical images); `hsb` encodes hue,
-saturation, and brightness simultaneously in left frequency, right frequency, and
-amplitude (most information-dense). Three built-in scientific test images are
-included: a 2D Gaussian, a false-colour temperature map, and a quantum
-probability density.
-See [`images/README.md`](images/README.md).
+sweeps and sharp edges become abrupt jumps. Four sonification modes:
+`brightness` maps grayscale intensity to frequency, logarithmically by default
+to match how human hearing perceives pitch (simplest, best for first-time
+listeners); `scan_horizontal` is a pedagogical raster-scan counterpart to
+`brightness`, letting a listener hear the Hilbert-curve locality benefit
+directly by comparison; `colour` maps each pixel to the nearest of nine
+colours ordered by position in the visible light spectrum — violet the
+lowest pitch, red the highest — using perceptually uniform Lab colour
+distance (good for categorical images); `hsb` encodes hue as a shared pitch
+and brightness as timbre (pure tone → richer harmonics) on top of a
+saturation-controlled amplitude (most information-dense). Three built-in
+scientific test images are included: a 2D Gaussian, a false-colour
+temperature map, and a quantum probability density. Every run opens with a
+short spoken introduction describing the image, mode, and mapping in use.
+See [`images/README.md`](images/README.md) and
+[`images/LISTENING_GUIDE.md`](images/LISTENING_GUIDE.md) for the recommended
+listening sequence.
 
 ---
 
@@ -421,7 +459,7 @@ See [`docs/APPS.md`](docs/APPS.md) for a full listing of each app's config keys.
 
 ## stem-core
 
-All twelve projects load `stem-core` as a shared library. It provides:
+All thirteen projects load `stem-core` as a shared library. It provides:
 
 - **Config** — `LoadConfig`, `GetCfg`, `DeepMerge` — four-layer config merging and safe key lookup
 - **Sonification pipeline** — `SonifyTrajectory`, `SpatialLayer`, `MotionLayer`, `EventLayer`, `MixLayers`, `RenderAudio`

@@ -4,7 +4,7 @@
 
 Lorenz attractor simulation in Wolfram Language, runnable from the terminal
 via `wolframscript`. Produces a trajectory CSV, an animated GIF of the
-butterfly-shaped attractor, and a musical WAV sonification.
+butterfly-shaped attractor, and a WAV sonification.
 
 ## Project structure
 

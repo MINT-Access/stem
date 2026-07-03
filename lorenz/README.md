@@ -2,7 +2,7 @@
 
 A Wolfram Language simulation of the Lorenz strange attractor, runnable
 entirely from the terminal via `wolframscript`. Produces trajectory data,
-an animated GIF visualisation, and a musical audio sonification.
+an animated GIF visualisation, and an audio sonification.
 
 ## The mathematics
 
@@ -59,7 +59,7 @@ Start-Process wmplayer output\rossler_audio.wav
 |-----------------------------------|--------------------------------------|
 | output/lorenz_trajectory.csv        | t, x, y, z, speed at each step      |
 | output/lorenz_animation.gif         | Animated butterfly attractor (x-z)   |
-| output/lorenz_audio.wav             | Musical sonification of x(t)         |
+| output/lorenz_audio.wav             | Sonification of x(t)                 |
 
 ## Sonification
 
@@ -118,7 +118,7 @@ visualise how quickly they diverge.
     │   ├── model.wl         Lorenz ODE, pair solver, divergence
     │   ├── output.wl        CSV export and console summary
     │   ├── animate.wl       GIF animation (single + dual)
-    │   └── sonify.wl        Musical WAV sonification
+    │   └── sonify.wl        WAV sonification
     ├── tests/
     │   └── test_model.wl    Unit tests
     ├── output/                Output directory (not committed)

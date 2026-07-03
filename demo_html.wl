@@ -31,7 +31,7 @@ $genDate     = DateString[];
 (* ── Demo listening order (mirrors demo.wl / demo/README.md) ─── *)
 $appOrder = {
   "signal", "waves", "pendulum", "cellular", "primes", "quantum",
-  "lorenz", "asteroids", "lagrange", "images", "relativity", "cosmology"
+  "lorenz", "dynamical", "asteroids", "lagrange", "images", "relativity", "cosmology"
 };
 
 (* ── App metadata ─────────────────────────────────────────────
@@ -50,7 +50,7 @@ appMeta = <|
     "description" ->
       "The discrete Fourier transform decomposes any signal \[LongDash] sound, " <>
       "light, a radio wave \[LongDash] into a sum of pure frequencies. This app " <>
-      "builds a chord from three musical notes, buries it in random noise, then " <>
+      "builds a chord from three pure tones, buries it in random noise, then " <>
       "uses the Fourier transform to find and recover the original notes. Unlike " <>
       "every other app in this project, the audio is the phenomenon itself: you " <>
       "are not hearing a translation of something else, you are hearing the " <>
@@ -63,6 +63,7 @@ appMeta = <|
       "improvement is dramatic and immediate \[LongDash] no prior knowledge of " <>
       "Fourier analysis is needed to hear it happen.",
     "primary_wav" -> "chord_narrative_full.wav",
+    "primary_wav_label" -> "Full narrative (recommended)",
     "secondary_wavs" -> {
       <| "file" -> "chord_clean.wav",     "label" -> "Clean chord (no noise)" |>,
       <| "file" -> "chord_noisy.wav",     "label" -> "Noisy chord (signal buried in noise)" |>,
@@ -94,6 +95,7 @@ appMeta = <|
       "pause, the reflected wave sweeping back right to left off the " <>
       "boundary.",
     "primary_wav" -> "ripple_audio.wav",
+    "primary_wav_label" -> "Listen \[LongDash] ripple propagation",
     "secondary_wavs" -> {},
     "gif" -> "ripple.gif",
     "gif_static" -> False,
@@ -122,6 +124,7 @@ appMeta = <|
       "drift out of sync with each other \[LongDash] that drift, impossible " <>
       "to predict in advance, is chaos becoming audible.",
     "primary_wav" -> "double_audio.wav",
+    "primary_wav_label" -> "Listen \[LongDash] double pendulum (binaural stereo)",
     "secondary_wavs" -> {},
     "gif" -> "double_animation.gif",
     "gif_static" -> False,
@@ -151,6 +154,7 @@ appMeta = <|
       "again \[LongDash] population explosions and collapses are audible as " <>
       "distinct bursts.",
     "primary_wav" -> "life_rpentomino_audio.wav",
+    "primary_wav_label" -> "Listen \[LongDash] Game of Life, R-pentomino",
     "secondary_wavs" -> {},
     "gif" -> "life_rpentomino_animation.gif",
     "gif_static" -> False,
@@ -180,6 +184,7 @@ appMeta = <|
       "larger gaps. The rhythm is irregular but never random: it is " <>
       "arithmetic, made audible.",
     "primary_wav" -> "gaps_slow.wav",
+    "primary_wav_label" -> "Listen \[LongDash] prime gap rhythm (quarter speed)",
     "secondary_wavs" -> {
       <| "file" -> "gaps_audio.wav", "label" -> "Full-speed rhythm (gaps_audio.wav)" |>
     },
@@ -210,6 +215,7 @@ appMeta = <|
       "what makes this quantum state behave \"as classically as quantum " <>
       "mechanics allows.\"",
     "primary_wav" -> "qho_audio.wav",
+    "primary_wav_label" -> "Listen \[LongDash] quantum harmonic oscillator",
     "secondary_wavs" -> {},
     "gif" -> "qho_density.gif",
     "gif_static" -> False,
@@ -229,8 +235,8 @@ appMeta = <|
       "published in 1963, were the first rigorous proof that a system with " <>
       "no randomness at all can still be practically unpredictable \[LongDash] " <>
       "the origin of the phrase \"the butterfly effect.\" This app plays " <>
-      "the R\[OSlash]ssler attractor, a melodic cousin of Lorenz with a " <>
-      "simpler, single-loop geometry.",
+      "the R\[OSlash]ssler attractor, a cousin of Lorenz with a simpler, " <>
+      "single-loop geometry, producing a smoother, less jagged sonification.",
     "listening_guide" ->
       "Each turning point of the trajectory triggers one note, mapped to a " <>
       "minor pentatonic scale. Listen for phrases that sound almost like a " <>
@@ -238,6 +244,7 @@ appMeta = <|
       "exactly. That near-repetition without ever truly repeating is what " <>
       "deterministic chaos sounds like.",
     "primary_wav" -> "rossler_audio.wav",
+    "primary_wav_label" -> "Listen \[LongDash] R\[OSlash]ssler attractor",
     "secondary_wavs" -> {},
     "gif" -> "rossler_animation.gif",
     "gif_static" -> False,
@@ -250,13 +257,51 @@ appMeta = <|
     "github_path" -> "lorenz"
   |>,
 
+  "dynamical" -> <|
+    "title" -> "Logistic Map \[LongDash] Period-Doubling Route to Chaos",
+    "description" ->
+      "The logistic map x_{n+1} = r\[CenterDot]x_n\[CenterDot](1-x_n) is one " <>
+      "of the simplest equations in mathematics that produces chaos. As the " <>
+      "growth parameter r increases, the long-term behaviour transitions " <>
+      "from a single stable value through a cascade of period-doublings " <>
+      "\[LongDash] one note becomes two, then four, then eight \[LongDash] " <>
+      "before dissolving into chaos. This period-doubling cascade is " <>
+      "governed by the Feigenbaum constant (\[TildeTilde]4.669), a universal " <>
+      "number that appears in any smooth one-dimensional map, not just this " <>
+      "one. The sweep mode traverses the full route from r=2.5 to r=4.0 in " <>
+      "a single audio file.",
+    "listening_guide" ->
+      "Listen for the rhythm doubling \[LongDash] one repeating note " <>
+      "becomes two alternating notes, then four, then eight, each doubling " <>
+      "faster than the last. After the chaos begins, listen for a sudden " <>
+      "return to a clear three-note rhythm near the end: that is the " <>
+      "period-3 window near r\[TildeTilde]3.83, an island of order whose " <>
+      "existence is guaranteed by a mathematical theorem. The event " <>
+      "markers (accent tones) mark the first bifurcation, the onset of " <>
+      "chaos, and the period-3 window.",
+    "primary_wav" -> "sweep_audio.wav",
+    "primary_wav_label" -> "Listen \[LongDash] logistic map bifurcation sweep, r = 2.5 \[RightArrow] 4.0",
+    "secondary_wavs" -> {
+      <| "file" -> "iterate_audio.wav", "label" -> "Iterate mode at r = 3.8 (chaotic region)" |>
+    },
+    "gif" -> "sweep.gif",
+    "gif_static" -> False,
+    "gif_alt" ->
+      "A bifurcation diagram progressively drawn as r sweeps from 2.5 to " <>
+      "4.0: a single line splits into two, then four, then eight branches, " <>
+      "fracturing into a dense chaotic band with a visible gap \[LongDash] " <>
+      "the period-3 window \[LongDash] near the right edge.",
+    "cli" -> "wolframscript -file dynamical/main.wl",
+    "github_path" -> "dynamical"
+  |>,
+
   "asteroids" -> <|
     "title" -> "Asteroids \[LongDash] Live NASA Near-Earth Object Data",
     "description" ->
       "Every day, dozens of asteroids pass near Earth. This app fetches " <>
       "live close-approach data from NASA's Near-Earth Object Web Service " <>
       "for the last seven days and turns every asteroid into a single " <>
-      "musical note. Because the data is live, this is the only " <>
+      "tone. Because the data is live, this is the only " <>
       "simulation in the project whose output is different every single " <>
       "time it runs.",
     "listening_guide" ->
@@ -268,6 +313,7 @@ appMeta = <|
       "nearest approach.",
     (* Resolved dynamically at generation time — see $asteroidsPrimary. *)
     "primary_wav" -> Automatic,
+    "primary_wav_label" -> "Listen \[LongDash] near-Earth asteroids (last 7 days)",
     "secondary_wavs" -> {},
     "gif" -> Automatic,
     "gif_static" -> False,
@@ -298,6 +344,7 @@ appMeta = <|
       "endless, unchanging quality is exactly what orbital stability " <>
       "sounds like.",
     "primary_wav" -> "l4_audio.wav",
+    "primary_wav_label" -> "Listen \[LongDash] L4 tadpole orbit, Sun-Jupiter",
     "secondary_wavs" -> {},
     "gif" -> "l4.gif",
     "gif_static" -> False,
@@ -317,15 +364,19 @@ appMeta = <|
       "simple left-to-right, row-by-row scan makes neighbouring pixels " <>
       "jump around unpredictably in time. This app instead traverses the " <>
       "image along a Hilbert curve, a path that guarantees pixels close " <>
-      "together in the image stay close together in the resulting sound.",
+      "together in the image stay close together in the resulting sound. " <>
+      "A colour mode maps each pixel to a pitch by position in the visible " <>
+      "spectrum \[LongDash] violet is the lowest pitch, red is the highest " <>
+      "\[LongDash] and a pedagogical scan_horizontal mode traverses the same " <>
+      "image in simple row-by-row order, so a listener can hear the " <>
+      "Hilbert curve's locality benefit directly by comparison.",
     "listening_guide" ->
       "In brightness mode, dark pixels produce low tones and bright " <>
-      "pixels produce high tones. The test image is a soft glow, dark at " <>
-      "the edges and brightest at the centre. Listen for a smooth, mostly " <>
-      "rising sweep in pitch as the traversal spirals in from the dark " <>
-      "corners toward the bright centre \[LongDash] that smoothness is the " <>
-      "payoff of the Hilbert curve's locality property.",
+      "pixels produce high tones, with logarithmic scaling matching how " <>
+      "human hearing perceives frequency. Listen for the smooth sweep " <>
+      "from dark corners to the bright centre of the test image.",
     "primary_wav" -> "images_brightness_audio.wav",
+    "primary_wav_label" -> "Listen \[LongDash] Hilbert curve brightness scan (log scale)",
     "secondary_wavs" -> {},
     "gif" -> "images_brightness.gif",
     "gif_static" -> False,
@@ -334,7 +385,10 @@ appMeta = <|
       "across it, sweeping from the dark corners inward toward the bright " <>
       "central peak in a continuous, space-filling path.",
     "cli" -> "wolframscript -file images/main.wl -- --simulation.mode=brightness",
-    "github_path" -> "images"
+    "github_path" -> "images",
+    "listening_guide_note" ->
+      "New to image sonification? See images/LISTENING_GUIDE.md for the " <>
+      "recommended listening sequence."
   |>,
 
   "relativity" -> <|
@@ -355,6 +409,7 @@ appMeta = <|
       "merged black hole settles. This is, note for note, what LIGO's own " <>
       "scientists listened to when they first confirmed the detection.",
     "primary_wav" -> "chirp.wav",
+    "primary_wav_label" -> "Listen \[LongDash] GW150914 gravitational wave chirp",
     "secondary_wavs" -> {},
     "gif" -> "chirp.gif",
     "gif_static" -> False,
@@ -388,6 +443,7 @@ appMeta = <|
       "peak, and how much quieter the second one is, is the sound of a " <>
       "flat universe made mostly of ordinary and dark matter.",
     "primary_wav" -> "cmb_spectrum_audio.wav",
+    "primary_wav_label" -> "Listen \[LongDash] CMB angular power spectrum",
     "secondary_wavs" -> {},
     (* No animated GIF is produced in spectrum mode — cmb_spectrum.png
        is the static plot; see "gif_static". *)
@@ -505,7 +561,7 @@ BuildAppSection[appName_String, index_Integer] := Module[{
   gifFile       = If[appName === "asteroids", $asteroidsPrimary["gif"], meta["gif"]];
   secondaryWavs = meta["secondary_wavs"];
 
-  {primaryFig, primaryOk} = AudioFigure[appName, "Full narrative (recommended)", primaryWav];
+  {primaryFig, primaryOk} = AudioFigure[appName, meta["primary_wav_label"], primaryWav];
   {gifFig, gifOk}         = GifFigure[appName, gifFile, meta["gif_alt"], meta["gif_static"]];
 
   secondaryAnyOk = True;
@@ -559,8 +615,12 @@ BuildAppSection[appName_String, index_Integer] := Module[{
     "<p>" <> EscapeHTML[meta["description"]] <> "</p>\n" <>
     "<h3>Run it yourself</h3>\n" <>
     "<pre><code>" <> EscapeHTML[meta["cli"]] <> "</code></pre>\n" <>
+    If[Lookup[meta, "listening_guide_note", ""] =!= "",
+      "<p>" <> EscapeHTML[meta["listening_guide_note"]] <> "</p>\n",
+      ""
+    ] <>
     "<p><a href=\"https://github.com/MINT-Access/stem/tree/main/" <>
-    meta["github_path"] <> "\">View source on GitHub \[Rule]</a></p>\n" <>
+    meta["github_path"] <> "\">View source on GitHub \[RightArrow]</a></p>\n" <>
     "</div>\n" <>
     "</section>\n",
     allOk
@@ -756,10 +816,10 @@ $html = "<!doctype html>\n" <>
 "<a href=\"#main-content\" class=\"skip-link\">Skip to content</a>\n" <>
 "<header>\n" <>
 "<h1>MINT Access stem</h1>\n" <>
-"<p><strong>Accessible STEM Simulations \[LongDash] v1.1.0</strong></p>\n" <>
-"<p>Twelve physics, mathematics, and cosmology simulations, each producing " <>
-"an animated visualisation and a musical audio sonification designed to be " <>
-"fully accessible to blind and low-vision users.</p>\n" <>
+"<p><strong>Accessible STEM Simulations \[LongDash] v1.2.0</strong></p>\n" <>
+"<p>Thirteen physics, mathematics, and cosmology simulations, each producing " <>
+"an animated visualisation and an audio sonification of the underlying " <>
+"physics, designed to be fully accessible to blind and low-vision users.</p>\n" <>
 "<p class=\"links\">" <>
 "<a href=\"https://github.com/MINT-Access/stem\">GitHub repository</a>" <>
 "<a href=\"https://www.mintaccess.ch/\">MINT Access</a>" <>
@@ -768,10 +828,10 @@ $html = "<!doctype html>\n" <>
 "<main id=\"main-content\">\n" <>
 "<section id=\"intro\">\n" <>
 "<h2>About this demo</h2>\n" <>
-"<p>Each simulation below pairs a visual animation with a musical audio " <>
-"sonification of the same underlying physics or mathematics. Use the " <>
+"<p>Each simulation below pairs a visual animation with a sonification " <>
+"of the same underlying physics or mathematics. Use the " <>
 "jump list to go directly to any simulation, or scroll through all " <>
-"twelve in the recommended listening order. No installation is " <>
+"thirteen in the recommended listening order. No installation is " <>
 "required \[LongDash] everything on this page plays directly in your " <>
 "browser.</p>\n" <>
 "</section>\n" <>
@@ -782,7 +842,7 @@ $html = "<!doctype html>\n" <>
 $sectionsHtml <>
 "</main>\n" <>
 "<footer>\n" <>
-"<p>Generated by MINT Access stem v1.1.0 on " <> $genDate <> "</p>\n" <>
+"<p>Generated by MINT Access stem v1.2.0 on " <> $genDate <> "</p>\n" <>
 "<p class=\"links\">" <>
 "<a href=\"https://github.com/MINT-Access/stem\">GitHub</a> \[Bullet] " <>
 "<a href=\"https://www.mintaccess.ch/\">mintaccess.ch</a>" <>

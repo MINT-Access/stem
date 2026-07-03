@@ -7,7 +7,7 @@ This file tells AI coding assistants how to work effectively in this project.
 A simple pendulum simulation written in Wolfram Language, runnable entirely
 from the terminal via `wolframscript`. Designed as a reusable template for
 physics simulation projects. Produces CSV data, an animated GIF, and a
-musical WAV sonification.
+WAV sonification.
 
 ## Project structure
 
@@ -15,7 +15,7 @@ musical WAV sonification.
 - `src/model.wl`     — ODE definition (`SolvePendulum`) and `PendulumEnergy`.
 - `src/output.wl`    — CSV export (`ExportResults`) and `PrintSummary`.
 - `src/animate.wl`   — Animated GIF export (`ExportAnimation`, `PendulumFrame`).
-- `src/sonify.wl`    — Musical WAV export (`FindZeroCrossings`, `ExportSonification`).
+- `src/sonify.wl`    — WAV sonification export (`FindZeroCrossings`, `ExportSonification`).
 - `tests/test_model.wl` — Unit tests for the physics and solver.
 - `output/`            — Output directory. Do not commit this directory.
 
@@ -38,7 +38,7 @@ wolframscript -file tests/test_model.wl
 |-------------------------------|----------------------------------------|
 | output/results.csv              | Time, angle, velocity, energy per step |
 | output/pendulum_animation.gif   | Looping animated GIF of the pendulum   |
-| output/pendulum_audio.wav       | Musical sonification as WAV audio      |
+| output/pendulum_audio.wav       | Sonification as WAV audio              |
 
 ## Conventions
 

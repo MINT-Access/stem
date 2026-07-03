@@ -1,6 +1,6 @@
 # STEM Apps — Quick Reference
 
-All twelve apps share the same invocation pattern and config system. This
+All thirteen apps share the same invocation pattern and config system. This
 document covers CLI options, modes, config keys, and output files for each.
 
 ---
@@ -11,13 +11,14 @@ document covers CLI options, modes, config keys, and output files for each.
 |-----|--------|-------|-----------|---------------|
 | `pendulum` | Physics ODE | `simple`, `double` | `output/` | No |
 | `lorenz` | Strange attractor | `lorenz`, `rossler` | `output/` | No |
+| `dynamical` | Logistic map / route to chaos | `sweep`, `iterate` | `output/` | No |
 | `asteroids` | NASA NeoWs API | — | `output/` | Yes |
 | `cellular` | Cellular automata | `life`, `rule110` | `output/` | No |
 | `signal` | Fourier analysis | `chord`, `sweep`, `am` | `output/` | No |
 | `quantum` | Quantum mechanics | `qho`, `box` | `output/` | No |
 | `primes` | Prime number patterns | `ulam`, `gaps` | `output/` | No |
 | `relativity` | General relativity | `chirp`, `geodesic` | `output/` | No |
-| `images` | 2D image sonification | `brightness`, `colour`, `hsb` | `output/` | No |
+| `images` | 2D image sonification | `brightness`, `scan_horizontal`, `colour`, `hsb` | `output/` | No |
 | `cosmology` | CMB power spectrum | `spectrum`, `sky` | `output/` | Optional (Planck) |
 | `waves` | 2D wave propagation | `ripple`, `interference` | `output/` | No |
 | `lagrange` | CR3BP Lagrange points | `l4`, `l5`, `l1` | `output/` | No |
@@ -33,7 +34,7 @@ $HardcodedDefaults → config/config.json → <app>/config.json → CLI --key=va
 ```
 
 Keys use dot notation for nesting. CLI overrides accept both
-`--key.subkey=value` and `--key.subkey value` (space form) — all 12 apps
+`--key.subkey=value` and `--key.subkey value` (space form) — all 13 apps
 support both conventions.
 Dump the active config without running the simulation:
 
@@ -118,6 +119,91 @@ wolframscript -file lorenz/main.wl -- --simulation.lorenz.rho=35
 | `output/lorenz_audio.wav` | Sonification of x(t) extrema events |
 | `output/lorenz_animation.gif` | Growing trajectory animation |
 | `output/lorenz_trajectory.csv` | x, y, z time series |
+
+---
+
+## dynamical
+
+Sonifies the logistic map (x_{n+1} = r·x_n·(1-x_n)) and its period-doubling
+route to chaos. `sweep` mode traverses r from `r_start` to `r_end`, sonifying
+the long-term attractor recorded at each step. `iterate` mode fixes r (or a
+named preset) and sonifies the map's actual time evolution over
+`n_iterations` steps, transient included. Discrete per-point note synthesis
+(not the continuous `SonifyTrajectory` pipeline used by `lorenz`/`pendulum`)
+makes period-doubling audible as a directly countable rhythm — period-4
+genuinely sounds like a four-note cycle.
+
+**Run:**
+```sh
+wolframscript -file dynamical/main.wl                                       # sweep mode, r 2.5→4.0
+wolframscript -file dynamical/main.wl -- --simulation.mode=iterate          # iterate at r=3.8
+wolframscript -file dynamical/main.wl -- --simulation.dynamical.preset=fixed_point
+wolframscript -file dynamical/main.wl -- --simulation.dynamical.preset=period2
+wolframscript -file dynamical/main.wl -- --simulation.dynamical.preset=period4
+wolframscript -file dynamical/main.wl -- --simulation.dynamical.preset=period3_window
+wolframscript -file dynamical/main.wl -- --simulation.dynamical.preset=chaos
+wolframscript -file dynamical/main.wl -- --simulation.dynamical.r=3.83
+wolframscript -file dynamical/main.wl -- --simulation.dynamical.r_steps=1000
+```
+
+Named presets (`iterate` mode): `fixed_point` (r=2.8), `period2` (r=3.2),
+`period4` (r=3.5), `period3_window` (r=3.830), `chaos` (r=4.0). The
+`period3_window` preset uses r=3.830 rather than the textbook-cited 3.8284 —
+that value is the window's exact tangent-bifurcation opening edge, where
+convergence to the 3-cycle is pathologically slow; 3.830 converges cleanly
+within the default `n_iterations`.
+
+**Key config keys (`dynamical/config.json`):**
+
+| Key | Default | Description |
+|-----|---------|-------------|
+| `simulation.mode` | `"sweep"` | `"sweep"` or `"iterate"` |
+| `simulation.dynamical.r_start` | `2.5` | Sweep start r (sweep mode) |
+| `simulation.dynamical.r_end` | `4.0` | Sweep end r (sweep mode) |
+| `simulation.dynamical.r_steps` | `500` | Number of r values sampled (sweep mode) |
+| `simulation.dynamical.r` | `3.8` | Fixed r value (iterate mode, used when `preset` is empty) |
+| `simulation.dynamical.preset` | `""` | Named preset (iterate mode) — see above |
+| `simulation.dynamical.n_transient` | `200` | Transient iterations discarded before recording the attractor (sweep mode) |
+| `simulation.dynamical.n_attractor` | `100` | Attractor iterations recorded per r-step (sweep mode) |
+| `simulation.dynamical.n_iterations` | `300` | Total iterations (iterate mode) |
+| `simulation.dynamical.note_duration` | `0.08` | Seconds per note, both modes |
+| `simulation.dynamical.x0` | `0.5` | Initial population fraction |
+
+**Output files:**
+
+| File | Description |
+|------|-------------|
+| `output/sweep_audio.wav` | Spoken intro + sweep sonification (stereo) |
+| `output/sweep.gif` | Progressive bifurcation diagram animation with r cursor |
+| `output/sweep_data.csv` | r, iteration_index, x_n, pitch_hz, pan, volume, event_label |
+| `output/iterate_audio.wav` | Spoken intro + iteration sonification (stereo) |
+| `output/iterate.gif` | x_n vs. n time-series animation |
+| `output/iterate_data.csv` | n, x_n, pitch_hz, pan, volume |
+
+**Notes:**
+- Sonification mapping: pitch = x_n on a 3-octave minor pentatonic scale
+  (root C3); pan = x_n rescaled to [-1,1]; volume = |x_n − x_{n-1}| — the
+  chaotic region's larger jumps sound louder and more active than the
+  steady periodic region.
+- Sweep mode marks three named events with accent tones, announced in the
+  console and via speech as the sweep reaches them: the first
+  period-doubling bifurcation (660 Hz, r≈3.0, located numerically), the
+  onset of chaos (440 Hz, r≈3.57), and the period-3 window (528 Hz, r≈3.83).
+- Four correctness checks run on every invocation, printed as
+  `Checks: 1[PASS] 2[PASS] 3[PASS] 4[PASS]`: the Feigenbaum constant
+  (bifurcation points located via `FindRoot` on the map's stability
+  conditions, not hardcoded — ratio verified within 5% of δ≈4.669), the
+  analytic fixed point x*=1−1/r at r=2.8, the period-2 sum formula
+  (r+1)/r at r=3.2, and the Lyapunov exponent at r=4.0 (verified within
+  5% of log 2 ≈ 0.693).
+- Sweep mode audio duration scales as `r_steps × 8 × note_duration` — only
+  8 of each r-step's recorded attractor points become audible notes (all
+  are equally valid post-transient points; 8 is enough to make any
+  periodicity up to period-8 clearly audible while keeping the default
+  500-step sweep to ~5.3 minutes rather than the ~66 minutes a
+  one-note-per-attractor-point mapping would produce).
+- See [`dynamical/LISTENING_GUIDE.md`](../dynamical/LISTENING_GUIDE.md) for
+  the recommended five-preset listening sequence.
 
 ---
 
@@ -479,50 +565,73 @@ wolframscript -file relativity/main.wl -- --simulation.geodesic.photon.impact_pa
 
 ## images
 
-Converts 2D images into audio via Hilbert curve traversal. Three modes encode
-pixel data as pitch, with the Hilbert locality property ensuring spatial gradients
-become smooth temporal sweeps.
+Converts 2D images into audio via Hilbert curve traversal. Four modes encode
+pixel data as pitch, with the Hilbert locality property ensuring spatial
+gradients become smooth temporal sweeps. `scan_horizontal` is a pedagogical
+raster-scan counterpart to `brightness`, included so a listener can hear the
+Hilbert-curve locality benefit directly by comparing the two.
 
 **Run:**
 ```sh
-wolframscript -file images/main.wl                                       # brightness mode (default)
+wolframscript -file images/main.wl                                       # brightness mode (default, log scale)
+wolframscript -file images/main.wl -- --simulation.mode=scan_horizontal  # pedagogical raster scan
 wolframscript -file images/main.wl -- --simulation.mode=colour
 wolframscript -file images/main.wl -- --simulation.mode=hsb
 wolframscript -file images/main.wl -- --simulation.images.test_image=temperature
 wolframscript -file images/main.wl -- --simulation.images.test_image=quantum
 wolframscript -file images/main.wl -- --simulation.images.input_file=myimage.png
 wolframscript -file images/main.wl -- --simulation.images.size=128
+wolframscript -file images/main.wl -- --simulation.images.brightness_scale=linear
+wolframscript -file images/main.wl -- --simulation.images.brightness_gamma=2.0
+wolframscript -file images/main.wl -- --simulation.images.note_duration_base=0.05
 ```
 
 **Key config keys (`images/config.json`):**
 
 | Key | Default | Description |
 |-----|---------|-------------|
-| `simulation.mode` | `"brightness"` | `"brightness"`, `"colour"`, or `"hsb"` |
+| `simulation.mode` | `"brightness"` | `"brightness"`, `"scan_horizontal"`, `"colour"`, or `"hsb"` |
 | `simulation.images.size` | `64` | Grid side length (image resized to size×size; must be a power of 2) |
 | `simulation.images.input_file` | `""` | Path to a user image file (empty = use built-in test image) |
 | `simulation.images.test_image` | `"gaussian"` | Built-in test image: `"gaussian"`, `"temperature"`, or `"quantum"` |
-| `simulation.images.freq_min` | `200` | Lowest frequency in Hz (brightness and colour modes) |
-| `simulation.images.freq_max` | `2000` | Highest frequency in Hz (brightness and colour modes) |
-| `simulation.images.note_duration` | `0.05` | Duration of each pixel's note in seconds |
+| `simulation.images.freq_min` | `200` | Lowest frequency in Hz (brightness/scan_horizontal modes) |
+| `simulation.images.freq_max` | `2000` | Highest frequency in Hz (brightness/scan_horizontal modes) |
+| `simulation.images.brightness_scale` | `"log"` | `"log"` (default) or `"linear"` brightness-to-frequency mapping |
+| `simulation.images.brightness_gamma` | `1.0` | Log-scale exponent; >1 compresses highlights, <1 compresses shadows |
+| `simulation.images.note_duration_base` | `0.02` | Seconds per pixel (brightness/scan_horizontal/hsb); seconds-per-pixel run-length factor (colour) |
+| `simulation.images.scan_direction` | `"hilbert"` | `"hilbert"` (default) or `"raster"`; `scan_horizontal` always uses raster regardless of this key |
 
 **Output files (mode-prefixed):**
 
 | File | Description |
 |------|-------------|
-| `output/images_{mode}_audio.wav` | Sonification audio |
-| `output/images_{mode}.gif` | 32-frame Hilbert traversal animation |
+| `output/images_{mode}_audio.wav` | Spoken intro + sonification audio |
+| `output/images_{mode}.gif` | 32-frame traversal animation (Hilbert path, or sweep line for scan_horizontal) |
 | `output/images_{mode}_data.csv` | Per-pixel table: hilbert_index, col, row, brightness, hue, saturation, frequency_assigned |
 | `output/images_{mode}.png` | The processed (resized) source image |
 
 **Notes:**
-- In `colour` mode, pixels are quantised to the nearest of 10 named colours (black, grey, red,
-  orange, yellow, green, cyan, blue, violet, white), each with a fixed pitch on a C major scale
-  (C3–C5). Consecutive pixels of the same colour merge into a single held note.
-- In `hsb` mode, hue → left-channel frequency (100–3900 Hz), brightness → right-channel
-  frequency (100–3900 Hz), saturation → amplitude of both channels.
-- Audio duration = size² × note_duration seconds (e.g. 64×64 at 50 ms = ~205 s).
-  Reduce `note_duration` or `size` for faster exploration.
+- In `colour` mode, pixels are matched to the nearest of 9 colours ordered by
+  position in the visible light spectrum (violet = lowest pitch, C3, through
+  red = highest pitch, D4, plus white and black) using colour distance in
+  the perceptually uniform Lab colour space. Consecutive pixels of the same
+  colour merge into a single held note, duration proportional to run length.
+- In `hsb` mode, hue sets a shared pitch on both channels (100–3900 Hz); the
+  left channel is a pure reference tone, and the right channel's timbre
+  grows richer with brightness (pure sine → +2nd harmonic → +2nd and 3rd
+  harmonics) — pitch encodes colour, timbre encodes brightness.
+  Saturation controls the amplitude of both channels.
+- `brightness`/`scan_horizontal` default to logarithmic brightness-to-pitch
+  scaling (matches how human hearing perceives frequency); `linear` is also
+  available via `brightness_scale`.
+- For images larger than 32×32, `brightness` and `hsb` modes mix in three
+  brief 880 Hz orientation clicks at the 25%/50%/75% points of the traversal.
+- Audio duration = size² × note_duration_base seconds (e.g. 64×64 at the
+  default 20 ms/pixel = ~82 s). Reduce `note_duration_base` or `size` for
+  faster exploration.
+- See [`images/LISTENING_GUIDE.md`](../images/LISTENING_GUIDE.md) for the
+  recommended listening sequence (scan_horizontal → brightness → colour →
+  hsb) and the full colour-to-pitch reference table.
 
 ---
 

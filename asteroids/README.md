@@ -3,7 +3,7 @@
 A Wolfram Language data analysis project that fetches live asteroid
 close-approach data from NASA's public NeoWs API and produces a
 statistical report, an animated solar system visualisation, and a
-musical sonification — all from the terminal via `wolframscript`.
+sonification — all from the terminal via `wolframscript`.
 
 ## What it does
 
@@ -14,7 +14,7 @@ velocities, and sizes, and turns the data into:
 - A **CSV report** with one row per asteroid
 - A **solar system animation** (GIF) showing each asteroid as a dot
   around Earth, coloured by hazard status
-- A **musical sonification** (WAV) where each asteroid is one note —
+- A **sonification** (WAV) where each asteroid is one tone —
   pitch reflects miss distance, timbre distinguishes hazardous from safe
 
 ## Requirements
@@ -168,7 +168,7 @@ database, a seeded random angle (seed 42) is used as a fallback.
     │   ├── analyse.wl           Filters and statistics
     │   ├── output.wl            CSV export (17 columns incl. orbital elements)
     │   ├── animate.wl           Solar system GIF + orbital mechanics helpers
-    │   └── sonify.wl            Musical WAV sonification
+    │   └── sonify.wl            WAV sonification
     ├── tests/
     │   └── test_analyse.wl      Offline unit tests (incl. orbital mechanics)
     ├── output/                    Output files (not committed)
