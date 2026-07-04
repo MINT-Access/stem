@@ -21,7 +21,10 @@
       "articulation_mode": "relative",
       "articulation_threshold": 0.15,
       "articulation_threshold_abs": 5,
-      "base_note_duration": 0.06
+      "base_note_duration": 0.06,
+      "rule110": {
+        "base_note_duration": 0.10
+      }
     }
   },
 

@@ -115,7 +115,8 @@ Special events trigger short tone bursts, independent of note articulation:
 | `simulation.cellular.articulation_mode` | `"relative"` | `"relative"` (percent change) or `"absolute"` (cell-count change) |
 | `simulation.cellular.articulation_threshold` | `0.15` | Relative-mode threshold (fraction of previous population) |
 | `simulation.cellular.articulation_threshold_abs` | `5` | Absolute-mode threshold (cell count) |
-| `simulation.cellular.base_note_duration` | `0.06` | Seconds per generation; a run of N generations produces one note of `N × base_note_duration` seconds |
+| `simulation.cellular.base_note_duration` | `0.06` (`life`) | Seconds per generation; a run of N generations produces one note of `N × base_note_duration` seconds |
+| `simulation.cellular.rule110.base_note_duration` | `0.10` (`rule110`) | Per-mode override — applies only when `simulation.mode` is `rule110` |
 
 `articulation_threshold` controls how sensitive note articulation is to
 population change. Lower values (e.g. `0.03`) produce more frequent
@@ -127,9 +128,9 @@ articulates on nearly every generation; the default `0.15` keeps genuinely
 stable stretches held as one note while still responding to real growth or
 collapse (~48 notes for the default 300-generation R-pentomino run).
 
-Audio duration is `generations × base_note_duration` seconds (18 s for 300
-Life generations, 12 s for 200 Rule 110 generations, at the default 0.06
-s/generation).
+Audio duration is `generations × base_note_duration` seconds — 18 s for the
+default 300 Life generations at 0.06 s/generation, and 20 s for the default
+200 Rule 110 generations at its own 0.10 s/generation override.
 
 ```bash
 # Less sensitive articulation — fewer, longer notes

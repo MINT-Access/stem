@@ -221,6 +221,21 @@ RunNoteDuration[runLength_Integer, baseNoteDuration_?NumericQ] :=
   N[runLength * baseNoteDuration]
 
 
+(* ResolveBaseNoteDuration
+   base_note_duration can be overridden per simulation mode — e.g.
+   simulation.cellular.rule110.base_note_duration — so a different
+   default tempo can apply to rule110 without changing life's. Falls
+   back to the shared simulation.cellular.base_note_duration if no
+   mode-specific override is present. *)
+
+ResolveBaseNoteDuration[cfg_Association] :=
+  Module[{mode, sharedDefault},
+    mode          = GetCfg[cfg, {"simulation","mode"}, "life"];
+    sharedDefault = GetCfg[cfg, {"simulation","cellular","base_note_duration"}, 0.06];
+    GetCfg[cfg, {"simulation","cellular", mode, "base_note_duration"}, sharedDefault]
+  ]
+
+
 (* BuildNoteAudio
    Synthesises one held note per run into a stereo buffer.
      Pitch    — mean population of the run, mapped onto the minor
@@ -239,7 +254,7 @@ BuildNoteAudio[runs_List, pan_List, populations_List, cfg_Association, sr_Intege
           volMin, volMax, allMaxDeltas, minDelta, maxDeltaRange,
           nGen, nSamples, audioL, audioR, gensSoFar, harmonics, decayFrac},
 
-    baseNoteDur = GetCfg[cfg, {"simulation","cellular","base_note_duration"}, 0.06];
+    baseNoteDur = ResolveBaseNoteDuration[cfg];
     rootHz      = GetCfg[cfg, {"sonification","pitch","min_hz"}, 150];
     scale       = $StemScales["MinorPentatonic"];
 

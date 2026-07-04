@@ -103,6 +103,13 @@ exactly `generations × base_note_duration` regardless of how the
 generations are grouped into runs, since run lengths always sum to the
 total generation count.
 
+`base_note_duration` can be overridden per simulation mode via
+`ResolveBaseNoteDuration` — e.g. `simulation.cellular.rule110.base_note_duration`
+(currently `0.10`) applies only when `simulation.mode === "rule110"`,
+falling back to the shared `simulation.cellular.base_note_duration`
+(`0.06`, used by `life`) otherwise. Add further `simulation.cellular.<mode>.*`
+keys the same way if a mode needs its own tempo.
+
 **Articulation is independent of `DetectPopulationEvents`.** The
 extinction (150 Hz) and explosion (900 Hz) accent tones fire from raw
 population fraction-change thresholds (>40% drop/rise) exactly as
