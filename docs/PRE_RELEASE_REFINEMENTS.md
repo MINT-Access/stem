@@ -16,6 +16,34 @@ This document tracks small issues, wording improvements, and polish items to add
 
 ---
 
+## thermo/ app — post-implementation items (target: v1.3.0)
+
+### 8. docs/APPS.md — add thermo/ entry
+
+**Fix:** Add complete entry for thermo/ with all four modes, config keys, presets, and output filenames. Source from thermo/config.json and thermo/src/model.wl.
+
+### 9. Root README.md — add thermo/ entry
+
+**Fix:**
+- Repository layout diagram: add `thermo/` with description "Maxwell-Boltzmann distribution, ideal gas ensemble, thermal cooling, equipartition theorem"
+- Quick Start section: add CLI examples for all four modes
+- Projects section: add thermo/ subsection at the same length and depth as other entries
+- afplay examples: add distribution_audio.wav, cooling_audio.wav
+
+### 10. demo.wl and demo_html.wl — add thermo/
+
+**Fix:**
+- demo.wl: add thermo/ in distribution mode (helium, 100K→1000K) after quantum, before primes
+- demo_html.wl: add thermo/ appMeta entry with title, description, listening guide, primary WAV label "Listen — Maxwell-Boltzmann distribution sweep, helium 100K → 1000K", GIF, CLI
+
+**Status:** demo.wl side already done (see `feat: add thermo app` commit — thermo added to `$demoApps` after quantum/before primes, and to the demo README-generation template). demo_html.wl's `appMeta`/`$appOrder` entry is **not yet done** — that pass was explicitly scoped out when thermo/ was built; still needed before v1.3.0.
+
+### 11. cellular/ note-holding — include in v1.3.0 release notes and APPS.md
+
+**Fix:** cellular/ was enhanced after the v1.2.0 tag. Include in v1.3.0 release notes and update cellular/ entry in docs/APPS.md with new sonification config keys (articulation_mode, articulation_threshold, articulation_threshold_abs, base_note_duration).
+
+---
+
 ## Resolved items
 
 ### 1. Audio player labels — "Full narrative" misleading for non-signal apps
