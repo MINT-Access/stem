@@ -1,0 +1,21 @@
+{
+  "version": 1,
+  "app": "magnetic",
+  "description": "Charged particle motion in magnetic and electric fields: cyclotron orbits, E×B drift, magnetic mirror trapping, and multi-particle cyclotron chords",
+
+  "simulation": {
+    "mode": "cyclotron",
+    "magnetic": {
+      "B_z": 1.0,
+      "E_x": 0.5,
+      "B_0": 1.0,
+      "alpha": 0.5,
+      "charge_mass_ratio": 1.0,
+      "v_perp": 1.0,
+      "v_parallel": 0.0,
+      "n_periods": 5,
+      "mirror_duration": 30.0,
+      "base_freq_hz": 110.0
+    }
+  }
+}
