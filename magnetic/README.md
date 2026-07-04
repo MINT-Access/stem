@@ -118,8 +118,10 @@ oscillates underneath (the circular motion riding along on top of it)
 
 Non-uniform `Bz(z)`. **What you hear:** pitch rising as the particle
 approaches a mirror point and falling as it retreats, with a sharp
-accent at each reflection. An escaping particle's pitch simply keeps
-rising and the sound fades.
+accent at each reflection. An escaping particle's pitch trends upward
+overall rather than settling into a bounded rise-fall pattern — the
+near-axis field's coupling into the axial motion can still give it a
+wobble on the way out, so don't expect a perfectly clean climb.
 
 ### `multi`
 
