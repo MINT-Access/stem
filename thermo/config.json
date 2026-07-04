@@ -1,0 +1,26 @@
+{
+  "version": 1,
+  "app": "thermo",
+  "description": "Classical statistical mechanics: Maxwell-Boltzmann speed distribution, particle ensembles, thermal cooling, and the equipartition theorem",
+
+  "simulation": {
+    "mode": "distribution",
+    "thermo": {
+      "T_start": 100,
+      "T_end": 1000,
+      "T_hot": 1000,
+      "T_cold": 50,
+      "T_fixed": 300,
+      "mass_amu": 4,
+      "preset": "helium",
+      "n_particles": 20,
+      "n_steps": 100,
+      "n_timesteps": 200,
+      "n_bins": 64,
+      "frame_duration": 0.1,
+      "freq_min": 80,
+      "freq_max": 4000,
+      "molecule": "diatomic"
+    }
+  }
+}
