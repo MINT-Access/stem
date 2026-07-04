@@ -1,6 +1,6 @@
 # STEM Apps — Quick Reference
 
-All thirteen apps share the same invocation pattern and config system. This
+All sixteen apps share the same invocation pattern and config system. This
 document covers CLI options, modes, config keys, and output files for each.
 
 ---
@@ -22,6 +22,9 @@ document covers CLI options, modes, config keys, and output files for each.
 | `cosmology` | CMB power spectrum | `spectrum`, `sky` | `output/` | Optional (Planck) |
 | `waves` | 2D wave propagation | `ripple`, `interference` | `output/` | No |
 | `lagrange` | CR3BP Lagrange points | `l4`, `l5`, `l1` | `output/` | No |
+| `thermo` | Classical statistical mechanics | `distribution`, `ensemble`, `cooling`, `equipartition` | `output/` | No |
+| `montecarlo` | 2D Ising model (Metropolis MCMC) | `sweep`, `critical`, `quench` | `output/` | No |
+| `magnetic` | Charged particle motion (Lorentz force) | `cyclotron`, `drift`, `mirror`, `multi` | `output/` | No |
 
 ---
 
@@ -34,7 +37,7 @@ $HardcodedDefaults → config/config.json → <app>/config.json → CLI --key=va
 ```
 
 Keys use dot notation for nesting. CLI overrides accept both
-`--key.subkey=value` and `--key.subkey value` (space form) — all 13 apps
+`--key.subkey=value` and `--key.subkey value` (space form) — all 16 apps
 support both conventions.
 Dump the active config without running the simulation:
 
@@ -290,6 +293,10 @@ wolframscript -file cellular/main.wl -- --simulation.life.generations=500
 | `sonification.pitch.max_hz` | `900` | Pitch at maximum population |
 | `sonification.events.extinction` | `true` | Low burst on >40% population drop |
 | `sonification.events.explosion` | `true` | High burst on >40% population rise |
+| `simulation.cellular.articulation_mode` | `"relative"` | `"relative"` or `"absolute"` — how population-change is measured to decide when to articulate a new note |
+| `simulation.cellular.articulation_threshold` | `0.15` | Relative change (fraction) that triggers a new note, when `articulation_mode="relative"` |
+| `simulation.cellular.articulation_threshold_abs` | `5` | Absolute population change that triggers a new note, when `articulation_mode="absolute"` |
+| `simulation.cellular.base_note_duration` | `0.06` | Seconds per note during a held (unarticulated) run; overridable per mode, e.g. `simulation.cellular.rule110.base_note_duration` (default `0.10`) |
 
 **Output files:**
 
@@ -298,10 +305,20 @@ wolframscript -file cellular/main.wl -- --simulation.life.generations=500
 | `output/life_rpentomino_audio.wav` | Game of Life sonification |
 | `output/life_rpentomino_animation.gif` | Game of Life animation |
 | `output/life_rpentomino_stats.csv` | Population per generation |
+| `output/life_rpentomino_data.csv` | Per-generation articulation record: generation, population, articulated, run_length |
 | `output/rule110_audio.wav` | Rule 110 sonification |
 | `output/rule110_animation.gif` | Rule 110 animated space-time diagram |
 | `output/rule110_animation_spacetime.png` | Rule 110 static space-time image |
 | `output/rule110_stats.csv` | Row density per generation |
+| `output/rule110_data.csv` | Per-generation articulation record: generation, population, articulated, run_length |
+
+**Notes:**
+- Run-length articulation (note-holding): a new note is only triggered when
+  population changes by more than `articulation_threshold` (relative mode)
+  or `articulation_threshold_abs` (absolute mode) since the last articulated
+  note; otherwise the current pitch holds. Stable periods sound sustained;
+  population changes are clearly marked. Applies to both Game of Life and
+  Rule 110. EventLayer extinction/explosion accents are unaffected.
 
 ---
 
@@ -795,3 +812,209 @@ Named presets: `sun_jupiter` (μ = 0.000954, default), `earth_moon` (μ = 0.0121
   confirmed (distance grew > 3×), no escape from barycentre (max dist < 2.5 units) or early stop.
 - The `$mu` global is set in `main.wl` before any src/ functions are called; EOM helpers in
   `src/model.wl` use `$mu` via delayed evaluation.
+
+---
+
+## thermo
+
+Sonifies classical statistical mechanics: the Maxwell-Boltzmann speed
+distribution, particle ensembles under elastic collisions, thermal
+relaxation, and the equipartition theorem. Purely classical — no quantum
+statistics anywhere in this app.
+
+**Run:**
+```sh
+wolframscript -file thermo/main.wl                                    # distribution (default), helium, 100K->1000K
+wolframscript -file thermo/main.wl -- --simulation.mode=ensemble       # 20-particle chord, 300K
+wolframscript -file thermo/main.wl -- --simulation.mode=cooling        # thermal relaxation, 1000K->50K
+wolframscript -file thermo/main.wl -- --simulation.mode=equipartition  # monatomic vs. diatomic
+wolframscript -file thermo/main.wl -- --simulation.thermo.preset=nitrogen
+wolframscript -file thermo/main.wl -- --simulation.thermo.T_fixed=600
+```
+
+**Key config keys (`thermo/config.json`):**
+
+| Key | Default | Description |
+|-----|---------|-------------|
+| `simulation.mode` | `"distribution"` | `"distribution"`, `"ensemble"`, `"cooling"`, or `"equipartition"` |
+| `simulation.thermo.preset` | `"helium"` | Named gas: `hydrogen`, `helium`, `nitrogen`, `oxygen`, `argon` |
+| `simulation.thermo.mass_amu` | `4` | Fallback mass (amu) used only if `preset` is unrecognised |
+| `simulation.thermo.T_start` / `T_end` | `100` / `1000` | Temperature sweep range, K (distribution, equipartition) |
+| `simulation.thermo.T_hot` / `T_cold` | `1000` / `50` | Cooling curve endpoints, K (cooling) |
+| `simulation.thermo.T_fixed` | `300` | Fixed temperature, K (ensemble) |
+| `simulation.thermo.n_particles` | `20` | Ensemble size, max 50 (ensemble) |
+| `simulation.thermo.n_steps` | `100` | Number of temperature steps (distribution, equipartition) |
+| `simulation.thermo.n_timesteps` | `200` | Elastic-collision steps (ensemble) |
+| `simulation.thermo.n_bins` | `64` | Spectral bins per frame (distribution, cooling, equipartition) |
+| `simulation.thermo.frame_duration` | `0.1` | Seconds per frame/timestep (all modes) |
+| `simulation.thermo.freq_min` / `freq_max` | `80` / `4000` | Audio frequency range, Hz (all modes) |
+| `simulation.thermo.molecule` | `"diatomic"` | `"monatomic"` or `"diatomic"` (equipartition; drives mass via `RepresentativeGasForMoleculeType`, independent of `preset`) |
+
+**Output files (mode-prefixed):**
+
+| File | Description |
+|------|-------------|
+| `output/distribution_audio.wav` | Spoken intro + Maxwell-Boltzmann temperature sweep (additive synthesis) |
+| `output/distribution.gif` | Animated MB curve, colour shifting blue→red as T rises |
+| `output/distribution_data.csv` | Per-step: T, v_p, v_mean, v_rms |
+| `output/ensemble_audio.wav` | Spoken intro + particle-ensemble chord |
+| `output/ensemble.gif` | Animated speed histogram vs. the analytic MB curve |
+| `output/ensemble_data.csv` | Per-(timestep, particle): speed, collided flag |
+| `output/cooling_audio.wav` | Spoken intro + thermal relaxation sonification |
+| `output/cooling.gif` | Two-panel: T(t) curve + current MB distribution |
+| `output/cooling_data.csv` | Per-frame: time, T, amplitude scale, equilibrium flag |
+| `output/equipartition_audio.wav` | Spoken intro + binaural translational/rotational comparison |
+| `output/equipartition.gif` | Side-by-side monatomic vs. diatomic energy-partition pie charts |
+| `output/equipartition_data.csv` | Per-step: T, translational/rotational/total energy, rotational fraction |
+
+**Notes:**
+- Additive synthesis, not stem-core's `SonifyTrajectory` pipeline: each frame
+  synthesises many simultaneous sine partials (one per MB bin, or one per
+  ensemble particle) so the frame's spectral envelope literally *is* the
+  Maxwell-Boltzmann curve — a third sonification paradigm alongside
+  trajectory-based and Hilbert-field-based (see root `AGENTS.md`).
+- Two correctness checks run on every invocation (normalisation, characteristic
+  speed ratios `v_mean/v_p = Sqrt[4/pi]` and `v_rms/v_p = Sqrt[3/2]`); `ensemble`
+  and `equipartition` each add one more (equilibration within 10%, translational
+  KE = (3/2)kT within 1%).
+- `equipartition` mode's mass comes from `molecule`, not `preset`/`mass_amu` —
+  those two drive `distribution`/`ensemble`/`cooling` only.
+- See [`thermo/LISTENING_GUIDE.md`](../thermo/LISTENING_GUIDE.md) for the
+  recommended five-step listening sequence.
+
+---
+
+## montecarlo
+
+Sonifies the 2D ferromagnetic Ising model via Metropolis Monte Carlo — one of
+the few exactly-solved phase transitions in statistical physics (Onsager
+1944), critical temperature `T_c = 2J/k / ln(1+sqrt(2)) ≈ 2.269 J/k`.
+
+**Run:**
+```sh
+wolframscript -file montecarlo/main.wl                                        # sweep (default), 32x32, T 4.0->0.5
+wolframscript -file montecarlo/main.wl -- --simulation.mode=critical          # fixed at T_c
+wolframscript -file montecarlo/main.wl -- --simulation.mode=quench            # instantaneous T_hot->T_cold
+wolframscript -file montecarlo/main.wl -- --simulation.montecarlo.lattice_size=64
+wolframscript -file montecarlo/main.wl -- --simulation.montecarlo.N_T_steps=100
+wolframscript -file montecarlo/main.wl -- --simulation.montecarlo.T_fixed=3.0  # above T_c
+wolframscript -file montecarlo/main.wl -- --simulation.montecarlo.T_fixed=1.5  # below T_c
+```
+
+**Key config keys (`montecarlo/config.json`):**
+
+| Key | Default | Description |
+|-----|---------|-------------|
+| `simulation.mode` | `"sweep"` | `"sweep"`, `"critical"`, or `"quench"` |
+| `simulation.montecarlo.lattice_size` | `32` | Grid side length (coerced to the nearest power of 2 for the Hilbert spatial layer) |
+| `simulation.montecarlo.T_start` / `T_end` | `4.0` / `0.5` | Sweep endpoints (sweep) |
+| `simulation.montecarlo.N_T_steps` | `50` | Number of temperature steps (sweep) |
+| `simulation.montecarlo.n_equilibration` | `200` | Discarded sweeps per temperature step (sweep) |
+| `simulation.montecarlo.n_measurement` | `100` | Recorded sweeps per temperature step (sweep) |
+| `simulation.montecarlo.T_fixed` | `2.2692` | Fixed temperature (critical) |
+| `simulation.montecarlo.T_hot` / `T_cold` | `4.0` / `0.5` | Quench endpoints (quench) |
+| `simulation.montecarlo.n_sweeps` | `500` | Sweep count (critical; `main.wl` defaults quench's own count to 400) |
+| `simulation.montecarlo.random_seed` | `42` | RNG seed (quench) |
+| `simulation.montecarlo.J` | `1.0` | Coupling constant |
+| `simulation.montecarlo.pixel_duration` | `0.001` | Seconds per spin before run-length grouping (spatial layer) |
+| `sonification.montecarlo.spatial_layer_gain` | `-12` | Spatial (Hilbert) layer level relative to the observable layer, dB |
+
+**Output files (mode-prefixed):**
+
+| File | Description |
+|------|-------------|
+| `output/sweep_audio.wav` | Spoken intro + two-layer temperature-sweep sonification |
+| `output/sweep.gif` | Two-panel: spin grid + M(T) curve with a T_c marker |
+| `output/sweep_data.csv` | Per-sweep: T, M, E_per_spin, \|dM\|, chi_estimate, articulated |
+| `output/critical_audio.wav` | Spoken intro + fixed-T_c sonification |
+| `output/critical.gif` | Spin grid at T_c, fractal-like domain structure |
+| `output/critical_data.csv` | Per-sweep data at fixed T |
+| `output/quench_audio.wav` | Spoken intro + quench sonification |
+| `output/quench.gif` | Spin grid coarsening from noise to large domains |
+| `output/quench_data.csv` | Per-sweep data during the quench |
+
+**Notes:**
+- Two simultaneous sonification layers, mixed together: global observables
+  (|M|, energy, susceptibility) via stem-core's continuous
+  `SpatialLayer`/`MotionLayer` carrier, plus a quieter Hilbert-curve spatial
+  scan of the spin grid itself (run-length held notes, reusing `cellular/`'s
+  note-holding technique) — the first app in the project to combine the
+  trajectory-based and Hilbert-field-based paradigms in one output.
+- Three correctness checks run on every invocation (Onsager T_c, energy
+  bounds, detailed balance); `sweep` adds a fourth (magnetisation convergence,
+  |M| > 0.8 below T=1.0).
+- See [`montecarlo/LISTENING_GUIDE.md`](../montecarlo/LISTENING_GUIDE.md) for
+  the recommended three-mode listening sequence.
+
+---
+
+## magnetic
+
+Simulates and sonifies charged-particle motion under the Lorentz force,
+`F = q(E + v x B)`, across four field configurations: cyclotron orbits, E×B
+drift, magnetic mirror trapping, and a multi-particle cyclotron chord.
+
+**Run:**
+```sh
+wolframscript -file magnetic/main.wl                                          # cyclotron (default)
+wolframscript -file magnetic/main.wl -- --simulation.mode=drift               # E x B drift cycloid
+wolframscript -file magnetic/main.wl -- --simulation.mode=mirror              # magnetic mirror
+wolframscript -file magnetic/main.wl -- --simulation.mode=multi               # proton+alpha+electron chord
+wolframscript -file magnetic/main.wl -- --simulation.magnetic.v_parallel=0.5  # helix orbit (cyclotron mode)
+wolframscript -file magnetic/main.wl -- --simulation.magnetic.B_z=2.0         # stronger field
+```
+
+**Key config keys (`magnetic/config.json`):**
+
+| Key | Default | Description |
+|-----|---------|-------------|
+| `simulation.mode` | `"cyclotron"` | `"cyclotron"`, `"drift"`, `"mirror"`, or `"multi"` |
+| `simulation.magnetic.B_z` | `1.0` | Uniform field strength (cyclotron, drift, multi) |
+| `simulation.magnetic.E_x` | `0.5` | Electric field strength (drift only) |
+| `simulation.magnetic.B_0` | `1.0` | Minimum field strength at the mirror midplane |
+| `simulation.magnetic.alpha` | `0.5` | Mirror field gradient (larger = stronger, shorter mirror) |
+| `simulation.magnetic.charge_mass_ratio` | `1.0` | q/m for the single-particle modes |
+| `simulation.magnetic.v_perp` | `1.0` | Initial speed perpendicular to B |
+| `simulation.magnetic.v_parallel` | `0.0` | Initial speed along B (cyclotron helix / mirror pitch angle); `main.wl` substitutes `0.8` for mirror mode unless overridden on the CLI |
+| `simulation.magnetic.n_periods` | `5` | Cyclotron periods to simulate (cyclotron, drift, multi) |
+| `simulation.magnetic.mirror_duration` | `30.0` | Total integration time, mirror mode |
+| `simulation.magnetic.base_freq_hz` | `110.0` | Hz mapped to `omega_c = 1` (app-wide audio scale, all four modes) |
+
+Note: `v_perp` also defaults differently per mode in practice — `main.wl`
+substitutes `1.5` for mirror mode unless the CLI overrides it — for the same
+reason `v_parallel` does (mirror mode's own default pitch angle differs from
+cyclotron/drift's pure-circular-orbit default).
+
+**Output files (mode-prefixed):**
+
+| File | Description |
+|------|-------------|
+| `output/cyclotron_audio.wav` | Steady tone at the cyclotron frequency, panning with the orbit |
+| `output/cyclotron.gif` | 2D circle or 3D helix trajectory |
+| `output/cyclotron_data.csv` | Time series: t, x, y, z, vx, vy, vz, speed, kinetic_energy |
+| `output/drift_audio.wav` | Oscillating pitch, steadily drifting pan |
+| `output/drift.gif` | 2D cycloid trajectory, coloured by speed |
+| `output/drift_data.csv` | Drift trajectory time series |
+| `output/mirror_audio.wav` | Rising/falling pitch, accent at each reflection |
+| `output/mirror.gif` | 3D spiral trajectory with a field-strength gradient |
+| `output/mirror_data.csv` | Mirror trajectory time series |
+| `output/multi_audio.wav` | Three-particle cyclotron chord (proton/alpha/electron) |
+| `output/multi.gif` | Three simultaneous orbits |
+| `output/multi_data.csv` | Long format: one row per particle per timestep, with a `particle` label column |
+
+**Notes:**
+- Orbit integration via `NDSolve`, the same pattern used by `lagrange/` and
+  `relativity/`'s `geodesic` mode. Mirror mode additionally includes the
+  small radial field component required by `div B = 0` — a purely axial
+  `Bz(z)` field cannot physically produce a mirroring force on its own.
+- `multi` mode uses a closed-form solution rather than `NDSolve`: the
+  electron's charge-to-mass ratio is 1836x the proton's, so resolving its
+  gyration numerically over the same time window as the proton would need
+  ~1836x finer steps for a physically trivial (exact) result.
+- Four correctness checks run on every invocation: cyclotron period
+  (cyclotron), E×B drift velocity (drift), mirror trapping (mirror), energy
+  conservation (all modes — constant for cyclotron/mirror/multi, periodic
+  return for drift since the electric field does instantaneous but not net
+  work).
+- See [`magnetic/LISTENING_GUIDE.md`](../magnetic/LISTENING_GUIDE.md) for the
+  recommended listening sequence.

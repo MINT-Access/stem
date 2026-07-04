@@ -1,6 +1,6 @@
 # stem
 
-[![Version](https://img.shields.io/badge/version-1.2.0-blue.svg)](RELEASE_NOTES_v1.2.0.md)
+[![Version](https://img.shields.io/badge/version-1.3.0-blue.svg)](RELEASE_NOTES_v1.3.0.md)
 [![Wolfram Language](https://img.shields.io/badge/Wolfram_Language-13%2B-DD1100.svg)](https://www.wolfram.com/engine/)
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](LICENSE)
 
@@ -28,6 +28,9 @@ stem/
   cosmology/        CMB angular power spectrum and sky map sonification
   waves/            2D wave propagation and interference (FEM simulation)
   lagrange/         Circular restricted three-body problem, Lagrange point orbits
+  thermo/           Maxwell-Boltzmann distribution, ideal gas ensemble, thermal cooling, equipartition theorem
+  montecarlo/       2D Ising model, Metropolis MCMC, ferromagnetic phase transition
+  magnetic/         Charged particle motion: cyclotron orbits, E×B drift, magnetic mirror, multi-particle chord
   config/           Global config defaults (config.json)
   docs/             Workflow guides
 ```
@@ -168,13 +171,30 @@ wolframscript -file images/main.wl -- --simulation.mode=colour           # colou
 wolframscript -file images/main.wl -- --simulation.mode=hsb              # full HSB stereo mode
 wolframscript -file images/main.wl -- --simulation.images.test_image=temperature
 wolframscript -file images/main.wl -- --simulation.images.brightness_scale=log
+
+# Statistical mechanics — Maxwell-Boltzmann distribution
+wolframscript -file thermo/main.wl                                              # distribution, helium, 100K→1000K
+wolframscript -file thermo/main.wl -- --simulation.mode=ensemble               # particle ensemble at 300K
+wolframscript -file thermo/main.wl -- --simulation.mode=cooling                # thermal cooling 1000K→50K
+wolframscript -file thermo/main.wl -- --simulation.mode=equipartition          # monatomic vs diatomic
+
+# Monte Carlo — 2D Ising model
+wolframscript -file montecarlo/main.wl                                          # sweep, T 4.0→0.5
+wolframscript -file montecarlo/main.wl -- --simulation.mode=critical            # at T_c
+wolframscript -file montecarlo/main.wl -- --simulation.mode=quench              # instantaneous quench
+
+# Charged particles in a magnetic field
+wolframscript -file magnetic/main.wl                                            # cyclotron orbit
+wolframscript -file magnetic/main.wl -- --simulation.mode=drift                 # E×B drift
+wolframscript -file magnetic/main.wl -- --simulation.mode=mirror                # magnetic mirror
+wolframscript -file magnetic/main.wl -- --simulation.mode=multi                 # proton+alpha+electron chord
 ```
 
 Each project writes outputs into its own directory:
 
 | Project | Output dir | File types |
 |---------|-----------|------------|
-| all thirteen apps | `output/` | CSV, GIF, WAV (+ PNG for signal, quantum, primes, relativity, images, cosmology, waves, lagrange) |
+| all sixteen apps | `output/` | CSV, GIF, WAV (+ PNG for signal, quantum, primes, relativity, images, cosmology, waves, lagrange) |
 
 Play audio:
 
@@ -199,6 +219,12 @@ afplay waves/output/interference_audio.wav
 afplay lagrange/output/l4_audio.wav
 afplay lagrange/output/l1_audio.wav
 afplay images/output/images_brightness_audio.wav
+afplay thermo/output/distribution_audio.wav
+afplay thermo/output/cooling_audio.wav
+afplay montecarlo/output/sweep_audio.wav
+afplay montecarlo/output/critical_audio.wav
+afplay magnetic/output/mirror_audio.wav
+afplay magnetic/output/cyclotron_audio.wav
 
 # Linux — replace afplay with aplay
 aplay signal/output/chord_narrative_full.wav
@@ -209,13 +235,13 @@ Start-Process wmplayer signal\output\chord_narrative_full.wav
 Start-Process wmplayer pendulum\output\double_audio.wav
 ```
 
-See [RELEASE_NOTES_v1.2.0.md](RELEASE_NOTES_v1.2.0.md) for full app descriptions, physics notes, and listening guides.
+See [RELEASE_NOTES_v1.3.0.md](RELEASE_NOTES_v1.3.0.md) for full app descriptions, physics notes, and listening guides.
 
 ---
 
 ## Demo
 
-Run all thirteen apps with their most interesting presets and collect outputs into `demo/`:
+Run all sixteen apps with their most interesting presets and collect outputs into `demo/`:
 
 ```sh
 wolframscript -file demo.wl
@@ -244,7 +270,7 @@ Check whether a previous demo run completed successfully:
 wolframscript -file demo.wl -- --check-only
 ```
 
-Outputs are collected in `demo/` with a written report at `demo/demo-report.md`. A full run takes approximately four minutes (measured: 13/13 apps, 3 min 45 s total).
+Outputs are collected in `demo/` with a written report at `demo/demo-report.md`. A full run takes approximately four to five minutes (measured: 17/17 runs — 16 unique apps, `dynamical` runs twice — 4 min 13 s total, including live asteroid data).
 
 ---
 
@@ -424,6 +450,68 @@ See [`images/README.md`](images/README.md) and
 [`images/LISTENING_GUIDE.md`](images/LISTENING_GUIDE.md) for the recommended
 listening sequence.
 
+### thermo
+
+Sonifies classical statistical mechanics — what temperature means at the
+molecular level. At thermal equilibrium, molecular speeds in an ideal gas
+follow the Maxwell-Boltzmann distribution, a curve with three characteristic
+speeds (most probable, mean, and RMS, always in that increasing order) that
+broadens and shifts to higher speeds as the gas heats up. Four modes:
+`distribution` sweeps temperature and synthesises the distribution curve
+itself as a spectral envelope — many simultaneous sine partials whose
+amplitudes trace `f(v)`, so the sound literally *is* the distribution, not a
+sonification of something else; `ensemble` samples a fixed set of particles
+from that distribution and lets them exchange speeds via elastic collisions,
+audible as a chord that continuously reshuffles while its overall character
+stays fixed; `cooling` relaxes the gas from hot to cold following Newton's
+law of cooling; `equipartition` compares a monatomic and a diatomic gas
+side by side, making audible the extra heat capacity a diatomic gas gets
+from rotational degrees of freedom. Named gas presets cover hydrogen,
+helium, nitrogen, oxygen, and argon.
+See [`thermo/README.md`](thermo/README.md).
+
+### montecarlo
+
+Sonifies the 2D ferromagnetic Ising model — the canonical example of a
+phase transition, and one of the few exactly solved in statistical physics
+(Onsager, 1944). A square lattice of up/down spins is updated by the
+Metropolis algorithm, which samples configurations in proportion to their
+Boltzmann probability by occasionally accepting energetically unfavourable
+moves — the trick that lets the system properly explore thermal
+fluctuations rather than getting stuck in a local minimum. Below the
+critical temperature `T_c ≈ 2.269 J/k` the spins spontaneously align
+(ferromagnetic order); above it, thermal noise wins (disorder). Near `T_c`,
+magnetisation and susceptibility follow universal power laws shared by
+every system in the same critical-phenomena universality class, from
+magnets to the liquid-gas transition. Three modes: `sweep` descends through
+`T_c` in one continuous run; `critical` holds at `T_c` for an extended
+listen to scale-free fluctuation; `quench` drops the temperature
+instantaneously and follows the disorder-to-order coarsening that results.
+Two simultaneous sonification layers: global observables (magnetisation,
+energy, susceptibility) as a continuous carrier, plus a quieter Hilbert-curve
+scan of the spin grid itself.
+See [`montecarlo/README.md`](montecarlo/README.md).
+
+### magnetic
+
+Simulates and sonifies a charged particle moving under the Lorentz force,
+`F = q(E + v×B)`, across four field configurations. A uniform magnetic
+field alone can never speed a particle up or slow it down — it only turns
+it — producing circular motion at the **cyclotron frequency**, a quantity
+that depends only on the particle's charge-to-mass ratio and the field
+strength, never on its speed; the `cyclotron` mode's tone literally *is*
+that frequency. Adding a perpendicular electric field produces `drift` mode:
+a steady sideways drift riding underneath the circular motion, tracing a
+cycloid — the same physics that makes stray fields such a problem for
+confining plasma in a tokamak. A magnetic field that strengthens away from
+a midplane creates a `mirror` — the principle behind the Van Allen
+radiation belts, where solar-wind particles bounce between reflection
+points near Earth's poles. Finally, `multi` mode sounds a proton, an alpha
+particle, and an electron gyrating in the same field simultaneously — a
+three-tone chord whose frequency ratios directly encode the particles'
+relative masses.
+See [`magnetic/README.md`](magnetic/README.md).
+
 ---
 
 ## Config system
@@ -459,7 +547,7 @@ See [`docs/APPS.md`](docs/APPS.md) for a full listing of each app's config keys.
 
 ## stem-core
 
-All thirteen projects load `stem-core` as a shared library. It provides:
+All sixteen projects load `stem-core` as a shared library. It provides:
 
 - **Config** — `LoadConfig`, `GetCfg`, `DeepMerge` — four-layer config merging and safe key lookup
 - **Sonification pipeline** — `SonifyTrajectory`, `SpatialLayer`, `MotionLayer`, `EventLayer`, `MixLayers`, `RenderAudio`

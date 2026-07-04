@@ -7,6 +7,7 @@ This file covers the monorepo as a whole. For per-project detail, see the
 Per-project AGENTS files:
 - [`pendulum/AGENTS.md`](pendulum/AGENTS.md)
 - [`lorenz/AGENTS.md`](lorenz/AGENTS.md)
+- [`dynamical/AGENTS.md`](dynamical/AGENTS.md)
 - [`asteroids/AGENTS.md`](asteroids/AGENTS.md)
 - [`cellular/AGENTS.md`](cellular/AGENTS.md)
 - [`signal/AGENTS.md`](signal/AGENTS.md)
@@ -17,6 +18,9 @@ Per-project AGENTS files:
 - [`cosmology/AGENTS.md`](cosmology/AGENTS.md)
 - [`waves/AGENTS.md`](waves/AGENTS.md)
 - [`lagrange/AGENTS.md`](lagrange/AGENTS.md)
+- [`thermo/AGENTS.md`](thermo/AGENTS.md)
+- [`montecarlo/AGENTS.md`](montecarlo/AGENTS.md)
+- [`magnetic/AGENTS.md`](magnetic/AGENTS.md)
 
 ---
 
@@ -27,6 +31,7 @@ stem/
   stem-core/        Shared library — loaded by every project
   pendulum/         Physics simulation (pendulum ODE)
   lorenz/           Physics simulation (Lorenz attractor)
+  dynamical/        Logistic map and period-doubling route to chaos
   asteroids/        Data project (NASA NeoWs API)
   cellular/         Cellular automata (Game of Life, Rule 110)
   signal/           Signal processing (Fourier analysis, direct audio output)
@@ -37,6 +42,9 @@ stem/
   cosmology/        CMB power spectrum sonification (spectrum + sky modes)
   waves/            2D wave propagation FEM (ripple + interference modes)
   lagrange/         CR3BP Lagrange points (l1 escape, l4/l5 libration)
+  thermo/           Classical statistical mechanics (Maxwell-Boltzmann, ensemble, cooling, equipartition)
+  montecarlo/       2D Ising model via Metropolis Monte Carlo (sweep, critical, quench)
+  magnetic/         Charged particle motion in EM fields (cyclotron, drift, mirror, multi-particle chord)
   config/           Global config defaults (config.json)
   docs/             Workflow guides
 ```
@@ -91,6 +99,19 @@ wolframscript -file lagrange/main.wl                                     # L4 li
 wolframscript -file lagrange/main.wl -- --simulation.mode=l5
 wolframscript -file lagrange/main.wl -- --simulation.mode=l1
 wolframscript -file lagrange/main.wl -- --simulation.lagrange.preset=earth_moon
+wolframscript -file dynamical/main.wl                                    # logistic map sweep (default)
+wolframscript -file dynamical/main.wl -- --simulation.mode=iterate
+wolframscript -file thermo/main.wl                                       # Maxwell-Boltzmann distribution (default)
+wolframscript -file thermo/main.wl -- --simulation.mode=ensemble
+wolframscript -file thermo/main.wl -- --simulation.mode=cooling
+wolframscript -file thermo/main.wl -- --simulation.mode=equipartition
+wolframscript -file montecarlo/main.wl                                   # 2D Ising sweep (default)
+wolframscript -file montecarlo/main.wl -- --simulation.mode=critical
+wolframscript -file montecarlo/main.wl -- --simulation.mode=quench
+wolframscript -file magnetic/main.wl                                     # cyclotron orbit (default)
+wolframscript -file magnetic/main.wl -- --simulation.mode=drift
+wolframscript -file magnetic/main.wl -- --simulation.mode=mirror
+wolframscript -file magnetic/main.wl -- --simulation.mode=multi
 ```
 
 `asteroids/main.wl` and `asteroids/experiment.wl` accept `[-- YYYY-MM-DD YYYY-MM-DD [Scale]]`.
@@ -121,6 +142,10 @@ wolframscript -file images/tests/test_model.wl
 wolframscript -file cosmology/tests/test_model.wl
 wolframscript -file waves/tests/test_model.wl
 wolframscript -file lagrange/tests/test_model.wl
+wolframscript -file dynamical/tests/test_model.wl
+wolframscript -file thermo/tests/test_model.wl
+wolframscript -file montecarlo/tests/test_model.wl
+wolframscript -file magnetic/tests/test_model.wl
 ```
 
 `cellular`, `signal`, `quantum`, `primes`, and `relativity` do not have test files. All existing test files exit 0 on success, 1 on failure.
@@ -206,12 +231,12 @@ All code must run correctly via `wolframscript -file` with no display server.
 
 ## Demo script (demo.wl)
 
-`demo.wl` at the repo root runs all 12 apps with their most compelling presets and
+`demo.wl` at the repo root runs all 16 apps with their most compelling presets and
 collects every output into `demo/<appname>/`. It also writes `demo/demo-report.md`
 (machine-readable run report) and `demo/README.md` (listening guide).
 
 ```sh
-wolframscript -file demo.wl                        # full run (~3–4 min)
+wolframscript -file demo.wl                        # full run (~4–5 min)
 STEM_SPEAK=1 wolframscript -file demo.wl           # with speech
 NASA_API_KEY=... wolframscript -file demo.wl       # include live asteroids
 wolframscript -file demo.wl -- --check-only        # verify a previous run
@@ -244,22 +269,58 @@ overwritten or deleted on the next `wolframscript -file demo.wl` run.
 
 ## Sonification paradigms
 
-The 12 apps use two distinct sonification strategies:
+The apps use three distinct sonification strategies:
 
 **Trajectory-based** (`SonifyTrajectory` pipeline in `stem-core/src/sonification.wl`):
-pendulum, lorenz, asteroids, cellular, quantum, primes, relativity, waves, lagrange.
-A simulation produces an `n × 5` matrix `{t, x, y, z, speed}`. The three pipeline
-layers (SpatialLayer → MotionLayer → EventLayer) map position to stereo pan, speed to
-pitch, and labelled events to accent tones, then mix to a stereo WAV.
+pendulum, lorenz, asteroids, cellular, quantum, primes, relativity, waves, lagrange,
+magnetic. A simulation produces an `n × 5` matrix `{t, x, y, z, speed}`. The three
+pipeline layers (SpatialLayer → MotionLayer → EventLayer) map position to stereo pan,
+speed to pitch, and labelled events to accent tones, then mix to a stereo WAV.
+`magnetic` integrates its trajectories via `NDSolve` the same way `lagrange` and
+`relativity`'s `geodesic` mode do, but (like `relativity`'s chirp/geodesic sonify
+functions) builds its carrier manually rather than calling `SonifyTrajectory`
+directly — see `magnetic/AGENTS.md` design decision 1 for why a constant-frequency
+tone requirement is incompatible with `SpatialLayer`'s generic rescale-to-range
+pitch mapping.
 
 **Spatial-field-based** (`HilbertTraversalOrder` from `stem-core/src/hilbert.wl`):
-images, cosmology.
-A 2D spatial field (an image or a sky temperature map) is visited in Hilbert curve
-order so that spatially adjacent pixels become temporally adjacent notes. Pitch and
-volume are derived from the pixel value at each step (brightness, colour index, CMB
-temperature, etc.). This paradigm does not use `SonifyTrajectory`.
+images, cosmology. A 2D spatial field (an image or a sky temperature map) is visited
+in Hilbert curve order so that spatially adjacent pixels become temporally adjacent
+notes. Pitch and volume are derived from the pixel value at each step (brightness,
+colour index, CMB temperature, etc.). This paradigm does not use `SonifyTrajectory`.
+
+**Spectral-synthesis-based** (additive synthesis, one app so far):
+thermo. Rather than mapping a single trajectory value to pitch, each audio frame
+synthesises many simultaneous sine partials whose amplitudes trace an actual
+probability density (the Maxwell-Boltzmann speed distribution) — the frame's
+spectral envelope literally *is* the physics, not a sonification of a derived
+scalar. Uses neither `SonifyTrajectory` nor `HilbertTraversalOrder`.
+
+**montecarlo is the first app to combine two paradigms in one output**: its global
+observables (magnetisation, energy, susceptibility) drive a trajectory-based
+continuous carrier, mixed with a quieter Hilbert-curve spatial scan of the spin
+grid itself running simultaneously — reusing `cellular/`'s run-length note-holding
+technique for the spatial layer.
 
 ---
+
+## Spoken audio generation
+
+`SpeechSynthesize[]` is the current standard for generating spoken-word audio
+segments embedded in a WAV file (e.g. `signal/`'s `{mode}_narrative_full.wav`,
+or the spoken intro prepended to `thermo/`, `montecarlo/`, `dynamical/`,
+`magnetic/`, and `images/`'s main audio output). The pattern is three-tier:
+`SpeechSynthesize[]` first, falling back to platform-native TTS (macOS `say`,
+Linux `espeak-ng`/`espeak`, Windows PowerShell `SpeechSynthesizer`) if that
+fails, falling back to silence (of the same nominal duration) if both fail —
+never a hard error, since a missing spoken segment shouldn't break the rest
+of the audio. Earlier apps called platform-native TTS directly with no
+`SpeechSynthesize[]` attempt; this inconsistency was fixed project-wide in
+the v1.3.0 speech-consolidation pass (Part A) — `signal/` was the last
+holdout. This is distinct from `STEMSay[text]` (stem-core), which is a
+*console-only* announcement (spoken via the OS's TTS command when
+`STEM_SPEAK=1`, otherwise just printed) — it never produces WAV file content
+and needs no `SpeechSynthesize[]` equivalent.
 
 ## Sanity check pattern
 

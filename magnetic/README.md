@@ -187,6 +187,21 @@ wolframscript -file magnetic/main.wl -- --simulation.magnetic.v_parallel=0.5
 afplay magnetic/output/cyclotron_audio.wav
 ```
 
+## Correctness checks
+
+Printed on every run:
+
+1. **Cyclotron period** (`cyclotron`) — measured from positive-going
+   zero-crossings of `x(t)`, compared to `2*Pi/omega_c` within 1%.
+2. **E x B drift velocity** (`drift`) — mean `vy` compared to the
+   analytic `-Ex/Bz` within 2%.
+3. **Mirror trapping** (`mirror`) — analytic `sin^2(theta_0) > B0/Bmax`
+   compared against the simulated outcome (reflected vs. escaped).
+4. **Energy conservation** (all modes) — `|v|^2` constant to 0.1% for
+   `cyclotron`/`mirror`/`multi` (the magnetic force does no work);
+   periodic return to 0.1% for `drift` (the electric field does
+   instantaneous but not net work over whole cyclotron periods).
+
 ## Output files
 
 | File | Description |
