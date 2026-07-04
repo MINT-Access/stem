@@ -282,7 +282,8 @@ appMeta = <|
     "primary_wav" -> "sweep_audio.wav",
     "primary_wav_label" -> "Listen \[LongDash] logistic map bifurcation sweep, r = 2.5 \[RightArrow] 4.0",
     "secondary_wavs" -> {
-      <| "file" -> "iterate_audio.wav", "label" -> "Iterate mode at r = 3.8 (chaotic region)" |>
+      <| "file" -> "iterate_audio.wav",
+         "label" -> "Listen \[LongDash] period-3 window (three-note rhythm in chaos)" |>
     },
     "gif" -> "sweep.gif",
     "gif_static" -> False,
