@@ -1,0 +1,30 @@
+{
+  "version": 1,
+  "app": "montecarlo",
+  "description": "2D Ising model via Metropolis Monte Carlo: ferromagnetic phase transition with an exact analytic critical temperature",
+
+  "simulation": {
+    "mode": "sweep",
+    "montecarlo": {
+      "lattice_size": 32,
+      "T_start": 4.0,
+      "T_end": 0.5,
+      "T_fixed": 2.2692,
+      "T_hot": 4.0,
+      "T_cold": 0.5,
+      "N_T_steps": 50,
+      "n_equilibration": 200,
+      "n_measurement": 100,
+      "n_sweeps": 500,
+      "random_seed": 42,
+      "J": 1.0,
+      "pixel_duration": 0.001
+    }
+  },
+
+  "sonification": {
+    "montecarlo": {
+      "spatial_layer_gain": -12
+    }
+  }
+}
