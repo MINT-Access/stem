@@ -862,6 +862,7 @@ Export[$demoHtmlOut, $html, "Text"];
 Print[""];
 STEMHeading["Summary"];
 STEMPrintN["Apps with complete outputs", $nComplete, "", 2];
+Print["  (demo.wl runs 14 passes total \[LongDash] dynamical counts twice)"];
 If[$nIncomplete > 0,
   STEMPrintN["Apps with missing outputs", $nIncomplete, "", 2];
   Print["  (see [WARNING] lines above for which files were missing per app)"]

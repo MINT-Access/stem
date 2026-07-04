@@ -190,12 +190,14 @@ $demoApps = {
   |>
 };
 
-$nTotal = Length[$demoApps];
+$nTotal      = Length[$demoApps];
+$nUniqueApps = Length[DeleteDuplicates[Map[#["name"] &, $demoApps]]];
 
 (* ── Announce ────────────────────────────────────────────────── *)
 Print[""];
 STEMHeading["STEM Demo \[LongDash] " <> If[$checkOnly, "Check Only", "Full Run"]];
-Print["  Apps:   ", $nTotal];
+Print["  Apps:   ", $nUniqueApps, " (", $nTotal,
+      " runs \[LongDash] dynamical runs twice: sweep and period-3 window iterate)"];
 Print["  Output: ", $demoDir];
 If[$checkOnly,
   Print["  Mode:   --check-only (checking previous run outputs)"],
@@ -417,7 +419,7 @@ Scan[
 Print[$sep];
 Print[""];
 Print["Total elapsed:  ", FmtN[$totalElapsed, {7, 1}], " s"];
-Print["Passed:         ", $nPassed];
+Print["Passed:         ", $nPassed, "/", $nTotal, " runs (", $nUniqueApps, " unique apps)"];
 If[$nFailed  > 0, Print["Failed:         ", $nFailed]];
 If[$nSkipped > 0, Print["Skipped:        ", $nSkipped]];
 
