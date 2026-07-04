@@ -6,13 +6,7 @@ This document tracks small issues, wording improvements, and polish items to add
 
 ## Active items
 
-### 5. cellular/ app — note-holding enhancement (future targeted pass)
-
-**Issue:** The `cellular` app maps population to pitch at each timestep, producing continuous notes even during stable periods. Rao's run-length encoding principle (hold a note during uniform runs, articulate only on change) would make population events significantly more audible — stable periods would sound stable, explosions would be clearly marked.
-
-**Fix:** In a future targeted pass, adapt `cellular/src/sonify.wl` to hold pitch during stable-population periods and only articulate when population changes by more than a configurable threshold.
-
-**Scope:** cellular/ only, one targeted Claude Code session.
+*(none currently)*
 
 ---
 
@@ -59,6 +53,16 @@ Added a full `appMeta` entry for `dynamical/` (title, description, listening gui
 Completed: verified inclusion in `demo.wl` (runs in sweep mode, positioned after lorenz/before cellular in the app list, outputs land in `demo/dynamical/output/`, included in `demo-report.md`); added a full `docs/APPS.md` entry with all config keys; updated root `README.md` (repository layout, Quick Start, Projects section, afplay examples, version badge); updated `demo_html.wl` (see item 6).
 
 **Fixed in v1.2.0.**
+
+---
+
+## Resolved in v1.2.0 patch (post-tag)
+
+### Item 5 resolved: cellular/ note-holding enhancement
+
+**Fixed:** `cellular/src/sonify.wl` now uses run-length articulation with relative threshold (default 15%). Stable periods produce sustained tones; population changes produce new notes. Both Game of Life and Rule 110 modes updated. EventLayer accent tones preserved. CSV gains `articulated` and `run_length` columns. Config keys added: `articulation_mode`, `articulation_threshold`, `articulation_threshold_abs`, `base_note_duration`.
+
+**Note:** This was implemented after the v1.2.0 tag. Should be included in the next consolidation pass and release notes for v1.3.0.
 
 ---
 
