@@ -9,6 +9,7 @@ $projectRoot  = FileNameJoin[{DirectoryName[$InputFileName], ".."}];
 $stemCoreRoot = FileNameJoin[{$projectRoot, "..", "stem-core"}];
 Get[FileNameJoin[{$stemCoreRoot, "init.wl"}]];
 Get[FileNameJoin[{$projectRoot, "src", "model.wl"}]];
+Get[FileNameJoin[{$projectRoot, "src", "sonify.wl"}]];
 
 passed = 0;
 failed = 0;
@@ -116,6 +117,51 @@ AssertTrue["Single-cell init has 1 live cell in generation 0",
 gunGrid = LifeGrid["gliderlgun", 80, 80];
 AssertTrue["Glider gun grid has more than 5 live cells",
   Total[gunGrid, 2] > 5];
+
+(* --- Sonification: run-length note articulation tests --- *)
+
+articCfg[mode_String, threshRel_, threshAbs_] := <|
+  "simulation" -> <|
+    "cellular" -> <|
+      "articulation_mode"          -> mode,
+      "articulation_threshold"     -> threshRel,
+      "articulation_threshold_abs" -> threshAbs
+    |>
+  |>
+|>;
+
+(* Test 11: stable run — all changes under 3% group into one run *)
+stablePops = {100.0, 101.0, 100.0, 99.0, 101.0};
+stableRuns = ComputeRuns[stablePops, articCfg["relative", 0.03, 5]];
+AssertTrue["Stable population series groups into a single run",
+  Length[stableRuns["runs"]] === 1 && stableRuns["runs"][[1]]["length"] === 5];
+
+(* Test 12: articulation points at generations 2 and 4, not 3 *)
+growthPops = {100.0, 150.0, 151.0, 200.0};
+growthArtic = ComputeArticulations[growthPops, articCfg["relative", 0.03, 5]];
+AssertTrue["Articulation fires at generations 2 and 4 but not 3",
+  growthArtic === {1, 1, 0, 1}];
+
+(* Test 13: note duration — run of length 10 at 0.06 s/gen = 0.6 s *)
+AssertTrue["RunNoteDuration[10, 0.06] equals 0.6 seconds",
+  Abs[RunNoteDuration[10, 0.06] - 0.6] < 10^-9];
+
+(* Test 14: absolute mode — articulation at generation 4 (Δ=9 > 5), not 2 or 3 (Δ=3 each) *)
+absPops = {100.0, 103.0, 106.0, 115.0};
+absArtic = ComputeArticulations[absPops, articCfg["absolute", 0.03, 5]];
+AssertTrue["Absolute-mode articulation fires only at generation 4",
+  absArtic === {1, 0, 0, 1}];
+
+(* Test 15: EventLayer preservation — explosion/collapse detection is
+   independent of the run-length articulation refactor. A population
+   series with a >40% rise and a later >40% drop must still produce
+   exactly one explosion and one extinction event. *)
+eventPops = {50.0, 50.0, 90.0, 90.0, 30.0, 30.0};
+eventResult = DetectPopulationEvents[eventPops, <||>];
+AssertTrue["Explosion (>40% rise) is still detected after refactor",
+  eventResult["explosions"] === {1}];
+AssertTrue["Extinction (>40% drop) is still detected after refactor",
+  eventResult["extinctions"] === {3}];
 
 (* --- Summary --- *)
 Print[""];

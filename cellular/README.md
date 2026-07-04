@@ -77,27 +77,76 @@ All outputs are prefixed with the mode and pattern name.
 | `life_{pattern}_animation.gif` | One frame per generation, 10 fps |
 | `life_{pattern}_audio.wav` | Sonification of population dynamics |
 | `life_{pattern}_stats.csv` | Per-generation: population, density, deltas |
+| `life_{pattern}_data.csv` | Per-generation: population, note articulation, run length |
 | `rule110_animation.gif` | Single-frame GIF of the spacetime diagram |
 | `rule110_animation_spacetime.png` | Full spacetime PNG (200 gen × 120 cells) |
 | `rule110_audio.wav` | Sonification of Rule 110 population dynamics |
 | `rule110_stats.csv` | Per-generation statistics |
+| `rule110_data.csv` | Per-generation: population, note articulation, run length |
 
 ## Sonification
 
-The sonification maps population dynamics to audio parameters:
+Population dynamics are rendered as **held notes** rather than a continuous
+stream: during stable periods the colony holds a single sustained note;
+population changes produce new notes. The longer a note is held, the longer
+the colony spent at that population level. A colony holding steady for many
+generations produces one long note; rapid growth or collapse produces a
+quick sequence of short notes.
+
+A new note starts (an "articulation") only when the population changes
+enough to cross a threshold; otherwise consecutive generations are grouped
+into one run and rendered as a single note.
 
 | Parameter | Mapping |
 |-----------|---------|
-| Pitch | Population density (live cells / total cells) |
-| Pan | Left/right density asymmetry |
-| Volume | Rate of population change |
+| Pitch | Mean population of the run, mapped onto the minor pentatonic scale |
+| Duration | Run length × `base_note_duration` |
+| Pan | Left/right density asymmetry, averaged over the run |
+| Volume | Max rate of population change within the run |
 
-Special events trigger short tone bursts:
+Special events trigger short tone bursts, independent of note articulation:
 - **Extinction** (>40% population drop in one step): 150 Hz low burst
 - **Explosion** (>40% population rise in one step): 900 Hz high burst
 
-Audio duration is 0.1 seconds per generation (30 s for 300 Life generations,
-20 s for 200 Rule 110 generations).
+### Config keys
+
+| Key | Default | Description |
+|-----|---------|--------------|
+| `simulation.cellular.articulation_mode` | `"relative"` | `"relative"` (percent change) or `"absolute"` (cell-count change) |
+| `simulation.cellular.articulation_threshold` | `0.15` | Relative-mode threshold (fraction of previous population) |
+| `simulation.cellular.articulation_threshold_abs` | `5` | Absolute-mode threshold (cell count) |
+| `simulation.cellular.base_note_duration` | `0.06` | Seconds per generation; a run of N generations produces one note of `N × base_note_duration` seconds |
+
+`articulation_threshold` controls how sensitive note articulation is to
+population change. Lower values (e.g. `0.03`) produce more frequent
+articulation, tracking smaller population changes. Higher values (e.g.
+`0.30`) produce fewer, longer notes, emphasising only major population
+shifts. Game of Life populations fluctuate by a few cells almost every
+generation from ordinary oscillators, so a very low threshold (e.g. `0.03`)
+articulates on nearly every generation; the default `0.15` keeps genuinely
+stable stretches held as one note while still responding to real growth or
+collapse (~48 notes for the default 300-generation R-pentomino run).
+
+Audio duration is `generations × base_note_duration` seconds (18 s for 300
+Life generations, 12 s for 200 Rule 110 generations, at the default 0.06
+s/generation).
+
+```bash
+# Less sensitive articulation — fewer, longer notes
+wolframscript -file main.wl -- --simulation.cellular.articulation_threshold=0.30
+
+# More sensitive articulation — more, shorter notes
+wolframscript -file main.wl -- --simulation.cellular.articulation_threshold=0.05
+wolframscript -file main.wl -- --simulation.cellular.articulation_threshold=0.01
+
+# Absolute-change mode instead of relative
+wolframscript -file main.wl -- --simulation.cellular.articulation_mode=absolute
+wolframscript -file main.wl -- --simulation.cellular.articulation_threshold_abs=10
+
+# Faster / slower base tempo
+wolframscript -file main.wl -- --simulation.cellular.base_note_duration=0.04
+wolframscript -file main.wl -- --simulation.cellular.base_note_duration=0.10
+```
 
 ## Project structure
 
@@ -108,7 +157,8 @@ Audio duration is 0.1 seconds per generation (30 s for 300 Life generations,
     │   ├── model.wl         LifeModel, Rule110Model, GoLStep, LifeGrid
     │   ├── output.wl        ExportCellularStats, PrintCellularSummary
     │   ├── animate.wl       AnimateCellular, CellularFrame
-    │   └── sonify.wl        SonifyCellular, GridToTrajectory, SynthBurst
+    │   └── sonify.wl        SonifyCellular, GridToTrajectory,
+    │                        ComputeRuns, BuildNoteAudio, SynthBurst
     ├── output/              Output files (not committed)
     ├── AGENTS.md            Guidance for Claude Code
     └── README.md

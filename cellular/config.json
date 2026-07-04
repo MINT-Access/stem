@@ -16,6 +16,12 @@
       "width": 120,
       "generations": 200,
       "initial": "single_cell"
+    },
+    "cellular": {
+      "articulation_mode": "relative",
+      "articulation_threshold": 0.15,
+      "articulation_threshold_abs": 5,
+      "base_note_duration": 0.06
     }
   },
 

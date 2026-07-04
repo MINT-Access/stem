@@ -19,7 +19,9 @@ mode-agnostic.
                        `CellularFrame[genGrid, cellPx]`
 - `src/sonify.wl`    — `SonifyCellular[grid3D, cfg, outPath]`,
                        `GridToTrajectory[grid3D, cfg]`,
-                       `SynthBurst`
+                       `ComputeArticulations`, `ComputeRuns`, `RunNoteDuration`,
+                       `BuildNoteAudio`, `DetectPopulationEvents`,
+                       `ExportArticulationCSV`, `SynthBurst`
 - `output/`          — All output files (not committed)
 
 ## How to run
@@ -61,24 +63,79 @@ that unpack the 300×80×80 history array and make `Total[grid3D, {2, 3}]`
 extremely slow (minutes instead of seconds). The integer-only form above keeps
 all arrays packed throughout.
 
-## Sonification data flow
+## Sonification data flow — run-length note articulation
 
 ```
 grid3D
-  → GridToTrajectory → trajectory {t, pan, density, 0, |Δpop|+ε}
-  → SpatialLayer, MotionLayer (stem-core)
-  → SynthBurst for extinction/explosion events
-  → MixLayers → RenderAudio
+  → GridToTrajectory        → trajectory {t, pan, density, 0, |Δpop|+ε}
+                               (pan column reused; rescaled + clipped
+                               into [-1,1] before use — see below)
+  → ComputeArticulations     → 0/1 list: does generation g start a new note?
+  → ComputeRuns              → one Association per run {start, end,
+                               length, meanPop, maxDelta}
+  → BuildNoteAudio           → one StemSynthNote per run, pitch =
+                               ScaleLookup(meanPop) on MinorPentatonic,
+                               volume = maxDelta rescaled to dB range,
+                               pan = mean pan over the run
+  → DetectPopulationEvents   → extinction/explosion generation lists
+                               (unchanged logic)
+  → SynthBurst accent tones mixed additively into the same stereo buffer
+  → RenderAudio + ExportArticulationCSV (writes `{name}_data.csv`)
 ```
 
-Trajectory column mapping:
-- `x` (pan)   — `(left_pop − right_pop) / cols`
-- `y` (pitch) — `total_pop / (rows * cols)`
-- `z`         — always 0.0
-- `speed`     — `|Δpopulation| + 0.01` (ε prevents MinMax degeneracy)
+Instead of the previous continuous per-generation pitch glissando
+(stem-core's `SpatialLayer`/`MotionLayer`), population dynamics are now
+rendered as discrete held notes: consecutive generations whose
+population doesn't change enough to cross the articulation threshold
+are grouped into a single run, and each run produces exactly one note
+whose duration is `run length × base_note_duration`.
 
-Audio duration: `gens × 0.1` seconds, injected via `DeepMerge` before
-calling `SpatialLayer`/`MotionLayer`.
+**Two threshold modes** (`--simulation.cellular.articulation_mode`):
+- `"relative"` (default) — a new note starts when
+  `|Δpop| / max(pop_prev, 1) > articulation_threshold` (default `0.15`,
+  i.e. 15%).
+- `"absolute"` — a new note starts when
+  `|Δpop| > articulation_threshold_abs` (default `5` cells).
+
+`base_note_duration` (default `0.06` s/generation) sets both the note
+"tick" length and the overall audio duration: total duration is always
+exactly `generations × base_note_duration` regardless of how the
+generations are grouped into runs, since run lengths always sum to the
+total generation count.
+
+**Articulation is independent of `DetectPopulationEvents`.** The
+extinction (150 Hz) and explosion (900 Hz) accent tones fire from raw
+population fraction-change thresholds (>40% drop/rise) exactly as
+before the refactor; run-length grouping only affects which pitch/
+volume/duration a generation contributes to, never whether an event
+tone plays. `DetectPopulationEvents` is exposed as its own function
+specifically so this independence can be unit-tested directly.
+
+**Measured articulation counts (debugging reference):** at the default
+15% relative threshold, the R-pentomino's 300-generation evolution
+produces **~48 articulations** (avg run length ~6.25 generations) — in
+the expected 40–80 order of magnitude, with clearly audible held notes
+during quieter stretches. Note that Game of Life population rarely
+holds exactly still for more than a few generations at these
+population magnitudes (5–237) — a single blinker or oscillator
+changing by 1–2 cells easily exceeds a 3% threshold, which is why the
+default was raised from an initial 3% (which produced ~230
+articulations, mostly length 1–2, effectively defeating the
+sustained-note effect) to 15%. Lower the threshold (e.g. `0.03`) for
+denser, more reactive articulation, or switch to absolute mode with a
+larger `articulation_threshold_abs` for a similar sparser effect on a
+different basis.
+
+Trajectory column mapping (from `GridToTrajectory`, retained for pan
+and API stability — density/speed columns are no longer consumed by
+the note-based pitch/volume mapping):
+- `x` (pan)   — `(left_pop − right_pop) / cols` — **not** bounded to
+  [-1,1]; `SonifyCellular` rescales + clips it before use (see pitfall
+  below).
+- `y` (density) — `total_pop / (rows * cols)` — unused by pitch now
+- `z`         — always 0.0
+- `speed`     — `|Δpopulation| + 0.01` — unused by volume now (volume
+  comes from each run's max |Δpop| instead)
 
 ## Animation dispatch
 
@@ -94,13 +151,24 @@ calling `SpatialLayer`/`MotionLayer`.
 - `CellFrame` is a protected WL symbol — the function is named `CellularFrame`.
 - Event detection in `SonifyCellular` uses fractional population change
   `(cur − prev) / prev`. Guard against `prev == 0` before dividing.
-- Audio duration must be injected into cfg via `DeepMerge` before calling
-  stem-core's `SpatialLayer`/`MotionLayer`, which read `sonification.duration`.
+- `GridToTrajectory`'s pan column, `(left_pop − right_pop) / cols`, is **not**
+  bounded to `[-1, 1]` — population counts routinely exceed the column count.
+  Feeding it unclipped into a constant-power pan law
+  (`Sqrt[(1 ± pan) / 2]`) drives the square root negative and silently
+  produces complex samples, which unpacks the audio array and makes
+  `Export[...,"WAV"]` fail with `Export::nodta` — with no other symptom
+  until export time. `SonifyCellular` rescales pan via
+  `Rescale[pan, MinMax[pan], panRange]` then `Clip`s it before every use
+  (both note panning and event-burst panning) precisely to avoid this.
+  If you add a new panning consumer, clip it too.
 
 ## Dependencies
 
 - Mathematica or Wolfram Engine (any recent version)
-- `stem-core` (sibling `../stem-core`) — `SpatialLayer`, `MotionLayer`,
-  `MixLayers`, `RenderAudio`, `ExportGIF`, `ExportCSV`, `EnsureDir`,
-  `STEMSay`, `STEMDescribe*`, `GetCfg`, `DeepMerge`, `LoadConfig`
+- `stem-core` (sibling `../stem-core`) — `ScaleLookup`, `$StemScales`,
+  `StemSynthNote`, `RenderAudio`, `ExportGIF`, `ExportCSV`, `EnsureDir`,
+  `STEMSay`, `STEMDescribe*`, `GetCfg`, `DeepMerge`, `LoadConfig`.
+  `SpatialLayer`/`MotionLayer`/`MixLayers` are no longer used by
+  `sonify.wl` (replaced by direct per-run `StemSynthNote` synthesis)
+  but remain available for other apps.
 - No external paclets required
