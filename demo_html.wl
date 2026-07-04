@@ -31,6 +31,7 @@ $genDate     = DateString[];
 (* ── Demo listening order (mirrors demo.wl / demo/README.md) ─── *)
 $appOrder = {
   "signal", "waves", "pendulum", "cellular", "primes", "quantum",
+  "thermo", "montecarlo", "magnetic",
   "lorenz", "dynamical", "asteroids", "lagrange", "images", "relativity", "cosmology"
 };
 
@@ -225,6 +226,127 @@ appMeta = <|
       "and forth along the position axis without spreading or distorting.",
     "cli" -> "wolframscript -file quantum/main.wl -- --simulation.qho.alpha=3.0",
     "github_path" -> "quantum"
+  |>,
+
+  "thermo" -> <|
+    "title" -> "Thermo \[LongDash] Maxwell-Boltzmann Speed Distribution",
+    "description" ->
+      "At thermal equilibrium, the speeds of gas molecules follow the " <>
+      "Maxwell-Boltzmann distribution \[LongDash] a precise curve whose " <>
+      "shape depends only on temperature and molecular mass. This app " <>
+      "sweeps temperature from 100 K to 1000 K for helium gas, " <>
+      "synthesising audio whose spectral shape literally matches the " <>
+      "distribution at each temperature: the sound broadens and " <>
+      "brightens as the gas heats up and molecules move faster. Three " <>
+      "soft taps at each temperature step mark the most probable speed, " <>
+      "the mean speed, and the RMS speed \[LongDash] the three " <>
+      "characteristic speeds of the distribution.",
+    "listening_guide" ->
+      "Listen for the sound broadening and rising in pitch as " <>
+      "temperature increases from cold (a narrow, dark cluster of " <>
+      "tones) to hot (a wide, bright spread). The soft triple-tap at " <>
+      "each step marks the three characteristic speeds.",
+    "primary_wav" -> "distribution_audio.wav",
+    "primary_wav_label" ->
+      "Listen \[LongDash] Maxwell-Boltzmann sweep, helium 100 K \[RightArrow] 1000 K",
+    "secondary_wavs" -> {
+      <| "file" -> "cooling_audio.wav",
+         "label" -> "Listen \[LongDash] thermal cooling, 1000 K \[RightArrow] 50 K" |>
+    },
+    "gif" -> "distribution.gif",
+    "gif_static" -> False,
+    "gif_alt" ->
+      "An animated Maxwell-Boltzmann speed distribution curve for " <>
+      "helium gas, broadening and shifting toward higher speeds as " <>
+      "temperature rises from 100 K to 1000 K, coloured from blue " <>
+      "(cold) to red (hot).",
+    "cli" -> "wolframscript -file thermo/main.wl",
+    "github_path" -> "thermo"
+  |>,
+
+  "montecarlo" -> <|
+    "title" -> "Monte Carlo \[LongDash] Ising Model Phase Transition",
+    "description" ->
+      "The 2D Ising model is the simplest physical system that shows a " <>
+      "genuine phase transition: a square lattice of magnetic spins " <>
+      "that spontaneously orders below a critical temperature T_c " <>
+      "\[TildeEqual] 2.269 (in units of J/k) and disorders above it. " <>
+      "The Metropolis algorithm updates the lattice stochastically, " <>
+      "accepting energy-raising moves with a temperature-dependent " <>
+      "probability \[LongDash] the correct way to sample thermal " <>
+      "equilibrium. This app sweeps temperature from disorder (T=4) " <>
+      "through the critical point down into ferromagnetic order " <>
+      "(T=0.5). The critical point is the loudest, most turbulent " <>
+      "moment: maximum fluctuations, correlated domains at all scales " <>
+      "simultaneously.",
+    "listening_guide" ->
+      "Listen for three distinct phases: a quiet noisy opening " <>
+      "(disordered spins at T=4), a loud turbulent middle (the phase " <>
+      "transition near T=2.27 \[LongDash] the loudest moment), and a " <>
+      "settling into a steady high-pitched tone (ferromagnetic order " <>
+      "at T=0.5). A quieter background layer scans the spin grid in " <>
+      "Hilbert curve order \[LongDash] rapid pitch alternation means " <>
+      "disorder, long held tones mean large aligned domains.",
+    "primary_wav" -> "sweep_audio.wav",
+    "primary_wav_label" ->
+      "Listen \[LongDash] Metropolis sweep, T = 4.0 \[RightArrow] 0.5 through T_c",
+    "secondary_wavs" -> {
+      <| "file" -> "critical_audio.wav",
+         "label" -> "Listen \[LongDash] at the critical point T_c (scale-free fluctuations)" |>,
+      <| "file" -> "quench_audio.wav",
+         "label" -> "Listen \[LongDash] instantaneous quench from disorder to order" |>
+    },
+    "gif" -> "sweep.gif",
+    "gif_static" -> False,
+    "gif_alt" ->
+      "A two-panel animation: a 32\[Times]32 grid of black-and-white " <>
+      "spins coarsening from random noise into large aligned domains, " <>
+      "alongside a magnetisation curve descending through the critical " <>
+      "temperature.",
+    "cli" -> "wolframscript -file montecarlo/main.wl",
+    "github_path" -> "montecarlo"
+  |>,
+
+  "magnetic" -> <|
+    "title" -> "Magnetic \[LongDash] Charged Particles in a Magnetic Field",
+    "description" ->
+      "A charged particle moving in a magnetic field experiences the " <>
+      "Lorentz force, causing it to spiral in circles \[LongDash] or " <>
+      "helices, or cycloids, or mirror-bouncing trajectories " <>
+      "\[LongDash] depending on the field geometry. The cyclotron " <>
+      "frequency (the orbital rate) depends only on the charge-to-mass " <>
+      "ratio and field strength, not on the particle's speed. This app " <>
+      "simulates four phenomena: simple cyclotron orbits, E\[Times]B " <>
+      "drift (a cycloid caused by crossed electric and magnetic " <>
+      "fields), magnetic mirror trapping (the principle behind the Van " <>
+      "Allen radiation belts), and a chord of three simultaneous " <>
+      "cyclotron frequencies for a proton, an alpha particle, and an " <>
+      "electron.",
+    "listening_guide" ->
+      "In mirror mode, listen for the pitch rising as the particle " <>
+      "approaches the mirror point and falling as it retreats " <>
+      "\[LongDash] repeated bouncing between the two ends of the " <>
+      "magnetic bottle. The accent tones mark each reflection. The Van " <>
+      "Allen radiation belts work exactly this way: solar wind " <>
+      "particles trapped between the polar mirror points of Earth's " <>
+      "magnetic field, bouncing back and forth.",
+    "primary_wav" -> "mirror_audio.wav",
+    "primary_wav_label" -> "Listen \[LongDash] magnetic mirror, Van Allen belt trapping",
+    "secondary_wavs" -> {
+      <| "file" -> "cyclotron_audio.wav",
+         "label" -> "Listen \[LongDash] cyclotron orbit (pure circular motion)" |>,
+      <| "file" -> "multi_audio.wav",
+         "label" -> "Listen \[LongDash] proton, alpha, electron chord" |>
+    },
+    "gif" -> "mirror.gif",
+    "gif_static" -> False,
+    "gif_alt" ->
+      "A 3D trajectory of a charged particle spiralling along a " <>
+      "magnetic field line, bouncing back from a mirror point near " <>
+      "each end and returning toward the midplane, coloured by local " <>
+      "field strength.",
+    "cli" -> "wolframscript -file magnetic/main.wl -- --simulation.mode=mirror",
+    "github_path" -> "magnetic"
   |>,
 
   "lorenz" -> <|
@@ -817,8 +939,8 @@ $html = "<!doctype html>\n" <>
 "<a href=\"#main-content\" class=\"skip-link\">Skip to content</a>\n" <>
 "<header>\n" <>
 "<h1>MINT Access stem</h1>\n" <>
-"<p><strong>Accessible STEM Simulations \[LongDash] v1.2.0</strong></p>\n" <>
-"<p>Thirteen physics, mathematics, and cosmology simulations, each producing " <>
+"<p><strong>Accessible STEM Simulations \[LongDash] v1.3.0</strong></p>\n" <>
+"<p>Sixteen physics, mathematics, and cosmology simulations, each producing " <>
 "an animated visualisation and an audio sonification of the underlying " <>
 "physics, designed to be fully accessible to blind and low-vision users.</p>\n" <>
 "<p class=\"links\">" <>
@@ -832,7 +954,7 @@ $html = "<!doctype html>\n" <>
 "<p>Each simulation below pairs a visual animation with a sonification " <>
 "of the same underlying physics or mathematics. Use the " <>
 "jump list to go directly to any simulation, or scroll through all " <>
-"thirteen in the recommended listening order. No installation is " <>
+"sixteen in the recommended listening order. No installation is " <>
 "required \[LongDash] everything on this page plays directly in your " <>
 "browser.</p>\n" <>
 "</section>\n" <>
@@ -843,7 +965,7 @@ $html = "<!doctype html>\n" <>
 $sectionsHtml <>
 "</main>\n" <>
 "<footer>\n" <>
-"<p>Generated by MINT Access stem v1.2.0 on " <> $genDate <> "</p>\n" <>
+"<p>Generated by MINT Access stem v1.3.0 on " <> $genDate <> "</p>\n" <>
 "<p class=\"links\">" <>
 "<a href=\"https://github.com/MINT-Access/stem\">GitHub</a> \[Bullet] " <>
 "<a href=\"https://www.mintaccess.ch/\">mintaccess.ch</a>" <>
@@ -862,7 +984,7 @@ Export[$demoHtmlOut, $html, "Text"];
 Print[""];
 STEMHeading["Summary"];
 STEMPrintN["Apps with complete outputs", $nComplete, "", 2];
-Print["  (demo.wl runs 14 passes total \[LongDash] dynamical counts twice)"];
+Print["  (demo.wl runs 17 passes total \[LongDash] dynamical counts twice)"];
 If[$nIncomplete > 0,
   STEMPrintN["Apps with missing outputs", $nIncomplete, "", 2];
   Print["  (see [WARNING] lines above for which files were missing per app)"]

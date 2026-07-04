@@ -224,51 +224,35 @@ predating this pass, not one of the numbered items) — closed at the same
 time since leaving a released app out of "the listing" while updating "the
 listing" would be a strange result.
 
+### Items 10, 14, 17 resolved: demo.wl and demo_html.wl — thermo/, montecarlo/, magnetic/
+
+**Fixed:** The demo.wl side of all three items was already done in earlier
+sessions (thermo, montecarlo, and magnetic were already present in
+`$demoApps`, in that order, positioned after `quantum` and before `primes`
+— confirmed by running each app's `--config-dump` cleanly and by a full
+`demo.wl` run reporting 17/17 passes with 16 unique apps). The remaining
+work — `demo_html.wl` — is now done: added `appMeta` entries for all
+three apps and inserted them into `$appOrder` after `quantum`, before
+`lorenz` (not "before primes" as this item's own text stated — the page's
+listening order already has `primes` earlier, at position 5, ahead of
+`quantum` at position 6; `demo.wl`'s *run* order and `demo_html.wl`'s
+*page* order have never been identical, and the fix follows the page's
+own established order rather than the run order). Also updated the
+header/footer version strings (v1.2.0 → v1.3.0), the "thirteen" app-count
+text (→ "sixteen"), and the "14 passes total" comment (→ "17 passes
+total"). Ran `demo_html.wl`: all 16 apps report "OK — all outputs
+present" with zero `[WARNING]` lines; the generated `demo/demo.html` has
+16 correctly numbered sections (1–16) in the right order, verified by
+grep and by rendering screenshots of the three new sections in a browser.
 
 ---
 
-## thermo/ app — post-implementation items (target: v1.3.0)
+## thermo/, montecarlo/, magnetic/ — all post-implementation items resolved
 
-### 10. demo.wl and demo_html.wl — add thermo/
-
-**Fix:**
-- demo.wl: add thermo/ in distribution mode (helium, 100K→1000K) after quantum, before primes
-- demo_html.wl: add thermo/ appMeta entry with title, description, listening guide, primary WAV label "Listen — Maxwell-Boltzmann distribution sweep, helium 100K → 1000K", GIF, CLI
-
-**Status:** demo.wl side already done (thermo added to `$demoApps` after quantum/before montecarlo, in distribution mode). demo_html.wl's `appMeta`/`$appOrder` entry is still needed — Part C.
-
-Items 8, 9, and 11 (docs/APPS.md, root README.md, and the cellular/ APPS.md
-note-holding update) are resolved — see "Resolved in v1.3.0" above.
-
----
-
-## montecarlo/ app — post-implementation items (target: v1.3.0)
-
-### 14. demo.wl and demo_html.wl — add montecarlo/
-
-**Fix:**
-- demo.wl: add montecarlo/ in sweep mode (32×32, T 4.0→0.5) after thermo/, before primes/
-- demo_html.wl: add montecarlo/ appMeta entry with title "Ising Model — Ferromagnetic Phase Transition", description, listening guide, primary WAV label "Listen — Metropolis sweep, T = 4.0 → 0.5 through T_c", GIF, CLI
-
-**Status:** demo.wl side already done (montecarlo added to `$demoApps` after thermo/before magnetic, in sweep mode). demo_html.wl's `appMeta`/`$appOrder` entry is still needed — Part C.
-
-Items 12 and 13 (docs/APPS.md and root README.md) are resolved — see
-"Resolved in v1.3.0" above.
-
----
-
-## magnetic/ app — post-implementation items (target: v1.3.0)
-
-### 17. demo.wl and demo_html.wl — add magnetic/
-
-**Fix:**
-- demo.wl: add magnetic/ in mirror mode after montecarlo/, before primes/
-- demo_html.wl: add magnetic/ appMeta entry with title "Magnetic — Charged Particles in a Magnetic Field", description, listening guide, primary WAV label "Listen — magnetic mirror, Van Allen belt trapping", GIF: mirror.gif, CLI
-
-**Status:** demo.wl side already done (magnetic added to `$demoApps` after montecarlo/before primes, in mirror mode). demo_html.wl's `appMeta`/`$appOrder` entry is still needed — Part C.
-
-Items 15 and 16 (docs/APPS.md and root README.md) are resolved — see
-"Resolved in v1.3.0" above.
+Items 8, 9, 10, 11, 12, 13, 14, 15, 16, and 17 — docs/APPS.md and root
+README.md entries for all three apps, the cellular/ APPS.md note-holding
+update, and demo.wl/demo_html.wl integration for all three apps — are
+all resolved as of v1.3.0. See "Resolved in v1.3.0" above for details.
 
 ---
 
