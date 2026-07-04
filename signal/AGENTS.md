@@ -25,6 +25,7 @@ of a simulation — they ARE the signal. Do not apply stem-core's
                            Exports 3 PNGs + 1 GIF per run
 - `src/sonify.wl`        — `SonifySignal[analysis, cfg, outDir]`,
                            `ExportMonoWAV`, `SpeakToBuffer`,
+                           `SpeakToBufferPlatform`, `ResampleLinear`,
                            `CountCorrectPeaks`, `NarrativeText`
 - `output/`              — All output files (not committed)
 
@@ -88,8 +89,22 @@ multiple mode runs coexist in `output/` without overwriting each other.
   not in the `FourierAnalysis` result. Access via `cfg` or `signalAssoc`.
 - `SonifySignal` takes `outDir` (directory), not a file path.
   Filenames are constructed internally using `analysis["mode"]`.
-- `SpeakToBuffer` calls macOS `say` and returns a PCM list. It degrades
-  gracefully to 0.5 s of silence if `say` fails or AIFF import fails.
+- `SpeakToBuffer` tries `SpeechSynthesize[]` first, then falls back to
+  platform-native TTS (`SpeakToBufferPlatform`: macOS `say`, Linux
+  `espeak-ng`/`espeak`, Windows PowerShell `SpeechSynthesizer`), then
+  degrades to 0.5 s of silence if both tiers fail — the same three-tier
+  pattern used by `images/`, `thermo/`, `montecarlo/`, `dynamical/`, and
+  `magnetic/`. Prior to the v1.3.0 speech-consolidation pass this app
+  called platform TTS directly with no `SpeechSynthesize[]` attempt;
+  that was the one remaining inconsistency across the project's speech
+  mechanisms. `ResampleLinear` (arbitrary-ratio linear interpolation)
+  replaced an old hack that only handled exactly a 2x sample-rate ratio
+  — `SpeechSynthesize[]` and the TTS engines can return audio at rates
+  that aren't a clean fraction of the target (e.g. 22050 Hz vs 44100 Hz
+  is fine, but not every engine uses that rate). A single
+  `$SignalSpeechFailed` flag (reset per `SonifySignal` call) triggers
+  one `[WARNING]` print if *any* narrative segment had to fall back to
+  silence, rather than one warning per segment.
 
 ## Dependencies
 
@@ -97,4 +112,7 @@ multiple mode runs coexist in `output/` without overwriting each other.
 - `stem-core` (sibling `../stem-core`) — `NormalizeBuffer`, `ExportAudioBuffer`,
   `EnsureDir`, `ExportGIF`, `ExportCSV`, `STEMSay`, `STEMDescribe*`, `GetCfg`,
   `DeepMerge`, `LoadConfig`
+- `SpeechSynthesize`, `AudioQ`, `AudioData`, `AudioSampleRate` (primary TTS
+  tier), `RunProcess` (platform TTS fallback), `Import` (reading
+  TTS-generated WAV files)
 - No external paclets required

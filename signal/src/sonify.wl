@@ -14,25 +14,52 @@
      {mode}_noisy.wav           — noisy signal, normalised to 0.95
      {mode}_recovered.wav       — recovered signal, normalised to 0.95
      {mode}_narrative_full.wav  — speech + signals concatenated (best effort)
+
+   Speech: SpeechSynthesize[] -> platform-native TTS -> silence.
+   Same three-tier fallback as images/, thermo/, montecarlo/, dynamical/,
+   and magnetic/'s src/speech.wl (or, for magnetic, sonify.wl) files —
+   this app previously skipped straight to shell `say`/espeak/PowerShell
+   calls with no SpeechSynthesize[] attempt at all, which was the one
+   remaining inconsistency addressed by the v1.3.0 speech-mechanism
+   consolidation pass. If both TTS tiers fail, the narrative WAV is
+   still built with silence standing in for the missing speech segment,
+   so the intro -> clean -> noisy -> recovered -> summary structure and
+   overall duration stay intact either way.
    ======================================================== *)
 
 
 
-(* SpeakToBuffer
-   Synthesises speech and returns a mono PCM list at the target sample rate.
-   Falls back to a short silence on any error or if TTS is unavailable.
+(* ResampleLinear — general linear-interpolation resampler, any ratio.
+   Replaces the old "only handles exactly a 2x ratio" upsample hack:
+   SpeechSynthesize[] and the platform TTS engines can each return audio
+   at a variety of native sample rates (e.g. 22050, 24000 Hz), not just
+   half of targetSr. *)
+ResampleLinear[data_List, rawSr_?NumericQ, targetSr_?NumericQ] :=
+  Module[{n = Length[data], newN, ratio, oldPos, lo, frac},
+    If[n < 2 || Abs[N[rawSr] - N[targetSr]] < 1.0, Return[data]];
+    ratio = N[targetSr] / N[rawSr];
+    newN  = Max[1, Round[n * ratio]];
+    Table[
+      oldPos = (i - 1) * (n - 1.0) / Max[newN - 1, 1];
+      lo     = Clip[Floor[oldPos], {0, n - 2}];
+      frac   = oldPos - lo;
+      (1 - frac) * data[[lo + 1]] + frac * data[[lo + 2]],
+      {i, newN}
+    ]
+  ]
+
+
+(* SpeakToBufferPlatform — OS-native TTS -> mono PCM at targetSr.
+   Second-tier fallback, used only when SpeechSynthesize[] is
+   unavailable or fails.
 
    Platform support:
      macOS   — `say -o file.aiff` then `afconvert` to linear PCM WAV
      Linux   — `espeak-ng -w file.wav` (preferred) or `espeak -w file.wav`
-     Windows — PowerShell System.Speech.Synthesis.SpeechSynthesizer to WAV
+     Windows — PowerShell System.Speech.Synthesis.SpeechSynthesizer to WAV *)
 
-   Upsamples to targetSr by linear interpolation when the TTS engine
-   outputs at a lower sample rate (e.g. 22050 → 44100 Hz). *)
-
-SpeakToBuffer[text_String, targetSr_Integer] :=
-  Module[{id, wavPath, snd, data, rawSr, upsampled,
-          silence = ConstantArray[0.0, Round[targetSr * 0.5]]},
+SpeakToBufferPlatform[text_String, targetSr_Integer] :=
+  Module[{id, wavPath, snd, data, rawSr},
 
     id      = ToString[RandomInteger[999999]];
     wavPath = FileNameJoin[{$TemporaryDirectory, "stem_say_" <> id <> ".wav"}];
@@ -47,13 +74,13 @@ SpeakToBuffer[text_String, targetSr_Integer] :=
           If[!AssociationQ[result] || result["ExitCode"] =!= 0 ||
              !FileExistsQ[aiffPath],
             Quiet[DeleteFile /@ Select[{aiffPath, wavPath}, FileExistsQ]];
-            Return[silence]];
+            Return[{}]];
           conv = Quiet[RunProcess[{"afconvert", aiffPath, wavPath,
                                     "-d", "LEI16", "-f", "WAVE"}]];
           Quiet[DeleteFile[aiffPath]];
           If[!AssociationQ[conv] || conv["ExitCode"] =!= 0 || !FileExistsQ[wavPath],
             Quiet[DeleteFile /@ Select[{wavPath}, FileExistsQ]];
-            Return[silence]]],
+            Return[{}]]],
 
       (* ── Linux: espeak-ng or espeak → WAV directly ── *)
       "Unix",
@@ -63,7 +90,7 @@ SpeakToBuffer[text_String, targetSr_Integer] :=
             result = Quiet[RunProcess[{"espeak", "-w", wavPath, text}]]];
           If[!AssociationQ[result] || result["ExitCode"] =!= 0 || !FileExistsQ[wavPath],
             Quiet[DeleteFile /@ Select[{wavPath}, FileExistsQ]];
-            Return[silence]]],
+            Return[{}]]],
 
       (* ── Windows: PowerShell SpeechSynthesizer → WAV ── *)
       "Windows",
@@ -77,31 +104,59 @@ SpeakToBuffer[text_String, targetSr_Integer] :=
           result = Quiet[RunProcess[{"powershell", "-NoProfile", "-Command", psCmd}]];
           If[!AssociationQ[result] || result["ExitCode"] =!= 0 || !FileExistsQ[wavPath],
             Quiet[DeleteFile /@ Select[{wavPath}, FileExistsQ]];
-            Return[silence]]],
+            Return[{}]]],
 
-      (* ── Unknown platform: return silence ── *)
+      (* ── Unknown platform ── *)
       _,
-        Return[silence]
+        Return[{}]
     ];
 
-    (* Common path: import the WAV, extract samples, upsample if needed *)
+    (* Common path: import the WAV, extract samples, resample if needed *)
     snd = Quiet[Import[wavPath]];
-    If[!AudioQ[snd], Quiet[DeleteFile[wavPath]]; Return[silence]];
+    If[!AudioQ[snd], Quiet[DeleteFile[wavPath]]; Return[{}]];
     data  = Quiet[Flatten[N[AudioData[snd]]]];
     rawSr = Quiet[QuantityMagnitude[AudioSampleRate[snd]]];
     Quiet[DeleteFile[wavPath]];
-    If[!ListQ[data] || Length[data] === 0, Return[silence]];
+    If[!ListQ[data] || Length[data] === 0 || !NumericQ[rawSr], Return[{}]];
 
-    If[rawSr < targetSr,
-      With[{ratio = Round[targetSr / rawSr]},
-        If[ratio === 2,
-          upsampled = Flatten[Transpose[{
-            Most[data],
-            (Most[data] + Rest[data]) / 2.0
-          }]];
-          Append[upsampled, Last[data]],
-          data]],
-      data]
+    ResampleLinear[data, rawSr, targetSr]
+  ]
+
+
+(* SpeakToBuffer
+   Synthesises speech and returns a mono PCM list at the target sample
+   rate: SpeechSynthesize[] first, platform-native TTS second, silence
+   (of the same nominal duration the fallback would have produced) if
+   both fail. Sets the module-level $SignalSpeechFailed flag the first
+   time both tiers fail, so SonifySignal can print a single warning
+   rather than one per segment. *)
+
+$SignalSpeechFailed = False;
+
+SpeakToBuffer[text_String, targetSr_Integer] :=
+  Module[{buf, result, data, rawSr, silence},
+    silence = ConstantArray[0.0, Round[targetSr * 0.5]];
+
+    buf = Quiet[Check[
+      result = SpeechSynthesize[text];
+      If[AudioQ[result],
+        data  = Quiet[Flatten[N[AudioData[result]]]];
+        rawSr = Quiet[QuantityMagnitude[AudioSampleRate[result]]];
+        If[ListQ[data] && Length[data] > 0 && NumericQ[rawSr],
+          ResampleLinear[data, rawSr, targetSr],
+          {}
+        ],
+        {}
+      ],
+      {}
+    ]];
+    If[ListQ[buf] && Length[buf] > 0, Return[buf]];
+
+    buf = SpeakToBufferPlatform[text, targetSr];
+    If[ListQ[buf] && Length[buf] > 0, Return[buf]];
+
+    $SignalSpeechFailed = True;
+    silence
   ]
 
 
@@ -204,14 +259,21 @@ SonifySignal[analysis_Association, cfg_Association, outDir_String] :=
     STEMDescribeWAV[recovPath, dur];
 
     (* ── Narrative WAV: speech + signals concatenated ── *)
-    Print["  Building narrative WAV (TTS: say / espeak-ng / PowerShell)..."];
+    Print["  Building narrative WAV (TTS: SpeechSynthesize -> platform TTS -> silence)..."];
     texts   = NarrativeText[analysis, mode];
-    silence = ConstantArray[0.0, Round[sr * 0.4]];   (* 0.4 s pause *)
+    silence = ConstantArray[0.0, Round[sr * 0.4]];   (* 0.4 s pause between segments *)
 
-    spIntro  = SpeakToBuffer[texts["intro"],   sr];
-    spNoisy  = SpeakToBuffer[texts["noisy"],   sr];
-    spRecov  = SpeakToBuffer[texts["recov"],   sr];
+    $SignalSpeechFailed = False;
+    spIntro   = SpeakToBuffer[texts["intro"],   sr];
+    spNoisy   = SpeakToBuffer[texts["noisy"],   sr];
+    spRecov   = SpeakToBuffer[texts["recov"],   sr];
     spSummary = SpeakToBuffer[texts["summary"], sr];
+
+    If[$SignalSpeechFailed,
+      Print["[WARNING] Speech synthesis unavailable (SpeechSynthesize[] and " <>
+            "platform TTS both failed) -- narrative WAV will use silence in place " <>
+            "of the affected spoken segment(s); signal audio and timing are unaffected."]
+    ];
 
     (* Concatenate: intro → clean → transition → noisy → transition → recovered → summary *)
     fullNarrative = Join[
