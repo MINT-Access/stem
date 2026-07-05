@@ -1,0 +1,30 @@
+{
+  "version": 1,
+  "app": "bayes",
+  "description": "Bayesian inference sonified: coin bias updating (Beta-Binomial), Gaussian mean estimation (Normal-Normal), and Bayes factor model comparison",
+
+  "simulation": {
+    "mode": "coin",
+    "bayes": {
+      "theta_true": 0.7,
+      "theta_alt": 0.7,
+      "mu_true": 2.5,
+      "mu_0": 0.0,
+      "sigma_0": 2.0,
+      "sigma": 1.0,
+      "n_flips": 100,
+      "n_obs": 80,
+      "random_seed": 42,
+      "frame_duration": 0.15,
+      "freq_min": 100,
+      "freq_max": 4000,
+      "n_bins": 128
+    }
+  },
+
+  "sonification": {
+    "bayes": {
+      "summary_layer_gain": -12
+    }
+  }
+}
