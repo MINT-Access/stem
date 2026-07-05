@@ -48,6 +48,28 @@ This document tracks small issues, wording improvements, and polish items to add
 
 ---
 
+## scattering/ app — post-implementation items (target: v1.4.0)
+
+### 24. docs/APPS.md — add scattering/ entry
+
+**Fix:** Add complete entry for scattering/ with all three modes (scatter, distribution, discovery), presets (glancing, moderate, headon, backscatter), config keys, and output filenames. Source from scattering/config.json and scattering/src/model.wl.
+
+### 25. Root README.md — add scattering/ entry
+
+**Fix:**
+- Repository layout diagram: add `scattering/` with description "Rutherford alpha particle scattering: hyperbolic trajectories, cross-section distribution, Thomson vs Rutherford model comparison"
+- Quick Start section: add CLI examples for all three modes and key presets
+- Projects section: add scattering/ subsection covering the 1911 discovery, hyperbolic trajectories, the 1/sin⁴ cross-section, and the binaural Thomson vs Rutherford comparison
+- afplay examples: add discovery_audio.wav (demo preset), scatter_audio.wav
+
+### 26. demo.wl and demo_html.wl — add scattering/
+
+**Fix:**
+- demo.wl: add scattering/ in discovery mode after magnetic/, before primes/
+- demo_html.wl: add scattering/ appMeta entry with title "Scattering — Rutherford Alpha Particle Scattering", description, listening guide, primary WAV label "Listen — Thomson vs Rutherford: the experiment that discovered the nucleus (stereo)", GIF: discovery.gif, secondary WAVs: scatter_audio.wav, distribution_audio.wav
+
+---
+
 ## Resolved
 
 ### Item 23 resolved: demo.wl and demo_html.wl — add bayes/
