@@ -1,0 +1,18 @@
+{
+  "simulation": {
+    "mode": "orbitals",
+    "hydrogen": {
+      "orbital": "210",
+      "grid_size": 64,
+      "n_max": 8,
+      "n_start": 5,
+      "l_start": 2,
+      "n_realizations": 20,
+      "max_steps": 50,
+      "freq_min": 100,
+      "freq_max": 4000,
+      "chord_duration": 3.0,
+      "note_duration": 0.3
+    }
+  }
+}
