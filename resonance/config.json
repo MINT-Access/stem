@@ -1,0 +1,28 @@
+{
+  "version": 1,
+  "app": "resonance",
+  "description": "Orbital resonances sonified: the Galilean moons' 4:2:1 Laplace resonance, the asteroid belt's Kirkwood gaps, and Saturn's Cassini Division",
+
+  "simulation": {
+    "mode": "galilean",
+    "resonance": {
+      "n_periods": 8,
+      "n_steps": 200,
+      "a_min_AU": 2.0,
+      "a_max_AU": 3.5,
+      "gap_width_AU": 0.05,
+      "r_min_km": 74000,
+      "r_max_km": 137000,
+      "freq_min": 150,
+      "freq_max": 3000,
+      "duration_per_step": 0.05,
+      "chord_duration": 4.0
+    }
+  },
+
+  "sonification": {
+    "resonance": {
+      "trajectory_layer_gain": -12
+    }
+  }
+}
