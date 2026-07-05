@@ -32,6 +32,28 @@ This document tracks small issues, wording improvements, and polish items to add
 
 ---
 
+## bayes/ app — post-implementation items (target: v1.4.0)
+
+### 21. docs/APPS.md — add bayes/ entry
+
+**Fix:** Add complete entry for bayes/ with all three modes (coin, gaussian, model), all `simulation.bayes.*`/`sonification.bayes.*` config keys, and output filenames. Source from bayes/config.json and bayes/src/model.wl.
+
+### 22. Root README.md — add bayes/ entry
+
+**Fix:**
+- Repository layout diagram: add `bayes/` with description "Bayesian inference: Beta-Binomial coin updating, Normal-Normal Gaussian mean estimation, Bayes factor model comparison"
+- Quick Start section: add CLI examples for all three modes
+- Projects section: add bayes/ subsection covering Bayes' theorem, conjugate priors, the Bayes factor/Jeffreys scale, and the connection to thermo/'s spectral-narrowing technique
+- afplay examples: add coin_audio.wav (demo preset), gaussian_audio.wav, model_audio.wav
+
+### 23. demo.wl and demo_html.wl — add bayes/
+
+**Fix:**
+- demo.wl: add bayes/ in coin mode (theta_true=0.7, 100 flips) after primes/, before images/
+- demo_html.wl: add bayes/ appMeta entry with title "Bayesian Inference — Coin Bias, Gaussian Mean, and Model Comparison", description, listening guide, primary WAV label "Listen — Bayesian coin inference, posterior narrowing over 100 flips", GIF: coin.gif, secondary WAVs: gaussian_audio.wav, model_audio.wav
+
+---
+
 ## Resolved
 
 ### Items 1–2 resolved: demo/demo.html labels and "musical" framing
