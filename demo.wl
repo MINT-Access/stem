@@ -3,7 +3,7 @@
 (* ================================================================
    demo.wl  —  STEM project showcase and regression test
 
-   Runs all 18 apps with their most compelling presets, collects
+   Runs all 19 apps with their most compelling presets, collects
    all outputs into demo/, and writes demo/demo-report.md.
 
    Each app is loaded inline via Get+Block rather than spawning
@@ -109,6 +109,24 @@ $demoApps = {
     "listenFor" -> "l4_audio.wav \[LongDash] pitch follows angular velocity as the test " <>
                    "particle librates around Jupiter's L4 Trojan point; pan sweeps with " <>
                    "x-position in the co-rotating frame; accent tones mark each closest approach"
+  |>,
+  (* Inserted immediately after "lagrange" per its build spec's own
+     instruction -- not literally "before asteroids" as that spec text
+     also said, since "asteroids" already sits earlier in this array
+     (position 5, before "lagrange" at position 6); the same kind of
+     "before X" mismatch bayes/thermo/montecarlo/magnetic's own build
+     notes hit, resolved the same way (see docs/PRE_RELEASE_REFINEMENTS.md). *)
+  <|
+    "name"      -> "resonance",
+    "preset"    -> "galilean moons, 4:2:1 Laplace resonance, 8 Ganymede periods",
+    "cliArgs"   -> {"main.wl"},
+    "expected"  -> {"output/galilean_audio.wav",
+                    "output/galilean.gif",
+                    "output/galilean_data.csv"},
+    "listenFor" -> "galilean_audio.wav \[LongDash] Ganymede plays C3, Europa plays C4, Io " <>
+                   "plays C5 \[LongDash] a two-octave chord locked in place by gravity for " <>
+                   "billions of years; count exactly 4 Io notes and 2 Europa notes between " <>
+                   "each Ganymede note"
   |>,
   <|
     "name"      -> "cellular",
@@ -581,7 +599,7 @@ If[!$checkOnly,
 
   dl["# STEM Demo"]; dl[""];
   dl["This directory contains outputs from a single run of `../demo.wl`,"];
-  dl["which exercises all 18 STEM apps with their most scientifically and"];
+  dl["which exercises all 19 STEM apps with their most scientifically and"];
   dl["acoustically compelling presets."]; dl[""];
   dl["Generated: " <> DateString[]]; dl[""];
   dl["## Contents"]; dl[""];
@@ -652,15 +670,20 @@ If[!$checkOnly,
   dl["   co-rotating frame. Pitch follows angular velocity; pan sweeps with x-position."];
   dl["   Accent tones mark the libration rhythm. The particle stays bounded \[LongDash]"];
   dl["   the reason real Trojan asteroids exist at L4 and L5 but not L1."]; dl[""];
-  dl["16. **images** \[LongDash] `images_brightness_audio.wav`"];
+  dl["16. **resonance** \[LongDash] `galilean_audio.wav`"];
+  dl["   From the L4/L5 1:1 resonance to an exact 4:2:1 lock: Io, Europa, and Ganymede"];
+  dl["   playing C3, C4, and C5 \[LongDash] a two-octave chord held in place by gravity"];
+  dl["   for billions of years. Count 4 Io notes and 2 Europa notes between each"];
+  dl["   Ganymede note."]; dl[""];
+  dl["17. **images** \[LongDash] `images_brightness_audio.wav`"];
   dl["   A 2D Gaussian cloud sonified via Hilbert curve traversal."];
   dl["   Dark edges map to low pitch; the bright central peak maps to high pitch."];
   dl["   Spatial structure becomes temporal structure \[LongDash] the Hilbert"];
   dl["   locality property means nearby pixels sound nearby in time."]; dl[""];
-  dl["17. **relativity** \[LongDash] `chirp.wav`"];
+  dl["18. **relativity** \[LongDash] `chirp.wav`"];
   dl["   Binary black hole merger (GW150914). Rising pitch and amplitude,"];
   dl["   abrupt merger, fading ringdown. This is what LIGO heard on 14 Sep 2015."]; dl[""];
-  dl["18. **cosmology** \[LongDash] `cmb_spectrum_audio.wav`"];
+  dl["19. **cosmology** \[LongDash] `cmb_spectrum_audio.wav`"];
   dl["   The CMB angular power spectrum from l=2 to l=2000. Hear the"];
   dl["   Sachs-Wolfe plateau give way to the first acoustic peak (l\[TildeEqual]220),"];
   dl["   then the second and third harmonics fading into the Silk damping tail."];
@@ -683,6 +706,7 @@ If[!$checkOnly,
   dl["afplay demo/dynamical/output/sweep_audio.wav"];
   dl["afplay demo/asteroids/output/*.wav"];
   dl["afplay demo/lagrange/output/l4_audio.wav"];
+  dl["afplay demo/resonance/output/galilean_audio.wav"];
   dl["afplay demo/images/output/images_brightness_audio.wav"];
   dl["afplay demo/relativity/output/chirp.wav"];
   dl["afplay demo/cosmology/output/cmb_spectrum_audio.wav"];
