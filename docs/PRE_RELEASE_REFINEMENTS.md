@@ -74,60 +74,35 @@ This document tracks small issues, wording improvements, and polish items to add
 
 ### 27. docs/APPS.md — add resonance/ entry
 
-**Fix:** Add complete entry for resonance/ with all three modes (galilean, kirkwood, saturn), all `simulation.resonance.*`/`sonification.resonance.*` config keys, and output filenames. Source from resonance/config.json and resonance/src/model.wl.
+**Fix:** Add complete entry for resonance/ with all three modes (galilean,
+kirkwood, saturn), config keys, and output filenames. Source from
+resonance/config.json and resonance/src/model.wl.
 
 ### 28. Root README.md — add resonance/ entry
 
 **Fix:**
-- Repository layout diagram: add `resonance/` with description "Orbital resonance sonified: Galilean moons' 4:2:1 Laplace resonance, asteroid belt Kirkwood gaps, Saturn's Cassini Division"
+- Repository layout diagram: add `resonance/` with description "Orbital
+  resonances: Galilean moon 4:2:1 Laplace resonance, Kirkwood gaps,
+  Saturn's Cassini Division"
 - Quick Start section: add CLI examples for all three modes
-- Projects section: add resonance/ subsection covering the Laplace resonance, Kirkwood gaps, the Cassini Division, and the 2:1-resonance-is-a-musical-octave connection
-- afplay examples: add galilean_audio.wav (demo preset), kirkwood_audio.wav, saturn_audio.wav
+- Projects section: add resonance/ subsection covering the Galilean moon
+  canon, Kirkwood gap silences, Cassini Division, and the music/orbital
+  mechanics connection
+- afplay examples: add galilean_audio.wav (demo preset), kirkwood_audio.wav,
+  saturn_audio.wav
 
-### 29. demo_html.wl — add resonance/
+### 29. demo.wl and demo_html.wl — add resonance/
 
-**Fix:** demo_html.wl's `$appOrder` gained a `resonance/` entry in `demo.wl` (see item 30, resolved below) but has not yet been touched itself. Add a full `appMeta` entry (title "Resonance — Orbital Resonance Sonified", description, listening guide, primary WAV label "Listen — Galilean moons' 4:2:1 Laplace resonance, a two-octave chord locked in place by gravity", GIF: galilean.gif, secondary WAVs kirkwood_audio.wav/saturn_audio.wav, `listening_guide_note` pointing to resonance/LISTENING_GUIDE.md) positioned in `$appOrder` immediately after `"lagrange"` — matching demo.wl's own run-order placement, not necessarily "before asteroids" (see item 30's note on that same mismatch). Update the header/intro app-count text accordingly.
+**Fix:**
+- demo.wl: add resonance/ in galilean mode after lagrange/, before asteroids/
+- demo_html.wl: add resonance/ appMeta entry with title "Resonance — Orbital
+  Resonances and the Music of the Spheres", description, listening guide,
+  primary WAV label "Listen — Io, Europa, Ganymede: 4:2:1 two-octave canon",
+  GIF: galilean.gif, secondary WAVs: kirkwood_audio.wav, saturn_audio.wav
 
 ---
 
 ## Resolved
-
-### Item 30 resolved: demo.wl and demo/README.md — add resonance/
-
-**Fixed:** `demo.wl`'s `$demoApps` array gained a `resonance` entry
-(galilean mode, defaults — no CLI overrides needed since the demo
-preset matches `resonance/config.json`'s own defaults exactly),
-inserted immediately after `lagrange` and before `cellular` — **not**
-"before asteroids" as this app's own build spec text asked, since
-`asteroids` already sits at position 5 in this array, *before*
-`lagrange` at position 6 — the identical "before X" mismatch
-bayes/thermo/montecarlo/magnetic's own build notes hit (see the
-"Item 23 resolved" entry below for the precedent), resolved the same
-way: honour the explicit "after lagrange" placement and accept that
-"before asteroids" cannot be satisfied without reordering `asteroids`
-itself, which is out of scope here. Header comment ("18 apps" ->
-"19 apps"), demo/README.md's app-count text ("18 STEM apps" -> "19 STEM
-apps"), the numbered listening-order list, and the afplay examples list
-were all updated; the listening-order list places `resonance`
-immediately after `lagrange` at position 16 (renumbering
-`images`/`relativity`/`cosmology` from 16-18 to 17-19) — this is the
-one demo.wl integration so far where the run-order array and the
-hand-curated listening-order list actually agree on placement, since
-`lagrange` (position 6 in the run array) is not immediately followed by
-`asteroids` there either.
-
-Verified, not assumed: ran `resonance/main.wl` standalone in all three
-modes (galilean/kirkwood/saturn) plus `tests/test_model.wl` (11/11
-passed) before wiring the demo entry; confirmed `demo.wl`'s own syntax
-remained valid after editing (`SyntaxQ` on the full file text) rather
-than running the entire 19-app demo (asteroids requires `NASA_API_KEY`;
-a full run was not repeated for this specific addition since the
-per-app pipeline logic is identical to the other 18 already-passing
-entries and only the static `$demoApps`/`dl[...]` text changed).
-
-**Note:** Items 27 (docs/APPS.md), 28 (root README.md), and 29
-(demo_html.wl) for resonance/ remain open above — this item covered
-only the demo.wl integration.
 
 ### Item 23 resolved: demo.wl and demo_html.wl — add bayes/
 
