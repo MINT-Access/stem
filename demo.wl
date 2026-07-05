@@ -3,7 +3,7 @@
 (* ================================================================
    demo.wl  —  STEM project showcase and regression test
 
-   Runs all 17 apps with their most compelling presets, collects
+   Runs all 18 apps with their most compelling presets, collects
    all outputs into demo/, and writes demo/demo-report.md.
 
    Each app is loaded inline via Get+Block rather than spawning
@@ -202,6 +202,15 @@ $demoApps = {
                     "output/gaps_animation.gif", "output/gaps_stats.csv"},
     "listenFor" -> "gaps_slow.wav at quarter tempo — twin-prime pairs as double-attacks; " <>
                    "large gaps leave audible rests"
+  |>,
+  <|
+    "name"      -> "bayes",
+    "preset"    -> "coin bias inference, theta_true=0.7, 100 flips (uniform prior)",
+    "cliArgs"   -> {"main.wl"},
+    "expected"  -> {"output/coin_audio.wav", "output/coin.gif", "output/coin_data.csv"},
+    "listenFor" -> "coin_audio.wav \[LongDash] the sound begins broad, every bias equally " <>
+                   "plausible, then narrows to a focused tone as 100 flips accumulate \[LongDash] " <>
+                   "probability updating made directly audible"
   |>,
   <|
     "name"      -> "images",
@@ -572,7 +581,7 @@ If[!$checkOnly,
 
   dl["# STEM Demo"]; dl[""];
   dl["This directory contains outputs from a single run of `../demo.wl`,"];
-  dl["which exercises all 17 STEM apps with their most scientifically and"];
+  dl["which exercises all 18 STEM apps with their most scientifically and"];
   dl["acoustically compelling presets."]; dl[""];
   dl["Generated: " <> DateString[]]; dl[""];
   dl["## Contents"]; dl[""];
@@ -601,51 +610,57 @@ If[!$checkOnly,
   dl["5. **primes** \[LongDash] `gaps_slow.wav`"];
   dl["   5000 prime gaps at quarter tempo. Twin-prime pairs (gap=2) sound as"];
   dl["   near-simultaneous double-attacks; large gaps leave audible rests."]; dl[""];
-  dl["6. **quantum** \[LongDash] `qho_audio.wav`"];
+  dl["6. **bayes** \[LongDash] `coin_audio.wav`"];
+  dl["   From number theory to probability: a coin's bias updated flip by flip via"];
+  dl["   Bayes' theorem. The sound begins broad and uncertain \[LongDash] every bias"];
+  dl["   equally plausible \[LongDash] and narrows to a focused tone as evidence"];
+  dl["   accumulates. No differential equations here, just belief updating, heard"];
+  dl["   directly."]; dl[""];
+  dl["7. **quantum** \[LongDash] `qho_audio.wav`"];
   dl["   A coherent-state wave packet oscillating in a harmonic potential."];
   dl["   Pitch follows mean position \[LongDash] smooth, periodic, and exact."]; dl[""];
-  dl["7. **hydrogen** \[LongDash] `spectrum_audio.wav`"];
+  dl["8. **hydrogen** \[LongDash] `spectrum_audio.wav`"];
   dl["   From one particle's wave packet to the exact quantum atom: hydrogen's full"];
   dl["   emission spectrum, chord first then a sweep from ultraviolet through the"];
   dl["   four bell-marked Balmer lines \[LongDash] the actual colour of hydrogen \[LongDash]"];
   dl["   to infrared."]; dl[""];
-  dl["8. **thermo** \[LongDash] `distribution_audio.wav`"];
+  dl["9. **thermo** \[LongDash] `distribution_audio.wav`"];
   dl["   From one quantum atom to the statistics of many classical ones:"];
   dl["   the Maxwell-Boltzmann speed distribution swept from 100K to 1000K."];
   dl["   Hear the spectrum broaden and rise in pitch as the gas heats up."]; dl[""];
-  dl["9. **montecarlo** \[LongDash] `sweep_audio.wav`"];
+  dl["10. **montecarlo** \[LongDash] `sweep_audio.wav`"];
   dl["   The 2D Ising model's ferromagnetic phase transition, swept from T=4.0"];
   dl["   down through T_c \[TildeEqual] 2.269 to T=0.5. The loudest, most turbulent"];
   dl["   moment of the sweep is the phase transition itself."]; dl[""];
-  dl["10. **magnetic** \[LongDash] `mirror_audio.wav`"];
+  dl["11. **magnetic** \[LongDash] `mirror_audio.wav`"];
   dl["   A charged particle bouncing inside a magnetic bottle. Pitch rises as it"];
   dl["   approaches each mirror point and falls as it retreats, with a sharp accent"];
   dl["   at every reflection \[LongDash] the same physics that traps solar-wind"];
   dl["   particles in Earth's Van Allen belts."]; dl[""];
-  dl["11. **lorenz** \[LongDash] `rossler_audio.wav`"];
+  dl["12. **lorenz** \[LongDash] `rossler_audio.wav`"];
   dl["   The R\[ODoubleDot]ssler attractor sonified. More melodic than Lorenz, almost"];
   dl["   improvisational \[LongDash] structured but never repeating."]; dl[""];
-  dl["12. **dynamical** \[LongDash] `sweep_audio.wav`"];
+  dl["13. **dynamical** \[LongDash] `sweep_audio.wav`"];
   dl["   The logistic map's period-doubling route to chaos. Hear the rhythm double"];
   dl["   at r=3, double again, dissolve into chaos near r=3.57, then snap back into"];
   dl["   a clean three-note rhythm at the period-3 window near r=3.83."]; dl[""];
-  dl["13. **asteroids** \[LongDash] any `asteroids_*.wav`"];
+  dl["14. **asteroids** \[LongDash] any `asteroids_*.wav`"];
   dl["   Each note is one asteroid this week: pitch = miss distance,"];
   dl["   bright timbre = hazardous. Live data, always different."]; dl[""];
-  dl["14. **lagrange** \[LongDash] `l4_audio.wav`"];
+  dl["15. **lagrange** \[LongDash] `l4_audio.wav`"];
   dl["   A test particle librating around Jupiter's L4 Trojan point in the Sun-Jupiter"];
   dl["   co-rotating frame. Pitch follows angular velocity; pan sweeps with x-position."];
   dl["   Accent tones mark the libration rhythm. The particle stays bounded \[LongDash]"];
   dl["   the reason real Trojan asteroids exist at L4 and L5 but not L1."]; dl[""];
-  dl["15. **images** \[LongDash] `images_brightness_audio.wav`"];
+  dl["16. **images** \[LongDash] `images_brightness_audio.wav`"];
   dl["   A 2D Gaussian cloud sonified via Hilbert curve traversal."];
   dl["   Dark edges map to low pitch; the bright central peak maps to high pitch."];
   dl["   Spatial structure becomes temporal structure \[LongDash] the Hilbert"];
   dl["   locality property means nearby pixels sound nearby in time."]; dl[""];
-  dl["16. **relativity** \[LongDash] `chirp.wav`"];
+  dl["17. **relativity** \[LongDash] `chirp.wav`"];
   dl["   Binary black hole merger (GW150914). Rising pitch and amplitude,"];
   dl["   abrupt merger, fading ringdown. This is what LIGO heard on 14 Sep 2015."]; dl[""];
-  dl["17. **cosmology** \[LongDash] `cmb_spectrum_audio.wav`"];
+  dl["18. **cosmology** \[LongDash] `cmb_spectrum_audio.wav`"];
   dl["   The CMB angular power spectrum from l=2 to l=2000. Hear the"];
   dl["   Sachs-Wolfe plateau give way to the first acoustic peak (l\[TildeEqual]220),"];
   dl["   then the second and third harmonics fading into the Silk damping tail."];
@@ -658,6 +673,7 @@ If[!$checkOnly,
   dl["afplay demo/pendulum/output/double_audio.wav"];
   dl["afplay demo/cellular/output/life_rpentomino_audio.wav"];
   dl["afplay demo/primes/output/gaps_slow.wav"];
+  dl["afplay demo/bayes/output/coin_audio.wav"];
   dl["afplay demo/quantum/output/qho_audio.wav"];
   dl["afplay demo/hydrogen/output/spectrum_audio.wav"];
   dl["afplay demo/thermo/output/distribution_audio.wav"];

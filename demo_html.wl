@@ -29,8 +29,18 @@ $demoHtmlOut = FileNameJoin[{$demoDir, "demo.html"}];
 $genDate     = DateString[];
 
 (* ── Demo listening order (mirrors demo.wl / demo/README.md) ─── *)
+(* "bayes" is inserted immediately after "primes", before "quantum" —
+   not literally "before images" as its own build-note text says,
+   for the same reason thermo/montecarlo/magnetic were placed after
+   quantum rather than "before primes": this page's listening order
+   and demo.wl's run order have never been identical, and primes is
+   already immediately followed by quantum here (images sits much
+   later, at position 14) — following the page's own established
+   order keeps the primes (number theory) -> bayes (probability) ->
+   quantum (physics) domain-shift the original note intended, without
+   uprooting bayes from primes by seven apps. *)
 $appOrder = {
-  "signal", "waves", "pendulum", "cellular", "primes", "quantum",
+  "signal", "waves", "pendulum", "cellular", "primes", "bayes", "quantum",
   "thermo", "montecarlo", "magnetic",
   "lorenz", "dynamical", "asteroids", "lagrange", "images", "relativity", "cosmology"
 };
@@ -197,6 +207,47 @@ appMeta = <|
       "for larger gaps.",
     "cli" -> "wolframscript -file primes/main.wl -- --simulation.mode=gaps",
     "github_path" -> "primes"
+  |>,
+
+  "bayes" -> <|
+    "title" -> "Bayesian Inference \[LongDash] Coin Bias, Gaussian Mean, and Model Comparison",
+    "description" ->
+      "Bayes' theorem describes how a probability distribution should update as " <>
+      "evidence arrives: a prior belief, combined with new data, produces a " <>
+      "posterior belief. This app sonifies that updating process directly, with " <>
+      "no differential equations, orbital mechanics, or wave functions involved " <>
+      "\[LongDash] the most conceptually distinct app in the project. In coin " <>
+      "mode, an unknown coin bias starts from a uniform prior (every bias " <>
+      "equally plausible) and is updated flip by flip via the exact Beta-Binomial " <>
+      "conjugate rule; a Gaussian mode and a Bayes-factor model-comparison mode " <>
+      "sonify two further kinds of Bayesian updating.",
+    "listening_guide" ->
+      "Listen for the sound beginning broad and noisy \[LongDash] many biases " <>
+      "remain plausible \[LongDash] and narrowing to a focused tone as 100 " <>
+      "simulated coin flips accumulate. A soft accent marks the first meaningful " <>
+      "update (flip 10), another marks the convergence milestone, and a final " <>
+      "accent marks the last flip. The narrowing itself is the inference: " <>
+      "uncertainty collapsing to near-certainty as data arrives.",
+    "primary_wav" -> "coin_audio.wav",
+    "primary_wav_label" -> "Listen \[LongDash] Bayesian coin inference, posterior narrowing over 100 flips",
+    "secondary_wavs" -> {
+      <| "file" -> "gaussian_audio.wav",
+         "label" -> "Listen \[LongDash] Gaussian mean estimation (pitch shifts toward the true mean)" |>,
+      <| "file" -> "model_audio.wav",
+         "label" -> "Listen \[LongDash] Bayes factor model comparison (stereo drift toward the favoured hypothesis)" |>
+    },
+    "gif" -> "coin.gif",
+    "gif_static" -> False,
+    "gif_alt" ->
+      "An animated Beta distribution curve over coin bias theta, starting flat " <>
+      "(uniform prior) and progressively narrowing into a sharp peak near the " <>
+      "true bias as simulated coin flips accumulate, coloured from blue (broad, " <>
+      "uncertain) to orange (narrow, confident).",
+    "cli" -> "wolframscript -file bayes/main.wl",
+    "github_path" -> "bayes",
+    "listening_guide_note" ->
+      "New to Bayesian sonification? See bayes/LISTENING_GUIDE.md for the " <>
+      "recommended listening sequence across all three modes."
   |>,
 
   "quantum" -> <|
@@ -940,7 +991,7 @@ $html = "<!doctype html>\n" <>
 "<header>\n" <>
 "<h1>MINT Access stem</h1>\n" <>
 "<p><strong>Accessible STEM Simulations \[LongDash] v1.3.0</strong></p>\n" <>
-"<p>Sixteen physics, mathematics, and cosmology simulations, each producing " <>
+"<p>Seventeen physics, mathematics, and cosmology simulations, each producing " <>
 "an animated visualisation and an audio sonification of the underlying " <>
 "physics, designed to be fully accessible to blind and low-vision users.</p>\n" <>
 "<p class=\"links\">" <>
@@ -954,7 +1005,7 @@ $html = "<!doctype html>\n" <>
 "<p>Each simulation below pairs a visual animation with a sonification " <>
 "of the same underlying physics or mathematics. Use the " <>
 "jump list to go directly to any simulation, or scroll through all " <>
-"sixteen in the recommended listening order. No installation is " <>
+"seventeen in the recommended listening order. No installation is " <>
 "required \[LongDash] everything on this page plays directly in your " <>
 "browser.</p>\n" <>
 "</section>\n" <>
@@ -984,7 +1035,7 @@ Export[$demoHtmlOut, $html, "Text"];
 Print[""];
 STEMHeading["Summary"];
 STEMPrintN["Apps with complete outputs", $nComplete, "", 2];
-Print["  (demo.wl runs 17 passes total \[LongDash] dynamical counts twice)"];
+Print["  (demo.wl runs 19 passes total, 18 unique apps \[LongDash] dynamical counts twice)"];
 If[$nIncomplete > 0,
   STEMPrintN["Apps with missing outputs", $nIncomplete, "", 2];
   Print["  (see [WARNING] lines above for which files were missing per app)"]

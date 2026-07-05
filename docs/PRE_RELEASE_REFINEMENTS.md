@@ -46,15 +46,55 @@ This document tracks small issues, wording improvements, and polish items to add
 - Projects section: add bayes/ subsection covering Bayes' theorem, conjugate priors, the Bayes factor/Jeffreys scale, and the connection to thermo/'s spectral-narrowing technique
 - afplay examples: add coin_audio.wav (demo preset), gaussian_audio.wav, model_audio.wav
 
-### 23. demo.wl and demo_html.wl — add bayes/
-
-**Fix:**
-- demo.wl: add bayes/ in coin mode (theta_true=0.7, 100 flips) after primes/, before images/
-- demo_html.wl: add bayes/ appMeta entry with title "Bayesian Inference — Coin Bias, Gaussian Mean, and Model Comparison", description, listening guide, primary WAV label "Listen — Bayesian coin inference, posterior narrowing over 100 flips", GIF: coin.gif, secondary WAVs: gaussian_audio.wav, model_audio.wav
-
 ---
 
 ## Resolved
+
+### Item 23 resolved: demo.wl and demo_html.wl — add bayes/
+
+**Fixed:** `demo.wl`'s `$demoApps` array gained a `bayes` entry (coin mode,
+defaults: theta_true=0.7, 100 flips — no CLI overrides needed since the
+demo preset matches `bayes/config.json`'s own defaults exactly), inserted
+between `primes` and `images` per this item's instruction (the array's
+`primes` entry is already immediately followed by `images`, so no
+reordering conflict here, unlike the demo_html.wl case below). Header
+comment, demo/README.md's app count ("17" -> "18 STEM apps"), the
+numbered listening-order list, and the afplay examples list were all
+updated; the listening-order list and afplay list place `bayes` right
+after `primes` (position 6, renumbering `quantum`..`cosmology` from
+6-17 to 7-18) since that list has always been a separate hand-curated
+narrative order from the run-order array, not identical to it.
+
+`demo_html.wl`'s `$appOrder` gained `"bayes"` positioned after
+`"primes"` and before `"quantum"` — **not** "before images" as this
+item's own text stated. The page's listening order already has
+`primes` at position 5 immediately followed by `quantum` at position 6,
+with `images` much later at position 14 (seven apps further along);
+following the page's own established order (the same resolution
+`demo.wl`/`demo_html.wl`'s items 10/14/17 for thermo/montecarlo/magnetic
+used for an identical "before X" mismatch) keeps the
+primes-(number theory) -> bayes-(probability) -> quantum-(physics)
+domain-shift the original build note intended, without uprooting bayes
+from primes by seven apps. A full `appMeta` entry was added (title,
+description, listening guide, primary WAV label, `coin.gif`, secondary
+WAVs `gaussian_audio.wav`/`model_audio.wav`, `listening_guide_note`
+pointing to `bayes/LISTENING_GUIDE.md`, matching the `images` entry's
+precedent for apps with a dedicated listening guide). Header/intro
+app-count text updated "Sixteen"/"sixteen" -> "Seventeen"/"seventeen"
+(this file's own `$appOrder` count, which still does not include
+`hydrogen` — that remains a separate, still-open gap, item 20 above,
+not touched by this fix) and the summary footer's pass-count comment
+updated to "19 passes total, 18 unique apps" (matching `demo.wl`'s
+actual current totals).
+
+Verified, not assumed: ran the full `demo.wl` (19/19 passes, 18 unique
+apps, 275.1s total) and then `demo_html.wl` (17/17 sections "OK — all
+outputs present", zero `[WARNING]` lines, generated `demo/demo.html`
+with `bayes` correctly numbered "6." in both the nav list and its own
+section, all four of its audio/GIF references resolving to real files).
+
+**Note:** Items 21 (docs/APPS.md) and 22 (root README.md) for bayes/
+remain open above — this item covered only the demo integration.
 
 ### Items 1–2 resolved: demo/demo.html labels and "musical" framing
 
