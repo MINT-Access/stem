@@ -91,14 +91,19 @@ resonance/config.json and resonance/src/model.wl.
 - afplay examples: add galilean_audio.wav (demo preset), kirkwood_audio.wav,
   saturn_audio.wav
 
-### 29. demo.wl and demo_html.wl — add resonance/
+### 29. demo_html.wl — add resonance/
 
-**Fix:**
-- demo.wl: add resonance/ in galilean mode after lagrange/, before asteroids/
-- demo_html.wl: add resonance/ appMeta entry with title "Resonance — Orbital
-  Resonances and the Music of the Spheres", description, listening guide,
-  primary WAV label "Listen — Io, Europa, Ganymede: 4:2:1 two-octave canon",
-  GIF: galilean.gif, secondary WAVs: kirkwood_audio.wav, saturn_audio.wav
+**Status:** demo.wl already done — `$demoApps` has a `resonance/` entry
+(galilean mode) positioned immediately after `lagrange/`, not "before
+asteroids/" as originally planned, since `asteroids/` already precedes
+`lagrange/` in that array (same "before X" mismatch bayes/thermo/
+montecarlo/magnetic's own items hit; see their resolved entries below).
+
+**Fix (remaining):** demo_html.wl: add resonance/ appMeta entry with title
+"Resonance — Orbital Resonances and the Music of the Spheres", description,
+listening guide, primary WAV label "Listen — Io, Europa, Ganymede: 4:2:1
+two-octave canon", GIF: galilean.gif, secondary WAVs: kirkwood_audio.wav,
+saturn_audio.wav
 
 ---
 
