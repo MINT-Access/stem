@@ -1,0 +1,20 @@
+{
+  "version": 1,
+  "app": "scattering",
+  "description": "Rutherford alpha-particle scattering: single trajectory, beam distribution, and the historic Thomson vs Rutherford model comparison",
+
+  "simulation": {
+    "mode": "scatter",
+    "scattering": {
+      "b": 1.0,
+      "preset": "",
+      "r_initial": 20.0,
+      "n_points": 500,
+      "n_particles": 200,
+      "b_max": 8.0,
+      "random_seed": 42,
+      "note_duration": 0.08,
+      "n_seconds": 8.0
+    }
+  }
+}
