@@ -1,6 +1,6 @@
 # stem
 
-[![Version](https://img.shields.io/badge/version-1.3.0-blue.svg)](RELEASE_NOTES_v1.3.0.md)
+[![Version](https://img.shields.io/badge/version-1.4.0-blue.svg)](RELEASE_NOTES_v1.4.0.md)
 [![Wolfram Language](https://img.shields.io/badge/Wolfram_Language-13%2B-DD1100.svg)](https://www.wolfram.com/engine/)
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](LICENSE)
 
@@ -31,6 +31,11 @@ stem/
   thermo/           Maxwell-Boltzmann distribution, ideal gas ensemble, thermal cooling, equipartition theorem
   montecarlo/       2D Ising model, Metropolis MCMC, ferromagnetic phase transition
   magnetic/         Charged particle motion: cyclotron orbits, E×B drift, magnetic mirror, multi-particle chord
+  hydrogen/         Hydrogen atom: wave functions, emission spectrum, quantum cascade transitions
+  bayes/            Bayesian inference: coin bias, Gaussian mean estimation, Bayes factor comparison
+  scattering/       Rutherford scattering: hyperbolic trajectories, cross-section, Thomson vs Rutherford
+  resonance/        Orbital resonances: Galilean 4:2:1 Laplace resonance, Kirkwood gaps, Cassini Division
+  fluid/            Kármán vortex street: vortex shedding, Strouhal frequency, Reynolds sweep, flag flutter
   config/           Global config defaults (config.json)
   docs/             Workflow guides
 ```
@@ -188,13 +193,39 @@ wolframscript -file magnetic/main.wl                                            
 wolframscript -file magnetic/main.wl -- --simulation.mode=drift                 # E×B drift
 wolframscript -file magnetic/main.wl -- --simulation.mode=mirror                # magnetic mirror
 wolframscript -file magnetic/main.wl -- --simulation.mode=multi                 # proton+alpha+electron chord
+
+# Hydrogen atom — wave functions and emission spectrum
+wolframscript -file hydrogen/main.wl                                            # orbitals, 2p (210)
+wolframscript -file hydrogen/main.wl -- --simulation.mode=spectrum              # emission spectrum
+wolframscript -file hydrogen/main.wl -- --simulation.mode=transitions           # quantum cascade
+wolframscript -file hydrogen/main.wl -- --simulation.hydrogen.orbital=320       # 3d orbital
+
+# Bayesian inference
+wolframscript -file bayes/main.wl                                               # coin, θ=0.7, 100 flips
+wolframscript -file bayes/main.wl -- --simulation.mode=gaussian                 # Gaussian mean
+wolframscript -file bayes/main.wl -- --simulation.mode=model                    # Bayes factor
+
+# Rutherford scattering
+wolframscript -file scattering/main.wl                                          # single trajectory b=1
+wolframscript -file scattering/main.wl -- --simulation.scattering.preset=backscatter
+wolframscript -file scattering/main.wl -- --simulation.mode=discovery           # Thomson vs Rutherford
+
+# Orbital resonances
+wolframscript -file resonance/main.wl                                           # Galilean 4:2:1
+wolframscript -file resonance/main.wl -- --simulation.mode=kirkwood             # Kirkwood gaps
+wolframscript -file resonance/main.wl -- --simulation.mode=saturn               # Cassini Division
+
+# Kármán vortex street
+wolframscript -file fluid/main.wl                                               # karman, Re=150
+wolframscript -file fluid/main.wl -- --simulation.mode=strouhal                 # Reynolds sweep
+wolframscript -file fluid/main.wl -- --simulation.mode=flag                     # flag flutter
 ```
 
 Each project writes outputs into its own directory:
 
 | Project | Output dir | File types |
 |---------|-----------|------------|
-| all sixteen apps | `output/` | CSV, GIF, WAV (+ PNG for signal, quantum, primes, relativity, images, cosmology, waves, lagrange) |
+| all twenty-one apps | `output/` | CSV, GIF, WAV (+ PNG for signal, quantum, primes, relativity, images, cosmology, waves, lagrange, hydrogen) |
 
 Play audio:
 
@@ -225,6 +256,15 @@ afplay montecarlo/output/sweep_audio.wav
 afplay montecarlo/output/critical_audio.wav
 afplay magnetic/output/mirror_audio.wav
 afplay magnetic/output/cyclotron_audio.wav
+afplay hydrogen/output/spectrum_audio.wav
+afplay hydrogen/output/transitions_audio.wav
+afplay bayes/output/coin_audio.wav
+afplay bayes/output/model_audio.wav
+afplay scattering/output/discovery_audio.wav
+afplay resonance/output/galilean_audio.wav
+afplay resonance/output/kirkwood_audio.wav
+afplay fluid/output/karman_audio.wav
+afplay fluid/output/strouhal_audio.wav
 
 # Linux — replace afplay with aplay
 aplay signal/output/chord_narrative_full.wav
@@ -512,6 +552,102 @@ three-tone chord whose frequency ratios directly encode the particles'
 relative masses.
 See [`magnetic/README.md`](magnetic/README.md).
 
+### hydrogen
+
+Sonifies the quantum mechanics of the hydrogen atom — the only atom whose
+Schrödinger equation can be solved exactly in closed form, and the
+foundation of all atomic physics and spectroscopy. Energy levels follow
+`E_n = -13.6057/n^2 eV`, and a transition from an excited state releases a
+photon whose energy is the difference — the Rydberg formula. The Balmer
+series (transitions down to n=2) is the visible light emitted by hydrogen,
+empirically discovered in 1885 and theoretically explained by Bohr in 1913;
+these same wavelengths appear as absorption lines in the spectra of stars
+across the universe, including the Sun. Three modes: `orbitals` sonifies
+`|psi_nlm|^2` wave functions via Hilbert curve traversal, so an orbital's
+lobes and nodes become audible sweeps and silences; `spectrum` sonifies the
+full n=2..n_max emission spectrum as a chord and then a UV-to-IR sweep;
+`transitions` simulates an electron cascading down to the ground state
+through a sequence of random, selection-rule-respecting quantum jumps —
+`|Delta l| = 1` — audible as a different "melody" on every run.
+See [`hydrogen/README.md`](hydrogen/README.md).
+
+### bayes
+
+Sonifies Bayesian inference — belief updating made directly audible. A
+prior distribution, combined with observed data via the likelihood,
+produces a posterior: the updated belief. Three conjugate-update scenarios,
+all exact: `coin` mode updates a Beta prior over a coin's bias flip by
+flip, the clearest possible demonstration of a broad, uncertain prior
+narrowing into a focused posterior as evidence accumulates; `gaussian`
+mode updates a Normal prior over an unknown mean, both narrowing and
+shifting in pitch toward the true value; `model` mode computes a Bayes
+factor between two competing hypotheses about a coin, with stereo position
+drifting toward whichever hypothesis the data favours (interpreted via the
+commonly-cited Jeffreys scale: anecdotal, moderate, strong, very strong
+evidence). The `coin`/`gaussian` posteriors are sonified with the same
+spectral-narrowing additive-synthesis technique as `thermo/`'s
+Maxwell-Boltzmann distribution mode — but driven by accumulating
+*information* rather than *temperature*.
+See [`bayes/README.md`](bayes/README.md).
+
+### scattering
+
+Simulates and sonifies Rutherford alpha-particle scattering — the
+1909-1911 Geiger-Marsden experiment that discovered the atomic nucleus.
+J.J. Thomson's "plum pudding" model, with positive charge spread evenly
+through the atom, could not produce large-angle scattering; Rutherford
+described the observed result as "almost as incredible as if you fired a
+15-inch shell at a piece of tissue paper and it came back and hit you." The
+only explanation was a tiny, dense, positively charged nucleus. Three
+modes: `scatter` integrates a single alpha particle's hyperbolic trajectory
+around the nucleus, pitch and volume rising through closest approach;
+`distribution` sonifies a realistic beam of particles as a dense, quiet
+stream of small-angle events punctuated by rare, loud backscatter accents —
+the Rutherford cross-section `1/sin^4(theta/2)` played directly rather than
+plotted; `discovery` recreates the historical comparison in binaural
+stereo, Thomson's model (left channel, confined to under one degree) against
+Rutherford's (right channel, with occasional dramatic backscatter events the
+Thomson model structurally cannot produce).
+See [`scattering/README.md`](scattering/README.md).
+
+### resonance
+
+Sonifies orbital resonance — the phenomenon where orbiting bodies' periods
+lock into simple integer ratios — across three settings, in the app where
+planetary mechanics and music theory meet most precisely: a 2:1 orbital
+resonance *is* a musical octave. `galilean` mode simulates Jupiter's moons
+Io, Europa, and Ganymede, whose periods lock into an almost exact 4:2:1
+ratio (the Laplace resonance), sonified as a rhythmic canon — a two-octave
+chord, C3:C4:C5, in a 1:2:4 ratio of note counts, locked in place by
+gravity. `kirkwood` mode sonifies the asteroid belt's Kirkwood gaps — sharp
+silences at semi-major axes where Jupiter's resonant gravitational kicks
+have swept the belt clear. `saturn` mode applies the same technique to
+Saturn's rings, where the Cassini Division is audible as a long silence,
+the same 2:1 resonance mechanism at a different scale, caused by the moon
+Mimas. Kepler spent much of his career searching for a "harmony of the
+spheres" among the planets; the Galilean moons, discovered just nine years
+before his death, are the genuine article he never got to see.
+See [`resonance/README.md`](resonance/README.md).
+
+### fluid
+
+Simulates and sonifies vortex shedding behind a bluff body — the Kármán
+vortex street — making the Strouhal frequency directly audible: the same
+pitch a wire, flagpole, or power line sings in the wind (an Aeolian tone).
+`karman` mode fixes the Reynolds number and sonifies the resulting periodic
+vortex shedding as a steady tone with alternating shed-event clicks.
+`strouhal` mode sweeps the Reynolds number from onset (Re≈47 — a genuine
+bifurcation from steady to periodic flow) through the laminar regime toward
+turbulence, audible as silence giving way to a sudden tone that gradually
+broadens. `flag` mode models a flexible flag flapping in the flow as a
+damped, driven oscillator — a simplified cousin of the aeroelastic flutter
+that destroyed the original Tacoma Narrows Bridge in 1940 — with pitch and
+pan following the flapping tip. The wake itself is modelled with the vortex
+particle method: a handful of discrete point vortices advected by mutual
+Biot-Savart induction, an educational approximation rather than a full
+Navier-Stokes solve.
+See [`fluid/README.md`](fluid/README.md).
+
 ---
 
 ## Config system
@@ -547,7 +683,7 @@ See [`docs/APPS.md`](docs/APPS.md) for a full listing of each app's config keys.
 
 ## stem-core
 
-All sixteen projects load `stem-core` as a shared library. It provides:
+All twenty-one projects load `stem-core` as a shared library. It provides:
 
 - **Config** — `LoadConfig`, `GetCfg`, `DeepMerge` — four-layer config merging and safe key lookup
 - **Sonification pipeline** — `SonifyTrajectory`, `SpatialLayer`, `MotionLayer`, `EventLayer`, `MixLayers`, `RenderAudio`

@@ -1,6 +1,6 @@
 # STEM Apps — Quick Reference
 
-All sixteen apps share the same invocation pattern and config system. This
+All twenty-one apps share the same invocation pattern and config system. This
 document covers CLI options, modes, config keys, and output files for each.
 
 ---
@@ -25,6 +25,11 @@ document covers CLI options, modes, config keys, and output files for each.
 | `thermo` | Classical statistical mechanics | `distribution`, `ensemble`, `cooling`, `equipartition` | `output/` | No |
 | `montecarlo` | 2D Ising model (Metropolis MCMC) | `sweep`, `critical`, `quench` | `output/` | No |
 | `magnetic` | Charged particle motion (Lorentz force) | `cyclotron`, `drift`, `mirror`, `multi` | `output/` | No |
+| `hydrogen` | Hydrogen atom (quantum mechanics) | `orbitals`, `spectrum`, `transitions` | `output/` | No |
+| `bayes` | Bayesian inference | `coin`, `gaussian`, `model` | `output/` | No |
+| `scattering` | Rutherford alpha-particle scattering | `scatter`, `distribution`, `discovery` | `output/` | No |
+| `resonance` | Orbital resonance | `galilean`, `kirkwood`, `saturn` | `output/` | No |
+| `fluid` | Kármán vortex street | `karman`, `strouhal`, `flag` | `output/` | No |
 
 ---
 
@@ -37,7 +42,7 @@ $HardcodedDefaults → config/config.json → <app>/config.json → CLI --key=va
 ```
 
 Keys use dot notation for nesting. CLI overrides accept both
-`--key.subkey=value` and `--key.subkey value` (space form) — all 16 apps
+`--key.subkey=value` and `--key.subkey value` (space form) — all 21 apps
 support both conventions.
 Dump the active config without running the simulation:
 
@@ -1017,4 +1022,336 @@ cyclotron/drift's pure-circular-orbit default).
   return for drift since the electric field does instantaneous but not net
   work).
 - See [`magnetic/LISTENING_GUIDE.md`](../magnetic/LISTENING_GUIDE.md) for the
+  recommended listening sequence.
+
+---
+
+## hydrogen
+
+Sonifies the quantum mechanics of the hydrogen atom: energy levels and the
+Rydberg formula, wave functions/orbitals via Hilbert-curve traversal, and
+electron cascade transitions respecting the electric-dipole selection rule.
+The only atom whose Schrödinger equation is exactly solvable.
+
+**Run:**
+```sh
+wolframscript -file hydrogen/main.wl                                          # orbitals, 2p (210)
+wolframscript -file hydrogen/main.wl -- --simulation.hydrogen.orbital=100     # 1s
+wolframscript -file hydrogen/main.wl -- --simulation.hydrogen.orbital=320     # 3d, m=0
+wolframscript -file hydrogen/main.wl -- --simulation.hydrogen.orbital=321     # 3d, four-lobe clover
+wolframscript -file hydrogen/main.wl -- --simulation.mode=spectrum            # emission spectrum
+wolframscript -file hydrogen/main.wl -- --simulation.mode=transitions         # electron cascades
+wolframscript -file hydrogen/main.wl -- --simulation.hydrogen.n_start=7
+wolframscript -file hydrogen/main.wl -- --simulation.hydrogen.n_realizations=5
+```
+
+Orbital presets (`orbitals` mode, `--simulation.hydrogen.orbital`): `100`
+(1s), `200` (2s), `210` (2p, m=0, default), `300` (3s), `320` (3d, m=0),
+`321` (3d, m=±1 clover).
+
+**Key config keys (`hydrogen/config.json`):**
+
+| Key | Default | Description |
+|-----|---------|--------------|
+| `simulation.mode` | `"orbitals"` | `"orbitals"`, `"spectrum"`, or `"transitions"` |
+| `simulation.hydrogen.orbital` | `"210"` | Named orbital preset (orbitals mode) — see above |
+| `simulation.hydrogen.grid_size` | `64` | Cross-section grid side length (rounded to nearest power of 2, capped at 256) |
+| `simulation.hydrogen.n_max` | `8` | Highest n_upper included in the emission spectrum (spectrum mode) |
+| `simulation.hydrogen.n_start` | `5` | Cascade starting principal quantum number (transitions mode) |
+| `simulation.hydrogen.l_start` | `2` | Cascade starting angular momentum quantum number (clipped to ≤ n_start−1) |
+| `simulation.hydrogen.n_realizations` | `20` | Independent cascades simulated (max 100) |
+| `simulation.hydrogen.max_steps` | `50` | Safety cap on cascade length |
+| `simulation.hydrogen.freq_min` | `100` | Audio frequency floor, Hz (all modes) |
+| `simulation.hydrogen.freq_max` | `4000` | Audio frequency ceiling, Hz (all modes) |
+| `simulation.hydrogen.chord_duration` | `3.0` | Spectrum chord duration, seconds (spectrum mode) |
+| `simulation.hydrogen.note_duration` | `0.3` | Spectrum sweep per-line duration, seconds (spectrum mode) |
+
+**Output files (mode-prefixed):**
+
+| File | Description |
+|------|--------------|
+| `output/orbitals_audio.wav` | Hilbert-traversal sonification of \|psi_nlm\|^2 (log pitch and amplitude) |
+| `output/orbitals.gif` / `.png` | Traversal sweep animation / static cross-section plot |
+| `output/orbitals_data.csv` | Per-pixel table: Hilbert index, position, density, assigned frequency |
+| `output/spectrum_audio.wav` | Full narrated file: intro, chord, sweep, outro |
+| `output/spectrum_chord.wav` / `spectrum_sweep.wav` | Raw chord / UV→IR sweep, no narration |
+| `output/spectrum.gif` / `spectrum_data.csv` | Growing stem-plot animation with sweeping cursor / per-line data |
+| `output/transitions_audio.wav` | Spoken intro + stereo cascade sonification (pan = l of emitting state) |
+| `output/transitions.gif` | Grotrian (energy-level) diagram animation |
+| `output/transitions_data.csv` | Per-transition table: n/l upper and lower, series, wavelength, Einstein A |
+
+**Notes:**
+- Energy levels: E_n = -13.6057/n^2 eV (infinite-nuclear-mass Rydberg
+  constant). The Balmer series (n_lower=2) is the visible-light emission,
+  discovered empirically in 1885.
+- Selection rules: electric-dipole transitions require \|Delta l\| = 1;
+  `transitions` mode's cascade simulator excludes 2s as a landing state (it
+  is metastable under Delta l=±1, matching real hydrogen).
+- Four correctness checks: energy levels vs -13.6057/n^2 (all modes),
+  Rydberg check (H-alpha = 656.279 nm within 0.1%, all modes), wave-function
+  normalisation (orbitals mode), selection rule \|Delta l\|=1 (transitions
+  mode).
+- See [`hydrogen/LISTENING_GUIDE.md`](../hydrogen/LISTENING_GUIDE.md) for the
+  recommended listening sequence.
+
+---
+
+## bayes
+
+Sonifies Bayesian inference: probability distributions narrowing as evidence
+accumulates. Three conjugate-update scenarios, all exact (no numerical
+integration needed for the posteriors themselves): Beta-Binomial coin bias,
+Normal-Normal Gaussian mean, and a Bayes-factor model comparison.
+
+**Run:**
+```sh
+wolframscript -file bayes/main.wl                                           # coin, theta_true=0.7, 100 flips
+wolframscript -file bayes/main.wl -- --simulation.mode=gaussian             # Gaussian mean estimation
+wolframscript -file bayes/main.wl -- --simulation.mode=model                # Bayes factor comparison
+wolframscript -file bayes/main.wl -- --simulation.bayes.theta_true=0.5      # fair coin, slow convergence
+wolframscript -file bayes/main.wl -- --simulation.bayes.theta_true=0.9      # strongly biased coin
+wolframscript -file bayes/main.wl -- --simulation.bayes.n_flips=200
+wolframscript -file bayes/main.wl -- --simulation.bayes.random_seed=123
+wolframscript -file bayes/main.wl -- --simulation.bayes.mu_true=0.5
+```
+
+**Key config keys (`bayes/config.json`):**
+
+| Key | Default | Description |
+|-----|---------|--------------|
+| `simulation.mode` | `"coin"` | `"coin"`, `"gaussian"`, or `"model"` |
+| `simulation.bayes.theta_true` | `0.7` | True coin bias (coin/model modes) |
+| `simulation.bayes.theta_alt` | `0.7` | H2's hypothesised bias (model mode) |
+| `simulation.bayes.mu_true` | `2.5` | True Gaussian mean (gaussian mode) |
+| `simulation.bayes.mu_0` | `0.0` | Prior mean (gaussian mode) |
+| `simulation.bayes.sigma_0` | `2.0` | Prior standard deviation (gaussian mode) |
+| `simulation.bayes.sigma` | `1.0` | Observation noise standard deviation (gaussian mode) |
+| `simulation.bayes.n_flips` | `100` | Number of coin flips (coin/model modes) |
+| `simulation.bayes.n_obs` | `80` | Number of observations (gaussian mode) |
+| `simulation.bayes.random_seed` | `42` | RNG seed for reproducible data generation |
+| `simulation.bayes.frame_duration` | `0.15` | Seconds per spectral frame or per-flip step |
+| `simulation.bayes.freq_min` | `100` | Lowest frequency in the spectral/pitch mapping, Hz |
+| `simulation.bayes.freq_max` | `4000` | Highest frequency in the spectral/pitch mapping, Hz |
+| `simulation.bayes.n_bins` | `128` | Frequency bins in the spectral posterior (coin/gaussian) |
+| `sonification.bayes.summary_layer_gain` | `-12` | dB gain of the pentatonic summary layer relative to the spectral layer |
+
+**Output files (mode-prefixed):**
+
+| File | Description |
+|------|--------------|
+| `output/coin_audio.wav` | Spoken intro + Beta posterior spectral narrowing + pentatonic summary layer |
+| `output/coin.gif` | Beta posterior density narrowing toward theta_true |
+| `output/coin_data.csv` | Per-flip: flip, outcome, alpha, beta, posterior mean/variance/mode |
+| `output/gaussian_audio.wav` | Spoken intro + Gaussian posterior narrowing and shifting |
+| `output/gaussian.gif` | Gaussian posterior shifting toward mu_true with 95% credible interval shaded |
+| `output/gaussian_data.csv` | Per-observation: x_obs, posterior mean/variance, credible interval bounds |
+| `output/model_audio.wav` | Spoken intro + Bayes-factor stereo-pan sonification |
+| `output/model.gif` | Bayes factor meter with revealed flip sequence |
+| `output/model_data.csv` | Per-flip: outcome, log_bayes_factor, pan, pitch, evidence level |
+
+**Notes:**
+- Coin/Gaussian posteriors are sonified as a spectral envelope (additive
+  synthesis) — the same technique `thermo/`'s Maxwell-Boltzmann distribution
+  mode uses, but driven by accumulating data rather than temperature.
+- Model mode's stereo pan tracks log10(Bayes factor); accent tones mark
+  \|log10 K\| crossing 1 (K=10) and 2 (K=100).
+- Four correctness checks: Beta posterior mean/mode (h=7,t=3), Gaussian
+  posterior mean/variance, Bayes factor value and sign, and a 5-realisation
+  convergence check.
+- See [`bayes/LISTENING_GUIDE.md`](../bayes/LISTENING_GUIDE.md) for the
+  recommended listening sequence.
+
+---
+
+## scattering
+
+Simulates and sonifies Rutherford alpha-particle scattering — the
+1909-1911 Geiger-Marsden experiment that discovered the atomic nucleus.
+Three modes: a single hyperbolic trajectory, a realistic beam distribution,
+and a binaural Thomson-vs-Rutherford historical comparison.
+
+**Run:**
+```sh
+wolframscript -file scattering/main.wl                                            # scatter, b=1.0 (90 deg)
+wolframscript -file scattering/main.wl -- --simulation.scattering.preset=glancing
+wolframscript -file scattering/main.wl -- --simulation.scattering.preset=headon
+wolframscript -file scattering/main.wl -- --simulation.scattering.preset=backscatter
+wolframscript -file scattering/main.wl -- --simulation.scattering.b=2.0
+wolframscript -file scattering/main.wl -- --simulation.mode=distribution          # beam of 200 particles
+wolframscript -file scattering/main.wl -- --simulation.mode=discovery             # Thomson vs Rutherford
+wolframscript -file scattering/main.wl -- --simulation.scattering.n_particles=500
+wolframscript -file scattering/main.wl -- --simulation.scattering.b_max=12.0
+```
+
+Presets (`--simulation.scattering.preset`, scatter mode): `glancing`
+(b=5.0), `moderate` (b=1.0, the default `b` value, not set via `preset`),
+`headon` (b=0.1), `backscatter` (b=0.0).
+
+**Key config keys (`scattering/config.json`):**
+
+| Key | Default | Description |
+|-----|---------|--------------|
+| `simulation.mode` | `"scatter"` | `"scatter"`, `"distribution"`, or `"discovery"` |
+| `simulation.scattering.b` | `1.0` | Impact parameter, scaled units (scatter mode) |
+| `simulation.scattering.preset` | `""` | Named preset overriding `b` — see above (scatter mode) |
+| `simulation.scattering.r_initial` | `20.0` | Starting distance, scaled units (scatter mode) |
+| `simulation.scattering.n_points` | `500` | Trajectory sample resolution (scatter mode) |
+| `simulation.scattering.n_particles` | `200` | Beam size (distribution mode) |
+| `simulation.scattering.b_max` | `8.0` | Maximum impact parameter (distribution/discovery modes) |
+| `simulation.scattering.random_seed` | `42` | RNG seed (distribution/discovery modes) |
+| `simulation.scattering.note_duration` | `0.08` | Seconds per particle note (distribution mode) |
+| `simulation.scattering.n_seconds` | `8.0` | Total playback duration (discovery mode) |
+
+**Output files (mode-prefixed):**
+
+| File | Description |
+|------|--------------|
+| `output/scatter_audio.wav` | Approach/periapsis/departure trajectory sonification |
+| `output/scatter.gif` | 2D hyperbolic trajectory around the nucleus |
+| `output/scatter_data.csv` | Time series: position, speed, phi, pitch/pan/volume |
+| `output/distribution_audio.wav` | Dense small-angle event stream with rare backscatter accents |
+| `output/distribution.gif` | Impact parameter vs. scattering angle scatter plot + histogram |
+| `output/distribution_data.csv` | One row per particle: b, theta, cross-section weight, pitch/pan/volume |
+| `output/discovery_audio.wav` | Binaural: Thomson (left) vs Rutherford (right) |
+| `output/discovery.gif` | Side-by-side growing angle histograms |
+| `output/discovery_data.csv` | One row per particle: b, Thomson angle, Rutherford angle |
+
+**Notes:**
+- Scaled units: the head-on (b=0) distance of closest approach and the
+  asymptotic speed are both set to 1, giving the exact closed form
+  theta = 2*ArcCot[b] and cross-section dSigma/dOmega = 1/sin^4(theta/2).
+- Four correctness checks: Rutherford formula (b=1 → theta=90°, all
+  modes), angular momentum conservation (scatter), energy conservation
+  (scatter), cross-section check against the analytic 1/b_max^2 backscatter
+  fraction (distribution).
+- See [`scattering/LISTENING_GUIDE.md`](../scattering/LISTENING_GUIDE.md) for
+  the recommended listening sequence.
+
+---
+
+## resonance
+
+Sonifies orbital resonance across the solar system: the Galilean moons'
+exact 4:2:1 Laplace resonance, the Kirkwood gaps Jupiter clears in the
+asteroid belt, and the Cassini Division Mimas clears in Saturn's rings.
+
+**Run:**
+```sh
+wolframscript -file resonance/main.wl                                          # galilean, 8 Ganymede periods
+wolframscript -file resonance/main.wl -- --simulation.mode=kirkwood            # asteroid belt gaps
+wolframscript -file resonance/main.wl -- --simulation.mode=saturn              # Saturn ring structure
+wolframscript -file resonance/main.wl -- --simulation.resonance.n_periods=4    # shorter galilean
+wolframscript -file resonance/main.wl -- --simulation.resonance.n_periods=16   # longer galilean
+wolframscript -file resonance/main.wl -- --simulation.resonance.gap_width_AU=0.02
+```
+
+**Key config keys (`resonance/config.json`):**
+
+| Key | Default | Description |
+|-----|---------|--------------|
+| `simulation.mode` | `"galilean"` | `"galilean"`, `"kirkwood"`, or `"saturn"` |
+| `simulation.resonance.n_periods` | `8` | Ganymede periods simulated (galilean mode) |
+| `simulation.resonance.n_steps` | `200` | Sample/bin resolution (all modes; saturn defaults internally to 300 if unset) |
+| `simulation.resonance.a_min_AU` / `a_max_AU` | `2.0` / `3.5` | Asteroid belt inner/outer edge (kirkwood mode) |
+| `simulation.resonance.gap_width_AU` | `0.05` | Kirkwood gap width (kirkwood mode) |
+| `simulation.resonance.r_min_km` / `r_max_km` | `74000` / `137000` | Ring inner/outer edge (saturn mode) |
+| `simulation.resonance.freq_min` / `freq_max` | `150` / `3000` | Sweep/chord frequency range, Hz (kirkwood/saturn modes) |
+| `simulation.resonance.duration_per_step` | `0.05` | Seconds per sweep step (kirkwood/saturn modes) |
+| `simulation.resonance.chord_duration` | `4.0` | Seconds for the simultaneous chord (kirkwood/saturn modes) |
+| `sonification.resonance.trajectory_layer_gain` | `-12` | dB gain of the continuous drone layer (galilean mode) |
+
+**Output files (mode-prefixed):**
+
+| File | Description |
+|------|--------------|
+| `output/galilean_audio.wav` | Rhythmic canon (event layer, C3/C4/C5) + 4:2:1 drone (trajectory layer) |
+| `output/galilean.gif` | Top-down orbital animation, Io/Europa/Ganymede with fading trails |
+| `output/galilean_data.csv` | Time series: angles, positions, orbit-completion event flags |
+| `output/kirkwood_audio.wav` | Chord, then sweep with Kirkwood gaps audible as silences |
+| `output/kirkwood.gif` | Animated sweep across the asteroid belt density curve |
+| `output/kirkwood_data.csv` | One row per sample: semi-major axis, density, pitch, amplitude |
+| `output/saturn_audio.wav` | Chord, then sweep with the Cassini Division audible as a gap |
+| `output/saturn.gif` | Animated sweep across Saturn's ring density, false-coloured by region |
+| `output/saturn_data.csv` | One row per sample: orbital radius, ring region, density, pitch |
+
+**Notes:**
+- Resonance radii use Kepler's third law, a = a_Jupiter*(q/p)^(2/3), applied
+  uniformly to both the Kirkwood gaps and the Cassini Division.
+- Four correctness checks: period ratio (galilean, Io:Europa:Ganymede =
+  4:2:1 within 0.01 orbits), Kepler's third law (kirkwood, all five gap radii
+  within 0.5% of reference), Cassini Division location (saturn, idealised
+  2-body prediction within 1000 km of the real observed value — the
+  point-mass formula cannot reach the originally-specified 100 km tolerance,
+  see `resonance/AGENTS.md`), musical interval (galilean, C3:C4:C5 = 1:2:4
+  within 0.01%).
+- Two sonification paradigms in one app: `galilean` mode is event-based
+  (canon + drone, `SonifyTrajectory`-style); `kirkwood`/`saturn` modes are
+  spectral-synthesis-based (chord + sweep, matching `thermo/`'s technique) —
+  the first app in the project to use both approaches in different modes.
+- See [`resonance/LISTENING_GUIDE.md`](../resonance/LISTENING_GUIDE.md) for
+  the recommended listening sequence.
+
+---
+
+## fluid
+
+Simulates and sonifies vortex shedding behind a bluff body — the Kármán
+vortex street — making the Strouhal frequency directly audible. Three
+modes: a fixed-Reynolds-number vortex street, a Reynolds-number sweep from
+onset through transition, and a flag-flutter aeroelastic oscillator.
+
+**Run:**
+```sh
+wolframscript -file fluid/main.wl                                               # karman, Re=150
+wolframscript -file fluid/main.wl -- --simulation.mode=strouhal                 # Re sweep 20->300
+wolframscript -file fluid/main.wl -- --simulation.mode=flag                     # flag flutter
+wolframscript -file fluid/main.wl -- --simulation.fluid.Re=80                   # lower Re, cleaner tone
+wolframscript -file fluid/main.wl -- --simulation.fluid.Re=250                  # higher Re, noisier
+wolframscript -file fluid/main.wl -- --simulation.fluid.audio_freq_target=440
+wolframscript -file fluid/main.wl -- --simulation.fluid.flag_length=10.0
+wolframscript -file fluid/main.wl -- --simulation.fluid.duration=80
+```
+
+**Key config keys (`fluid/config.json`):**
+
+| Key | Default | Description |
+|-----|---------|--------------|
+| `simulation.mode` | `"karman"` | `"karman"`, `"strouhal"`, or `"flag"` |
+| `simulation.fluid.Re` | `150` | Reynolds number (karman mode) |
+| `simulation.fluid.U` | `1.0` | Freestream velocity |
+| `simulation.fluid.D` | `1.0` | Cylinder diameter |
+| `simulation.fluid.duration` | `40` | Simulation duration, convective time units (karman/strouhal; `main.wl` substitutes `30` for flag mode unless overridden) |
+| `simulation.fluid.n_vortices_max` | `200` | Max vortices retained in the domain (karman mode) |
+| `simulation.fluid.Re_start` / `Re_end` | `20` / `300` | Strouhal sweep range |
+| `simulation.fluid.Re_steps` | `50` | Number of sweep steps |
+| `simulation.fluid.duration_per_Re` | `10` | Simulation time per sweep step |
+| `simulation.fluid.audio_freq_target` | `220` | Reference pitch, Hz, at the canonical configuration |
+| `simulation.fluid.flag_length` | `5.0` | Flag length (flag mode) |
+| `simulation.fluid.flag_stiffness` | `0.1` | Dimensionless flag stiffness (flag mode) |
+
+**Output files (mode-prefixed):**
+
+| File | Description |
+|------|--------------|
+| `output/karman_audio.wav` | Strouhal tone + melodic modulation + alternating shed-event clicks |
+| `output/karman.gif` | Vortex street animation, centroid drifting downstream |
+| `output/karman_data.csv` | Time series: lift proxy, vortex centroid, positive/negative vortex counts |
+| `output/strouhal_audio.wav` | Silence -> onset tone -> broadening tone as Re sweeps |
+| `output/strouhal.gif` | Live flow snapshot alongside a building St-vs-Re curve |
+| `output/strouhal_data.csv` | Per Re-step: Re, shedding flag, predicted/measured f_shed and St |
+| `output/flag_audio.wav` | Flutter tone panning left-right with each flap |
+| `output/flag.gif` | Flag tip animation |
+| `output/flag_data.csv` | Time series: tip displacement, velocity, pitch/pan/volume |
+
+**Notes:**
+- Vortex particle method: the wake is a growing list of discrete point
+  vortices shed alternately top/bottom at the Strouhal frequency, advected
+  by freestream + mutual Biot-Savart induction — an educational
+  approximation, not a Navier-Stokes solver (see `fluid/AGENTS.md` for the
+  full list of simplifications).
+- Four correctness checks: Strouhal/shedding frequency (FFT peak vs
+  St*U/D within 10%), onset Reynolds number (40-60 range), Strouhal number
+  range (St in [0.18,0.22] for Re in [250,2000]), flag flutter frequency
+  (dedicated 12-period check vs 0.15*U/flagLength within 20%).
+- See [`fluid/LISTENING_GUIDE.md`](../fluid/LISTENING_GUIDE.md) for the
   recommended listening sequence.

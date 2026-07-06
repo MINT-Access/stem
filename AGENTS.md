@@ -21,6 +21,11 @@ Per-project AGENTS files:
 - [`thermo/AGENTS.md`](thermo/AGENTS.md)
 - [`montecarlo/AGENTS.md`](montecarlo/AGENTS.md)
 - [`magnetic/AGENTS.md`](magnetic/AGENTS.md)
+- [`hydrogen/AGENTS.md`](hydrogen/AGENTS.md)
+- [`bayes/AGENTS.md`](bayes/AGENTS.md)
+- [`scattering/AGENTS.md`](scattering/AGENTS.md)
+- [`resonance/AGENTS.md`](resonance/AGENTS.md)
+- [`fluid/AGENTS.md`](fluid/AGENTS.md)
 
 ---
 
@@ -45,6 +50,11 @@ stem/
   thermo/           Classical statistical mechanics (Maxwell-Boltzmann, ensemble, cooling, equipartition)
   montecarlo/       2D Ising model via Metropolis Monte Carlo (sweep, critical, quench)
   magnetic/         Charged particle motion in EM fields (cyclotron, drift, mirror, multi-particle chord)
+  hydrogen/         Hydrogen atom quantum mechanics (orbitals, emission spectrum, cascade transitions)
+  bayes/            Bayesian inference (coin bias, Gaussian mean, Bayes factor model comparison)
+  scattering/       Rutherford alpha-particle scattering (single trajectory, beam, Thomson vs Rutherford)
+  resonance/        Orbital resonance (Galilean 4:2:1 Laplace resonance, Kirkwood gaps, Cassini Division)
+  fluid/            Karman vortex street (vortex shedding, Strouhal sweep, flag flutter)
   config/           Global config defaults (config.json)
   docs/             Workflow guides
 ```
@@ -112,6 +122,21 @@ wolframscript -file magnetic/main.wl                                     # cyclo
 wolframscript -file magnetic/main.wl -- --simulation.mode=drift
 wolframscript -file magnetic/main.wl -- --simulation.mode=mirror
 wolframscript -file magnetic/main.wl -- --simulation.mode=multi
+wolframscript -file hydrogen/main.wl                                     # orbitals, 2p (default)
+wolframscript -file hydrogen/main.wl -- --simulation.mode=spectrum
+wolframscript -file hydrogen/main.wl -- --simulation.mode=transitions
+wolframscript -file bayes/main.wl                                        # coin (default)
+wolframscript -file bayes/main.wl -- --simulation.mode=gaussian
+wolframscript -file bayes/main.wl -- --simulation.mode=model
+wolframscript -file scattering/main.wl                                   # scatter, b=1.0 (default)
+wolframscript -file scattering/main.wl -- --simulation.mode=distribution
+wolframscript -file scattering/main.wl -- --simulation.mode=discovery
+wolframscript -file resonance/main.wl                                    # galilean (default)
+wolframscript -file resonance/main.wl -- --simulation.mode=kirkwood
+wolframscript -file resonance/main.wl -- --simulation.mode=saturn
+wolframscript -file fluid/main.wl                                        # karman, Re=150 (default)
+wolframscript -file fluid/main.wl -- --simulation.mode=strouhal
+wolframscript -file fluid/main.wl -- --simulation.mode=flag
 ```
 
 `asteroids/main.wl` and `asteroids/experiment.wl` accept `[-- YYYY-MM-DD YYYY-MM-DD [Scale]]`.
@@ -146,6 +171,11 @@ wolframscript -file dynamical/tests/test_model.wl
 wolframscript -file thermo/tests/test_model.wl
 wolframscript -file montecarlo/tests/test_model.wl
 wolframscript -file magnetic/tests/test_model.wl
+wolframscript -file hydrogen/tests/test_model.wl
+wolframscript -file bayes/tests/test_model.wl
+wolframscript -file scattering/tests/test_model.wl
+wolframscript -file resonance/tests/test_model.wl
+wolframscript -file fluid/tests/test_model.wl
 ```
 
 `cellular`, `signal`, `quantum`, `primes`, and `relativity` do not have test files. All existing test files exit 0 on success, 1 on failure.
@@ -281,26 +311,57 @@ speed to pitch, and labelled events to accent tones, then mix to a stereo WAV.
 functions) builds its carrier manually rather than calling `SonifyTrajectory`
 directly — see `magnetic/AGENTS.md` design decision 1 for why a constant-frequency
 tone requirement is incompatible with `SpatialLayer`'s generic rescale-to-range
-pitch mapping.
+pitch mapping. `scattering`'s `scatter` mode and `fluid`'s `karman`/`flag` modes
+follow the same manual-carrier pattern: each is a single simulated trajectory
+(a hyperbolic scattering path; a vortex-street centroid; a flag tip) turned into
+pitch/pan/volume by hand rather than via `SonifyTrajectory`. `scattering` and
+`resonance` join `lagrange` and `magnetic` as the project's orbital/celestial
+mechanics apps; `fluid` joins `waves` as a continuum-mechanics app (both solve a
+field/flow problem rather than a single-body orbit).
 
 **Spatial-field-based** (`HilbertTraversalOrder` from `stem-core/src/hilbert.wl`):
-images, cosmology. A 2D spatial field (an image or a sky temperature map) is visited
-in Hilbert curve order so that spatially adjacent pixels become temporally adjacent
-notes. Pitch and volume are derived from the pixel value at each step (brightness,
-colour index, CMB temperature, etc.). This paradigm does not use `SonifyTrajectory`.
+images, cosmology, hydrogen (`orbitals` mode only). A 2D spatial field (an image, a
+sky temperature map, or a quantum orbital's cross-section) is visited in Hilbert
+curve order so that spatially adjacent points become temporally adjacent notes.
+Pitch and volume are derived from the field value at each step (brightness, colour
+index, CMB temperature, or `|psi|^2` probability density). This paradigm does not
+use `SonifyTrajectory`. `hydrogen` is the project's other quantum-mechanics app
+alongside `quantum` — `quantum` covers time-dependent wave-packet dynamics in one
+spatial dimension, while `hydrogen` covers a static, exactly-solvable
+three-dimensional system and its spectroscopy (its `spectrum`/`transitions` modes
+use bespoke chord/sweep and per-transition synthesis instead, matching neither
+this paradigm nor the trajectory-based one).
 
-**Spectral-synthesis-based** (additive synthesis, one app so far):
-thermo. Rather than mapping a single trajectory value to pitch, each audio frame
-synthesises many simultaneous sine partials whose amplitudes trace an actual
-probability density (the Maxwell-Boltzmann speed distribution) — the frame's
-spectral envelope literally *is* the physics, not a sonification of a derived
-scalar. Uses neither `SonifyTrajectory` nor `HilbertTraversalOrder`.
+**Spectral-synthesis-based** (additive synthesis): thermo, bayes (`coin`/`gaussian`
+modes), resonance (`kirkwood`/`saturn` modes). Rather than mapping a single
+trajectory value to pitch, each audio frame synthesises many simultaneous sine
+partials whose amplitudes trace an actual probability density or spatial density
+(the Maxwell-Boltzmann speed distribution; a Bayesian posterior; asteroid-belt or
+ring density vs. orbital radius) — the frame's spectral envelope literally *is*
+the physics, not a sonification of a derived scalar. Uses neither
+`SonifyTrajectory` nor `HilbertTraversalOrder`. `bayes` is the project's first
+statistics app, and reuses `thermo`'s exact spectral-narrowing technique — driven
+by accumulating *information* rather than *temperature*.
 
 **montecarlo is the first app to combine two paradigms in one output**: its global
 observables (magnetisation, energy, susceptibility) drive a trajectory-based
 continuous carrier, mixed with a quieter Hilbert-curve spatial scan of the spin
 grid itself running simultaneously — reusing `cellular/`'s run-length note-holding
-technique for the spatial layer.
+technique for the spatial layer. **`resonance` is the first app to use two
+paradigms in different modes of the same app** (rather than combined in one
+output): `galilean` mode is event-based (a bespoke rhythmic canon plus a
+constant-frequency drone, `StemSynthNote` per orbit completion), while
+`kirkwood`/`saturn` modes are spectral-synthesis-based (chord + sweep, the same
+`SynthesizeAdditiveFrame` technique as `thermo`/`bayes`).
+
+**fluid is an educational approximation, not a CFD tool**: the wake is modelled
+with the vortex particle method — a handful of discrete point vortices shed at the
+Strouhal frequency and advected by mutual Biot-Savart induction — which reproduces
+the correct shedding frequency and alternating staggered-row structure but has no
+viscous core diffusion and no resolved boundary layer. A future enhancement could
+replace this with a full finite-element Navier-Stokes solve (as `waves/` already
+does for the linear wave equation) if runtime permits; see `fluid/AGENTS.md` for
+the complete list of simplifications.
 
 ---
 

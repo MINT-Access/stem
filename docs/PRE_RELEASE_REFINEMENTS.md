@@ -12,18 +12,6 @@ This document tracks small issues, wording improvements, and polish items to add
 
 ## hydrogen/ app — post-implementation items (target: v1.4.0)
 
-### 18. docs/APPS.md — add hydrogen/ entry
-
-**Fix:** Add complete entry for hydrogen/ with all three modes (orbitals, spectrum, transitions), config keys, orbital presets, and output filenames. Source from hydrogen/config.json and hydrogen/src/model.wl.
-
-### 19. Root README.md — add hydrogen/ entry
-
-**Fix:**
-- Repository layout diagram: add `hydrogen/` with description "Hydrogen atom: wave functions, emission spectrum (Balmer series), quantum cascade transitions"
-- Quick Start section: add CLI examples for all three modes and key orbital presets
-- Projects section: add hydrogen/ subsection covering energy levels, Balmer series historical significance, wave functions, and quantum cascade
-- afplay examples: add spectrum_audio.wav (demo preset), transitions_audio.wav
-
 ### 20. demo.wl and demo_html.wl — add hydrogen/
 
 **Fix:**
@@ -32,35 +20,7 @@ This document tracks small issues, wording improvements, and polish items to add
 
 ---
 
-## bayes/ app — post-implementation items (target: v1.4.0)
-
-### 21. docs/APPS.md — add bayes/ entry
-
-**Fix:** Add complete entry for bayes/ with all three modes (coin, gaussian, model), all `simulation.bayes.*`/`sonification.bayes.*` config keys, and output filenames. Source from bayes/config.json and bayes/src/model.wl.
-
-### 22. Root README.md — add bayes/ entry
-
-**Fix:**
-- Repository layout diagram: add `bayes/` with description "Bayesian inference: Beta-Binomial coin updating, Normal-Normal Gaussian mean estimation, Bayes factor model comparison"
-- Quick Start section: add CLI examples for all three modes
-- Projects section: add bayes/ subsection covering Bayes' theorem, conjugate priors, the Bayes factor/Jeffreys scale, and the connection to thermo/'s spectral-narrowing technique
-- afplay examples: add coin_audio.wav (demo preset), gaussian_audio.wav, model_audio.wav
-
----
-
 ## scattering/ app — post-implementation items (target: v1.4.0)
-
-### 24. docs/APPS.md — add scattering/ entry
-
-**Fix:** Add complete entry for scattering/ with all three modes (scatter, distribution, discovery), presets (glancing, moderate, headon, backscatter), config keys, and output filenames. Source from scattering/config.json and scattering/src/model.wl.
-
-### 25. Root README.md — add scattering/ entry
-
-**Fix:**
-- Repository layout diagram: add `scattering/` with description "Rutherford alpha particle scattering: hyperbolic trajectories, cross-section distribution, Thomson vs Rutherford model comparison"
-- Quick Start section: add CLI examples for all three modes and key presets
-- Projects section: add scattering/ subsection covering the 1911 discovery, hyperbolic trajectories, the 1/sin⁴ cross-section, and the binaural Thomson vs Rutherford comparison
-- afplay examples: add discovery_audio.wav (demo preset), scatter_audio.wav
 
 ### 26. demo.wl and demo_html.wl — add scattering/
 
@@ -71,25 +31,6 @@ This document tracks small issues, wording improvements, and polish items to add
 ---
 
 ## resonance/ app — post-implementation items (target: v1.4.0)
-
-### 27. docs/APPS.md — add resonance/ entry
-
-**Fix:** Add complete entry for resonance/ with all three modes (galilean,
-kirkwood, saturn), config keys, and output filenames. Source from
-resonance/config.json and resonance/src/model.wl.
-
-### 28. Root README.md — add resonance/ entry
-
-**Fix:**
-- Repository layout diagram: add `resonance/` with description "Orbital
-  resonances: Galilean moon 4:2:1 Laplace resonance, Kirkwood gaps,
-  Saturn's Cassini Division"
-- Quick Start section: add CLI examples for all three modes
-- Projects section: add resonance/ subsection covering the Galilean moon
-  canon, Kirkwood gap silences, Cassini Division, and the music/orbital
-  mechanics connection
-- afplay examples: add galilean_audio.wav (demo preset), kirkwood_audio.wav,
-  saturn_audio.wav
 
 ### 29. demo_html.wl — add resonance/
 
@@ -109,24 +50,6 @@ saturn_audio.wav
 
 ## fluid/ app — post-implementation items (target: v1.4.0)
 
-### 30. docs/APPS.md — add fluid/ entry
-
-**Fix:** Add complete entry for fluid/ with all three modes (karman, strouhal,
-flag), config keys, and output filenames. Source from fluid/config.json and
-fluid/src/model.wl.
-
-### 31. Root README.md — add fluid/ entry
-
-**Fix:**
-- Repository layout diagram: add `fluid/` with description "Kármán vortex
-  street: vortex shedding, Strouhal frequency, Reynolds number sweep,
-  flag flutter"
-- Quick Start section: add CLI examples for all three modes
-- Projects section: add fluid/ subsection covering the Kármán street,
-  Strouhal number, Aeolian tones, Tacoma Narrows, and the bifurcation
-  from steady to periodic flow
-- afplay examples: add karman_audio.wav (demo preset), strouhal_audio.wav
-
 ### 32. demo.wl and demo_html.wl — add fluid/
 
 **Fix:**
@@ -140,6 +63,68 @@ fluid/src/model.wl.
 ---
 
 ## Resolved
+
+### v1.4.0 consolidation, Part A: docs for hydrogen/, bayes/, scattering/, resonance/, fluid/
+
+**Fixed:** Items 18-19 (hydrogen/), 21-22 (bayes/), 24-25 (scattering/),
+27-28 (resonance/), and 30-31 (fluid/) — `docs/APPS.md` and root
+`README.md` entries for all five v1.4.0 apps. `docs/APPS.md` gained full
+entries (all modes, config keys sourced from each app's actual
+`config.json`, output filenames sourced from each app's `main.wl`) for
+all five, positioned after `magnetic`. Root `README.md` gained: five
+repository-layout lines; Quick Start CLI examples for all three modes of
+each app; five Projects subsections (matched in length/level to the
+existing subsections); nine `afplay` examples
+(`spectrum_audio.wav`/`transitions_audio.wav` for hydrogen,
+`coin_audio.wav`/`model_audio.wav` for bayes, `discovery_audio.wav` for
+scattering, `galilean_audio.wav`/`kirkwood_audio.wav` for resonance,
+`karman_audio.wav`/`strouhal_audio.wav` for fluid); and the version badge
+bumped to 1.4.0, linking to `RELEASE_NOTES_v1.4.0.md` (not yet
+created — Part C's job, same "badge updated ahead of the file" pattern
+the v1.3.0 pass used).
+
+Root `AGENTS.md` also updated (not separately numbered above, same
+"leave the listing complete" precedent set by the v1.3.0 pass's
+`dynamical/` fix): all five apps added to the per-project `AGENTS.md`
+list, the repo-structure diagram, the "How to run" CLI block, and the
+"Tests" block (all five ship a `tests/test_model.wl`). The "Sonification
+paradigms" section was extended: `hydrogen` (`orbitals` mode) added to
+the spatial-field-based group alongside `images`/`cosmology`, noting it
+is the project's other quantum-mechanics app alongside `quantum`; `bayes`
+(`coin`/`gaussian` modes) added to the spectral-synthesis-based group
+alongside `thermo`, noted as the project's first statistics app reusing
+`thermo`'s exact technique; `scattering` and `resonance` noted as joining
+`lagrange`/`magnetic` in the orbital/celestial-mechanics group, `fluid`
+as joining `waves` in the continuum-mechanics group; a note that
+`resonance` is the first app to use two sonification paradigms in
+different modes of the same app (event-based `galilean`, versus
+spectral-synthesis-based `kirkwood`/`saturn`); and a note that `fluid`'s
+vortex-particle-method wake model is an educational approximation, not a
+CFD tool, with a future-enhancement pointer to a full FEM/Navier-Stokes
+solve if runtime permits.
+
+Per-app `README.md` files for all five were spot-checked against
+`relativity/README.md` and `thermo/README.md` for structural parity
+(physics section, mode descriptions with sensory listening language,
+config-key table, output-filename table, `LISTENING_GUIDE.md` reference)
+and found already complete — no changes needed. (No app `README.md` in
+this repo links back to the root `README.md`; that is not an established
+convention here, so none was added.)
+
+**Correction, not assumed:** this brief's own text states "the project
+now has 22 apps." Counting actual app directories (`ls -d */`, excluding
+`stem-core/`, `config/`, `docs/`, and the gitignored `demo/`) gives
+**21**, matching this brief's own itemised list (8 + 5 + 3 + 5 = 21), not
+22. `docs/APPS.md`'s and root `README.md`'s app-count text now reads
+"twenty-one"/"21" throughout, not "twenty-two"/"22" — the same kind of
+stale-count correction the v1.3.0 pass made ("sixteen" -> the real count
+of that pass). Items 20, 23, 26, 29, 32 (demo.wl/demo_html.wl
+integration) remain open above — those are Part B; note that `demo.wl`
+itself (inspected, not assumed) already contains entries for `hydrogen`,
+`bayes`, `resonance`, and `fluid` from earlier sessions — only
+`scattering` (item 26) is actually still missing from `demo.wl` itself,
+though all five still need their `demo_html.wl` `appMeta` entries per
+items 20/23/26/29/32's own text.
 
 ### Item 23 resolved: demo.wl and demo_html.wl — add bayes/
 
@@ -352,4 +337,4 @@ archival pattern. Root README.md's version badge already pointed to
 
 **v1.3.0 consolidation complete. Next consolidation target: v1.4.0.**
 
-*Last updated: 2026-07-05*
+*Last updated: 2026-07-06*
