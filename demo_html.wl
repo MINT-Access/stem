@@ -38,11 +38,26 @@ $genDate     = DateString[];
    later, at position 14) — following the page's own established
    order keeps the primes (number theory) -> bayes (probability) ->
    quantum (physics) domain-shift the original note intended, without
-   uprooting bayes from primes by seven apps. *)
+   uprooting bayes from primes by seven apps.
+
+   Four more v1.4.0 apps follow the same "honour the part of the
+   instruction that already holds in this array, not the part that
+   would require reordering everything before it" pattern:
+   - "fluid" after "waves", before "pendulum" — both hold literally
+     here (waves already immediately precedes pendulum).
+   - "scattering" after "magnetic" — but not "before primes" (primes
+     already precedes magnetic here), so it lands before "lorenz",
+     the app that already immediately follows magnetic.
+   - "resonance" after "lagrange" — but not "before asteroids"
+     (asteroids already precedes lagrange here), so it lands before
+     "images", the app that already immediately follows lagrange.
+   - "hydrogen" after "quantum" — but not "before primes" (primes
+     already precedes quantum here), so it lands before "thermo", the
+     app that already immediately follows quantum. *)
 $appOrder = {
-  "signal", "waves", "pendulum", "cellular", "primes", "bayes", "quantum",
-  "thermo", "montecarlo", "magnetic",
-  "lorenz", "dynamical", "asteroids", "lagrange", "images", "relativity", "cosmology"
+  "signal", "waves", "fluid", "pendulum", "cellular", "primes", "bayes", "quantum",
+  "hydrogen", "thermo", "montecarlo", "magnetic", "scattering",
+  "lorenz", "dynamical", "asteroids", "lagrange", "resonance", "images", "relativity", "cosmology"
 };
 
 (* ── App metadata ─────────────────────────────────────────────
@@ -116,6 +131,57 @@ appMeta = <|
       "the circular boundary, and converges back toward the centre.",
     "cli" -> "wolframscript -file waves/main.wl -- --simulation.mode=ripple",
     "github_path" -> "waves"
+  |>,
+
+  "fluid" -> <|
+    "title" -> "Fluid \[LongDash] K\[AAcute]rm\[AAcute]n Vortex Street and Aeolian Tones",
+    "description" ->
+      "When a fluid flows past a cylindrical obstacle at intermediate " <>
+      "speeds, it sheds alternating vortices from each side \[LongDash] " <>
+      "the K\[AAcute]rm\[AAcute]n vortex street, named after Theodore von " <>
+      "K\[AAcute]rm\[AAcute]n who analysed its stability in 1911. The " <>
+      "alternating vortices produce an oscillating lift force on the " <>
+      "cylinder at a characteristic frequency: the Strouhal frequency, " <>
+      "approximately 20% of the flow speed divided by the cylinder " <>
+      "diameter. This frequency is directly mapped to audio pitch " <>
+      "\[LongDash] the sound you hear in karman mode is the tone the " <>
+      "cylinder sings in the flow. The same physics makes flags flap, " <>
+      "power lines hum in the wind, and caused the Tacoma Narrows Bridge " <>
+      "to oscillate destructively in 1940. The strouhal mode sweeps " <>
+      "Reynolds number from steady flow through the onset of vortex " <>
+      "shedding \[LongDash] listen for the pure tone appearing from " <>
+      "silence at Re\[TildeTilde]47.",
+    "listening_guide" ->
+      "In karman mode, listen for the steady periodic tone (the Strouhal " <>
+      "frequency) and the alternating clicks marking each vortex shed " <>
+      "from the top and bottom of the cylinder. In strouhal mode, listen " <>
+      "for the silence at low Reynolds numbers followed by the sudden " <>
+      "onset of a pure tone near Re=47 \[LongDash] that moment is a fluid " <>
+      "bifurcation, the same mathematical phenomenon as the logistic " <>
+      "map's first period-doubling. In flag mode, the panning tone is " <>
+      "the flag tip sweeping left and right across the stereo field with " <>
+      "each flap.",
+    "primary_wav" -> "karman_audio.wav",
+    "primary_wav_label" ->
+      "Listen \[LongDash] K\[AAcute]rm\[AAcute]n vortex street, Re=150, Strouhal tone with alternating vortex clicks",
+    "secondary_wavs" -> {
+      <| "file" -> "strouhal_audio.wav",
+         "label" -> "Listen \[LongDash] Reynolds sweep: silence to onset to turbulent wake" |>,
+      <| "file" -> "flag_audio.wav",
+         "label" -> "Listen \[LongDash] flag flutter, panning at the flutter frequency" |>
+    },
+    "gif" -> "karman.gif",
+    "gif_static" -> False,
+    "gif_alt" ->
+      "A K\[AAcute]rm\[AAcute]n vortex street animation: alternating " <>
+      "vortices shed from the top and bottom of a cylinder, drifting " <>
+      "downstream in a staggered zig-zag pattern as the centroid of the " <>
+      "wake advances.",
+    "cli" -> "wolframscript -file fluid/main.wl",
+    "github_path" -> "fluid",
+    "listening_guide_note" ->
+      "New to this app? See fluid/LISTENING_GUIDE.md for the " <>
+      "recommended listening sequence."
   |>,
 
   "pendulum" -> <|
@@ -279,6 +345,51 @@ appMeta = <|
     "github_path" -> "quantum"
   |>,
 
+  "hydrogen" -> <|
+    "title" -> "Hydrogen \[LongDash] Atomic Spectrum and Quantum Transitions",
+    "description" ->
+      "The hydrogen atom is the only atom with an exact analytic solution " <>
+      "to the Schr\[ODoubleDot]dinger equation. Its electron can occupy " <>
+      "discrete energy levels, and when it drops from a higher to a lower " <>
+      "level it emits a photon of light at a precise frequency. The " <>
+      "spectrum mode sonifies all hydrogen emission lines from the Lyman " <>
+      "series through the Paschen series as a chord and a sweep \[LongDash] " <>
+      "the four Balmer lines (the visible hydrogen spectrum, appearing as " <>
+      "dark lines in every stellar spectrum ever observed) are marked with " <>
+      "a soft bell tone. The transitions mode follows a single electron " <>
+      "cascading down through random quantum jumps from an excited state " <>
+      "to the ground state, producing a different quantum melody each time.",
+    "listening_guide" ->
+      "In spectrum mode, listen first to the chord (all lines " <>
+      "simultaneously) then the sweep (each line in sequence from UV to " <>
+      "IR). The four bell tones mark the Balmer series \[LongDash] the " <>
+      "visible light lines of hydrogen that appear in the spectrum of " <>
+      "every star. In transitions mode, listen for 20 different " <>
+      "descending melodies, each a different random path through the " <>
+      "energy levels, all ending on the same low final note (the ground " <>
+      "state).",
+    "primary_wav" -> "spectrum_audio.wav",
+    "primary_wav_label" -> "Listen \[LongDash] hydrogen emission spectrum, Balmer series chord and sweep",
+    "secondary_wavs" -> {
+      <| "file" -> "transitions_audio.wav",
+         "label" -> "Listen \[LongDash] quantum cascade, 20 realisations from n=5" |>,
+      <| "file" -> "orbitals_audio.wav",
+         "label" -> "Listen \[LongDash] 2p orbital Hilbert scan" |>
+    },
+    "gif" -> "spectrum.gif",
+    "gif_static" -> False,
+    "gif_alt" ->
+      "A growing stem plot of hydrogen emission-line frequencies with a " <>
+      "sweeping cursor moving from ultraviolet through the visible Balmer " <>
+      "lines to infrared, each line's height proportional to its Einstein " <>
+      "A coefficient.",
+    "cli" -> "wolframscript -file hydrogen/main.wl -- --simulation.mode=spectrum",
+    "github_path" -> "hydrogen",
+    "listening_guide_note" ->
+      "New to hydrogen sonification? See hydrogen/LISTENING_GUIDE.md for the " <>
+      "recommended listening sequence across all three modes."
+  |>,
+
   "thermo" -> <|
     "title" -> "Thermo \[LongDash] Maxwell-Boltzmann Speed Distribution",
     "description" ->
@@ -398,6 +509,55 @@ appMeta = <|
       "field strength.",
     "cli" -> "wolframscript -file magnetic/main.wl -- --simulation.mode=mirror",
     "github_path" -> "magnetic"
+  |>,
+
+  "scattering" -> <|
+    "title" -> "Scattering \[LongDash] Rutherford Alpha Particle Scattering",
+    "description" ->
+      "In 1909, Hans Geiger and Ernest Marsden fired alpha particles at " <>
+      "gold foil and found that some bounced nearly straight back " <>
+      "\[LongDash] completely impossible if the atom's positive charge " <>
+      "were spread uniformly, as Thomson's plum-pudding model assumed. " <>
+      "Ernest Rutherford proposed the atomic nucleus in 1911 to explain " <>
+      "it: a tiny, dense concentration of positive charge that could " <>
+      "deflect alpha particles through large angles. This app sonifies " <>
+      "that discovery. In discovery mode, the left stereo channel plays " <>
+      "the Thomson model prediction (all small angles, uniform quiet " <>
+      "sound) while the right plays the Rutherford model (same " <>
+      "background plus occasional loud large-angle events). The " <>
+      "large-angle events present in the right channel and completely " <>
+      "absent in the left are what changed physics.",
+    "listening_guide" ->
+      "Use headphones for discovery mode. Focus on the left channel " <>
+      "first (Thomson \[LongDash] quiet, uniform), then the right channel " <>
+      "(Rutherford \[LongDash] same background plus sudden loud " <>
+      "high-pitched events). Those sudden events in the right channel " <>
+      "are the backscatter that Rutherford called as surprising as " <>
+      "artillery shells bouncing off tissue paper. In scatter mode, " <>
+      "listen for the rising pitch and volume as the particle approaches " <>
+      "the nucleus, the accent tone at closest approach, and the " <>
+      "departure at the scattering angle.",
+    "primary_wav" -> "discovery_audio.wav",
+    "primary_wav_label" ->
+      "Listen \[LongDash] Thomson vs Rutherford: the experiment that discovered the nucleus (stereo)",
+    "secondary_wavs" -> {
+      <| "file" -> "scatter_audio.wav",
+         "label" -> "Listen \[LongDash] single trajectory, b=1.0 (90\[Degree] scattering)" |>,
+      <| "file" -> "distribution_audio.wav",
+         "label" -> "Listen \[LongDash] beam of 200 particles, Rutherford cross-section" |>
+    },
+    "gif" -> "discovery.gif",
+    "gif_static" -> False,
+    "gif_alt" ->
+      "Side-by-side growing angular-distribution histograms for the " <>
+      "Thomson and Rutherford models: the Thomson histogram stays " <>
+      "confined to a narrow band near zero degrees, while the Rutherford " <>
+      "histogram shows a long tail reaching to large angles.",
+    "cli" -> "wolframscript -file scattering/main.wl -- --simulation.mode=discovery",
+    "github_path" -> "scattering",
+    "listening_guide_note" ->
+      "New to this app? See scattering/LISTENING_GUIDE.md for the " <>
+      "recommended listening sequence."
   |>,
 
   "lorenz" -> <|
@@ -528,6 +688,51 @@ appMeta = <|
       "degrees ahead of Jupiter, never drifting away.",
     "cli" -> "wolframscript -file lagrange/main.wl -- --simulation.mode=l4",
     "github_path" -> "lagrange"
+  |>,
+
+  "resonance" -> <|
+    "title" -> "Resonance \[LongDash] Orbital Resonances and the Music of the Spheres",
+    "description" ->
+      "Io, Europa, and Ganymede orbit Jupiter in exact 4:2:1 period ratios " <>
+      "\[LongDash] a Laplace resonance maintained for billions of years. " <>
+      "In musical terms, 4:2:1 is a two-octave interval: the most " <>
+      "consonant possible spacing. This app assigns Ganymede the note C3, " <>
+      "Europa C4, and Io C5 \[LongDash] and plays them as they orbit, one " <>
+      "note per orbit. The result is a three-voice musical canon where " <>
+      "the rhythm IS the orbital mechanics. The kirkwood mode makes the " <>
+      "Kirkwood gaps in the asteroid belt audible as silences: regions " <>
+      "cleared by Jupiter's resonances over billions of years. The " <>
+      "saturn mode does the same for Saturn's rings, with the Cassini " <>
+      "Division \[LongDash] visible through any small telescope \[LongDash] " <>
+      "producing a clear gap in the ring sound.",
+    "listening_guide" ->
+      "In galilean mode, count the Io notes (highest pitch, C5) per " <>
+      "Ganymede note (lowest, C3) \[LongDash] you should hear exactly 4. " <>
+      "The repeating three-voice pattern has been playing in the Jovian " <>
+      "system for billions of years. In kirkwood mode, the silences in " <>
+      "the sweep are the Kirkwood gaps \[LongDash] named after Daniel " <>
+      "Kirkwood who noticed them in 1866. In saturn mode, the long " <>
+      "silence in the middle of the sweep is the Cassini Division, " <>
+      "discovered in 1675.",
+    "primary_wav" -> "galilean_audio.wav",
+    "primary_wav_label" -> "Listen \[LongDash] Io, Europa, Ganymede: 4:2:1 two-octave orbital canon",
+    "secondary_wavs" -> {
+      <| "file" -> "kirkwood_audio.wav",
+         "label" -> "Listen \[LongDash] Kirkwood gaps: silences in the asteroid belt" |>,
+      <| "file" -> "saturn_audio.wav",
+         "label" -> "Listen \[LongDash] Saturn's rings and the Cassini Division" |>
+    },
+    "gif" -> "galilean.gif",
+    "gif_static" -> False,
+    "gif_alt" ->
+      "Top-down orbital animation of Io, Europa, and Ganymede circling " <>
+      "Jupiter with fading trails, the three moons periodically " <>
+      "realigning in their exact 4:2:1 period lock.",
+    "cli" -> "wolframscript -file resonance/main.wl",
+    "github_path" -> "resonance",
+    "listening_guide_note" ->
+      "New to this app? See resonance/LISTENING_GUIDE.md for the " <>
+      "recommended listening sequence."
   |>,
 
   "images" -> <|
@@ -990,8 +1195,8 @@ $html = "<!doctype html>\n" <>
 "<a href=\"#main-content\" class=\"skip-link\">Skip to content</a>\n" <>
 "<header>\n" <>
 "<h1>MINT Access stem</h1>\n" <>
-"<p><strong>Accessible STEM Simulations \[LongDash] v1.3.0</strong></p>\n" <>
-"<p>Seventeen physics, mathematics, and cosmology simulations, each producing " <>
+"<p><strong>Accessible STEM Simulations \[LongDash] v1.4.0</strong></p>\n" <>
+"<p>Twenty-one physics, mathematics, and cosmology simulations, each producing " <>
 "an animated visualisation and an audio sonification of the underlying " <>
 "physics, designed to be fully accessible to blind and low-vision users.</p>\n" <>
 "<p class=\"links\">" <>
@@ -1005,7 +1210,7 @@ $html = "<!doctype html>\n" <>
 "<p>Each simulation below pairs a visual animation with a sonification " <>
 "of the same underlying physics or mathematics. Use the " <>
 "jump list to go directly to any simulation, or scroll through all " <>
-"seventeen in the recommended listening order. No installation is " <>
+"twenty-one in the recommended listening order. No installation is " <>
 "required \[LongDash] everything on this page plays directly in your " <>
 "browser.</p>\n" <>
 "</section>\n" <>
@@ -1016,7 +1221,7 @@ $html = "<!doctype html>\n" <>
 $sectionsHtml <>
 "</main>\n" <>
 "<footer>\n" <>
-"<p>Generated by MINT Access stem v1.3.0 on " <> $genDate <> "</p>\n" <>
+"<p>Generated by MINT Access stem v1.4.0 on " <> $genDate <> "</p>\n" <>
 "<p class=\"links\">" <>
 "<a href=\"https://github.com/MINT-Access/stem\">GitHub</a> \[Bullet] " <>
 "<a href=\"https://www.mintaccess.ch/\">mintaccess.ch</a>" <>
@@ -1035,7 +1240,7 @@ Export[$demoHtmlOut, $html, "Text"];
 Print[""];
 STEMHeading["Summary"];
 STEMPrintN["Apps with complete outputs", $nComplete, "", 2];
-Print["  (demo.wl runs 19 passes total, 18 unique apps \[LongDash] dynamical counts twice)"];
+Print["  (demo.wl runs 22 passes total, 21 unique apps \[LongDash] dynamical counts twice)"];
 If[$nIncomplete > 0,
   STEMPrintN["Apps with missing outputs", $nIncomplete, "", 2];
   Print["  (see [WARNING] lines above for which files were missing per app)"]

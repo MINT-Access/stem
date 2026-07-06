@@ -10,59 +10,71 @@ This document tracks small issues, wording improvements, and polish items to add
 
 ---
 
-## hydrogen/ app — post-implementation items (target: v1.4.0)
-
-### 20. demo.wl and demo_html.wl — add hydrogen/
-
-**Fix:**
-- demo.wl: add hydrogen/ in spectrum mode after quantum/, before primes/
-- demo_html.wl: add hydrogen/ appMeta entry with title "Hydrogen — Atomic Spectrum and Quantum Transitions", description, listening guide, primary WAV label "Listen — hydrogen emission spectrum, Balmer series chord and sweep", GIF: spectrum.gif, secondary WAVs: transitions_audio.wav, orbitals_audio.wav
-
----
-
-## scattering/ app — post-implementation items (target: v1.4.0)
-
-### 26. demo.wl and demo_html.wl — add scattering/
-
-**Fix:**
-- demo.wl: add scattering/ in discovery mode after magnetic/, before primes/
-- demo_html.wl: add scattering/ appMeta entry with title "Scattering — Rutherford Alpha Particle Scattering", description, listening guide, primary WAV label "Listen — Thomson vs Rutherford: the experiment that discovered the nucleus (stereo)", GIF: discovery.gif, secondary WAVs: scatter_audio.wav, distribution_audio.wav
-
----
-
-## resonance/ app — post-implementation items (target: v1.4.0)
-
-### 29. demo_html.wl — add resonance/
-
-**Status:** demo.wl already done — `$demoApps` has a `resonance/` entry
-(galilean mode) positioned immediately after `lagrange/`, not "before
-asteroids/" as originally planned, since `asteroids/` already precedes
-`lagrange/` in that array (same "before X" mismatch bayes/thermo/
-montecarlo/magnetic's own items hit; see their resolved entries below).
-
-**Fix (remaining):** demo_html.wl: add resonance/ appMeta entry with title
-"Resonance — Orbital Resonances and the Music of the Spheres", description,
-listening guide, primary WAV label "Listen — Io, Europa, Ganymede: 4:2:1
-two-octave canon", GIF: galilean.gif, secondary WAVs: kirkwood_audio.wav,
-saturn_audio.wav
-
----
-
-## fluid/ app — post-implementation items (target: v1.4.0)
-
-### 32. demo.wl and demo_html.wl — add fluid/
-
-**Fix:**
-- demo.wl: add fluid/ in karman mode (Re=150) after waves/, before pendulum/
-- demo_html.wl: add fluid/ appMeta entry with title "Fluid — Kármán Vortex
-  Street and Aeolian Tones", description, listening guide, primary WAV label
-  "Listen — Kármán vortex street, Re=150, Strouhal tone with alternating
-  vortex clicks", GIF: karman.gif, secondary WAVs: strouhal_audio.wav,
-  flag_audio.wav
-
----
-
 ## Resolved
+
+### v1.4.0 consolidation, Part B: demo.wl and demo_html.wl for hydrogen/, scattering/, resonance/, fluid/ (bayes/ already done)
+
+**Fixed:** Items 20 (hydrogen/), 26 (scattering/), 29 (resonance/), and 32
+(fluid/) — the `demo.wl`/`demo_html.wl` integration left open by Part A.
+Confirmed by inspection (not assumed) that `demo.wl`'s `$demoApps` already
+contained `hydrogen` (spectrum mode, positioned after `quantum`, before
+`thermo`), `resonance` (galilean mode, after `lagrange`, before `cellular`),
+and `fluid` (karman mode, after `waves`, before `quantum`) from earlier
+sessions — only `scattering` was actually still missing. Added a
+`scattering` entry (discovery mode) to `$demoApps` immediately after
+`magnetic`, before `primes` — honouring the "after magnetic/" half of this
+item's own instruction literally (magnetic and primes are already
+adjacent) rather than "before resonance/" (an alternate phrasing floated
+in Part B's own brief), which is not achievable without moving `resonance`
+seven positions earlier — the identical "before X" mismatch bayes/thermo/
+montecarlo/magnetic/fluid/resonance's own build notes hit, resolved the
+same way. Updated `demo.wl`'s header comment ("20 apps" -> "21 apps"),
+`demo/README.md`'s generated app-count text ("20" -> "21"), the
+hand-curated numbered listening-order list (inserted `scattering` as a
+new item 9, ahead of `hydrogen`, on the reasoning that discovering the
+nucleus narratively precedes explaining the atom built around it —
+renumbering `hydrogen`..`cosmology` from 9-20 to 10-21), and the `afplay`
+example list.
+
+`demo_html.wl` had only `bayes` among the five v1.4.0 apps in its
+`appMeta`/`$appOrder` (per item 23, already resolved) — `hydrogen`,
+`scattering`, `resonance`, and `fluid` were still entirely missing. Added
+full `appMeta` entries for all four (title, description, listening guide,
+primary/secondary WAV labels, GIF, alt text, CLI, `listening_guide_note`
+pointing to each app's `LISTENING_GUIDE.md`, matching the `bayes`/`images`
+precedent), using the exact content this task's own brief specified,
+adapted to this file's actual `secondary_wavs` schema (list of
+`<|"file"->..., "label"->...|>` associations, not the brief's flat
+parallel-list form) and given the mandatory `gif_static`/`gif_alt` keys
+`GifFigure` requires (omitted from the brief's snippets). `$appOrder`
+gained all four apps, each placed by the same rule used above: honour
+whichever half of "after X, before Y" already holds true in this array,
+insert immediately after X otherwise-adjacent app when Y does not. Three
+of the four resolved to literal placements per the brief's own primary
+instruction (`fluid` after `waves`/before `pendulum` — both hold here
+directly; `resonance` after `lagrange`, landing before `images` since
+`asteroids` already precedes `lagrange`; `hydrogen` after `quantum`,
+landing before `thermo` since `primes` already precedes `quantum`), while
+`scattering` needed the same "after magnetic" resolution as in `demo.wl`
+(landing before `lorenz`, since `primes` already precedes `magnetic` in
+this array). Also updated the header/footer version strings (v1.3.0 ->
+v1.4.0), the "Seventeen"/"seventeen" app-count text (-> "Twenty-one"/
+"twenty-one"), and the "19 passes total, 18 unique apps" summary comment
+(-> "22 passes total, 21 unique apps").
+
+Verified, not assumed: ran the full `demo.wl` (22/22 passes, 21 unique
+apps, 306.6s total, including live asteroid data and the new `scattering`
+run) and then `demo_html.wl` (21/21 sections "OK — all outputs present",
+zero `[WARNING]` lines; the generated `demo/demo.html` has 21 correctly
+numbered sections, 1-21, in the specified order, confirmed by grepping
+both the nav list and the section headings — they match exactly).
+Confirmed every secondary WAV/GIF referenced in the four new `appMeta`
+entries actually exists in `demo/<app>/output/` (each app's own
+`output/` directory already had all three of its modes' outputs from
+earlier development sessions, which `demo.wl`'s copy step — copying
+every file present in `<app>/output/`, not just the invoked mode's
+"expected" list — carried into `demo/<app>/output/` even though `demo.wl`
+itself only invokes one mode per app).
 
 ### v1.4.0 consolidation, Part A: docs for hydrogen/, bayes/, scattering/, resonance/, fluid/
 
