@@ -1,0 +1,23 @@
+{
+  "version": 1,
+  "app": "fluid",
+  "description": "Karman vortex street sonified: vortex shedding, the Strouhal number, and flag flutter",
+
+  "simulation": {
+    "mode": "karman",
+    "fluid": {
+      "Re": 150,
+      "U": 1.0,
+      "D": 1.0,
+      "duration": 40,
+      "n_vortices_max": 200,
+      "Re_start": 20,
+      "Re_end": 300,
+      "Re_steps": 50,
+      "duration_per_Re": 10,
+      "audio_freq_target": 220,
+      "flag_length": 5.0,
+      "flag_stiffness": 0.1
+    }
+  }
+}
