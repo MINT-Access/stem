@@ -107,6 +107,38 @@ saturn_audio.wav
 
 ---
 
+## fluid/ app — post-implementation items (target: v1.4.0)
+
+### 30. docs/APPS.md — add fluid/ entry
+
+**Fix:** Add complete entry for fluid/ with all three modes (karman, strouhal,
+flag), config keys, and output filenames. Source from fluid/config.json and
+fluid/src/model.wl.
+
+### 31. Root README.md — add fluid/ entry
+
+**Fix:**
+- Repository layout diagram: add `fluid/` with description "Kármán vortex
+  street: vortex shedding, Strouhal frequency, Reynolds number sweep,
+  flag flutter"
+- Quick Start section: add CLI examples for all three modes
+- Projects section: add fluid/ subsection covering the Kármán street,
+  Strouhal number, Aeolian tones, Tacoma Narrows, and the bifurcation
+  from steady to periodic flow
+- afplay examples: add karman_audio.wav (demo preset), strouhal_audio.wav
+
+### 32. demo.wl and demo_html.wl — add fluid/
+
+**Fix:**
+- demo.wl: add fluid/ in karman mode (Re=150) after waves/, before pendulum/
+- demo_html.wl: add fluid/ appMeta entry with title "Fluid — Kármán Vortex
+  Street and Aeolian Tones", description, listening guide, primary WAV label
+  "Listen — Kármán vortex street, Re=150, Strouhal tone with alternating
+  vortex clicks", GIF: karman.gif, secondary WAVs: strouhal_audio.wav,
+  flag_audio.wav
+
+---
+
 ## Resolved
 
 ### Item 23 resolved: demo.wl and demo_html.wl — add bayes/
