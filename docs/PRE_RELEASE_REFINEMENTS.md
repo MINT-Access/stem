@@ -12,6 +12,38 @@ This document tracks small issues, wording improvements, and polish items to add
 
 ## Resolved
 
+### v1.4.0 consolidation, Part C: release notes, archival, badge link — Fixed in v1.4.0
+
+**Fixed:** `RELEASE_NOTES_v1.4.0.md` written in the same structure, tone,
+and level of detail as `RELEASE_NOTES_v1.3.0.md` — an opening paragraph
+situating the release, one prose subsection per new app (`hydrogen/`,
+`bayes/`, `scattering/`, `resonance/`, `fluid/`, in demo listening order)
+each covering the scientific concept with a real-world anchor, the
+sonification approach, sensory listening guidance, and a runnable
+`afplay` example, a new "What comes next" section documenting the
+strategic pause, an updated three-command "Getting started" section
+(demo runtime corrected to the actual measured 306.6 s / ~5 minutes for
+22 passes / 21 unique apps, not the brief's guessed 12-15 minutes; crown
+jewel set to `resonance/`'s galilean mode per spec), and an updated
+Acknowledgements section thanking the broader Wolfram Language community.
+`RELEASE_NOTES_v1.3.0.md` moved to `docs/archive/RELEASE_NOTES_v1.3.0.md`
+via `git mv`, matching the v1.0.0/v1.1.0/v1.2.0 archival pattern. Root
+`README.md`'s version badge already pointed to `RELEASE_NOTES_v1.4.0.md`
+(set ahead of the file's existence back in Part A, the same "badge
+updated ahead of the file" pattern the v1.3.0 pass used) and is now
+valid; the inline body link ("See RELEASE_NOTES_v1.3.0.md for full app
+descriptions...") still pointed at the now-archived v1.3.0 file and has
+been updated to `RELEASE_NOTES_v1.4.0.md` to match.
+
+**Consistent with Parts A and B:** this document uses **21** apps
+throughout, not the "22" figure repeated in each part's own brief text —
+the release notes' opening paragraph and "Getting started" section say
+"twenty-one" apps / "all twenty-one apps," matching `docs/APPS.md`, root
+`README.md`, `AGENTS.md`, `demo.wl`, and `demo_html.wl`, all already
+corrected to this count in Parts A and B. Introducing "22" into the
+public-facing release notes at this final step would have reopened the
+exact inconsistency the last two passes closed.
+
 ### v1.4.0 consolidation, Part B: demo.wl and demo_html.wl for hydrogen/, scattering/, resonance/, fluid/ (bayes/ already done)
 
 **Fixed:** Items 20 (hydrogen/), 26 (scattering/), 29 (resonance/), and 32
@@ -347,6 +379,7 @@ archival pattern. Root README.md's version badge already pointed to
 
 ---
 
-**v1.3.0 consolidation complete. Next consolidation target: v1.4.0.**
+**v1.4.0 consolidation complete. Project enters strategic pause phase.
+Next development phase: v1.5.0 (date TBD).**
 
 *Last updated: 2026-07-06*

@@ -275,7 +275,7 @@ Start-Process wmplayer signal\output\chord_narrative_full.wav
 Start-Process wmplayer pendulum\output\double_audio.wav
 ```
 
-See [RELEASE_NOTES_v1.3.0.md](RELEASE_NOTES_v1.3.0.md) for full app descriptions, physics notes, and listening guides.
+See [RELEASE_NOTES_v1.4.0.md](RELEASE_NOTES_v1.4.0.md) for full app descriptions, physics notes, and listening guides.
 
 ---
 
