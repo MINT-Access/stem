@@ -1,0 +1,21 @@
+{
+  "version": 1,
+  "app": "clt",
+  "description": "Central Limit Theorem: sample-mean sweep for one source, standardized binaural comparison of two sources, and the sum of N fair dice",
+
+  "simulation": {
+    "mode": "sweep",
+    "clt": {
+      "source": "uniform",
+      "bernoulli_p": 0.5,
+      "source_left": "uniform",
+      "source_right": "exponential",
+      "n_samples": 5000,
+      "n_bins": 48,
+      "audio_freq_min": 100,
+      "audio_freq_max": 4000,
+      "frame_duration": 0.2,
+      "random_seed": 42
+    }
+  }
+}
