@@ -1,0 +1,23 @@
+{
+  "version": 1,
+  "app": "henon",
+  "description": "Hénon map — a 2D invertible chaotic attractor, Michel Hénon's simplified model of a Poincaré section through the Lorenz attractor.",
+  "simulation": {
+    "mode": "attractor",
+    "henon": {
+      "a": 1.4,
+      "b": 0.3,
+      "x0": 0.1,
+      "y0": 0.1,
+      "n_transient": 500,
+      "n_points": 2000,
+      "a_min": 0.2,
+      "a_max": 1.4,
+      "a_steps": 250,
+      "n_attractor": 40,
+      "n_forward": 40,
+      "reverse_steps": 10,
+      "note_duration": 0.08
+    }
+  }
+}
