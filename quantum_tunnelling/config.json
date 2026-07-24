@@ -1,0 +1,25 @@
+{
+  "version": 1,
+  "app": "quantum_tunnelling",
+  "description": "Quantum tunnelling: single barrier-crossing event, barrier-width sweep, and incident-energy sweep across the barrier height (tunnelling to resonance)",
+
+  "simulation": {
+    "mode": "barrier",
+    "quantum_tunnelling": {
+      "preset": "default",
+      "energy_ev": 1.0,
+      "barrier_height_ev": 2.0,
+      "barrier_width_nm": 0.5,
+      "mass_ev": 510998.95,
+      "width_min_nm": 0.1,
+      "width_max_nm": 3.0,
+      "energy_min_ev": 0.1,
+      "energy_max_ev": 6.0,
+      "n_steps": 100,
+      "audio_freq_min": 150,
+      "audio_freq_max": 2500,
+      "sweep_duration": 6.0,
+      "energy_duration": 8.0
+    }
+  }
+}

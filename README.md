@@ -38,6 +38,7 @@ stem/
   fluid/            Kármán vortex street: vortex shedding, Strouhal frequency, Reynolds sweep, flag flutter
   blackbody/        Planck black body radiation: spectrum sweep, Wien's law, Stefan-Boltzmann law, star presets
   compton/          Compton scattering: single-event collision, angle sweep, energy sweep, Thomson vs Compton
+  quantum_tunnelling/  Quantum tunnelling: barrier-crossing event, width sweep, energy sweep to resonance
   config/           Global config defaults (config.json)
   docs/             Workflow guides
 ```
@@ -233,13 +234,19 @@ wolframscript -file compton/main.wl                                            #
 wolframscript -file compton/main.wl -- --simulation.mode=sweep                  # angle glissando, 0-180 deg
 wolframscript -file compton/main.wl -- --simulation.mode=energy                 # incident-energy sweep, 1keV-5MeV
 wolframscript -file compton/main.wl -- --simulation.mode=discovery              # Thomson vs Compton, binaural
+
+# Quantum tunnelling
+wolframscript -file quantum_tunnelling/main.wl                                  # barrier, default preset (T~2.35%)
+wolframscript -file quantum_tunnelling/main.wl -- --simulation.quantum_tunnelling.preset=stm
+wolframscript -file quantum_tunnelling/main.wl -- --simulation.mode=sweep       # barrier-width sweep
+wolframscript -file quantum_tunnelling/main.wl -- --simulation.mode=energy      # energy sweep, crosses V0
 ```
 
 Each project writes outputs into its own directory:
 
 | Project | Output dir | File types |
 |---------|-----------|------------|
-| all twenty-three apps | `output/` | CSV, GIF, WAV (+ PNG for signal, quantum, primes, relativity, images, cosmology, waves, lagrange, hydrogen, blackbody, compton) |
+| all twenty-four apps | `output/` | CSV, GIF, WAV (+ PNG for signal, quantum, primes, relativity, images, cosmology, waves, lagrange, hydrogen, blackbody, compton, quantum_tunnelling) |
 
 Play audio:
 
@@ -284,7 +291,11 @@ afplay blackbody/output/temperature_audio.wav
 afplay blackbody/output/star_audio.wav
 afplay compton/output/scatter_audio.wav
 afplay compton/output/sweep_audio.wav
+afplay compton/output/energy_audio.wav
 afplay compton/output/discovery_audio.wav
+afplay quantum_tunnelling/output/barrier_audio.wav
+afplay quantum_tunnelling/output/sweep_audio.wav
+afplay quantum_tunnelling/output/energy_audio.wav
 
 # Linux — replace afplay with aplay
 aplay signal/output/chord_narrative_full.wav
@@ -301,7 +312,7 @@ See [RELEASE_NOTES_v1.4.0.md](RELEASE_NOTES_v1.4.0.md) for full app descriptions
 
 ## Demo
 
-Run all twenty-three apps with their most interesting presets and collect outputs into `demo/`:
+Run all twenty-four apps with their most interesting presets and collect outputs into `demo/`:
 
 ```sh
 wolframscript -file demo.wl
@@ -330,7 +341,7 @@ Check whether a previous demo run completed successfully:
 wolframscript -file demo.wl -- --check-only
 ```
 
-Outputs are collected in `demo/` with a written report at `demo/demo-report.md`. A full run takes approximately five to six minutes (24/24 runs — 23 unique apps, `dynamical` runs twice — including live asteroid data).
+Outputs are collected in `demo/` with a written report at `demo/demo-report.md`. A full run takes approximately five to six minutes (25/25 runs — 24 unique apps, `dynamical` runs twice — including live asteroid data).
 
 ---
 
@@ -714,6 +725,30 @@ right channel dropping (the real result) — the actual gap that won
 Arthur Compton the 1927 Nobel Prize, made audible. See
 [`compton/README.md`](compton/README.md).
 
+### quantum_tunnelling
+
+Sonifies quantum tunnelling — a particle crossing a potential barrier
+it classically has zero chance of crossing, the effect behind alpha
+decay (Gamow, 1928), the scanning tunnelling microscope (Binnig &
+Rohrer, 1981, Nobel Prize 1986), and the tunnel diode. `barrier` mode
+plays a single event as a narrated sequence: an incoming tone, a
+marker click, then a reflected tone and a transmitted tone sounding
+*simultaneously*, loudness split by probability — both genuinely
+happen in the same measurement statistics, not a coin flip on any one
+run. Three presets span twelve orders of magnitude in energy, from a
+textbook electron (transmission ~2.35%) through a scanning-tunnelling-
+microscope gap (~7.5×10⁻⁶) to an illustrative alpha-decay barrier
+(~7×10⁻¹⁰) — explicitly not a quantitative half-life calculation, just
+a demonstration of why the real effect is so improbable per attempt
+and yet still eventually happens. `sweep` mode fades a tone toward
+silence as barrier width grows, tunnelling's exponential sensitivity
+made audible; `energy` mode sweeps particle energy across the barrier
+height and into a genuinely surprising regime: above the barrier,
+transmission oscillates, reaching perfect, total transparency at
+specific resonant energies — the identical standing-wave condition
+that quantizes `quantum/`'s particle-in-a-box. See
+[`quantum_tunnelling/README.md`](quantum_tunnelling/README.md).
+
 ---
 
 ## Config system
@@ -749,7 +784,7 @@ See [`docs/APPS.md`](docs/APPS.md) for a full listing of each app's config keys.
 
 ## stem-core
 
-All twenty-three projects load `stem-core` as a shared library. It provides:
+All twenty-four projects load `stem-core` as a shared library. It provides:
 
 - **Config** — `LoadConfig`, `GetCfg`, `DeepMerge` — four-layer config merging and safe key lookup
 - **Sonification pipeline** — `SonifyTrajectory`, `SpatialLayer`, `MotionLayer`, `EventLayer`, `MixLayers`, `RenderAudio`

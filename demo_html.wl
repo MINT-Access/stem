@@ -64,10 +64,14 @@ $genDate     = DateString[];
    "blackbody", before "thermo" -- from a star's continuous glow to a
    single photon-electron collision to the statistics of many
    classical particles, the same "insert between, don't displace"
-   pattern. *)
+   pattern. "quantum_tunnelling" follows immediately after "compton",
+   before "thermo" -- from a photon-electron collision to a particle
+   crossing a barrier it classically cannot cross, still one step
+   before the statistics of many classical particles; same pattern
+   again. *)
 $appOrder = {
   "signal", "waves", "fluid", "pendulum", "cellular", "primes", "bayes", "quantum",
-  "hydrogen", "blackbody", "compton", "thermo", "montecarlo", "magnetic", "scattering",
+  "hydrogen", "blackbody", "compton", "quantum_tunnelling", "thermo", "montecarlo", "magnetic", "scattering",
   "lorenz", "dynamical", "asteroids", "lagrange", "resonance", "images", "relativity", "cosmology"
 };
 
@@ -489,6 +493,52 @@ appMeta = <|
     "listening_guide_note" ->
       "New to this app? See compton/LISTENING_GUIDE.md for the " <>
       "recommended listening sequence across all four modes."
+  |>,
+
+  "quantum_tunnelling" -> <|
+    "title" -> "Quantum Tunnelling \[LongDash] Barrier Crossing",
+    "description" ->
+      "Classically, a particle without enough energy to climb over a " <>
+      "barrier is reflected with certainty. Quantum mechanically, " <>
+      "there is always some nonzero chance it appears on the far side " <>
+      "anyway \[LongDash] tunnelling, the effect behind alpha decay " <>
+      "(Gamow, 1928), the scanning tunnelling microscope (Binnig & " <>
+      "Rohrer, 1981, Nobel Prize 1986), and the tunnel diode. The " <>
+      "barrier mode plays a single event as a narrated sequence: an " <>
+      "incoming tone, a marker click, then a reflected tone and a " <>
+      "transmitted tone sounding SIMULTANEOUSLY, loud in proportion to " <>
+      "probability \[LongDash] both genuinely happen in the same " <>
+      "measurement statistics, not a coin flip on any one run. Three " <>
+      "presets span twelve orders of magnitude in energy, from a " <>
+      "textbook electron to an illustrative (not quantitative) " <>
+      "alpha-decay barrier.",
+    "listening_guide" ->
+      "Listen for the incoming tone, the click at the barrier, then " <>
+      "the reflected and transmitted tones together \[LongDash] loud " <>
+      "in proportion to their probability, at the SAME pitch (crossing " <>
+      "the barrier does not change the particle's energy, only which " <>
+      "side it ends up on). Try the stm and alpha_decay presets and " <>
+      "notice the transmitted tone growing almost inaudibly quiet.",
+    "primary_wav" -> "barrier_audio.wav",
+    "primary_wav_label" -> "Listen \[LongDash] single tunnelling event, default preset",
+    "secondary_wavs" -> {
+      <| "file" -> "sweep_audio.wav",
+         "label" -> "Listen \[LongDash] barrier-width sweep, fading toward silence" |>,
+      <| "file" -> "energy_audio.wav",
+         "label" -> "Listen \[LongDash] energy sweep, crossing the barrier into resonance" |>
+    },
+    "gif" -> "barrier.gif",
+    "gif_static" -> False,
+    "gif_alt" ->
+      "A barrier diagram: an incoming particle arrow travels toward a " <>
+      "rectangular barrier, then splits into a reflected arrow bouncing " <>
+      "back and a transmitted arrow continuing through, each arrow's " <>
+      "thickness proportional to its probability.",
+    "cli" -> "wolframscript -file quantum_tunnelling/main.wl",
+    "github_path" -> "quantum_tunnelling",
+    "listening_guide_note" ->
+      "New to this app? See quantum_tunnelling/LISTENING_GUIDE.md for the " <>
+      "recommended listening sequence across all three modes."
   |>,
 
   "thermo" -> <|
@@ -1311,7 +1361,7 @@ $html = "<!doctype html>\n" <>
 "<p>Each simulation below pairs a visual animation with a sonification " <>
 "of the same underlying physics or mathematics. Use the " <>
 "jump list to go directly to any simulation, or scroll through all " <>
-"twenty-three in the recommended listening order. No installation is " <>
+"twenty-four in the recommended listening order. No installation is " <>
 "required \[LongDash] everything on this page plays directly in your " <>
 "browser.</p>\n" <>
 "</section>\n" <>
@@ -1341,7 +1391,7 @@ Export[$demoHtmlOut, $html, "Text"];
 Print[""];
 STEMHeading["Summary"];
 STEMPrintN["Apps with complete outputs", $nComplete, "", 2];
-Print["  (demo.wl runs 24 passes total, 23 unique apps \[LongDash] dynamical counts twice)"];
+Print["  (demo.wl runs 25 passes total, 24 unique apps \[LongDash] dynamical counts twice)"];
 If[$nIncomplete > 0,
   STEMPrintN["Apps with missing outputs", $nIncomplete, "", 2];
   Print["  (see [WARNING] lines above for which files were missing per app)"]
