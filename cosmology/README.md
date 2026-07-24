@@ -137,6 +137,22 @@ temperature gradients become temporal pitch sweeps.
   the Hilbert curve preserves locality.  Rapid pitch jumps mark
   boundaries between hot and cold regions.
 
+**Resolution limit:** a patch of fixed angular size sampled at N × N
+pixels can only represent multipoles up to a Nyquist limit set by N —
+finer acoustic structure than that simply isn't present in the
+texture, no matter how the audio or image is rendered afterwards. At
+the default 64 × 64 resolution over the 20° patch this app uses, that
+limit is ℓ ≈ 576 — capturing the first two acoustic peaks and about
+89% of the spectrum's total power, but not the third, fourth, and
+fifth peaks (ℓ ≈ 810, 1120, 1430). Every run prints the actual
+achievable ℓ range and names which peaks are and aren't reachable at
+the chosen `sky_resolution`, so this is never silent. Raise
+`--simulation.cosmology.sky_resolution` to resolve more (128 reaches
+ℓ ≈ 1152, ~98.5% of total power, missing only the fifth peak) — see
+the `AGENTS.md` for why this app caps what's shown to match the
+resolution you choose rather than silently growing the grid to chase
+a configured `l_max`.
+
 ## Simulated vs Planck mode
 
 `--simulation.cosmology.source=simulated` (default) uses an analytic

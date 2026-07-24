@@ -146,12 +146,38 @@ baryon loading asymmetry or the reionisation bump at l < 10.
 1. Compute 2D DFT mode l-values: `l(k_x, k_y) = |k| * 2pi / theta_patch`
 2. Look up `C_l` via linear interpolation of the power spectrum
 3. Draw complex Gaussian coefficients: `a(k) ~ Normal(0, sigma(k))`,
-   where `sigma(k)^2 = C_l / 2 * (N / sqrt(Omega))^2`
+   where `sigma(k)^2 = C_l * N^4 / Omega_patch` (see the amplitude-bug
+   note in `model.wl` for the full derivation — an earlier version of
+   this formula was `C_l/2 * (N/sqrt(Omega))^2`, missing a full factor
+   of `N`, which made the simulated map's RMS temperature ~90x too
+   quiet and scale down as resolution increased instead of staying
+   fixed for a fixed patch; both this formula and the correctness
+   check below were fixed together, since the check had the same
+   missing factor and was falsely passing on the too-quiet map)
 4. Apply InverseFourier with `FourierParameters -> {1, -1}`
 5. Take Re[] — the result is a real-valued temperature field
 
 Seed is fixed (`SeedRandom[271828]`) so outputs are reproducible.
-The pixel variance should match `sum_k C_l(k) / (N^2 * Omega_patch)`.
+The pixel variance should match `sum_k C_l(k) / Omega_patch` (no `N`
+dependence — the total large-scale power a fixed patch shows should
+not shrink just because it's resolved into more pixels).
+
+**Resolution caps what's representable, and this is deliberately
+capped rather than auto-grown.** A patch of fixed angular size
+sampled at `N x N` pixels can only resolve multipoles up to
+`lNyquist = (N/2) * (2pi/theta_patch)` — real acoustic structure above
+that simply isn't present in `lGrid` by construction, regardless of
+`l_max` in the loaded spectrum. `GenerateSkyMap` computes `lNyquist`
+and reports, every run, what fraction of total spectral power falls
+inside the achievable range and which of `$cmbPeakSpecs`'s named
+peaks are and aren't reachable (default 64x64/20deg: `lNyquist~576`,
+~89% of power, peaks 1-2 reachable, 3-5 not). The alternative design —
+silently growing `sky_resolution` to whatever a configured `l_max`
+would need — was deliberately rejected: it would change this mode's
+grid size, runtime, and audio duration without the user asking for
+that. Capping to the user's chosen resolution and clearly reporting
+the tradeoff respects the resolution they picked instead of second-
+guessing it.
 
 ## Physical correctness checks
 
@@ -160,7 +186,13 @@ The pixel variance should match `sum_k C_l(k) / (N^2 * Omega_patch)`.
 3. **Silk damping**: Peak 1 > last peak overall (strict pairwise monotonicity
    is not required — the physical spectrum has peak 3 > peak 2).
 4. **Sky variance**: Pixel variance / flat-sky expected variance must be in
-   [0.5, 2.0] — confirms correct DFT normalisation.
+   [0.5, 2.0] — confirms the DFT normalisation matches the continuum
+   flat-sky target `sum_k C_l(k) / Omega_patch`, independently derived
+   from `Var[T] = Integral[d^2l/(2 Pi)^2, C_l]` rather than restated
+   from the generator's own formula (that was the original bug: the
+   check used to share its formula with the generator, so a shared
+   missing factor made both agree with each other while both were
+   wrong relative to the actual physics — see `model.wl`).
 
 ## Common pitfalls
 
