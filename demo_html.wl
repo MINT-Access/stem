@@ -68,11 +68,23 @@ $genDate     = DateString[];
    before "thermo" -- from a photon-electron collision to a particle
    crossing a barrier it classically cannot cross, still one step
    before the statistics of many classical particles; same pattern
-   again. *)
+   again. "clt" follows immediately after "quantum_tunnelling", before
+   "thermo" -- from one particle's barrier crossing to the statistics
+   of many dice, still one step before the statistics of many gas
+   particles; same pattern once more.
+
+   "henon" follows immediately after "dynamical", before "asteroids" --
+   from the logistic map's 1D period-doubling route to chaos to a
+   genuinely 2D, invertible chaotic map literally derived from a
+   Poincare section of the Lorenz attractor heard two entries earlier;
+   it does not displace dynamical's own position relative to
+   lorenz/asteroids, just inserts between them, the same "insert
+   between, don't displace" pattern as every v1.4.0/v1.5.0 addition
+   above. *)
 $appOrder = {
   "signal", "waves", "fluid", "pendulum", "cellular", "primes", "bayes", "quantum",
-  "hydrogen", "blackbody", "compton", "quantum_tunnelling", "thermo", "montecarlo", "magnetic", "scattering",
-  "lorenz", "dynamical", "asteroids", "lagrange", "resonance", "images", "relativity", "cosmology"
+  "hydrogen", "blackbody", "compton", "quantum_tunnelling", "clt", "thermo", "montecarlo", "magnetic", "scattering",
+  "lorenz", "dynamical", "henon", "asteroids", "lagrange", "resonance", "images", "relativity", "cosmology"
 };
 
 (* ── App metadata ─────────────────────────────────────────────
@@ -541,6 +553,47 @@ appMeta = <|
       "recommended listening sequence across all three modes."
   |>,
 
+  "clt" -> <|
+    "title" -> "CLT \[LongDash] Central Limit Theorem",
+    "description" ->
+      "Sums and means of independent random variables become " <>
+      "approximately Gaussian as more of them are combined, regardless " <>
+      "of the source distribution's own shape \[LongDash] the most " <>
+      "accessible statistics app in this project, no physics background " <>
+      "required. The dice mode sonifies the single most recognisable " <>
+      "illustration: the sum of up to ten fair six-sided dice. A single " <>
+      "die is flat \[LongDash] six equally likely outcomes. Summed dice " <>
+      "smooth into an unmistakable bell shape, purely from adding more " <>
+      "of them together, honestly framed around SHAPE SMOOTHING rather " <>
+      "than narrowing, since a sum's spread actually grows with N.",
+    "listening_guide" ->
+      "Listen for the flat, jagged N=1 sound smoothing into a symmetric, " <>
+      "peaked bell shape by N=10 \[LongDash] purely from summing more " <>
+      "dice, nothing else changing. Then try sweep mode (one source " <>
+      "distribution narrowing AND smoothing at once) and compare mode " <>
+      "(two very different distributions, standardized, converging to " <>
+      "the identical shape in binaural stereo).",
+    "primary_wav" -> "dice_audio.wav",
+    "primary_wav_label" -> "Listen \[LongDash] sum of up to 10 fair dice, flat to bell-shaped",
+    "secondary_wavs" -> {
+      <| "file" -> "sweep_audio.wav",
+         "label" -> "Listen \[LongDash] sample-mean sweep, narrowing and smoothing" |>,
+      <| "file" -> "compare_audio.wav",
+         "label" -> "Listen \[LongDash] uniform vs exponential, standardized, binaural" |>
+    },
+    "gif" -> "dice.gif",
+    "gif_static" -> False,
+    "gif_alt" ->
+      "A bar chart of the probability of each possible dice-sum value, " <>
+      "flat and six-barred at N=1, becoming progressively smoother and " <>
+      "more bell-shaped as more dice are summed together.",
+    "cli" -> "wolframscript -file clt/main.wl -- --simulation.mode=dice",
+    "github_path" -> "clt",
+    "listening_guide_note" ->
+      "New to this app? See clt/LISTENING_GUIDE.md for the " <>
+      "recommended listening sequence across all three modes."
+  |>,
+
   "thermo" -> <|
     "title" -> "Thermo \[LongDash] Maxwell-Boltzmann Speed Distribution",
     "description" ->
@@ -778,6 +831,39 @@ appMeta = <|
       "the period-3 window \[LongDash] near the right edge.",
     "cli" -> "wolframscript -file dynamical/main.wl",
     "github_path" -> "dynamical"
+  |>,
+
+  "henon" -> <|
+    "title" -> "H\[EAcute]non Map \[LongDash] A 2D Invertible Chaotic Attractor",
+    "description" ->
+      "The H\[EAcute]non map (x_{n+1} = 1 - a\[CenterDot]x_n^2 + y_n, " <>
+      "y_{n+1} = b\[CenterDot]x_n) was built by Michel H\[EAcute]non in 1976 as " <>
+      "the simplest system that still captures the essential dynamics of a " <>
+      "Poincar\[EAcute] section through the Lorenz attractor \[LongDash] a " <>
+      "genuine, concrete link to the Lorenz app heard earlier. Unlike the " <>
+      "logistic map, the H\[EAcute]non map is exactly invertible: it can " <>
+      "always be run backwards to recover the point that came before. At the " <>
+      "canonical parameters a=1.4, b=0.3 it produces a fractal strange " <>
+      "attractor with a box-counting dimension around 1.2.",
+    "listening_guide" ->
+      "Stereo pan tracks the trajectory's x-position; pitch tracks its " <>
+      "y-position; accent tones mark each turning point where the " <>
+      "trajectory folds back on itself. Watch the GIF's point cloud grow " <>
+      "into the attractor's characteristic banded, folded shape \[LongDash] " <>
+      "that banding is the fractal structure a cross-section through it " <>
+      "would reveal.",
+    "primary_wav" -> "henon_attractor.wav",
+    "primary_wav_label" -> "Listen \[LongDash] H\[EAcute]non attractor, a=1.4, b=0.3",
+    "secondary_wavs" -> {},
+    "gif" -> "henon_attractor.gif",
+    "gif_static" -> False,
+    "gif_alt" ->
+      "A growing point cloud on the map's native x-y plane, colour-graded " <>
+      "from blue (early) to orange and red (recent), tracing a wide, thin, " <>
+      "folded crescent shape \[LongDash] the H\[EAcute]non strange attractor's " <>
+      "fractal cross-section.",
+    "cli" -> "wolframscript -file henon/main.wl",
+    "github_path" -> "henon"
   |>,
 
   "asteroids" -> <|
@@ -1347,7 +1433,7 @@ $html = "<!doctype html>\n" <>
 "<header>\n" <>
 "<h1>MINT Access stem</h1>\n" <>
 "<p><strong>Accessible STEM Simulations \[LongDash] v1.4.0</strong></p>\n" <>
-"<p>Twenty-one physics, mathematics, and cosmology simulations, each producing " <>
+"<p>Twenty-six physics, mathematics, and cosmology simulations, each producing " <>
 "an animated visualisation and an audio sonification of the underlying " <>
 "physics, designed to be fully accessible to blind and low-vision users.</p>\n" <>
 "<p class=\"links\">" <>
@@ -1361,7 +1447,7 @@ $html = "<!doctype html>\n" <>
 "<p>Each simulation below pairs a visual animation with a sonification " <>
 "of the same underlying physics or mathematics. Use the " <>
 "jump list to go directly to any simulation, or scroll through all " <>
-"twenty-four in the recommended listening order. No installation is " <>
+"twenty-six in the recommended listening order. No installation is " <>
 "required \[LongDash] everything on this page plays directly in your " <>
 "browser.</p>\n" <>
 "</section>\n" <>
@@ -1391,7 +1477,7 @@ Export[$demoHtmlOut, $html, "Text"];
 Print[""];
 STEMHeading["Summary"];
 STEMPrintN["Apps with complete outputs", $nComplete, "", 2];
-Print["  (demo.wl runs 25 passes total, 24 unique apps \[LongDash] dynamical counts twice)"];
+Print["  (demo.wl runs 27 passes total, 26 unique apps \[LongDash] dynamical counts twice)"];
 If[$nIncomplete > 0,
   STEMPrintN["Apps with missing outputs", $nIncomplete, "", 2];
   Print["  (see [WARNING] lines above for which files were missing per app)"]

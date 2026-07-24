@@ -18,6 +18,7 @@ stem/
   pendulum/         Simple and double pendulum ODE simulation
   lorenz/           Lorenz and Rössler strange attractor simulation
   dynamical/        Logistic map and period-doubling route to chaos
+  henon/            Hénon map: 2D invertible chaotic attractor, Lorenz Poincaré-section link
   asteroids/        NASA near-Earth asteroid tracker (live API data)
   cellular/         Conway's Game of Life and Wolfram Rule 110
   signal/           Fourier analysis demonstration (chord, sweep, AM)
@@ -39,6 +40,7 @@ stem/
   blackbody/        Planck black body radiation: spectrum sweep, Wien's law, Stefan-Boltzmann law, star presets
   compton/          Compton scattering: single-event collision, angle sweep, energy sweep, Thomson vs Compton
   quantum_tunnelling/  Quantum tunnelling: barrier-crossing event, width sweep, energy sweep to resonance
+  clt/              Central Limit Theorem: sample-mean sweep, standardized comparison, sum of N dice
   config/           Global config defaults (config.json)
   docs/             Workflow guides
 ```
@@ -117,6 +119,11 @@ wolframscript -file lorenz/main.wl
 wolframscript -file dynamical/main.wl                                      # sweep mode, r 2.5→4.0
 wolframscript -file dynamical/main.wl -- --simulation.mode=iterate         # iterate at r=3.8
 wolframscript -file dynamical/main.wl -- --simulation.dynamical.preset=period3_window
+
+# Hénon map — 2D invertible chaotic attractor
+wolframscript -file henon/main.wl                                          # attractor, canonical a=1.4,b=0.3
+wolframscript -file henon/main.wl -- --simulation.mode=sweep                # period-doubling sweep, a 0.2→1.4
+wolframscript -file henon/main.wl -- --simulation.mode=reverse              # forward/reversed/inverse-demo
 
 # Live NASA asteroid data
 wolframscript -file asteroids/main.wl                                    # last 7 days
@@ -240,13 +247,19 @@ wolframscript -file quantum_tunnelling/main.wl                                  
 wolframscript -file quantum_tunnelling/main.wl -- --simulation.quantum_tunnelling.preset=stm
 wolframscript -file quantum_tunnelling/main.wl -- --simulation.mode=sweep       # barrier-width sweep
 wolframscript -file quantum_tunnelling/main.wl -- --simulation.mode=energy      # energy sweep, crosses V0
+
+# Central Limit Theorem
+wolframscript -file clt/main.wl                                                 # sweep, uniform source
+wolframscript -file clt/main.wl -- --simulation.clt.source=exponential
+wolframscript -file clt/main.wl -- --simulation.mode=compare                    # uniform vs exponential, binaural
+wolframscript -file clt/main.wl -- --simulation.mode=dice                       # sum of N fair dice
 ```
 
 Each project writes outputs into its own directory:
 
 | Project | Output dir | File types |
 |---------|-----------|------------|
-| all twenty-four apps | `output/` | CSV, GIF, WAV (+ PNG for signal, quantum, primes, relativity, images, cosmology, waves, lagrange, hydrogen, blackbody, compton, quantum_tunnelling) |
+| all twenty-six apps | `output/` | CSV, GIF, WAV (+ PNG for signal, quantum, primes, relativity, images, cosmology, waves, lagrange, hydrogen, blackbody, compton, quantum_tunnelling, clt, henon) |
 
 Play audio:
 
@@ -257,6 +270,9 @@ afplay pendulum/output/double_audio.wav
 afplay lorenz/output/lorenz_audio.wav
 afplay dynamical/output/sweep_audio.wav
 afplay dynamical/output/iterate_audio.wav
+afplay henon/output/henon_attractor.wav
+afplay henon/output/henon_sweep.wav
+afplay henon/output/henon_reverse.wav
 afplay asteroids/output/asteroids_*.wav
 afplay cellular/output/life_rpentomino_audio.wav
 afplay quantum/output/qho_audio.wav
@@ -296,6 +312,9 @@ afplay compton/output/discovery_audio.wav
 afplay quantum_tunnelling/output/barrier_audio.wav
 afplay quantum_tunnelling/output/sweep_audio.wav
 afplay quantum_tunnelling/output/energy_audio.wav
+afplay clt/output/sweep_audio.wav
+afplay clt/output/compare_audio.wav
+afplay clt/output/dice_audio.wav
 
 # Linux — replace afplay with aplay
 aplay signal/output/chord_narrative_full.wav
@@ -312,7 +331,7 @@ See [RELEASE_NOTES_v1.4.0.md](RELEASE_NOTES_v1.4.0.md) for full app descriptions
 
 ## Demo
 
-Run all twenty-four apps with their most interesting presets and collect outputs into `demo/`:
+Run all twenty-six apps with their most interesting presets and collect outputs into `demo/`:
 
 ```sh
 wolframscript -file demo.wl
@@ -341,7 +360,7 @@ Check whether a previous demo run completed successfully:
 wolframscript -file demo.wl -- --check-only
 ```
 
-Outputs are collected in `demo/` with a written report at `demo/demo-report.md`. A full run takes approximately five to six minutes (25/25 runs — 24 unique apps, `dynamical` runs twice — including live asteroid data).
+Outputs are collected in `demo/` with a written report at `demo/demo-report.md`. A full run takes approximately five to six minutes (27/27 runs — 26 unique apps, `dynamical` runs twice — including live asteroid data).
 
 ---
 
@@ -382,6 +401,28 @@ any smooth one-dimensional map, not just this one. The sweep mode GIF
 animates the classic bifurcation diagram being drawn progressively, with a
 moving cursor and dashed lines marking the three named events.
 See [`dynamical/README.md`](dynamical/README.md).
+
+### henon
+
+Sonifies the Hénon map, a two-dimensional, exactly invertible chaotic
+attractor built by Michel Hénon in 1976 as the simplest system that still
+captures the essential dynamics of a Poincaré section through the Lorenz
+attractor — a genuine, concrete link to `lorenz/` already in this codebase.
+`attractor` mode (default) settles onto the canonical strange attractor
+(a=1.4, b=0.3) and sonifies it continuously, reusing `lorenz/`'s own
+trajectory technique: pan tracks x, pitch tracks y, and accent tones mark
+each turning point. `sweep` mode traverses a from 0.2 to 1.4, reusing
+`dynamical/`'s discrete note-per-iterate idiom so the period-doubling
+route to chaos is directly countable — one note becomes two, then four,
+then eight, before dissolving into chaos, with a surprising period-seven
+window near a≈1.227. `reverse` mode plays a short forward segment, replays
+it exactly reversed, then proves the map's invertibility directly: the
+last several points recovered by applying the exact inverse-map formula,
+confirmed against the already-known preceding values. Four correctness
+checks run on every invocation, including verifying the map's constant
+Jacobian determinant (exactly -b, everywhere on the plane) and that the
+two Lyapunov exponents sum to log(b) exactly.
+See [`henon/README.md`](henon/README.md).
 
 ### asteroids
 
@@ -749,6 +790,29 @@ specific resonant energies — the identical standing-wave condition
 that quantizes `quantum/`'s particle-in-a-box. See
 [`quantum_tunnelling/README.md`](quantum_tunnelling/README.md).
 
+### clt
+
+Sonifies the Central Limit Theorem — the most accessible statistics
+app in this project, no physics background required. `sweep` mode
+sweeps N from 1 to 30 for one source distribution (`uniform`,
+`exponential`, or a configurable-bias `bernoulli` coin, connecting to
+`bayes/`'s own coin theme) and sonifies the raw sample mean as a
+spectral envelope — `thermo/`'s and `bayes/`'s additive-synthesis
+technique, reused directly — audibly both narrowing (an exact,
+non-asymptotic fact: `Var(mean)=sigma^2/N`) and smoothing into a
+symmetric bell shape (the actual, asymptotic Central Limit Theorem)
+regardless of how lopsided the N=1 starting shape looked. `compare`
+mode instead standardizes away each source's own scale and sweeps two
+deliberately different distributions — flat `uniform` left, one-sided
+`exponential` right — simultaneously in binaural stereo, so a listener
+hears two completely different sounds at N=1 converge toward the
+identical shape by N=30. `dice` mode sonifies the most recognisable
+illustration of them all: the sum (not mean) of up to ten fair
+six-sided dice, a flat, jagged six-outcome sound smoothing into an
+unmistakable bell shape purely from summing more dice — honestly framed
+around shape smoothing rather than narrowing, since a sum's spread
+actually grows with N. See [`clt/README.md`](clt/README.md).
+
 ---
 
 ## Config system
@@ -784,7 +848,7 @@ See [`docs/APPS.md`](docs/APPS.md) for a full listing of each app's config keys.
 
 ## stem-core
 
-All twenty-four projects load `stem-core` as a shared library. It provides:
+All twenty-six projects load `stem-core` as a shared library. It provides:
 
 - **Config** — `LoadConfig`, `GetCfg`, `DeepMerge` — four-layer config merging and safe key lookup
 - **Sonification pipeline** — `SonifyTrajectory`, `SpatialLayer`, `MotionLayer`, `EventLayer`, `MixLayers`, `RenderAudio`
