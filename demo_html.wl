@@ -80,10 +80,18 @@ $genDate     = DateString[];
    it does not displace dynamical's own position relative to
    lorenz/asteroids, just inserts between them, the same "insert
    between, don't displace" pattern as every v1.4.0/v1.5.0 addition
-   above. *)
+   above.
+
+   "brownian" follows immediately after "clt", before "thermo" -- from
+   an abstract sum of dice (clt) to a physical embodiment of the same
+   running-sum-of-random-steps law (a pollen grain's random walk), still
+   one step before the statistics of many classical gas particles
+   (thermo) -- the same "insert between, don't displace" pattern once
+   more; clt already immediately precedes thermo here, so this is a
+   pure insertion. *)
 $appOrder = {
   "signal", "waves", "fluid", "pendulum", "cellular", "primes", "bayes", "quantum",
-  "hydrogen", "blackbody", "compton", "quantum_tunnelling", "clt", "thermo", "montecarlo", "magnetic", "scattering",
+  "hydrogen", "blackbody", "compton", "quantum_tunnelling", "clt", "brownian", "thermo", "montecarlo", "magnetic", "scattering",
   "lorenz", "dynamical", "henon", "asteroids", "lagrange", "resonance", "images", "relativity", "cosmology"
 };
 
@@ -591,6 +599,52 @@ appMeta = <|
     "github_path" -> "clt",
     "listening_guide_note" ->
       "New to this app? See clt/LISTENING_GUIDE.md for the " <>
+      "recommended listening sequence across all three modes."
+  |>,
+
+  "brownian" -> <|
+    "title" -> "Brownian Motion \[LongDash] The Random Walk",
+    "description" ->
+      "In 1827, Robert Brown watched pollen grains jiggle erratically " <>
+      "in water, and ruled out life as the cause by seeing the same " <>
+      "jiggling in inorganic dust. Einstein showed in 1905 that the " <>
+      "motion was the visible signature of countless collisions with " <>
+      "individual water molecules \[LongDash] direct evidence for the " <>
+      "physical reality of atoms, quantitatively confirmed by Jean " <>
+      "Perrin (1908-1909, Nobel Prize 1926). Ensemble mode tracks 150 " <>
+      "independent walkers and sonifies their averaged distance from " <>
+      "the origin: a single rising tone whose climb visibly slows over " <>
+      "time \[LongDash] displacement growing as the square root of " <>
+      "time, not linearly, unlike ordinary ballistic motion.",
+    "listening_guide" ->
+      "Listen for the tone's climb slowing down rather than staying " <>
+      "steady \[LongDash] that slowing IS the square-root-of-time law. " <>
+      "Then try walk mode (a single random walk, volume tracking " <>
+      "distance from the start rather than speed) and temperature mode " <>
+      "(the same walk, hotter or colder, via the Stokes-Einstein " <>
+      "relation).",
+    "primary_wav" -> "brownian_ensemble.wav",
+    "primary_wav_label" -> "Listen \[LongDash] 150-walker ensemble, the square-root-of-time law",
+    "secondary_wavs" -> {
+      <| "file" -> "brownian_walk.wav",
+         "label" -> "Listen \[LongDash] a single random walk" |>,
+      <| "file" -> "brownian_temperature.wav",
+         "label" -> "Listen \[LongDash] Stokes-Einstein temperature sweep, 275K-350K" |>
+    },
+    (* No animated GIF is produced in ensemble mode — brownian_ensemble.png
+       is the static plot; see "gif_static". *)
+    "gif" -> "brownian_ensemble.png",
+    "gif_static" -> True,
+    "gif_alt" ->
+      "A plot of distance from the origin versus time: several " <>
+      "individual random walkers trace noisy, wandering grey curves, " <>
+      "while a clean blue curve \[LongDash] their average \[LongDash] " <>
+      "rises smoothly with a visibly slowing, concave, square-root " <>
+      "shape, closely tracking a dashed theoretical curve.",
+    "cli" -> "wolframscript -file brownian/main.wl -- --simulation.mode=ensemble",
+    "github_path" -> "brownian",
+    "listening_guide_note" ->
+      "New to this app? See brownian/LISTENING_GUIDE.md for the " <>
       "recommended listening sequence across all three modes."
   |>,
 
@@ -1433,7 +1487,7 @@ $html = "<!doctype html>\n" <>
 "<header>\n" <>
 "<h1>MINT Access stem</h1>\n" <>
 "<p><strong>Accessible STEM Simulations \[LongDash] v1.4.0</strong></p>\n" <>
-"<p>Twenty-six physics, mathematics, and cosmology simulations, each producing " <>
+"<p>Twenty-seven physics, mathematics, and cosmology simulations, each producing " <>
 "an animated visualisation and an audio sonification of the underlying " <>
 "physics, designed to be fully accessible to blind and low-vision users.</p>\n" <>
 "<p class=\"links\">" <>
@@ -1447,7 +1501,7 @@ $html = "<!doctype html>\n" <>
 "<p>Each simulation below pairs a visual animation with a sonification " <>
 "of the same underlying physics or mathematics. Use the " <>
 "jump list to go directly to any simulation, or scroll through all " <>
-"twenty-six in the recommended listening order. No installation is " <>
+"twenty-seven in the recommended listening order. No installation is " <>
 "required \[LongDash] everything on this page plays directly in your " <>
 "browser.</p>\n" <>
 "</section>\n" <>
@@ -1477,7 +1531,7 @@ Export[$demoHtmlOut, $html, "Text"];
 Print[""];
 STEMHeading["Summary"];
 STEMPrintN["Apps with complete outputs", $nComplete, "", 2];
-Print["  (demo.wl runs 27 passes total, 26 unique apps \[LongDash] dynamical counts twice)"];
+Print["  (demo.wl runs 28 passes total, 27 unique apps \[LongDash] dynamical counts twice)"];
 If[$nIncomplete > 0,
   STEMPrintN["Apps with missing outputs", $nIncomplete, "", 2];
   Print["  (see [WARNING] lines above for which files were missing per app)"]

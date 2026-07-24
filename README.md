@@ -41,6 +41,7 @@ stem/
   compton/          Compton scattering: single-event collision, angle sweep, energy sweep, Thomson vs Compton
   quantum_tunnelling/  Quantum tunnelling: barrier-crossing event, width sweep, energy sweep to resonance
   clt/              Central Limit Theorem: sample-mean sweep, standardized comparison, sum of N dice
+  brownian/         Brownian motion: random walk, ensemble sqrt(t) law, Stokes-Einstein temperature sweep
   config/           Global config defaults (config.json)
   docs/             Workflow guides
 ```
@@ -253,13 +254,18 @@ wolframscript -file clt/main.wl                                                 
 wolframscript -file clt/main.wl -- --simulation.clt.source=exponential
 wolframscript -file clt/main.wl -- --simulation.mode=compare                    # uniform vs exponential, binaural
 wolframscript -file clt/main.wl -- --simulation.mode=dice                       # sum of N fair dice
+
+# Brownian motion
+wolframscript -file brownian/main.wl                                            # single random walk
+wolframscript -file brownian/main.wl -- --simulation.mode=ensemble              # 150-walker sqrt(t) glissando
+wolframscript -file brownian/main.wl -- --simulation.mode=temperature          # Stokes-Einstein D(T) sweep
 ```
 
 Each project writes outputs into its own directory:
 
 | Project | Output dir | File types |
 |---------|-----------|------------|
-| all twenty-six apps | `output/` | CSV, GIF, WAV (+ PNG for signal, quantum, primes, relativity, images, cosmology, waves, lagrange, hydrogen, blackbody, compton, quantum_tunnelling, clt, henon) |
+| all twenty-seven apps | `output/` | CSV, GIF, WAV (+ PNG for signal, quantum, primes, relativity, images, cosmology, waves, lagrange, hydrogen, blackbody, compton, quantum_tunnelling, clt, henon, brownian) |
 
 Play audio:
 
@@ -315,6 +321,9 @@ afplay quantum_tunnelling/output/energy_audio.wav
 afplay clt/output/sweep_audio.wav
 afplay clt/output/compare_audio.wav
 afplay clt/output/dice_audio.wav
+afplay brownian/output/brownian_walk.wav
+afplay brownian/output/brownian_ensemble.wav
+afplay brownian/output/brownian_temperature.wav
 
 # Linux — replace afplay with aplay
 aplay signal/output/chord_narrative_full.wav
@@ -331,7 +340,7 @@ See [RELEASE_NOTES_v1.4.0.md](RELEASE_NOTES_v1.4.0.md) for full app descriptions
 
 ## Demo
 
-Run all twenty-six apps with their most interesting presets and collect outputs into `demo/`:
+Run all twenty-seven apps with their most interesting presets and collect outputs into `demo/`:
 
 ```sh
 wolframscript -file demo.wl
@@ -360,7 +369,7 @@ Check whether a previous demo run completed successfully:
 wolframscript -file demo.wl -- --check-only
 ```
 
-Outputs are collected in `demo/` with a written report at `demo/demo-report.md`. A full run takes approximately five to six minutes (27/27 runs — 26 unique apps, `dynamical` runs twice — including live asteroid data).
+Outputs are collected in `demo/` with a written report at `demo/demo-report.md`. A full run takes approximately five to six minutes (28/28 runs — 27 unique apps, `dynamical` runs twice — including live asteroid data).
 
 ---
 
@@ -813,6 +822,30 @@ unmistakable bell shape purely from summing more dice — honestly framed
 around shape smoothing rather than narrowing, since a sum's spread
 actually grows with N. See [`clt/README.md`](clt/README.md).
 
+### brownian
+
+Sonifies Brownian motion — the random walk a microscopic particle
+follows under countless collisions with surrounding fluid molecules,
+first observed by Robert Brown (1827) and explained by Einstein (1905)
+as direct evidence for the physical reality of atoms, confirmed
+quantitatively by Jean Perrin (1908-1909, Nobel Prize 1926). `walk` mode
+(default) sonifies a single random walk continuously — the same
+trajectory pipeline `lorenz/` and `henon/`'s `attractor` mode use, but
+with volume tracking displacement from the origin rather than speed, a
+deliberate deviation since local jitter says nothing about diffusion
+specifically. `ensemble` mode tracks 150 independent walkers and
+sonifies their averaged root-mean-square displacement as a single rising
+tone whose climb visibly slows over time — the audible signature that
+displacement grows as the square root of time, not linearly, unlike
+ballistic motion. `temperature` mode sweeps 275K-350K, computing the
+diffusion coefficient via the Stokes-Einstein relation and scaling a
+representative walk's jiggle to it — a real, correctly-directioned, but
+honestly modest effect within water's actual liquid range. This random
+walk is also a direct physical embodiment of `clt/`'s own Central Limit
+Theorem setup: a running sum of independent random steps, here in real
+2D space rather than an abstract sample mean. See
+[`brownian/README.md`](brownian/README.md).
+
 ---
 
 ## Config system
@@ -848,7 +881,7 @@ See [`docs/APPS.md`](docs/APPS.md) for a full listing of each app's config keys.
 
 ## stem-core
 
-All twenty-six projects load `stem-core` as a shared library. It provides:
+All twenty-seven projects load `stem-core` as a shared library. It provides:
 
 - **Config** — `LoadConfig`, `GetCfg`, `DeepMerge` — four-layer config merging and safe key lookup
 - **Sonification pipeline** — `SonifyTrajectory`, `SpatialLayer`, `MotionLayer`, `EventLayer`, `MixLayers`, `RenderAudio`
