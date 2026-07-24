@@ -69,18 +69,28 @@ direction if you ever touch this line). The check then independently
 confirms each computed `lambda_peak` is an actual local maximum by
 comparing `B` at `lambda_peak*1.02` and `lambda_peak*0.98`.
 
-### 3. Correctness checks run every invocation, unconditionally — and never abort
+### 3. Correctness checks run every invocation, unconditionally, and are diagnostic-only in this app
 
 All four checks (Rayleigh-Jeans, Wien approximation, Wien's
 displacement, Stefan-Boltzmann) are properties of the Planck formula
 itself, not of any particular mode, so they run once before the mode
 dispatch (matching `hydrogen/`'s `EnergyLevelCheck`/`RydbergCheck`
 placement, not `thermo/`'s mode-conditional checks 3-4). Checks print
-`[PASS]`/`[FAIL]` and the run continues regardless — **no app in this
-codebase aborts via `LogError` on a failed correctness check**; that is
-a printed diagnostic convention, not a hard gate, verified by grepping
-every other app's `main.wl` before writing this app's checks the same
-way.
+`[PASS]`/`[FAIL]` and the run continues regardless.
+
+Note this is *not* a universal codebase convention — `relativity/`'s
+chirp mode genuinely does call `Exit[1]` when its frequency/amplitude
+monotonicity checks fail (see `relativity/src/model.wl`, the `fMono`/
+`aMono` gate), so "correctness checks abort on failure" and
+"correctness checks are diagnostic-only" both exist as patterns in this
+codebase depending on the app. Blackbody's four checks are print-only
+by deliberate choice, not because no precedent for aborting exists:
+they test closed-form mathematical limits of a fixed formula, which
+would only fail from an actual code bug (not from any runtime
+simulation instability an abort could usefully catch), so a hard gate
+adds little here. If you're deciding whether a *new* check in this app
+should abort, that's the distinction to reason from — not "no app does
+this."
 
 ### 4. `RayleighJeansCheck`/`WienApproxCheck` are parametrised by dimensionless `x`, not raw Hz
 

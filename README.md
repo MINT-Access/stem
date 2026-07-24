@@ -37,6 +37,7 @@ stem/
   resonance/        Orbital resonances: Galilean 4:2:1 Laplace resonance, Kirkwood gaps, Cassini Division
   fluid/            Kármán vortex street: vortex shedding, Strouhal frequency, Reynolds sweep, flag flutter
   blackbody/        Planck black body radiation: spectrum sweep, Wien's law, Stefan-Boltzmann law, star presets
+  compton/          Compton scattering: single-event collision, angle sweep, energy sweep, Thomson vs Compton
   config/           Global config defaults (config.json)
   docs/             Workflow guides
 ```
@@ -226,13 +227,19 @@ wolframscript -file blackbody/main.wl                                          #
 wolframscript -file blackbody/main.wl -- --simulation.mode=temperature          # 2500K -> 40000K sweep
 wolframscript -file blackbody/main.wl -- --simulation.mode=star \
                                           --simulation.blackbody.preset=all     # tour, red dwarf -> white dwarf
+
+# Compton scattering
+wolframscript -file compton/main.wl                                            # scatter, Compton's own 1923 values
+wolframscript -file compton/main.wl -- --simulation.mode=sweep                  # angle glissando, 0-180 deg
+wolframscript -file compton/main.wl -- --simulation.mode=energy                 # incident-energy sweep, 1keV-5MeV
+wolframscript -file compton/main.wl -- --simulation.mode=discovery              # Thomson vs Compton, binaural
 ```
 
 Each project writes outputs into its own directory:
 
 | Project | Output dir | File types |
 |---------|-----------|------------|
-| all twenty-two apps | `output/` | CSV, GIF, WAV (+ PNG for signal, quantum, primes, relativity, images, cosmology, waves, lagrange, hydrogen, blackbody) |
+| all twenty-three apps | `output/` | CSV, GIF, WAV (+ PNG for signal, quantum, primes, relativity, images, cosmology, waves, lagrange, hydrogen, blackbody, compton) |
 
 Play audio:
 
@@ -275,6 +282,9 @@ afplay fluid/output/strouhal_audio.wav
 afplay blackbody/output/spectrum_audio.wav
 afplay blackbody/output/temperature_audio.wav
 afplay blackbody/output/star_audio.wav
+afplay compton/output/scatter_audio.wav
+afplay compton/output/sweep_audio.wav
+afplay compton/output/discovery_audio.wav
 
 # Linux — replace afplay with aplay
 aplay signal/output/chord_narrative_full.wav
@@ -291,7 +301,7 @@ See [RELEASE_NOTES_v1.4.0.md](RELEASE_NOTES_v1.4.0.md) for full app descriptions
 
 ## Demo
 
-Run all twenty-two apps with their most interesting presets and collect outputs into `demo/`:
+Run all twenty-three apps with their most interesting presets and collect outputs into `demo/`:
 
 ```sh
 wolframscript -file demo.wl
@@ -320,7 +330,7 @@ Check whether a previous demo run completed successfully:
 wolframscript -file demo.wl -- --check-only
 ```
 
-Outputs are collected in `demo/` with a written report at `demo/demo-report.md`. A full run takes approximately five to six minutes (23/23 runs — 22 unique apps, `dynamical` runs twice — including live asteroid data).
+Outputs are collected in `demo/` with a written report at `demo/demo-report.md`. A full run takes approximately five to six minutes (24/24 runs — 23 unique apps, `dynamical` runs twice — including live asteroid data).
 
 ---
 
@@ -680,6 +690,30 @@ presets, red dwarf to white dwarf, chord-then-sweep for a single
 preset (reusing `hydrogen/`'s emission-spectrum structure) or a
 sequential, spoken tour across all six. See [`blackbody/README.md`](blackbody/README.md).
 
+### compton
+
+Sonifies Compton scattering — the 1923 measurement that settled the
+wave/particle debate: a photon loses energy to a recoiling electron and
+shifts to a longer wavelength, something only a particle carrying
+discrete momentum can do. `scatter` mode plays Compton's own historical
+values (71pm molybdenum X-rays, 90 degrees) as a short narrated
+sequence — incoming photon, collision click, outgoing photon at a
+measurably lower pitch, and a soft thud for the recoiling electron,
+panned to the opposite side by momentum conservation. `sweep` mode turns
+the formula itself into a glissando — pitch falling fastest through
+90 degrees, exactly where `sin(theta)` peaks, the same "equation IS the
+pitch bend" relationship `relativity/`'s chirp has to its own governing
+formula. `energy` mode sweeps incident photon energy from 1 keV to
+5 MeV, crossing the electron's own rest energy (511 keV) where the
+incoming and outgoing pitches audibly pull apart. `discovery` mode
+revisits the same binaural classical-vs-quantum structure as
+`scattering/discovery` — left channel flat (J.J. Thomson's classical
+prediction, making a second appearance in this codebase, this time as
+the *correct* low-energy limit rather than a superseded atomic model),
+right channel dropping (the real result) — the actual gap that won
+Arthur Compton the 1927 Nobel Prize, made audible. See
+[`compton/README.md`](compton/README.md).
+
 ---
 
 ## Config system
@@ -715,7 +749,7 @@ See [`docs/APPS.md`](docs/APPS.md) for a full listing of each app's config keys.
 
 ## stem-core
 
-All twenty-two projects load `stem-core` as a shared library. It provides:
+All twenty-three projects load `stem-core` as a shared library. It provides:
 
 - **Config** — `LoadConfig`, `GetCfg`, `DeepMerge` — four-layer config merging and safe key lookup
 - **Sonification pipeline** — `SonifyTrajectory`, `SpatialLayer`, `MotionLayer`, `EventLayer`, `MixLayers`, `RenderAudio`

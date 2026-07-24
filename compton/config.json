@@ -1,0 +1,23 @@
+{
+  "version": 1,
+  "app": "compton",
+  "description": "Compton scattering: single-event collision, angle sweep, incident-energy sweep, and the Thomson vs Compton historical comparison",
+
+  "simulation": {
+    "mode": "scatter",
+    "compton": {
+      "wavelength_pm": 71.0,
+      "angle_deg": 90,
+      "angle_min": 0,
+      "angle_max": 180,
+      "energy_min_kev": 1,
+      "energy_max_kev": 5000,
+      "n_steps": 100,
+      "audio_freq_min": 200,
+      "audio_freq_max": 3000,
+      "frame_duration": 0.1,
+      "sweep_duration": 6.0,
+      "discovery_duration": 8.0
+    }
+  }
+}

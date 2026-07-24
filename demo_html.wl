@@ -60,10 +60,14 @@ $genDate     = DateString[];
    continuous glow every hot object emits (blackbody) to the
    statistics of many classical particles (thermo); it does not
    displace hydrogen's own position relative to quantum/thermo, just
-   inserts between them. *)
+   inserts between them. "compton" follows immediately after
+   "blackbody", before "thermo" -- from a star's continuous glow to a
+   single photon-electron collision to the statistics of many
+   classical particles, the same "insert between, don't displace"
+   pattern. *)
 $appOrder = {
   "signal", "waves", "fluid", "pendulum", "cellular", "primes", "bayes", "quantum",
-  "hydrogen", "blackbody", "thermo", "montecarlo", "magnetic", "scattering",
+  "hydrogen", "blackbody", "compton", "thermo", "montecarlo", "magnetic", "scattering",
   "lorenz", "dynamical", "asteroids", "lagrange", "resonance", "images", "relativity", "cosmology"
 };
 
@@ -439,6 +443,52 @@ appMeta = <|
     "listening_guide_note" ->
       "New to this app? See blackbody/LISTENING_GUIDE.md for the " <>
       "recommended listening sequence across all three modes."
+  |>,
+
+  "compton" -> <|
+    "title" -> "Compton \[LongDash] Compton Scattering",
+    "description" ->
+      "In 1923, Arthur Compton fired X-rays at electrons and found the " <>
+      "scattered light came back at a longer wavelength \[LongDash] " <>
+      "measurably lower energy \[LongDash] by an amount that depended only " <>
+      "on the scattering angle. Only a particle carrying discrete " <>
+      "momentum can lose energy to a recoiling electron this way; a wave " <>
+      "alone cannot. The discovery mode recreates the historical test in " <>
+      "binaural stereo: the left channel plays the classical (Thomson) " <>
+      "prediction \[LongDash] flat, no shift at any angle \[LongDash] while " <>
+      "the right channel plays the real, quantum result, its pitch " <>
+      "dropping measurably as the angle increases. J.J. Thomson appears " <>
+      "twice in this project: wrongly, as the plum-pudding atomic model " <>
+      "scattering/ discredits, and rightly, here, as the correct " <>
+      "low-energy limit of the very effect that helped confirm the photon.",
+    "listening_guide" ->
+      "Listen for the two channels starting in unison at theta=0 and " <>
+      "pulling apart as the sweep proceeds toward theta=180 \[LongDash] " <>
+      "that widening gap between the flat left channel and the falling " <>
+      "right channel is the actual 1923 measurement that won Compton the " <>
+      "1927 Nobel Prize in Physics.",
+    "primary_wav" -> "discovery_audio.wav",
+    "primary_wav_label" -> "Listen \[LongDash] Thomson vs Compton, binaural",
+    "secondary_wavs" -> {
+      <| "file" -> "scatter_audio.wav",
+         "label" -> "Listen \[LongDash] single collision, Compton's own 1923 values" |>,
+      <| "file" -> "sweep_audio.wav",
+         "label" -> "Listen \[LongDash] angle sweep, the formula as a glissando" |>,
+      <| "file" -> "energy_audio.wav",
+         "label" -> "Listen \[LongDash] incident-energy sweep, 1 keV to 5 MeV" |>
+    },
+    "gif" -> "scatter.gif",
+    "gif_static" -> False,
+    "gif_alt" ->
+      "A collision diagram: an incoming photon arrow travels toward a " <>
+      "central point, then splits into an outgoing photon arrow at the " <>
+      "scattering angle and a recoiling electron arrow on the opposite " <>
+      "side, each labelled with its energy.",
+    "cli" -> "wolframscript -file compton/main.wl -- --simulation.mode=discovery",
+    "github_path" -> "compton",
+    "listening_guide_note" ->
+      "New to this app? See compton/LISTENING_GUIDE.md for the " <>
+      "recommended listening sequence across all four modes."
   |>,
 
   "thermo" -> <|
@@ -1261,7 +1311,7 @@ $html = "<!doctype html>\n" <>
 "<p>Each simulation below pairs a visual animation with a sonification " <>
 "of the same underlying physics or mathematics. Use the " <>
 "jump list to go directly to any simulation, or scroll through all " <>
-"twenty-two in the recommended listening order. No installation is " <>
+"twenty-three in the recommended listening order. No installation is " <>
 "required \[LongDash] everything on this page plays directly in your " <>
 "browser.</p>\n" <>
 "</section>\n" <>
@@ -1291,7 +1341,7 @@ Export[$demoHtmlOut, $html, "Text"];
 Print[""];
 STEMHeading["Summary"];
 STEMPrintN["Apps with complete outputs", $nComplete, "", 2];
-Print["  (demo.wl runs 23 passes total, 22 unique apps \[LongDash] dynamical counts twice)"];
+Print["  (demo.wl runs 24 passes total, 23 unique apps \[LongDash] dynamical counts twice)"];
 If[$nIncomplete > 0,
   STEMPrintN["Apps with missing outputs", $nIncomplete, "", 2];
   Print["  (see [WARNING] lines above for which files were missing per app)"]
