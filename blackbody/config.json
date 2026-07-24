@@ -1,0 +1,25 @@
+{
+  "version": 1,
+  "app": "blackbody",
+  "description": "Planck black body radiation: spectral radiance sweep, temperature sweep (Wien's law + Stefan-Boltzmann), and named star/remnant presets",
+
+  "simulation": {
+    "mode": "spectrum",
+    "blackbody": {
+      "temperature": 5778,
+      "temp_min": 2500,
+      "temp_max": 40000,
+      "n_steps": 100,
+      "preset": "sun",
+      "freq_min": 1e6,
+      "freq_max": 1e19,
+      "n_bins": 64,
+      "audio_freq_min": 100,
+      "audio_freq_max": 4000,
+      "chord_duration": 4.0,
+      "note_duration": 0.08,
+      "frame_duration": 0.12,
+      "tour_segment_duration": 2.5
+    }
+  }
+}

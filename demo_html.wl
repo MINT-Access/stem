@@ -53,10 +53,17 @@ $genDate     = DateString[];
      "images", the app that already immediately follows lagrange.
    - "hydrogen" after "quantum" — but not "before primes" (primes
      already precedes quantum here), so it lands before "thermo", the
-     app that already immediately follows quantum. *)
+     app that already immediately follows quantum.
+
+   v1.5.0 adds "blackbody" immediately after "hydrogen", before
+   "thermo" — one atom's discrete spectral lines (hydrogen) to the
+   continuous glow every hot object emits (blackbody) to the
+   statistics of many classical particles (thermo); it does not
+   displace hydrogen's own position relative to quantum/thermo, just
+   inserts between them. *)
 $appOrder = {
   "signal", "waves", "fluid", "pendulum", "cellular", "primes", "bayes", "quantum",
-  "hydrogen", "thermo", "montecarlo", "magnetic", "scattering",
+  "hydrogen", "blackbody", "thermo", "montecarlo", "magnetic", "scattering",
   "lorenz", "dynamical", "asteroids", "lagrange", "resonance", "images", "relativity", "cosmology"
 };
 
@@ -387,6 +394,50 @@ appMeta = <|
     "github_path" -> "hydrogen",
     "listening_guide_note" ->
       "New to hydrogen sonification? See hydrogen/LISTENING_GUIDE.md for the " <>
+      "recommended listening sequence across all three modes."
+  |>,
+
+  "blackbody" -> <|
+    "title" -> "Blackbody \[LongDash] Planck Black Body Radiation",
+    "description" ->
+      "Every object with a temperature radiates a continuous spectrum of " <>
+      "light shaped only by that temperature \[LongDash] Planck's law, the " <>
+      "formula whose exact fit to both the low- and high-frequency limits " <>
+      "forced quantum mechanics into existence in 1900. The spectrum mode " <>
+      "sweeps photon frequency from radio through microwave, infrared, " <>
+      "visible, ultraviolet, to X-ray at the Sun's own temperature (5778K), " <>
+      "sonified as a spectral envelope the same way thermo's Maxwell-" <>
+      "Boltzmann curve is sonified \[LongDash] many simultaneous partials " <>
+      "tracing the physics directly. Two soft taps mark the edges of the " <>
+      "400-700nm visible band, which happens to sit almost exactly on the " <>
+      "solar curve's peak \[LongDash] not a coincidence: human colour " <>
+      "vision evolved around precisely this spectrum.",
+    "listening_guide" ->
+      "Listen first to the chord (the whole curve at once) then the sweep " <>
+      "(the same curve, bin by bin, low frequency to high). The two soft " <>
+      "taps mark the visible-light window \[LongDash] notice how briefly " <>
+      "they land relative to the whole radio-to-X-ray sweep. That gap is " <>
+      "literally all the light a human eye can see; every star emits far " <>
+      "more that no eye can detect.",
+    "primary_wav" -> "spectrum_audio.wav",
+    "primary_wav_label" -> "Listen \[LongDash] Planck spectrum, solar T=5778K, chord and sweep",
+    "secondary_wavs" -> {
+      <| "file" -> "temperature_audio.wav",
+         "label" -> "Listen \[LongDash] temperature sweep, 2500K red dwarf to 40000K blue giant" |>,
+      <| "file" -> "star_audio.wav",
+         "label" -> "Listen \[LongDash] star tour, red dwarf to white dwarf" |>
+    },
+    "gif" -> "spectrum.gif",
+    "gif_static" -> False,
+    "gif_alt" ->
+      "A Planck radiance curve plotted against log frequency, with a " <>
+      "marker sweeping from left to right tracing out the radio-to-X-ray " <>
+      "spectrum, the narrow visible-light band shaded and the Wien's-law " <>
+      "peak marked with a red dot.",
+    "cli" -> "wolframscript -file blackbody/main.wl",
+    "github_path" -> "blackbody",
+    "listening_guide_note" ->
+      "New to this app? See blackbody/LISTENING_GUIDE.md for the " <>
       "recommended listening sequence across all three modes."
   |>,
 
@@ -1210,7 +1261,7 @@ $html = "<!doctype html>\n" <>
 "<p>Each simulation below pairs a visual animation with a sonification " <>
 "of the same underlying physics or mathematics. Use the " <>
 "jump list to go directly to any simulation, or scroll through all " <>
-"twenty-one in the recommended listening order. No installation is " <>
+"twenty-two in the recommended listening order. No installation is " <>
 "required \[LongDash] everything on this page plays directly in your " <>
 "browser.</p>\n" <>
 "</section>\n" <>
@@ -1240,7 +1291,7 @@ Export[$demoHtmlOut, $html, "Text"];
 Print[""];
 STEMHeading["Summary"];
 STEMPrintN["Apps with complete outputs", $nComplete, "", 2];
-Print["  (demo.wl runs 22 passes total, 21 unique apps \[LongDash] dynamical counts twice)"];
+Print["  (demo.wl runs 23 passes total, 22 unique apps \[LongDash] dynamical counts twice)"];
 If[$nIncomplete > 0,
   STEMPrintN["Apps with missing outputs", $nIncomplete, "", 2];
   Print["  (see [WARNING] lines above for which files were missing per app)"]

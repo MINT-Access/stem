@@ -36,6 +36,7 @@ stem/
   scattering/       Rutherford scattering: hyperbolic trajectories, cross-section, Thomson vs Rutherford
   resonance/        Orbital resonances: Galilean 4:2:1 Laplace resonance, Kirkwood gaps, Cassini Division
   fluid/            Kármán vortex street: vortex shedding, Strouhal frequency, Reynolds sweep, flag flutter
+  blackbody/        Planck black body radiation: spectrum sweep, Wien's law, Stefan-Boltzmann law, star presets
   config/           Global config defaults (config.json)
   docs/             Workflow guides
 ```
@@ -219,13 +220,19 @@ wolframscript -file resonance/main.wl -- --simulation.mode=saturn               
 wolframscript -file fluid/main.wl                                               # karman, Re=150
 wolframscript -file fluid/main.wl -- --simulation.mode=strouhal                 # Reynolds sweep
 wolframscript -file fluid/main.wl -- --simulation.mode=flag                     # flag flutter
+
+# Black body radiation
+wolframscript -file blackbody/main.wl                                          # spectrum, solar T=5778K
+wolframscript -file blackbody/main.wl -- --simulation.mode=temperature          # 2500K -> 40000K sweep
+wolframscript -file blackbody/main.wl -- --simulation.mode=star \
+                                          --simulation.blackbody.preset=all     # tour, red dwarf -> white dwarf
 ```
 
 Each project writes outputs into its own directory:
 
 | Project | Output dir | File types |
 |---------|-----------|------------|
-| all twenty-one apps | `output/` | CSV, GIF, WAV (+ PNG for signal, quantum, primes, relativity, images, cosmology, waves, lagrange, hydrogen) |
+| all twenty-two apps | `output/` | CSV, GIF, WAV (+ PNG for signal, quantum, primes, relativity, images, cosmology, waves, lagrange, hydrogen, blackbody) |
 
 Play audio:
 
@@ -265,6 +272,9 @@ afplay resonance/output/galilean_audio.wav
 afplay resonance/output/kirkwood_audio.wav
 afplay fluid/output/karman_audio.wav
 afplay fluid/output/strouhal_audio.wav
+afplay blackbody/output/spectrum_audio.wav
+afplay blackbody/output/temperature_audio.wav
+afplay blackbody/output/star_audio.wav
 
 # Linux — replace afplay with aplay
 aplay signal/output/chord_narrative_full.wav
@@ -281,7 +291,7 @@ See [RELEASE_NOTES_v1.4.0.md](RELEASE_NOTES_v1.4.0.md) for full app descriptions
 
 ## Demo
 
-Run all sixteen apps with their most interesting presets and collect outputs into `demo/`:
+Run all twenty-two apps with their most interesting presets and collect outputs into `demo/`:
 
 ```sh
 wolframscript -file demo.wl
@@ -310,7 +320,7 @@ Check whether a previous demo run completed successfully:
 wolframscript -file demo.wl -- --check-only
 ```
 
-Outputs are collected in `demo/` with a written report at `demo/demo-report.md`. A full run takes approximately four to five minutes (measured: 17/17 runs — 16 unique apps, `dynamical` runs twice — 4 min 13 s total, including live asteroid data).
+Outputs are collected in `demo/` with a written report at `demo/demo-report.md`. A full run takes approximately five to six minutes (23/23 runs — 22 unique apps, `dynamical` runs twice — including live asteroid data).
 
 ---
 
@@ -648,6 +658,28 @@ Biot-Savart induction, an educational approximation rather than a full
 Navier-Stokes solve.
 See [`fluid/README.md`](fluid/README.md).
 
+### blackbody
+
+Sonifies Planck's law — the 1900 formula whose exact fit to both the
+low- and high-frequency limits (Rayleigh-Jeans and Wien) forced quantum
+mechanics into existence. `spectrum` mode fixes a temperature and
+sweeps photon frequency from radio through microwave, infrared,
+visible, ultraviolet, to X-ray, sonifying the curve the same way
+`thermo/`'s Maxwell-Boltzmann distribution is sonified: as a spectral
+envelope, many simultaneous partials tracing the physics directly,
+rather than a single value moving over time. Two soft taps mark the
+edges of the 400-700nm visible band — at the Sun's own temperature
+(5778K) that band sits almost exactly on the curve's peak, which is not
+a coincidence: human colour vision evolved around precisely this
+spectrum. `temperature` mode sweeps temperature itself from a 2500K red
+dwarf to a 40000K blue giant, making Wien's displacement law (the peak
+rising in pitch) and the Stefan-Boltzmann law (total power rising as
+temperature to the fourth power, log-compressed so it stays audible
+across the whole range) audible at once. `star` mode tours six named
+presets, red dwarf to white dwarf, chord-then-sweep for a single
+preset (reusing `hydrogen/`'s emission-spectrum structure) or a
+sequential, spoken tour across all six. See [`blackbody/README.md`](blackbody/README.md).
+
 ---
 
 ## Config system
@@ -683,7 +715,7 @@ See [`docs/APPS.md`](docs/APPS.md) for a full listing of each app's config keys.
 
 ## stem-core
 
-All twenty-one projects load `stem-core` as a shared library. It provides:
+All twenty-two projects load `stem-core` as a shared library. It provides:
 
 - **Config** — `LoadConfig`, `GetCfg`, `DeepMerge` — four-layer config merging and safe key lookup
 - **Sonification pipeline** — `SonifyTrajectory`, `SpatialLayer`, `MotionLayer`, `EventLayer`, `MixLayers`, `RenderAudio`
