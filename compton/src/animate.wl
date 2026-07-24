@@ -27,7 +27,9 @@ ScatterDiagramGraphics[model_Association, revealFrac_?NumericQ] :=
 
     incomingStart   = {-extend, 0.0};
     photonOutEnd     = extend * {Cos[thetaRad], Sin[thetaRad]};
-    electronOutEnd   = 0.55 * extend * {Cos[phiRad], -Sin[phiRad]};   (* opposite (-y) side, see model.wl *)
+    electronOutEnd   = 0.55 * extend * {Cos[phiRad], Sin[phiRad]};   (* RecoilElectronAngleDeg
+      is already the electron's own (opposite-transverse-side) angle as of the
+      model.wl fix -- no extra sign flip needed here anymore. *)
 
     incomingNow = If[revealFrac <= 0.5,
       incomingStart * (1.0 - 2.0 * revealFrac),

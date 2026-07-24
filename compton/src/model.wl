@@ -87,7 +87,15 @@ RecoilElectronAngleDeg[EKeV_?NumericQ, thetaRad_?NumericQ] :=
   Module[{EPrime, px, py},
     EPrime = ComptonOutgoingEnergyKeV[EKeV, thetaRad];
     px = EKeV - EPrime * Cos[thetaRad];
-    py = EPrime * Sin[thetaRad];
+    (* py is the ELECTRON's transverse momentum: p_e = p_in - p_out_photon,
+       and p_in has zero transverse component, so py = -EPrime*Sin[theta]
+       (the negative of the scattered photon's own transverse momentum).
+       Previously this was written without the minus sign, which returned
+       the photon's transverse momentum instead of the electron's -- the
+       function's own docstring already claimed "opposite transverse side,"
+       this fixes the implementation to actually match it, and removes the
+       need for animate.wl to apply a second, compensating sign flip. *)
+    py = -EPrime * Sin[thetaRad];
     ArcTan[px, py] * 180.0 / Pi
   ];
 

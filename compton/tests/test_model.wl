@@ -75,12 +75,12 @@ AssertTrue["A high-energy gamma ray (10 MeV) loses the majority of its energy at
 (* --- Test 7: recoil electron angle --- *)
 Print[""];
 Print["-- Recoil electron angle --"];
-AssertTrue["Recoil angle is 45 deg (bisecting incident/scattered directions) in the Thomson limit at 90 deg scattering",
-  Abs[RecoilElectronAngleDeg[0.0001, Pi / 2.0] - 45.0] < 1.0];
-AssertTrue["Recoil angle is between 0 and 90 degrees for any forward-scattering event",
-  With[{phi = RecoilElectronAngleDeg[17.5, Pi / 4.0]}, 0.0 < phi < 90.0]];
-AssertTrue["Recoil angle approaches 0 deg (straight forward) at theta -> pi (backscatter)",
-  RecoilElectronAngleDeg[17.5, N[Pi] - 0.001] < 1.0];
+AssertTrue["Recoil angle is -45 deg (opposite transverse side from the scattered photon) in the Thomson limit at 90 deg scattering",
+  Abs[RecoilElectronAngleDeg[0.0001, Pi / 2.0] - (-45.0)] < 1.0];
+AssertTrue["Recoil angle is between -90 and 0 degrees for any forward-scattering event",
+  With[{phi = RecoilElectronAngleDeg[17.5, Pi / 4.0]}, -90.0 < phi < 0.0]];
+AssertTrue["Recoil angle magnitude approaches 0 deg (straight forward) at theta -> pi (backscatter)",
+  Abs[RecoilElectronAngleDeg[17.5, N[Pi] - 0.001]] < 1.0];
 
 (* --- Test 8: pitch/pan mapping helpers --- *)
 Print[""];

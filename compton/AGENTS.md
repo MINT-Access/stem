@@ -157,19 +157,34 @@ value (`x=1e-6`); the fix here is better — an exact identity means
 (`1e-8` rad) with no precision concern at all, rather than needing to
 tune a compromise test angle.
 
-### 8. `RecoilElectronAngleDeg` returns a magnitude; the caller places it on the opposite side
+### 8. `RecoilElectronAngleDeg` returns the electron's own (already-signed) angle
 
-The function returns `ArcTan[px, py]` where `py = E'*Sin[theta]` is the
-scattered PHOTON's transverse momentum magnitude, not the electron's
-(the electron's is the same magnitude, opposite sign, by momentum
-conservation) — so the returned angle is always a positive value in
-`(0,90]` degrees for forward-scattering `theta`. `animate.wl`'s
-`ScatterDiagramGraphics` draws the electron arrow at `{Cos[phi],
--Sin[phi]}` (note the explicit minus sign) specifically to place it on
-the transverse side opposite the scattered photon. If you add a new
-consumer of `RecoilElectronAngleDeg`, remember to apply that same sign
-flip yourself — the function does not do it for you, to keep its return
-value a simple, unsigned "how far from the forward axis" angle.
+`py = -EPrime*Sin[theta]` — the minus sign matters: `p_e = p_in -
+p_out_photon`, and the incident photon has zero transverse momentum, so
+the electron's transverse momentum is the *negative* of the scattered
+photon's, not the same value reused. The function returns a negative
+angle for any forward-scattering `theta` (0 to 180 degrees maps to 0 to
+-90 degrees), i.e. it is already on the correct, opposite transverse
+side — this matches the function's own docstring and needs no
+compensating sign flip anywhere downstream.
+
+An earlier draft omitted the minus sign, returning the scattered
+*photon's* transverse momentum angle instead of the electron's. That
+version's own docstring already claimed "opposite transverse side," so
+the bug was a mismatch between the docstring and the implementation, not
+absent documentation. `animate.wl`'s diagram happened to look correct
+anyway, because `ScatterDiagramGraphics` applied its own independent
+minus sign when placing the electron arrow — but `output.wl`'s CSV/
+console export used the raw (wrong-signed) value directly, so the
+exported `recoil_angle_deg` silently disagreed with the diagram's own
+picture. Fixing the sign at the source (here) instead of patching every
+downstream consumer removes that class of bug entirely: there is now
+exactly one place that decides which side the electron is on, and every
+consumer — `animate.wl`, `output.wl`, and any future one — reads it
+correctly for free. If you touch this function, keep it that way: a
+shared geometric quantity like a signed angle should carry its own
+correct sign, not rely on each caller separately remembering which way
+to flip it.
 
 ## Project structure
 
