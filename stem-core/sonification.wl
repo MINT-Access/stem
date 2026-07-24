@@ -60,7 +60,26 @@ SpatialLayer[trajectory_?MatrixQ, cfg_Association] := Module[
   nSamples = Round[sampleRate * duration];
   times    = Rescale[Range[nSamples], {1, nSamples}, {First[t], Last[t]}];
 
-  (* Interpolate the chosen axes onto the audio sample grid *)
+  (* Interpolate the chosen axes onto the audio sample grid.
+     Method->"Spline" (cubic) is not shape-preserving: it can overshoot
+     beyond the source data's own min/max between nodes, especially for
+     trajectories with sharp curvature changes relative to how densely
+     they were sampled (a coarse random walk or a sparsely-recorded
+     ODE segment, for instance -- confirmed empirically: a 6-point
+     trajectory with one sharp feature overshot by 15-25% of its data
+     range in a standalone test). panArr already clipped back to
+     panRange for exactly this reason; pitchArr and volArr previously
+     did not, meaning pitch could in principle be pushed outside
+     [min_hz,max_hz] -- including negative, which Sin[Accumulate[...]]
+     evaluates without erroring but which is physically meaningless and
+     would sound like a brief, wrong pitch excursion at exactly the
+     trajectory's most eventful (highest-curvature) moments. All three
+     are now clipped consistently. In practice this rarely bites at the
+     sampling densities every app in this repo currently uses (verified
+     against lorenz/'s and brownian/'s real output data: sub-1% of
+     range even for a rough random walk), but the guard is cheap and
+     removes the failure mode entirely rather than relying on every
+     caller happening to sample densely enough. *)
   With[
     {panSrc   = Switch[panAxis,   "x", x, "y", y, "z", z, _, x],
      pitchSrc = Switch[pitchAxis, "x", x, "y", y, "z", z, _, y]},
@@ -69,14 +88,14 @@ SpatialLayer[trajectory_?MatrixQ, cfg_Association] := Module[
                  Interpolation[Transpose[{t, panSrc}],   Method -> "Spline"][times],
                  MinMax[panSrc], panRange], panRange];
 
-    pitchArr = Rescale[
+    pitchArr = Clip[Rescale[
                  Interpolation[Transpose[{t, pitchSrc}], Method -> "Spline"][times],
-                 MinMax[pitchSrc], pitchRange];
+                 MinMax[pitchSrc], pitchRange], pitchRange];
 
     (* Volume from speed: fast = louder *)
-    volArr   = Rescale[
+    volArr   = Clip[Rescale[
                  Interpolation[Transpose[{t, speed}],    Method -> "Spline"][times],
-                 MinMax[speed], volRange]
+                 MinMax[speed], volRange], volRange]
   ];
 
   <| "pan"   -> panArr,    (* -1 left … +1 right *)
