@@ -21,13 +21,35 @@
    -------------------------------------------------------- *)
 
 (* Earth's J2000.0 Keplerian elements — used to compute the geocentric
-   position offset from Earth's own heliocentric position. *)
+   position offset from Earth's own heliocentric position.
+
+   Source: JPL's "Keplerian Elements for Approximate Positions of the
+   Major Planets" (1800-2050 fit). That table's columns are a, e, I,
+   L (mean longitude), long.peri. = pi-bar = Omega+omega (LONGITUDE of
+   perihelion), and Omega (longitude of ascending node) -- it does NOT
+   tabulate omega (argument of perihelion) directly, unlike the JPL
+   SBDB small-body element sets FetchOrbitalElements pulls for every
+   asteroid, which use om/w = Omega/omega directly as two independent
+   rotation angles (see the "node"/"peri" labels in fetch.wl).
+
+   "w" below is therefore omega = pi-bar - Omega = 102.94719 - (-11.26064)
+   = 114.20783, NOT the table's pi-bar value used directly -- using
+   pi-bar in OrbitalToEcliptic2D's om/w rotation double-counts Omega,
+   shifting Earth's computed ecliptic longitude by a constant ~11.26
+   degrees (= Omega) on every date, verified numerically: at
+   2026-06-20 this moves Earth's computed heliocentric angle from
+   -91.18 deg to -102.44 deg while leaving its solar distance
+   unchanged (an in-plane rotation, not a distance error, consistent
+   with a pure angle-convention bug rather than a wrong magnitude).
+   "ma" (mean anomaly) below is unaffected -- it was already correctly
+   derived as L - pi-bar = 100.46435 - 102.94719 = -2.48284 = 357.51716
+   mod 360, which only ever needed pi-bar, not omega. *)
 $EarthOrbitalElements = <|
   "a"        -> 1.00000011,
   "e"        -> 0.01671022,
   "i"        -> 0.00005,
   "om"       -> -11.26064,
-  "w"        -> 102.94719,
+  "w"        -> 114.20783,
   "ma"       -> 357.51716,
   "per"      -> 365.25636,
   "epoch_jd" -> 2451545.0
