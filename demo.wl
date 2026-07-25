@@ -3,7 +3,7 @@
 (* ================================================================
    demo.wl  —  STEM project showcase and regression test
 
-   Runs all 31 apps with their most compelling presets, collects
+   Runs all 32 apps with their most compelling presets, collects
    all outputs into demo/, and writes demo/demo-report.md.
 
    Each app is loaded inline via Get+Block rather than spawning
@@ -346,6 +346,21 @@ $demoApps = {
     "listenFor" -> "A smooth sweep from low pitch (dark edges) to high pitch " <>
                    "(bright Gaussian peak) \[LongDash] the Hilbert curve makes " <>
                    "spatially adjacent pixels adjacent in time"
+  |>,
+  <|
+    "name"      -> "mandelbrot",
+    "preset"    -> "mandelbrot mode, the classic set over the standard window",
+    "cliArgs"   -> {"main.wl", "--", "--simulation.mode=mandelbrot"},
+    "expected"  -> {"output/mandelbrot_mandelbrot.wav",
+                    "output/mandelbrot_mandelbrot.gif",
+                    "output/mandelbrot_mandelbrot.png",
+                    "output/mandelbrot_mandelbrot.csv"},
+    "listenFor" -> "mandelbrot_mandelbrot.wav \[LongDash] the same Hilbert-traversal " <>
+                   "technique images/ uses, now sonifying escape-iteration count: calm, " <>
+                   "steady stretches deep inside or far outside the set, giving way to a " <>
+                   "rapid, chaotic pitch blur right at the boundary \[LongDash] measured, " <>
+                   "not just asserted, to be over 5 times jumpier than the interior and " <>
+                   "nearly 58 times jumpier than the exterior"
   |>,
   <|
     "name"      -> "relativity",
@@ -767,7 +782,7 @@ If[!$checkOnly,
 
   dl["# STEM Demo"]; dl[""];
   dl["This directory contains outputs from a single run of `../demo.wl`,"];
-  dl["which exercises all 31 STEM apps with their most scientifically and"];
+  dl["which exercises all 32 STEM apps with their most scientifically and"];
   dl["acoustically compelling presets."]; dl[""];
   dl["Generated: " <> DateString[]]; dl[""];
   dl["## Contents"]; dl[""];
@@ -916,10 +931,16 @@ If[!$checkOnly,
   dl["   Dark edges map to low pitch; the bright central peak maps to high pitch."];
   dl["   Spatial structure becomes temporal structure \[LongDash] the Hilbert"];
   dl["   locality property means nearby pixels sound nearby in time."]; dl[""];
-  dl["30. **relativity** \[LongDash] `chirp.wav`"];
+  dl["30. **mandelbrot** \[LongDash] `mandelbrot_mandelbrot.wav`"];
+  dl["   The same Hilbert-traversal technique, now sonifying escape-iteration"];
+  dl["   count instead of brightness: calm, steady stretches deep inside or far"];
+  dl["   outside the Mandelbrot set, giving way to a rapid, chaotic pitch blur"];
+  dl["   right at the boundary \[LongDash] measured to be over 5 times jumpier"];
+  dl["   than the interior and nearly 58 times jumpier than the exterior."]; dl[""];
+  dl["31. **relativity** \[LongDash] `chirp.wav`"];
   dl["   Binary black hole merger (GW150914). Rising pitch and amplitude,"];
   dl["   abrupt merger, fading ringdown. This is what LIGO heard on 14 Sep 2015."]; dl[""];
-  dl["31. **cosmology** \[LongDash] `cmb_spectrum_audio.wav`"];
+  dl["32. **cosmology** \[LongDash] `cmb_spectrum_audio.wav`"];
   dl["   The CMB angular power spectrum from l=2 to l=2000. Hear the"];
   dl["   Sachs-Wolfe plateau give way to the first acoustic peak (l\[TildeEqual]220),"];
   dl["   then the second and third harmonics fading into the Silk damping tail."];
@@ -956,6 +977,7 @@ If[!$checkOnly,
   dl["afplay demo/lagrange/output/l4_audio.wav"];
   dl["afplay demo/resonance/output/galilean_audio.wav"];
   dl["afplay demo/images/output/images_brightness_audio.wav"];
+  dl["afplay demo/mandelbrot/output/mandelbrot_mandelbrot.wav"];
   dl["afplay demo/relativity/output/chirp.wav"];
   dl["afplay demo/cosmology/output/cmb_spectrum_audio.wav"];
   dl["```"]; dl[""];

@@ -46,6 +46,7 @@ stem/
   bell/             Entanglement: Bell correlations, CHSH inequality, paired measurement
   grover/           Grover's search algorithm: optimal stopping, classical vs quantum race, rotation geometry
   quantum_statistics/  Bose-Einstein, Fermi-Dirac, Maxwell-Boltzmann occupation numbers: the quantum/thermo bridge
+  mandelbrot/       Mandelbrot and Julia sets, self-similarity, via Hilbert curve traversal
   config/           Global config defaults (config.json)
   docs/             Workflow guides
 ```
@@ -207,6 +208,11 @@ wolframscript -file images/main.wl -- --simulation.mode=hsb              # full 
 wolframscript -file images/main.wl -- --simulation.images.test_image=temperature
 wolframscript -file images/main.wl -- --simulation.images.brightness_scale=log
 
+# Mandelbrot and Julia sets — Hilbert curve traversal, self-similarity
+wolframscript -file mandelbrot/main.wl                                    # the classic set
+wolframscript -file mandelbrot/main.wl -- --simulation.mode=julia         # fixed c, sweep z0
+wolframscript -file mandelbrot/main.wl -- --simulation.mode=zoom          # 4 levels, seahorse valley
+
 # Statistical mechanics — Maxwell-Boltzmann distribution
 wolframscript -file thermo/main.wl                                              # distribution, helium, 100K→1000K
 wolframscript -file thermo/main.wl -- --simulation.mode=ensemble               # particle ensemble at 300K
@@ -289,7 +295,7 @@ Each project writes outputs into its own directory:
 
 | Project | Output dir | File types |
 |---------|-----------|------------|
-| all thirty-one apps | `output/` | CSV, GIF, WAV (+ PNG for signal, quantum, primes, relativity, images, cosmology, waves, lagrange, hydrogen, blackbody, compton, quantum_tunnelling, clt, henon, brownian, qubit, bell, grover, quantum_statistics) |
+| all thirty-two apps | `output/` | CSV, GIF, WAV (+ PNG for signal, quantum, primes, relativity, images, cosmology, waves, lagrange, hydrogen, blackbody, compton, quantum_tunnelling, clt, henon, brownian, qubit, bell, grover, quantum_statistics, mandelbrot) |
 
 Play audio:
 
@@ -326,6 +332,9 @@ afplay waves/output/interference_audio.wav
 afplay lagrange/output/l4_audio.wav
 afplay lagrange/output/l1_audio.wav
 afplay images/output/images_brightness_audio.wav
+afplay mandelbrot/output/mandelbrot_mandelbrot.wav
+afplay mandelbrot/output/mandelbrot_julia.wav
+afplay mandelbrot/output/mandelbrot_zoom.wav
 afplay thermo/output/distribution_audio.wav
 afplay thermo/output/cooling_audio.wav
 afplay quantum_statistics/output/quantum_statistics_spectrum.wav
@@ -376,7 +385,7 @@ See [RELEASE_NOTES_v1.4.0.md](RELEASE_NOTES_v1.4.0.md) for full app descriptions
 
 ## Demo
 
-Run all thirty-one apps with their most interesting presets and collect outputs into `demo/`:
+Run all thirty-two apps with their most interesting presets and collect outputs into `demo/`:
 
 ```sh
 wolframscript -file demo.wl
@@ -405,7 +414,7 @@ Check whether a previous demo run completed successfully:
 wolframscript -file demo.wl -- --check-only
 ```
 
-Outputs are collected in `demo/` with a written report at `demo/demo-report.md`. A full run takes approximately five to six minutes (32/32 runs — 31 unique apps, `dynamical` runs twice — including live asteroid data).
+Outputs are collected in `demo/` with a written report at `demo/demo-report.md`. A full run takes approximately five to six minutes (33/33 runs — 32 unique apps, `dynamical` runs twice — including live asteroid data).
 
 ---
 
@@ -606,6 +615,35 @@ short spoken introduction describing the image, mode, and mapping in use.
 See [`images/README.md`](images/README.md) and
 [`images/LISTENING_GUIDE.md`](images/LISTENING_GUIDE.md) for the recommended
 listening sequence.
+
+### mandelbrot
+
+Sonifies the Mandelbrot set, its Julia-set counterparts, and boundary
+self-similarity at increasing magnification, via `images/`'s own
+Hilbert-curve traversal and brightness-to-frequency technique — iteration
+count standing in for brightness. The escape radius (the "radius 2" every
+popular account cites) is derived here, not received wisdom: if `|z|>2`
+and `|z|>=|c|` within the standard `|c|<=2` region, the sequence is proven
+strictly increasing thereafter, verified directly against six test points.
+`mandelbrot` mode (default) renders the classic set over a window verified
+to comfortably contain the whole thing. `julia` mode fixes `c` and sweeps
+the starting point instead — the deep connection made concrete: `c` inside
+the Mandelbrot set gives a connected Julia set, outside gives a
+disconnected one. The default Julia `c=-0.123+0.745i` (the "Douady rabbit")
+was chosen only after verification revealed the far more commonly-cited
+`c=-0.7+0.27015i` is actually *outside* the Mandelbrot set (it escapes at
+exactly iteration 96, regardless of iteration budget) — the wrong choice
+for a "connected" default example, a genuine correction caught by this
+session's own verify-before-using discipline. `zoom` mode renders four
+successively deeper magnifications of a verified-rich "seahorse valley"
+boundary point, making self-similarity audible as the boundary's chaotic
+pitch variation sounding equally rich at every scale. The main cardioid's
+exact boundary (`c(theta)=Exp[I theta]/2-Exp[2 I theta]/4`) is also
+derived from the fixed-point stability condition, not cited, and verified
+by a correctness check quantifying this app's own headline claim: the
+boundary's mean pitch-jump between neighbouring pixels is `5.4x` the deep
+interior's and `57.7x` the far exterior's — measured, not assumed.
+See [`mandelbrot/README.md`](mandelbrot/README.md).
 
 ### thermo
 
@@ -1019,7 +1057,7 @@ See [`docs/APPS.md`](docs/APPS.md) for a full listing of each app's config keys.
 
 ## stem-core
 
-All thirty-one projects load `stem-core` as a shared library. It provides:
+All thirty-two projects load `stem-core` as a shared library. It provides:
 
 - **Config** — `LoadConfig`, `GetCfg`, `DeepMerge` — four-layer config merging and safe key lookup
 - **Sonification pipeline** — `SonifyTrajectory`, `SpatialLayer`, `MotionLayer`, `EventLayer`, `MixLayers`, `RenderAudio`

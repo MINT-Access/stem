@@ -116,11 +116,18 @@ $genDate     = DateString[];
    the deeper quantum statistics it is a limiting case of, still one
    step before montecarlo's own statistical-mechanics territory;
    "thermo" already immediately precedes "montecarlo" here, so this is
-   a pure insertion too, the same pattern once more. *)
+   a pure insertion too, the same pattern once more.
+
+   "mandelbrot" follows immediately after "images", before "relativity" --
+   from one Hilbert-traversal consumer to another, sonifying escape-
+   iteration count instead of brightness, still one step before
+   relativity's own binary-inspiral chirp; "images" already immediately
+   precedes "relativity" here, so this is a pure insertion too, the
+   same pattern once more. *)
 $appOrder = {
   "signal", "waves", "fluid", "pendulum", "cellular", "primes", "bayes", "quantum",
   "qubit", "bell", "grover", "hydrogen", "blackbody", "compton", "quantum_tunnelling", "clt", "brownian", "thermo", "quantum_statistics", "montecarlo", "magnetic", "scattering",
-  "lorenz", "dynamical", "henon", "asteroids", "lagrange", "resonance", "images", "relativity", "cosmology"
+  "lorenz", "dynamical", "henon", "asteroids", "lagrange", "resonance", "images", "mandelbrot", "relativity", "cosmology"
 };
 
 (* ── App metadata ─────────────────────────────────────────────
@@ -1263,6 +1270,50 @@ appMeta = <|
       "recommended listening sequence."
   |>,
 
+  "mandelbrot" -> <|
+    "title" -> "Mandelbrot \[LongDash] The Mandelbrot and Julia Sets",
+    "description" ->
+      "From one Hilbert-traversal consumer to another: the same locality-" <>
+      "preserving curve images/ uses to sonify photographs, now sonifying " <>
+      "escape-iteration count instead of brightness. For a complex number " <>
+      "c, iterate z -> z^2 + c starting from z=0; c belongs to the " <>
+      "Mandelbrot set if this sequence stays bounded forever. The escape " <>
+      "radius (\"radius 2\"), usually cited as received wisdom, is derived " <>
+      "here from scratch and verified directly. Julia " <>
+      "mode fixes c and sweeps the starting point instead, making concrete " <>
+      "a deep fact: c inside the Mandelbrot set gives a connected Julia " <>
+      "set, outside gives a disconnected one.",
+    "listening_guide" ->
+      "Listen for calm, steady stretches (deep inside the set, or far " <>
+      "outside it) versus a noticeably chaotic, rapidly-varying stretch " <>
+      "\[LongDash] the boundary, where a tiny nudge in position can mean " <>
+      "the difference between escaping in 5 steps and never escaping at " <>
+      "all. Three orientation clicks mark the 25%/50%/75% points of the " <>
+      "traversal. Then try julia mode (what one point of the Mandelbrot " <>
+      "set actually means) and zoom mode (the same chaotic richness, " <>
+      "sounding equally rich at every magnification \[LongDash] self-" <>
+      "similarity, made audible).",
+    "primary_wav" -> "mandelbrot_mandelbrot.wav",
+    "primary_wav_label" -> "Listen \[LongDash] the classic Mandelbrot set",
+    "secondary_wavs" -> {
+      <| "file" -> "mandelbrot_julia.wav",
+         "label" -> "Listen \[LongDash] the Douady rabbit Julia set" |>,
+      <| "file" -> "mandelbrot_zoom.wav",
+         "label" -> "Listen \[LongDash] 4 zoom levels, seahorse valley" |>
+    },
+    "gif" -> "mandelbrot_mandelbrot.gif",
+    "gif_static" -> False,
+    "gif_alt" ->
+      "A black cardioid-and-circle Mandelbrot silhouette on a blue " <>
+      "background, with a white Hilbert curve path sweeping across it, " <>
+      "growing pixel by pixel in a continuous, space-filling pattern.",
+    "cli" -> "wolframscript -file mandelbrot/main.wl",
+    "github_path" -> "mandelbrot",
+    "listening_guide_note" ->
+      "New to this app? See mandelbrot/LISTENING_GUIDE.md for the " <>
+      "recommended listening sequence across all three modes."
+  |>,
+
   "relativity" -> <|
     "title" -> "Relativity \[LongDash] Gravitational Waves (LIGO Chirp)",
     "description" ->
@@ -1733,7 +1784,7 @@ Export[$demoHtmlOut, $html, "Text"];
 Print[""];
 STEMHeading["Summary"];
 STEMPrintN["Apps with complete outputs", $nComplete, "", 2];
-Print["  (demo.wl runs 32 passes total, 31 unique apps \[LongDash] dynamical counts twice)"];
+Print["  (demo.wl runs 33 passes total, 32 unique apps \[LongDash] dynamical counts twice)"];
 If[$nIncomplete > 0,
   STEMPrintN["Apps with missing outputs", $nIncomplete, "", 2];
   Print["  (see [WARNING] lines above for which files were missing per app)"]

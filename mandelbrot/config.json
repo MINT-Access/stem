@@ -1,0 +1,17 @@
+{
+  "version": 1,
+  "app": "mandelbrot",
+  "description": "The Mandelbrot and Julia sets, sonified via Hilbert-curve traversal — self-similarity made audible.",
+  "simulation": {
+    "mode": "mandelbrot",
+    "mandelbrot": {
+      "max_iterations": 300,
+      "grid_size": 64,
+      "julia_c_real": -0.123,
+      "julia_c_imag": 0.745,
+      "zoom_center_real": -0.743643887037151,
+      "zoom_center_imag": 0.131825904205330,
+      "zoom_levels": 4
+    }
+  }
+}
