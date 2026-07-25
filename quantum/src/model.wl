@@ -21,11 +21,16 @@
 (* ── QHOModel ────────────────────────────────────────────
    Coherent state |alpha> in the quantum harmonic oscillator.
 
-   Eigenfunctions:  phi_n(x) = (2^n n! sqrt(Pi))^(-1/2) H_n(x) exp(-x^2/2)
+   Eigenfunctions:  phi_n(x) = (omega/Pi)^(1/4) (2^n n!)^(-1/2)
+                               H_n(Sqrt[omega] x) exp(-omega x^2/2)
    Coefficients:    c_n = exp(-|alpha|^2/2) * alpha^n / sqrt(n!)
    Time evolution:  psi(x,t) = Sum_n c_n phi_n(x) exp(-i omega (n+1/2) t)
    Mean energy:     <E> = omega (|alpha|^2 + 1/2)
-   ──────────────────────────────────────────────────────── *)
+
+   Note: at large alpha and small omega, the coherent state's spatial
+   extent (~1/Sqrt[omega]) can approach x_range's default {-8,8} --
+   widen x_range for a small-omega run if the density looks clipped
+   near the edges. *)
 
 QHOModel[cfg_Association] :=
   Module[{alpha, omega, nModes, xRange, nPoints, duration, dt,
@@ -53,10 +58,24 @@ QHOModel[cfg_Association] :=
       {n, 0, nModes - 1}
     ];
 
-    (* Physicists' HO eigenfunctions: phi_n(x) *)
+    (* Physicists' HO eigenfunctions: phi_n(x) = (omega/Pi)^(1/4) *
+       H_n(Sqrt[omega] x) * Exp[-omega x^2/2] / Sqrt[2^n n!].
+       The Sqrt[omega]-scaling of the Hermite argument and the omega
+       coefficient in the Gaussian are not optional cosmetics -- they
+       are what makes phi_n an actual eigenfunction of H = p^2/2 +
+       (1/2) omega^2 x^2 for omega != 1. Verified symbolically:
+       plugging the omega-scaled ground state into the time-
+       independent Schrodinger equation gives an exact zero residual
+       for any omega, while the previous (omega-independent) formula
+       only solved it at omega=1 -- for any other omega it was simply
+       not an eigenfunction of the requested Hamiltonian at all, even
+       though README's own documented example
+       (--simulation.qho.omega=2.0) exercises exactly that case. This
+       formula reduces exactly to the previous one at omega=1 (the
+       default), so nothing changes there. *)
     phi = Table[
-      N[1.0 / Sqrt[2.0^n * n! * Sqrt[Pi]]] *
-        N[HermiteH[n, xVals]] * Exp[-xVals^2 / 2.0],
+      N[(omega / Pi)^0.25 / Sqrt[2.0^n * n!]] *
+        N[HermiteH[n, Sqrt[omega] * xVals]] * Exp[-omega * xVals^2 / 2.0],
       {n, 0, nModes - 1}
     ];  (* phi[[n+1]] is a length-nx vector *)
 
