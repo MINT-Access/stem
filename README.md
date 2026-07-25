@@ -42,6 +42,7 @@ stem/
   quantum_tunnelling/  Quantum tunnelling: barrier-crossing event, width sweep, energy sweep to resonance
   clt/              Central Limit Theorem: sample-mean sweep, standardized comparison, sum of N dice
   brownian/         Brownian motion: random walk, ensemble sqrt(t) law, Stokes-Einstein temperature sweep
+  qubit/            Single qubit: Bloch sphere, gates, Rabi oscillation, Born-rule measurement
   config/           Global config defaults (config.json)
   docs/             Workflow guides
 ```
@@ -145,6 +146,11 @@ wolframscript -file signal/main.wl -- --simulation.mode=am
 wolframscript -file quantum/main.wl                                      # QHO coherent state
 wolframscript -file quantum/main.wl -- --simulation.mode=box             # particle-in-a-box
 wolframscript -file quantum/main.wl -- --simulation.qho.alpha=3.0        # larger coherent amplitude
+
+# Single qubit — Bloch sphere, gates, Rabi oscillation, measurement
+wolframscript -file qubit/main.wl                                        # gates, H-T-H-S-X from |0>
+wolframscript -file qubit/main.wl -- --simulation.mode=rabi              # continuous Rabi oscillation
+wolframscript -file qubit/main.wl -- --simulation.mode=measurement       # 2000 Born-rule measurements
 
 # Prime number patterns
 wolframscript -file primes/main.wl                                       # Ulam spiral (default)
@@ -265,7 +271,7 @@ Each project writes outputs into its own directory:
 
 | Project | Output dir | File types |
 |---------|-----------|------------|
-| all twenty-seven apps | `output/` | CSV, GIF, WAV (+ PNG for signal, quantum, primes, relativity, images, cosmology, waves, lagrange, hydrogen, blackbody, compton, quantum_tunnelling, clt, henon, brownian) |
+| all twenty-eight apps | `output/` | CSV, GIF, WAV (+ PNG for signal, quantum, primes, relativity, images, cosmology, waves, lagrange, hydrogen, blackbody, compton, quantum_tunnelling, clt, henon, brownian, qubit) |
 
 Play audio:
 
@@ -282,6 +288,9 @@ afplay henon/output/henon_reverse.wav
 afplay asteroids/output/asteroids_*.wav
 afplay cellular/output/life_rpentomino_audio.wav
 afplay quantum/output/qho_audio.wav
+afplay qubit/output/qubit_gates.wav
+afplay qubit/output/qubit_rabi.wav
+afplay qubit/output/qubit_measurement.wav
 afplay primes/output/ulam_audio.wav
 afplay primes/output/gaps_audio.wav
 afplay relativity/output/chirp.wav
@@ -340,7 +349,7 @@ See [RELEASE_NOTES_v1.4.0.md](RELEASE_NOTES_v1.4.0.md) for full app descriptions
 
 ## Demo
 
-Run all twenty-seven apps with their most interesting presets and collect outputs into `demo/`:
+Run all twenty-eight apps with their most interesting presets and collect outputs into `demo/`:
 
 ```sh
 wolframscript -file demo.wl
@@ -369,7 +378,7 @@ Check whether a previous demo run completed successfully:
 wolframscript -file demo.wl -- --check-only
 ```
 
-Outputs are collected in `demo/` with a written report at `demo/demo-report.md`. A full run takes approximately five to six minutes (28/28 runs — 27 unique apps, `dynamical` runs twice — including live asteroid data).
+Outputs are collected in `demo/` with a written report at `demo/demo-report.md`. A full run takes approximately five to six minutes (29/29 runs — 28 unique apps, `dynamical` runs twice — including live asteroid data).
 
 ---
 
@@ -846,6 +855,26 @@ Theorem setup: a running sum of independent random steps, here in real
 2D space rather than an abstract sample mean. See
 [`brownian/README.md`](brownian/README.md).
 
+### qubit
+
+Sonifies a single qubit — its Bloch-sphere representation, gate
+operations, Rabi oscillation, and measurement — the foundational app of
+a small quantum-computing batch. `gates` mode (default) applies a
+configurable sequence of gates (Pauli X/Y/Z, Hadamard, phase gates S/T,
+and parametrized rotations, every one verified unitary) to an initial
+state, sonifying the Bloch vector's path as a genuine continuous
+rotation — reusing `lorenz/`'s and `henon/`'s `attractor` trajectory
+pipeline directly, since the Bloch vector's own x/y/z coordinates map
+onto the trajectory's spatial columns with no invented mapping needed.
+`rabi` mode sonifies the closed-form Rabi oscillation `P(1)(t) =
+sin(Omega t/2)^2` — derived from the Schrodinger equation and verified
+two independent ways — as a continuously bending pitch, directly
+connecting to `quantum/`'s own coherent-state sonification. `measurement`
+mode simulates thousands of repeated Born-rule measurements and sonifies
+the running empirical frequency converging toward the true probability —
+the quantum analogue of `bayes/coin`'s flip-by-flip belief update. See
+[`qubit/README.md`](qubit/README.md).
+
 ---
 
 ## Config system
@@ -881,7 +910,7 @@ See [`docs/APPS.md`](docs/APPS.md) for a full listing of each app's config keys.
 
 ## stem-core
 
-All twenty-seven projects load `stem-core` as a shared library. It provides:
+All twenty-eight projects load `stem-core` as a shared library. It provides:
 
 - **Config** — `LoadConfig`, `GetCfg`, `DeepMerge` — four-layer config merging and safe key lookup
 - **Sonification pipeline** — `SonifyTrajectory`, `SpatialLayer`, `MotionLayer`, `EventLayer`, `MixLayers`, `RenderAudio`

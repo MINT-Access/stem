@@ -88,10 +88,18 @@ $genDate     = DateString[];
    one step before the statistics of many classical gas particles
    (thermo) -- the same "insert between, don't displace" pattern once
    more; clt already immediately precedes thermo here, so this is a
-   pure insertion. *)
+   pure insertion.
+
+   v1.6.0 adds "qubit" immediately after "quantum", before "hydrogen" --
+   from a coherent-state wave packet in a harmonic potential to the
+   simplest quantum system of all, a single driven qubit, one step
+   before hydrogen's exact atomic spectrum; "quantum" already
+   immediately precedes "hydrogen" here, so this is a pure insertion,
+   the same "insert between, don't displace" pattern as every prior
+   addition above. *)
 $appOrder = {
   "signal", "waves", "fluid", "pendulum", "cellular", "primes", "bayes", "quantum",
-  "hydrogen", "blackbody", "compton", "quantum_tunnelling", "clt", "brownian", "thermo", "montecarlo", "magnetic", "scattering",
+  "qubit", "hydrogen", "blackbody", "compton", "quantum_tunnelling", "clt", "brownian", "thermo", "montecarlo", "magnetic", "scattering",
   "lorenz", "dynamical", "henon", "asteroids", "lagrange", "resonance", "images", "relativity", "cosmology"
 };
 
@@ -378,6 +386,50 @@ appMeta = <|
       "and forth along the position axis without spreading or distorting.",
     "cli" -> "wolframscript -file quantum/main.wl -- --simulation.qho.alpha=3.0",
     "github_path" -> "quantum"
+  |>,
+
+  "qubit" -> <|
+    "title" -> "Qubit \[LongDash] A Single Qubit",
+    "description" ->
+      "From a coherent-state wave packet in a harmonic potential to the " <>
+      "simplest quantum system of all: a single qubit, `|psi> = " <>
+      "\[Alpha]|0> + \[Beta]|1>`, whose state lives on the surface of the " <>
+      "Bloch sphere. Driven on resonance by a classical field, it obeys " <>
+      "an exact closed-form solution \[LongDash] the same Rabi oscillation " <>
+      "used to flip real physical qubits in quantum-computing hardware, " <>
+      "and the foundational piece of a small quantum-computing batch " <>
+      "this app introduces.",
+    "listening_guide" ->
+      "Listen for a smoothly bending pitch, rising and falling in a " <>
+      "repeating pattern \[LongDash] the rate of that rise and fall IS the " <>
+      "drive frequency \[CapitalOmega], made directly audible as " <>
+      "P(1)(t) = sin^2(\[CapitalOmega]t/2). Then try gates mode (a " <>
+      "sequence of gates rotating the Bloch vector, sonified as a " <>
+      "continuous pan/pitch glide with an accent tone at each new gate) " <>
+      "and measurement mode (2000 repeated Born-rule measurements, the " <>
+      "empirical frequency audibly settling toward the true probability).",
+    "primary_wav" -> "qubit_rabi.wav",
+    "primary_wav_label" -> "Listen \[LongDash] continuous Rabi oscillation, \[CapitalOmega]=1.5",
+    "secondary_wavs" -> {
+      <| "file" -> "qubit_gates.wav",
+         "label" -> "Listen \[LongDash] gate sequence H, T, H, S, X applied to |0>" |>,
+      <| "file" -> "qubit_measurement.wav",
+         "label" -> "Listen \[LongDash] 2000 Born-rule measurements, equal superposition" |>
+    },
+    (* rabi mode produces a static P(1)(t) curve, not an animated GIF --
+       the animated Bloch-sphere path is only produced by gates mode;
+       see "gif_static", same pattern as brownian's ensemble/walk split. *)
+    "gif" -> "qubit_rabi.png",
+    "gif_static" -> True,
+    "gif_alt" ->
+      "A smooth sin-squared curve, P(1) versus time, oscillating " <>
+      "cleanly between 0 and 1 with perfectly regular period \[LongDash] " <>
+      "the qubit's exact Rabi oscillation probability.",
+    "cli" -> "wolframscript -file qubit/main.wl -- --simulation.mode=rabi",
+    "github_path" -> "qubit",
+    "listening_guide_note" ->
+      "New to this app? See qubit/LISTENING_GUIDE.md for the " <>
+      "recommended listening sequence across all three modes."
   |>,
 
   "hydrogen" -> <|
@@ -1531,7 +1583,7 @@ Export[$demoHtmlOut, $html, "Text"];
 Print[""];
 STEMHeading["Summary"];
 STEMPrintN["Apps with complete outputs", $nComplete, "", 2];
-Print["  (demo.wl runs 28 passes total, 27 unique apps \[LongDash] dynamical counts twice)"];
+Print["  (demo.wl runs 29 passes total, 28 unique apps \[LongDash] dynamical counts twice)"];
 If[$nIncomplete > 0,
   STEMPrintN["Apps with missing outputs", $nIncomplete, "", 2];
   Print["  (see [WARNING] lines above for which files were missing per app)"]

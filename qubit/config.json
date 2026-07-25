@@ -1,0 +1,20 @@
+{
+  "version": 1,
+  "app": "qubit",
+  "description": "A single qubit — Bloch sphere, gates, Rabi oscillation, and measurement.",
+  "simulation": {
+    "mode": "gates",
+    "qubit": {
+      "gate_sequence": ["H", "T", "H", "S", "X"],
+      "initial_theta_deg": 0.0,
+      "initial_phi_deg": 0.0,
+      "n_steps_per_gate": 30,
+      "rabi_frequency": 1.5,
+      "rabi_duration": 10.0,
+      "n_trials": 2000,
+      "measurement_theta_deg": 90.0,
+      "measurement_phi_deg": 0.0,
+      "seed": 7
+    }
+  }
+}
