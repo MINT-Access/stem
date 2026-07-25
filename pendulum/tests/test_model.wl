@@ -77,6 +77,61 @@ ExportResults[sol, testParams, tmpFile];
 AssertTrue["CSV file is created", FileExistsQ[tmpFile]];
 DeleteFile[tmpFile];
 
+(* --- Correctness checks (simple pendulum) --- *)
+Print[""];
+Print["-- Correctness checks (simple pendulum) --"];
+Module[{L = 1.0, g = 9.81, chk, bigSol, bigParams},
+  (* Check 1: exact period formula, small-angle sanity *)
+  AssertTrue["ExactPeriod reduces to small-angle formula as theta0->0",
+    Abs[ExactPeriod[L, g, 0.001] - 2.0*Pi*Sqrt[L/g]] / (2.0*Pi*Sqrt[L/g]) < 10^-6];
+
+  chk = ExactPeriodCheck[L, g];
+  AssertTrue["ExactPeriodCheck passes across 10/45/90/150 deg (exact, tight tolerance)", chk["pass"]];
+  AssertTrue["ExactPeriodCheck tests 4 amplitudes", Length[chk["results"]] === 4];
+
+  (* Large-amplitude sanity: exact period should exceed the small-angle
+     approximation (the pendulum takes longer to swing at large amplitude) *)
+  bigParams = <| "Length" -> L, "Gravity" -> g, "InitAngle" -> 150.0*Pi/180.0,
+                 "InitVelocity" -> 0.0, "TimeEnd" -> 10.0, "TimeStep" -> 0.01 |>;
+  AssertTrue["Exact period at 150 deg exceeds small-angle approximation",
+    ExactPeriod[L, g, 150.0*Pi/180.0] > 2.0*Pi*Sqrt[L/g]];
+
+  bigSol = SolvePendulum[bigParams];
+  chk = SimpleEnergyConservationCheck[bigSol, bigParams];
+  AssertTrue["SimpleEnergyConservationCheck passes at large amplitude (exact, tight tolerance)", chk["pass"]];
+  AssertTrue["SimpleEnergyConservationCheck samples multiple points, not just start/end",
+    Length[chk["sampled"]] > 2];
+];
+
+(* --- Correctness checks (double pendulum) --- *)
+Print[""];
+Print["-- Correctness checks (double pendulum) --"];
+Module[{cfg, dsol, chk},
+  cfg = <| "simulation" -> <| "double" -> <| "length1" -> 1.0, "length2" -> 1.0,
+           "mass1" -> 1.0, "mass2" -> 1.0, "angle1_deg" -> 120.0, "angle2_deg" -> 90.0 |>,
+           "gravity" -> 9.81, "duration" -> 20.0, "timestep" -> 0.01 |> |>;
+  dsol = DoublePendulumModel[cfg];
+
+  chk = DoubleEnergyConservationCheck[dsol, 1.0, 1.0, 1.0, 1.0, 9.81];
+  AssertTrue["DoubleEnergyConservationCheck passes (exact, tight tolerance)", chk["pass"]];
+  AssertTrue["DoubleEnergyConservationCheck relative drift is tiny (~1e-8 or better)",
+    chk["relDrift"] < 10^-6];
+
+  chk = ChaosSensitivityCheck[];
+  AssertTrue["ChaosSensitivityCheck passes at its own 130 deg test amplitude", chk["pass"]];
+  AssertTrue["ChaosSensitivityCheck divergence ratio exceeds 100x", chk["ratio"] >= 100.0];
+
+  (* Document the actual finding: the app's own DEFAULT angle1_deg=120
+     does NOT reliably clear the 100x threshold within the default 20s
+     duration -- this is why ChaosSensitivityCheck uses its own fixed
+     130 deg test amplitude rather than whatever the run configures. *)
+  Module[{lowChk},
+    lowChk = ChaosSensitivityCheck[120.0];
+    AssertTrue["At the app's own default 120 deg, divergence stays well under 100x within 20s ",
+      lowChk["ratio"] < 100.0];
+  ];
+];
+
 (* --- Summary --- *)
 Print[""];
 Print["Results: ", passed, " passed, ", failed, " failed."];

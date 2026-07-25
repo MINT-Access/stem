@@ -45,6 +45,45 @@ wolframscript -file tests/test_model.wl
 | `output/double_animation.gif` | Looping animated GIF, both bobs |
 | `output/double_audio.wav` | Binaural sonification, left/right bob in separate channels |
 
+## Correctness checks
+
+Each mode prints its own two checks (`[PASS]`/`[FAIL]`, diagnostic-only,
+never abort) — simple and double pendulum are different systems, so each
+gets the checks that are actually meaningful for it, the same
+per-mode-not-forced-four reasoning `magnetic/AGENTS.md` documents for its
+own four modes.
+
+**Simple mode:**
+
+1. **Exact period, any amplitude** — the true period of a simple pendulum
+   is `T = 4*Sqrt[L/g]*EllipticK[Sin[theta0/2]^2]` (WL's `EllipticK[m]`
+   takes the parameter `m=k^2`, not the modulus `k` — verified against the
+   small-angle limit, `EllipticK[0]=Pi/2`, before use). Checked against a
+   real NDSolve-measured period at 10/45/90/150 degrees — a strict upgrade
+   over checking only the small-angle *approximation*, since the exact
+   formula holds everywhere, including large amplitudes where the
+   approximation clearly fails. Exact relation, tight tolerance.
+2. **Energy conservation** — total mechanical energy checked at 10 points
+   spread across the full integration (not just start/end). Exact
+   relation, tight tolerance.
+
+**Double mode:**
+
+3. **Energy conservation** — same multi-point check, using the
+   independently re-derived `DoublePendulumEnergy`. Exact relation, tight
+   tolerance (energy conserved to ~1e-8 to 1e-10 relative in practice).
+4. **Chaos sensitivity** — two trajectories started a tiny distance apart
+   in `theta1` diverge by at least 100x within the default 20 s window,
+   using a fixed, independent 130-degree test amplitude (not whatever
+   `angle1_deg` the current run happens to be configured with).
+   **Important finding**: the app's own default `angle1_deg=120` does
+   *not* reliably clear this 100x threshold within 20 s — the transition
+   is sharp, from ~6x at 120 degrees to ~85,000x at 125 degrees. Chaos
+   genuinely exists above roughly 60 degrees in the qualitative sense
+   (Lyapunov-positive dynamics), but visible >=100x divergence within a
+   moderate window needs a substantially larger amplitude. Qualitative
+   check, generous tolerance.
+
 ## Sonification
 
 | Parameter | Design |

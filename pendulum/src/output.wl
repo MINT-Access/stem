@@ -61,3 +61,18 @@ PrintSummary[solution_List, params_Association] := Module[
   STEMPrintN["Final energy",    Last[energies],                       "J",   4];
   STEMPrintN["Energy drift",    Abs[Last[energies] - First[energies]], "J",   4];
 ]
+
+
+(* PrintCorrectnessChecks -- "Checks: N[PASS] M[FAIL] ..." line,
+   consistent with the style used across the v1.5.0 apps. Simple and
+   double pendulum are different systems (like magnetic/'s four
+   modes), so each mode prints only ITS OWN two checks (global numbers
+   1-2 for simple, 3-4 for double) rather than a forced four every
+   run -- see AGENTS.md design decision on this split, the same
+   deliberate-not-oversight reasoning magnetic/AGENTS.md documents for
+   its own per-mode check structure. *)
+PrintCorrectnessChecks[label1_String, chk1_Association, label2_String, chk2_Association] :=
+  Print["  Checks: ",
+    If[chk1["pass"], label1 <> "[PASS]", label1 <> "[FAIL]"], " ",
+    If[chk2["pass"], label2 <> "[PASS]", label2 <> "[FAIL]"]
+  ];

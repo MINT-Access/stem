@@ -69,27 +69,38 @@ Which[
       FmtN[2 Pi Sqrt[params["Length"] / params["Gravity"]], 4], " s"];
     Print[""];
 
-    Print["[1/4] Solving ODE..."];
+    Print["[1/5] Solving ODE..."];
     STEMSay["Solving pendulum ODE"];
     solution = SolvePendulum[params];
     Print["  Computed ", Length[solution], " time steps."];
     Print[""];
 
-    Print["[2/4] Exporting CSV..."];
+    Print["[2/5] Correctness checks..."];
+    STEMSay["Running correctness checks"];
+    $periodChk = ExactPeriodCheck[params["Length"], params["Gravity"]];
+    $energyChk = SimpleEnergyConservationCheck[solution, params];
+    PrintCorrectnessChecks["1", $periodChk, "2", $energyChk];
+    Print["    1. Exact period (elliptic integral) vs measured, at 10/45/90/150 deg: ",
+          "max rel error ", FmtN[$periodChk["maxRelError"], 6], "  (exact, any amplitude, tight tolerance)"];
+    Print["    2. Energy conservation (", Length[$energyChk["sampled"]], " sample points): ",
+          "relative drift ", FmtN[$energyChk["relDrift"], 8], "  (exact, tight tolerance)"];
+    Print[""];
+
+    Print["[3/5] Exporting CSV..."];
     outCSV = FileNameJoin[{$projectRoot, "output", "simple_results.csv"}];
     ExportResults[solution, params, outCSV];
     STEMDescribeCSV[outCSV, Length[solution], 5];
     PrintSummary[solution, params];
     Print[""];
 
-    Print["[3/4] Generating animation..."];
+    Print["[4/5] Generating animation..."];
     STEMSay["Generating animation"];
     outGIF = FileNameJoin[{$projectRoot, "output", "simple_animation.gif"}];
     nFrames = ExportAnimation[solution, params, outGIF, 25, 1.0];
     STEMDescribeGIF[outGIF, nFrames, 25];
     Print[""];
 
-    Print["[4/4] Generating sonification..."];
+    Print["[5/5] Generating sonification..."];
     STEMSay["Synthesising audio"];
     outWAV = FileNameJoin[{$projectRoot, "output", "simple_audio.wav"}];
     ExportSonification[solution, params, cfg, outWAV];
@@ -102,23 +113,22 @@ Which[
      ══════════════════════════════════════════════════════ *)
   mode === "double",
 
-    With[
-      {L1    = GetCfg[cfg, {"simulation","double","length1"},    1.0],
-       L2    = GetCfg[cfg, {"simulation","double","length2"},    1.0],
-       m1    = GetCfg[cfg, {"simulation","double","mass1"},      1.0],
-       m2    = GetCfg[cfg, {"simulation","double","mass2"},      1.0],
-       a1    = GetCfg[cfg, {"simulation","double","angle1_deg"}, 120.0],
-       a2    = GetCfg[cfg, {"simulation","double","angle2_deg"},  90.0],
-       tEnd  = GetCfg[cfg, {"simulation","duration"},            20.0]},
+    L1    = GetCfg[cfg, {"simulation","double","length1"},    1.0];
+    L2    = GetCfg[cfg, {"simulation","double","length2"},    1.0];
+    m1    = GetCfg[cfg, {"simulation","double","mass1"},      1.0];
+    m2    = GetCfg[cfg, {"simulation","double","mass2"},      1.0];
+    a1    = GetCfg[cfg, {"simulation","double","angle1_deg"}, 120.0];
+    a2    = GetCfg[cfg, {"simulation","double","angle2_deg"},  90.0];
+    tEnd  = GetCfg[cfg, {"simulation","duration"},            20.0];
 
-      Print["  L1=", L1, " m, L2=", L2, " m"];
-      Print["  m1=", m1, " kg, m2=", m2, " kg"];
-      Print["  angle1_0=", a1, " deg  angle2_0=", a2, " deg"];
-      Print["  Duration=", tEnd, " s  (chaotic above ~60 deg)"];
-      Print[""]
-    ];
+    Print["  L1=", L1, " m, L2=", L2, " m"];
+    Print["  m1=", m1, " kg, m2=", m2, " kg"];
+    Print["  angle1_0=", a1, " deg  angle2_0=", a2, " deg"];
+    Print["  Duration=", tEnd, " s  (genuinely chaotic dynamics above ~60 deg; see check 4 below ",
+          "for the much higher amplitude needed for a >=100x divergence within a 20s window)"];
+    Print[""];
 
-    Print["[1/4] Solving double pendulum ODE..."];
+    Print["[1/5] Solving double pendulum ODE..."];
     STEMSay["Solving double pendulum ODE"];
     solution = DoublePendulumModel[cfg];
     Print["  Computed ", Length[solution], " time steps."];
@@ -130,20 +140,33 @@ Which[
     ];
     Print[""];
 
-    Print["[2/4] Exporting CSV..."];
+    Print["[2/5] Correctness checks..."];
+    STEMSay["Running correctness checks"];
+    $energyChk = DoubleEnergyConservationCheck[solution, N[L1], N[L2], N[m1], N[m2], 9.81];
+    $chaosChk  = ChaosSensitivityCheck[];
+    PrintCorrectnessChecks["3", $energyChk, "4", $chaosChk];
+    Print["    3. Energy conservation (", Length[$energyChk["sampled"]], " sample points): ",
+          "relative drift ", FmtN[$energyChk["relDrift"], 8], "  (exact, tight tolerance)"];
+    Print["    4. Chaos sensitivity (independent test at theta1_0=",
+          FmtN[$chaosChk["testAngleDeg"], 3], " deg, NOT this run's own angle1_deg): ",
+          "divergence ratio ", FmtN[$chaosChk["ratio"], {9, 0}], "x over ", tEnd,
+          " s  (qualitative, generous >=100x threshold)"];
+    Print[""];
+
+    Print["[3/5] Exporting CSV..."];
     outCSV = FileNameJoin[{$projectRoot, "output", "double_results.csv"}];
     ExportDoublePendulumResults[solution, outCSV];
     STEMDescribeCSV[outCSV, Length[solution], 5];
     Print[""];
 
-    Print["[3/4] Generating animation..."];
+    Print["[4/5] Generating animation..."];
     STEMSay["Generating animation"];
     outGIF = FileNameJoin[{$projectRoot, "output", "double_animation.gif"}];
     nFrames = AnimateDoublePendulum[solution, cfg, outGIF];
     STEMDescribeGIF[outGIF, nFrames, 25];
     Print[""];
 
-    Print["[4/4] Generating sonification..."];
+    Print["[5/5] Generating sonification..."];
     STEMSay["Synthesising audio"];
     outWAV = FileNameJoin[{$projectRoot, "output", "double_audio.wav"}];
     SonifyDoublePendulum[solution, cfg, outWAV];
