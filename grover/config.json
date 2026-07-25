@@ -1,0 +1,16 @@
+{
+  "version": 1,
+  "app": "grover",
+  "description": "Grover's search algorithm — the optimal-stopping search, classical vs quantum speedup, and its literal 2D rotation geometry.",
+  "simulation": {
+    "mode": "search",
+    "grover": {
+      "n_items": 64,
+      "marked_index": 42,
+      "n_iterations": 12,
+      "compare_n_min": 4.0,
+      "compare_n_max": 1048576.0,
+      "compare_n_steps": 100
+    }
+  }
+}

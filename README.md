@@ -44,6 +44,7 @@ stem/
   brownian/         Brownian motion: random walk, ensemble sqrt(t) law, Stokes-Einstein temperature sweep
   qubit/            Single qubit: Bloch sphere, gates, Rabi oscillation, Born-rule measurement
   bell/             Entanglement: Bell correlations, CHSH inequality, paired measurement
+  grover/           Grover's search algorithm: optimal stopping, classical vs quantum race, rotation geometry
   config/           Global config defaults (config.json)
   docs/             Workflow guides
 ```
@@ -157,6 +158,11 @@ wolframscript -file qubit/main.wl -- --simulation.mode=measurement       # 2000 
 wolframscript -file bell/main.wl                                         # correlations, binaural quantum vs classical
 wolframscript -file bell/main.wl -- --simulation.mode=chsh               # CHSH gauge at derived-optimal angles
 wolframscript -file bell/main.wl -- --simulation.mode=measurement        # 2000 paired Bell measurements
+
+# Grover's search algorithm — optimal stopping, classical vs quantum race, rotation geometry
+wolframscript -file grover/main.wl                                       # search, N=64, rise then fall past optimum
+wolframscript -file grover/main.wl -- --simulation.mode=compare          # binaural classical vs quantum race
+wolframscript -file grover/main.wl -- --simulation.mode=geometry         # continuous 2D rotation
 
 # Prime number patterns
 wolframscript -file primes/main.wl                                       # Ulam spiral (default)
@@ -277,7 +283,7 @@ Each project writes outputs into its own directory:
 
 | Project | Output dir | File types |
 |---------|-----------|------------|
-| all twenty-nine apps | `output/` | CSV, GIF, WAV (+ PNG for signal, quantum, primes, relativity, images, cosmology, waves, lagrange, hydrogen, blackbody, compton, quantum_tunnelling, clt, henon, brownian, qubit, bell) |
+| all thirty apps | `output/` | CSV, GIF, WAV (+ PNG for signal, quantum, primes, relativity, images, cosmology, waves, lagrange, hydrogen, blackbody, compton, quantum_tunnelling, clt, henon, brownian, qubit, bell, grover) |
 
 Play audio:
 
@@ -300,6 +306,9 @@ afplay qubit/output/qubit_measurement.wav
 afplay bell/output/bell_correlations.wav
 afplay bell/output/bell_chsh.wav
 afplay bell/output/bell_measurement.wav
+afplay grover/output/grover_search.wav
+afplay grover/output/grover_compare.wav
+afplay grover/output/grover_geometry.wav
 afplay primes/output/ulam_audio.wav
 afplay primes/output/gaps_audio.wav
 afplay relativity/output/chirp.wav
@@ -358,7 +367,7 @@ See [RELEASE_NOTES_v1.4.0.md](RELEASE_NOTES_v1.4.0.md) for full app descriptions
 
 ## Demo
 
-Run all twenty-nine apps with their most interesting presets and collect outputs into `demo/`:
+Run all thirty apps with their most interesting presets and collect outputs into `demo/`:
 
 ```sh
 wolframscript -file demo.wl
@@ -387,7 +396,7 @@ Check whether a previous demo run completed successfully:
 wolframscript -file demo.wl -- --check-only
 ```
 
-Outputs are collected in `demo/` with a written report at `demo/demo-report.md`. A full run takes approximately five to six minutes (30/30 runs — 29 unique apps, `dynamical` runs twice — including live asteroid data).
+Outputs are collected in `demo/` with a written report at `demo/demo-report.md`. A full run takes approximately five to six minutes (31/31 runs — 30 unique apps, `dynamical` runs twice — including live asteroid data).
 
 ---
 
@@ -909,6 +918,34 @@ notably, the classical `|S|<=2` bound is proved by exhaustively
 enumerating all 16 possible local deterministic strategies, not merely
 asserted. See [`bell/README.md`](bell/README.md).
 
+### grover
+
+Sonifies Grover's search algorithm — the third and final app in this
+project's quantum-computing batch, demonstrating the other half of why
+quantum computing matters beyond entanglement's weirdness: a genuine,
+provable computational speedup. `search` mode (default) runs Grover
+iterations, sonifying `P(marked)=Sin[(2k+1)*theta]^2` as a discrete
+note per iteration, peaking at a bright accent (the true optimal
+iteration, `k=Round[Pi/(4*theta)-1/2]`) and audibly falling again if
+iteration continues past it — over-rotating genuinely makes the search
+worse, a real, counter-intuitive fact this mode makes directly
+audible. `compare` mode is a binaural race: classical average-case
+linear search (`N/2` queries) on the left, Grover's optimal count on
+the right, both starting together — the literal difference in how long
+each channel takes IS the speedup, no formula required, the same
+classical-vs-quantum lineage as `compton/discovery` and
+`bell/correlations`. `geometry` mode sonifies the algorithm's exact
+mechanism directly: each iteration is provably a rotation by exactly
+`2*theta` within a 2D subspace (verified via explicit matrix
+construction, not merely cited), heard as a continuously rotating
+pan/pitch. All four correctness checks are exact, including a
+genuinely discovered edge case documented rather than glossed over: at
+very small N, a naive search for "the optimal iteration count" can
+find a later, numerically-higher peak that is not the intended
+answer, since more queries is never actually better even when a
+coincidence briefly suggests otherwise. See
+[`grover/README.md`](grover/README.md).
+
 ---
 
 ## Config system
@@ -944,7 +981,7 @@ See [`docs/APPS.md`](docs/APPS.md) for a full listing of each app's config keys.
 
 ## stem-core
 
-All twenty-nine projects load `stem-core` as a shared library. It provides:
+All thirty projects load `stem-core` as a shared library. It provides:
 
 - **Config** — `LoadConfig`, `GetCfg`, `DeepMerge` — four-layer config merging and safe key lookup
 - **Sonification pipeline** — `SonifyTrajectory`, `SpatialLayer`, `MotionLayer`, `EventLayer`, `MixLayers`, `RenderAudio`

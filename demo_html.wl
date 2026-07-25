@@ -102,10 +102,17 @@ $genDate     = DateString[];
    one driven qubit to two entangled ones, still one step before
    hydrogen's exact atomic spectrum; "qubit" already immediately
    precedes "hydrogen" here (it was itself a pure insertion moments
-   ago), so this is a pure insertion too, the same pattern once more. *)
+   ago), so this is a pure insertion too, the same pattern once more.
+
+   "grover" follows immediately after "bell", before "hydrogen" -- from
+   two entangled qubits to a genuine quantum algorithm built from the
+   same machinery, completing the v1.6.0 batch, still one step before
+   hydrogen's exact atomic spectrum; "bell" already immediately
+   precedes "hydrogen" here, so this is a pure insertion too, the same
+   pattern once more. *)
 $appOrder = {
   "signal", "waves", "fluid", "pendulum", "cellular", "primes", "bayes", "quantum",
-  "qubit", "bell", "hydrogen", "blackbody", "compton", "quantum_tunnelling", "clt", "brownian", "thermo", "montecarlo", "magnetic", "scattering",
+  "qubit", "bell", "grover", "hydrogen", "blackbody", "compton", "quantum_tunnelling", "clt", "brownian", "thermo", "montecarlo", "magnetic", "scattering",
   "lorenz", "dynamical", "henon", "asteroids", "lagrange", "resonance", "images", "relativity", "cosmology"
 };
 
@@ -479,6 +486,48 @@ appMeta = <|
     "github_path" -> "bell",
     "listening_guide_note" ->
       "New to this app? See bell/LISTENING_GUIDE.md for the " <>
+      "recommended listening sequence across all three modes."
+  |>,
+
+  "grover" -> <|
+    "title" -> "Grover \[LongDash] Search Algorithm",
+    "description" ->
+      "From two entangled qubits to a genuine quantum algorithm, and the " <>
+      "third and final app in this project's quantum-computing batch. " <>
+      "Grover's algorithm searches an unsorted database of N items for one " <>
+      "marked item in about Sqrt[N] queries, versus the N queries any " <>
+      "classical algorithm needs on average \[LongDash] a real, proven " <>
+      "speedup, not just a faster constant factor. Each iteration is " <>
+      "provably a rotation by a fixed angle within a two-dimensional " <>
+      "subspace, verified here by explicit matrix construction rather than " <>
+      "simply cited.",
+    "listening_guide" ->
+      "Two channels tick at once: left is a classical linear search, right " <>
+      "is Grover's algorithm. Listen for which channel's \"found\" chime " <>
+      "rings out first \[LongDash] the right channel should finish " <>
+      "dramatically sooner, the speedup made audible as a literal " <>
+      "difference in time. Then try search mode (a rising sequence of " <>
+      "notes peaking at the optimal iteration, then falling again \[LongDash] " <>
+      "more iterations is not always better) and geometry mode (the exact " <>
+      "same rise and fall, heard as a continuously rotating pan and pitch).",
+    "primary_wav" -> "grover_compare.wav",
+    "primary_wav_label" -> "Listen \[LongDash] binaural race, classical vs quantum search",
+    "secondary_wavs" -> {
+      <| "file" -> "grover_search.wav",
+         "label" -> "Listen \[LongDash] P(marked) rises, then falls past the optimum" |>,
+      <| "file" -> "grover_geometry.wav",
+         "label" -> "Listen \[LongDash] the literal 2D rotation, continuous" |>
+    },
+    "gif" -> "grover_compare.gif",
+    "gif_static" -> False,
+    "gif_alt" ->
+      "Two lines on a log-log plot, both rising with N: a steep straight " <>
+      "line for classical search, a much shallower curve for quantum " <>
+      "search, the gap between them growing wider as N increases.",
+    "cli" -> "wolframscript -file grover/main.wl -- --simulation.mode=compare",
+    "github_path" -> "grover",
+    "listening_guide_note" ->
+      "New to this app? See grover/LISTENING_GUIDE.md for the " <>
       "recommended listening sequence across all three modes."
   |>,
 
@@ -1633,7 +1682,7 @@ Export[$demoHtmlOut, $html, "Text"];
 Print[""];
 STEMHeading["Summary"];
 STEMPrintN["Apps with complete outputs", $nComplete, "", 2];
-Print["  (demo.wl runs 30 passes total, 29 unique apps \[LongDash] dynamical counts twice)"];
+Print["  (demo.wl runs 31 passes total, 30 unique apps \[LongDash] dynamical counts twice)"];
 If[$nIncomplete > 0,
   STEMPrintN["Apps with missing outputs", $nIncomplete, "", 2];
   Print["  (see [WARNING] lines above for which files were missing per app)"]
