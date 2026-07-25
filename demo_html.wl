@@ -96,10 +96,16 @@ $genDate     = DateString[];
    before hydrogen's exact atomic spectrum; "quantum" already
    immediately precedes "hydrogen" here, so this is a pure insertion,
    the same "insert between, don't displace" pattern as every prior
-   addition above. *)
+   addition above.
+
+   "bell" follows immediately after "qubit", before "hydrogen" -- from
+   one driven qubit to two entangled ones, still one step before
+   hydrogen's exact atomic spectrum; "qubit" already immediately
+   precedes "hydrogen" here (it was itself a pure insertion moments
+   ago), so this is a pure insertion too, the same pattern once more. *)
 $appOrder = {
   "signal", "waves", "fluid", "pendulum", "cellular", "primes", "bayes", "quantum",
-  "qubit", "hydrogen", "blackbody", "compton", "quantum_tunnelling", "clt", "brownian", "thermo", "montecarlo", "magnetic", "scattering",
+  "qubit", "bell", "hydrogen", "blackbody", "compton", "quantum_tunnelling", "clt", "brownian", "thermo", "montecarlo", "magnetic", "scattering",
   "lorenz", "dynamical", "henon", "asteroids", "lagrange", "resonance", "images", "relativity", "cosmology"
 };
 
@@ -429,6 +435,50 @@ appMeta = <|
     "github_path" -> "qubit",
     "listening_guide_note" ->
       "New to this app? See qubit/LISTENING_GUIDE.md for the " <>
+      "recommended listening sequence across all three modes."
+  |>,
+
+  "bell" -> <|
+    "title" -> "Bell \[LongDash] Entanglement and the CHSH Inequality",
+    "description" ->
+      "From one driven qubit to two entangled ones. Einstein, Podolsky, and " <>
+      "Rosen argued in 1935 that quantum mechanics must be incomplete; John " <>
+      "Bell showed in 1964 that this was an experimentally testable " <>
+      "question. Alain Aspect's experiments in the 1980s, and decades of " <>
+      "rigorous follow-ups, found that nature violates Bell's inequality " <>
+      "exactly as quantum mechanics predicts \[LongDash] Clauser, Aspect, " <>
+      "and Zeilinger shared the 2022 Nobel Prize in Physics for this work. " <>
+      "chsh mode turns the actual inequality-violating number into a gauge " <>
+      "reading you can hear.",
+    "listening_guide" ->
+      "Four short notes build up the CHSH value term by term, then a " <>
+      "sustained two-tone verdict: the left channel holds the classical " <>
+      "limit (S=2, the most any local hidden-variable theory could ever " <>
+      "produce), the right channel holds the actual measured S (2.83). The " <>
+      "audible gap between the two held tones is Bell's theorem. Then try " <>
+      "correlations mode (a continuous binaural sweep, quantum vs a " <>
+      "genuinely derived classical prediction) and measurement mode " <>
+      "(thousands of paired measurements, each side individually " <>
+      "unpredictable, converging to an unmistakable correlation).",
+    "primary_wav" -> "bell_chsh.wav",
+    "primary_wav_label" -> "Listen \[LongDash] CHSH gauge, derived-optimal angles, S=2.83",
+    "secondary_wavs" -> {
+      <| "file" -> "bell_correlations.wav",
+         "label" -> "Listen \[LongDash] binaural correlation sweep, quantum vs classical" |>,
+      <| "file" -> "bell_measurement.wav",
+         "label" -> "Listen \[LongDash] 2000 paired Bell measurements" |>
+    },
+    "gif" -> "bell_chsh.gif",
+    "gif_static" -> False,
+    "gif_alt" ->
+      "A horizontal gauge with a needle building up in four steps toward a " <>
+      "final position well past the classical limit marker but at the " <>
+      "quantum (Tsirelson) limit marker \[LongDash] the CHSH value S " <>
+      "landing outside what any local hidden-variable theory permits.",
+    "cli" -> "wolframscript -file bell/main.wl -- --simulation.mode=chsh",
+    "github_path" -> "bell",
+    "listening_guide_note" ->
+      "New to this app? See bell/LISTENING_GUIDE.md for the " <>
       "recommended listening sequence across all three modes."
   |>,
 
@@ -1583,7 +1633,7 @@ Export[$demoHtmlOut, $html, "Text"];
 Print[""];
 STEMHeading["Summary"];
 STEMPrintN["Apps with complete outputs", $nComplete, "", 2];
-Print["  (demo.wl runs 29 passes total, 28 unique apps \[LongDash] dynamical counts twice)"];
+Print["  (demo.wl runs 30 passes total, 29 unique apps \[LongDash] dynamical counts twice)"];
 If[$nIncomplete > 0,
   STEMPrintN["Apps with missing outputs", $nIncomplete, "", 2];
   Print["  (see [WARNING] lines above for which files were missing per app)"]

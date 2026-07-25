@@ -1,0 +1,20 @@
+{
+  "version": 1,
+  "app": "bell",
+  "description": "Two entangled qubits — Bell correlations, the CHSH inequality, and repeated measurement.",
+  "simulation": {
+    "mode": "correlations",
+    "bell": {
+      "n_steps": 200,
+      "b_angle_deg": 0.0,
+      "chsh_a_deg": -45.0,
+      "chsh_ap_deg": 45.0,
+      "chsh_b_deg": 0.0,
+      "chsh_bp_deg": 90.0,
+      "alice_angle_deg": -45.0,
+      "bob_angle_deg": 0.0,
+      "n_trials": 2000,
+      "seed": 11
+    }
+  }
+}

@@ -43,6 +43,7 @@ stem/
   clt/              Central Limit Theorem: sample-mean sweep, standardized comparison, sum of N dice
   brownian/         Brownian motion: random walk, ensemble sqrt(t) law, Stokes-Einstein temperature sweep
   qubit/            Single qubit: Bloch sphere, gates, Rabi oscillation, Born-rule measurement
+  bell/             Entanglement: Bell correlations, CHSH inequality, paired measurement
   config/           Global config defaults (config.json)
   docs/             Workflow guides
 ```
@@ -151,6 +152,11 @@ wolframscript -file quantum/main.wl -- --simulation.qho.alpha=3.0        # large
 wolframscript -file qubit/main.wl                                        # gates, H-T-H-S-X from |0>
 wolframscript -file qubit/main.wl -- --simulation.mode=rabi              # continuous Rabi oscillation
 wolframscript -file qubit/main.wl -- --simulation.mode=measurement       # 2000 Born-rule measurements
+
+# Entanglement — Bell correlations, CHSH inequality, paired measurement
+wolframscript -file bell/main.wl                                         # correlations, binaural quantum vs classical
+wolframscript -file bell/main.wl -- --simulation.mode=chsh               # CHSH gauge at derived-optimal angles
+wolframscript -file bell/main.wl -- --simulation.mode=measurement        # 2000 paired Bell measurements
 
 # Prime number patterns
 wolframscript -file primes/main.wl                                       # Ulam spiral (default)
@@ -271,7 +277,7 @@ Each project writes outputs into its own directory:
 
 | Project | Output dir | File types |
 |---------|-----------|------------|
-| all twenty-eight apps | `output/` | CSV, GIF, WAV (+ PNG for signal, quantum, primes, relativity, images, cosmology, waves, lagrange, hydrogen, blackbody, compton, quantum_tunnelling, clt, henon, brownian, qubit) |
+| all twenty-nine apps | `output/` | CSV, GIF, WAV (+ PNG for signal, quantum, primes, relativity, images, cosmology, waves, lagrange, hydrogen, blackbody, compton, quantum_tunnelling, clt, henon, brownian, qubit, bell) |
 
 Play audio:
 
@@ -291,6 +297,9 @@ afplay quantum/output/qho_audio.wav
 afplay qubit/output/qubit_gates.wav
 afplay qubit/output/qubit_rabi.wav
 afplay qubit/output/qubit_measurement.wav
+afplay bell/output/bell_correlations.wav
+afplay bell/output/bell_chsh.wav
+afplay bell/output/bell_measurement.wav
 afplay primes/output/ulam_audio.wav
 afplay primes/output/gaps_audio.wav
 afplay relativity/output/chirp.wav
@@ -349,7 +358,7 @@ See [RELEASE_NOTES_v1.4.0.md](RELEASE_NOTES_v1.4.0.md) for full app descriptions
 
 ## Demo
 
-Run all twenty-eight apps with their most interesting presets and collect outputs into `demo/`:
+Run all twenty-nine apps with their most interesting presets and collect outputs into `demo/`:
 
 ```sh
 wolframscript -file demo.wl
@@ -378,7 +387,7 @@ Check whether a previous demo run completed successfully:
 wolframscript -file demo.wl -- --check-only
 ```
 
-Outputs are collected in `demo/` with a written report at `demo/demo-report.md`. A full run takes approximately five to six minutes (29/29 runs — 28 unique apps, `dynamical` runs twice — including live asteroid data).
+Outputs are collected in `demo/` with a written report at `demo/demo-report.md`. A full run takes approximately five to six minutes (30/30 runs — 29 unique apps, `dynamical` runs twice — including live asteroid data).
 
 ---
 
@@ -875,6 +884,31 @@ the running empirical frequency converging toward the true probability —
 the quantum analogue of `bayes/coin`'s flip-by-flip belief update. See
 [`qubit/README.md`](qubit/README.md).
 
+### bell
+
+Sonifies two entangled qubits — Bell correlations, the CHSH inequality,
+and repeated Bell-state measurement — the second app in this project's
+quantum-computing batch, built directly on `qubit/`'s Bloch-sphere and
+gate machinery. Tells the EPR (1935) -> Bell's theorem (1964) ->
+Aspect's experiments (1980s) -> 2022 Nobel Prize story explicitly.
+`correlations` mode (default) sweeps the angle difference and sonifies
+the real quantum correlation `E(a,b)=Cos[a-b]` (derived directly from
+the Bell state, verified two independent ways) against a genuinely
+derived local hidden-variable prediction, binaural — the same
+classical-vs-quantum idiom `compton/discovery` and
+`scattering/discovery` already establish. `chsh` mode computes the
+actual CHSH value at angles found by numerical optimisation (confirmed
+symbolically to equal `2*Sqrt[2]`, the Tsirelson bound, not assumed
+from memory) and presents it as a build-up-then-verdict gauge, audible
+as the gap between a classical-bound reference tone and the real
+measured value. `measurement` mode simulates thousands of paired
+measurements sampled from the true joint quantum distribution, each
+side individually unpredictable 50/50, converging to an unmistakable
+correlation. All four correctness checks are exact or constructive —
+notably, the classical `|S|<=2` bound is proved by exhaustively
+enumerating all 16 possible local deterministic strategies, not merely
+asserted. See [`bell/README.md`](bell/README.md).
+
 ---
 
 ## Config system
@@ -910,7 +944,7 @@ See [`docs/APPS.md`](docs/APPS.md) for a full listing of each app's config keys.
 
 ## stem-core
 
-All twenty-eight projects load `stem-core` as a shared library. It provides:
+All twenty-nine projects load `stem-core` as a shared library. It provides:
 
 - **Config** — `LoadConfig`, `GetCfg`, `DeepMerge` — four-layer config merging and safe key lookup
 - **Sonification pipeline** — `SonifyTrajectory`, `SpatialLayer`, `MotionLayer`, `EventLayer`, `MixLayers`, `RenderAudio`
