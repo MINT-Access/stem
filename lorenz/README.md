@@ -61,6 +61,32 @@ Start-Process wmplayer output\rossler_audio.wav
 | output/lorenz_animation.gif         | Animated butterfly attractor (x-z)   |
 | output/lorenz_audio.wav             | Sonification of x(t)                 |
 
+## Correctness checks
+
+Four checks run every invocation, printed as `[PASS]`/`[FAIL]`, diagnostic-only
+(never abort). Lorenz and Rössler have genuinely different mathematical
+structure, so check 1 tests a different (but always exact) claim per system
+rather than assuming one transfers to the other:
+
+1. **Phase-space divergence** — for Lorenz, `nabla.f` is exactly constant
+   (`-(sigma+1+beta)`) at every point in space, verified at several arbitrary
+   points via independent symbolic differentiation. For Rössler, `nabla.f`
+   is genuinely position-dependent (`a+x-c`) — the check instead verifies
+   *that* formula holds pointwise, and explicitly confirms the values are
+   **not** all equal (unlike Lorenz). Exact relation, tight tolerance.
+2. **Known equilibria satisfy f=0** — Lorenz's origin plus the nonzero pair
+   `C+/C- = (+-sqrt(beta(rho-1)), +-sqrt(beta(rho-1)), rho-1)`; Rössler's
+   two equilibria, derived from the quadratic that falls out of setting all
+   three equations of motion to zero. Exact relation, tight tolerance.
+3. **Largest Lyapunov exponent** — computed via Benettin's renormalization
+   method (perturb, integrate a short interval, measure growth, renormalize,
+   repeat, average) and compared against the commonly-cited literature value
+   for each system's classic parameters (Lorenz ≈0.905, Rössler ≈0.07).
+   Empirical benchmark comparison, generous tolerance.
+4. **Trajectory boundedness** — the actual solved trajectory contains no
+   `Overflow[]`/`Underflow[]`/`Indeterminate`/`ComplexInfinity` and stays
+   within a generous magnitude bound. Sanity check.
+
 ## Sonification
 
 | Parameter | Design |
@@ -115,8 +141,9 @@ visualise how quickly they diverge.
     ├── main.wl              Entry point
     ├── experiment.wl        Named parameter presets
     ├── src/
-    │   ├── model.wl         Lorenz ODE, pair solver, divergence
-    │   ├── output.wl        CSV export and console summary
+    │   ├── model.wl         Lorenz/Rossler ODEs, pair solver, divergence,
+    │   │                    four correctness checks (per system where they differ)
+    │   ├── output.wl        CSV export, console summary, PrintCorrectnessChecks
     │   ├── animate.wl       GIF animation (single + dual)
     │   └── sonify.wl        WAV sonification
     ├── tests/
@@ -130,11 +157,14 @@ visualise how quickly they diverge.
 `main.wl` prints one complete line per event so VoiceOver reads each chunk
 as a self-contained announcement. Headings use `STEMHeading`; the step count
 in `PrintSummary` uses `STEMPrintN`; the x/y/z range lines carry two values
-each and remain as bare `Print`; export confirmations use `STEMDescribeCSV`
-(1 row per step, 5 columns), `STEMDescribeGIF` (150 frames at 30 fps), and
-`STEMDescribeWAV` (duration from `params["TimeEnd"]`). `STEMSay` is called at
-each pipeline phase (ODE solve, animation, sonification) and as the final
-completion message with the platform-appropriate play command.
+each and remain as bare `Print`; the four correctness checks print as a
+`Checks: 1[PASS] 2[PASS] 3[PASS] 4[PASS]` line via `PrintCorrectnessChecks`,
+followed by one detail line per check; export confirmations use
+`STEMDescribeCSV` (1 row per step, 5 columns), `STEMDescribeGIF` (150 frames
+at 30 fps), and `STEMDescribeWAV` (duration from `params["TimeEnd"]`).
+`STEMSay` is called at each pipeline phase (ODE solve, correctness checks,
+animation, sonification) and as the final completion message with the
+platform-appropriate play command.
 
 To also hear a spoken announcement when the run finishes, set `STEM_SPEAK=1`
 before running:

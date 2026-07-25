@@ -70,27 +70,46 @@ Which[
     Print["  Duration: ", params["TimeEnd"], " s"];
     Print[""];
 
-    Print["[1/4] Solving Lorenz ODE..."];
+    Print["[1/5] Solving Lorenz ODE..."];
     STEMSay["Solving Lorenz ODE"];
     solution = SolveLorenz[params];
     Print["  Computed ", Length[solution], " steps."];
     PrintSummary[solution, params];
     Print[""];
 
-    Print["[2/4] Exporting trajectory data..."];
+    Print["[2/5] Correctness checks..."];
+    STEMSay["Running correctness checks"];
+    $divChk   = LorenzDivergenceCheck[params["Sigma"], params["Rho"], N[params["Beta"]]];
+    $eqChk    = LorenzEquilibriumCheck[params["Sigma"], params["Rho"], N[params["Beta"]]];
+    $lyapChk  = LorenzLyapunovCheck[params["Sigma"], params["Rho"], N[params["Beta"]]];
+    $boundChk = TrajectoryBoundedCheck[solution];
+    PrintCorrectnessChecks[$divChk, $eqChk, $lyapChk, $boundChk];
+    Print["    1. Constant phase-space divergence: ", FmtN[$divChk["expected"], 4],
+          " everywhere (max deviation ", FmtN[$divChk["maxError"], 6], ")  (exact, tight tolerance)"];
+    Print["    2. Equilibria satisfy f=0: origin + C+/C- = (",
+          FmtN[$eqChk["cPlus"][[1]], 4], ",", FmtN[$eqChk["cPlus"][[2]], 4], ",",
+          FmtN[$eqChk["cPlus"][[3]], 4], ") and its mirror (max residual ",
+          FmtN[$eqChk["maxError"], 6], ")  (exact, tight tolerance)"];
+    Print["    3. Largest Lyapunov exponent: ", FmtN[$lyapChk["lambda1"], 4],
+          " vs benchmark ", FmtN[$lyapChk["benchmark"], 4],
+          "  (empirical comparison, generous tolerance)"];
+    Print["    4. Trajectory boundedness: no overflow/NaN, all coordinates finite  (sanity)"];
+    Print[""];
+
+    Print["[3/5] Exporting trajectory data..."];
     outCSV = FileNameJoin[{$projectRoot, "output", "lorenz_trajectory.csv"}];
     ExportResults[solution, params, outCSV];
     STEMDescribeCSV[outCSV, Length[solution], 5];
     Print[""];
 
-    Print["[3/4] Rendering animation..."];
+    Print["[4/5] Rendering animation..."];
     STEMSay["Rendering animation"];
     outGIF = FileNameJoin[{$projectRoot, "output", "lorenz_animation.gif"}];
     ExportAnimation[solution, outGIF, 30, 150, "Lorenz Attractor"];
     STEMDescribeGIF[outGIF, 150, 30];
     Print[""];
 
-    Print["[4/4] Synthesising audio..."];
+    Print["[5/5] Synthesising audio..."];
     STEMSay["Synthesising audio"];
     outWAV = FileNameJoin[{$projectRoot, "output", "lorenz_audio.wav"}];
     ExportSonification[solution, params, cfg, outWAV];
@@ -124,27 +143,44 @@ Which[
     Print["  Duration: ", params["TimeEnd"], " s"];
     Print[""];
 
-    Print["[1/4] Solving Rossler ODE..."];
+    Print["[1/5] Solving Rossler ODE..."];
     STEMSay["Solving Rossler ODE"];
     solution = SolveRossler[params];
     Print["  Computed ", Length[solution], " steps."];
     PrintSummary[solution, params];
     Print[""];
 
-    Print["[2/4] Exporting trajectory data..."];
+    Print["[2/5] Correctness checks..."];
+    STEMSay["Running correctness checks"];
+    $divChk   = RosslerDivergenceCheck[params["A"], params["B"], params["C"]];
+    $eqChk    = RosslerEquilibriumCheck[params["A"], params["B"], params["C"]];
+    $lyapChk  = RosslerLyapunovCheck[params["A"], params["B"], params["C"]];
+    $boundChk = TrajectoryBoundedCheck[solution];
+    PrintCorrectnessChecks[$divChk, $eqChk, $lyapChk, $boundChk];
+    Print["    1. Divergence formula nabla.f = a+x-c (NOT constant, unlike Lorenz): ",
+          "max deviation ", FmtN[$divChk["maxError"], 6], "  (exact, tight tolerance)"];
+    Print["    2. Both equilibria satisfy f=0 (max residual ",
+          FmtN[$eqChk["maxError"], 6], ")  (exact, tight tolerance)"];
+    Print["    3. Largest Lyapunov exponent: ", FmtN[$lyapChk["lambda1"], 4],
+          " vs benchmark ", FmtN[$lyapChk["benchmark"], 4],
+          "  (empirical comparison, generous tolerance)"];
+    Print["    4. Trajectory boundedness: no overflow/NaN, all coordinates finite  (sanity)"];
+    Print[""];
+
+    Print["[3/5] Exporting trajectory data..."];
     outCSV = FileNameJoin[{$projectRoot, "output", "rossler_trajectory.csv"}];
     ExportResults[solution, params, outCSV];
     STEMDescribeCSV[outCSV, Length[solution], 5];
     Print[""];
 
-    Print["[3/4] Rendering animation..."];
+    Print["[4/5] Rendering animation..."];
     STEMSay["Rendering animation"];
     outGIF = FileNameJoin[{$projectRoot, "output", "rossler_animation.gif"}];
     ExportAnimation[solution, outGIF, 30, 150, "Rossler Attractor"];
     STEMDescribeGIF[outGIF, 150, 30];
     Print[""];
 
-    Print["[4/4] Synthesising audio..."];
+    Print["[5/5] Synthesising audio..."];
     STEMSay["Synthesising audio"];
     outWAV = FileNameJoin[{$projectRoot, "output", "rossler_audio.wav"}];
     ExportSonification[solution, params, cfg, outWAV];

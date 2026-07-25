@@ -81,5 +81,47 @@ AssertTrue["Divergence list matches solution length",
   Length[div] == Length[sol1]];
 
 Print[""];
+Print["-- Correctness checks (Lorenz) --"];
+Module[{sigma = 10.0, rho = 28.0, beta = 8.0/3.0, chk},
+  chk = LorenzDivergenceCheck[sigma, rho, beta];
+  AssertTrue["LorenzDivergenceCheck passes (exact, tight tolerance)", chk["pass"]];
+  AssertTrue["Divergence equals -(sigma+1+beta)", chk["expected"] === -(sigma+1.0+beta)];
+
+  chk = LorenzEquilibriumCheck[sigma, rho, beta];
+  AssertTrue["LorenzEquilibriumCheck passes (exact, tight tolerance)", chk["pass"]];
+  AssertTrue["C+ z-coordinate equals rho-1", Abs[chk["cPlus"][[3]] - (rho-1.0)] < 10^-9];
+
+  chk = LorenzLyapunovCheck[sigma, rho, beta];
+  AssertTrue["LorenzLyapunovCheck passes (empirical, generous tolerance)", chk["pass"]];
+  AssertTrue["Largest Lyapunov exponent is positive (chaos signature)", chk["lambda1"] > 0];
+
+  chk = TrajectoryBoundedCheck[sol];
+  AssertTrue["TrajectoryBoundedCheck passes on a real solved trajectory", chk["pass"]];
+];
+Print[""];
+
+Print["-- Correctness checks (Rossler) --"];
+Module[{a = 0.2, b = 0.2, c = 5.7, chk, rsol, rparams},
+  chk = RosslerDivergenceCheck[a, b, c];
+  AssertTrue["RosslerDivergenceCheck passes (exact, tight tolerance)", chk["pass"]];
+  AssertTrue["Rossler divergence is NOT constant across test points (genuinely x-dependent)",
+    Length[DeleteDuplicates[Round[chk["divergences"], 10^-6]]] > 1];
+
+  chk = RosslerEquilibriumCheck[a, b, c];
+  AssertTrue["RosslerEquilibriumCheck passes (exact, tight tolerance)", chk["pass"]];
+  AssertTrue["Two distinct equilibria found", Length[chk["equilibria"]] === 2];
+
+  chk = RosslerLyapunovCheck[a, b, c];
+  AssertTrue["RosslerLyapunovCheck passes (empirical, generous tolerance)", chk["pass"]];
+  AssertTrue["Largest Lyapunov exponent is positive (chaos signature)", chk["lambda1"] > 0];
+
+  rparams = <| "A"->a, "B"->b, "C"->c, "InitX"->0.1, "InitY"->0.0, "InitZ"->0.0,
+               "TimeEnd"->10.0, "TimeStep"->0.01 |>;
+  rsol = SolveRossler[rparams];
+  chk = TrajectoryBoundedCheck[rsol];
+  AssertTrue["TrajectoryBoundedCheck passes on a real solved Rossler trajectory", chk["pass"]];
+];
+
+Print[""];
 Print["Results: ", passed, " passed, ", failed, " failed."];
 If[failed > 0, Exit[1], Exit[0]];

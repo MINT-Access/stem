@@ -55,3 +55,15 @@ PrintSummary[solution_List, params_Association] :=
     Print["  y range: [", FmtN[Min[ys],4], ", ", FmtN[Max[ys],4], "]"];
     Print["  z range: [", FmtN[Min[zs],4], ", ", FmtN[Max[zs],4], "]"];
   ]
+
+
+(* PrintCorrectnessChecks -- "Checks: 1[PASS] 2[FAIL] ..." line,
+   consistent with the style used across the v1.5.0 apps. *)
+PrintCorrectnessChecks[divChk_Association, eqChk_Association,
+                       lyapChk_Association, boundChk_Association] :=
+  Print["  Checks: ",
+    If[divChk["pass"],   "1[PASS]", "1[FAIL]"], " ",
+    If[eqChk["pass"],    "2[PASS]", "2[FAIL]"], " ",
+    If[lyapChk["pass"],  "3[PASS]", "3[FAIL]"], " ",
+    If[boundChk["pass"], "4[PASS]", "4[FAIL]"]
+  ];
