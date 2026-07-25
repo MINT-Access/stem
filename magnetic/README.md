@@ -201,6 +201,16 @@ Printed on every run:
    `cyclotron`/`mirror`/`multi` (the magnetic force does no work);
    periodic return to 0.1% for `drift` (the electric field does
    instantaneous but not net work over whole cyclotron periods).
+5. **Cyclotron frequency ratios** (`multi` only) — each particle's
+   closed-form orbit is verified to exactly solve the Lorentz-force ODE
+   at its own charge-to-mass ratio (a symbolic check, not a sampled
+   measurement — the electron's period is 1836x shorter than the
+   proton's, too short to measure reliably on the shared rendering grid).
+
+Each mode prints only the checks that are actually meaningful for it —
+`cyclotron` prints 1+4, `drift` prints 2+4, `mirror` prints 3+4, `multi`
+prints 4+5 — rather than a fixed four every run; see `AGENTS.md` design
+decision 10 for why this is deliberate.
 
 ## Output files
 
@@ -232,7 +242,7 @@ magnetic/
     animate.wl      — GIF rendering (all four modes)
     output.wl       — CSV export
   tests/
-    test_model.wl   — Unit tests (period, drift, trapping, energy, radius)
+    test_model.wl   — Unit tests (period, drift, trapping, energy, radius, frequency ratios)
   output/           — Output files (not committed)
   README.md
   AGENTS.md

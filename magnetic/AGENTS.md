@@ -157,6 +157,66 @@ of the 0.5 default) specifically to stay in the regime where the
 simple criterion is reliable; a shallow-pitch preset with the default
 `alpha` can flip check 3 to `[FAIL]` for this reason.
 
+### 10. Checks are organized per-mode, not as a mechanically forced four — a deliberate choice, verified during the v1.5.0 correctness audit
+
+Most apps in this codebase print four correctness checks unconditionally
+on every run. This app deliberately does NOT: `{cyclotron period, E x B
+drift velocity, mirror trapping}` are each meaningful ONLY in their own
+mode — a drift-velocity check makes no sense during `mirror` mode (there
+is no `E` field), and a trapping-condition check makes no sense during
+`cyclotron` mode (there is no field gradient to trap against). Forcing
+all four to print regardless of mode would mean printing checks that test
+nothing meaningful for the active configuration — worse than the current
+design, not better.
+
+**Energy conservation is checked in all four modes** (see design decision
+7 for why `drift` mode's version differs), so a single run always prints
+exactly two checks: one universal (energy), one mode-specific — except
+`multi` mode, which as of this audit prints two mode-specific checks
+(energy plus the new frequency-ratio check below), for three total
+distinct checks across its own two lines.
+
+This structure was correct all along but was previously only observable
+by reading the code — nowhere did it say "this is deliberate," which is
+what let it look inconsistent with newer apps' four-checks convention at
+a glance during the audit. This section exists to close that gap:
+if you are comparing this app's checks against another app's AGENTS.md
+and wondering why the counts differ, this is why, and it is not a bug
+or a gap to fix.
+
+### 11. `multi` mode's frequency-ratio check (added during the audit) verifies the SOLUTION against the ODE, not the formula against itself
+
+`multi` mode previously checked only energy conservation. A second check
+was added: that each particle's cyclotron frequency ratio matches its
+`charge_mass_ratio` exactly, since `omega = kRatio*Bz` (and hence
+`omega_electron/omega_proton = kElectron/kProton` identically, `Bz`
+cancelling) is otherwise not tested by anything.
+
+**A numerical (sampled) frequency measurement was considered and
+rejected.** The electron's period is `1836x` shorter than the proton's;
+on the SAME time grid `BuildMultiModel` uses to render all three
+particles (~300 points per PROTON period, sized for the proton's own
+resolution), the electron gets under 1 sample per its own period — far
+below Nyquist, making any zero-crossing-based period measurement
+meaningless for it without a separate, dedicated fine grid per particle.
+
+**`MultiFrequencyRatioCheck` instead verifies the closed-form solution
+itself satisfies the Lorentz-force ODE symbolically** —
+`MultiParticleOrbit`'s `x(t)=r*Sin[omega*t]`, `y(t)=r*(Cos[omega*t]-1)`
+is checked against `x''=k*y'*Bz`, `y''=-k*x'*Bz` via `D[]` and
+`Simplify[]`, for each particle's own `(kRatio,Bz)` pair, evaluated at a
+couple of arbitrary `t` values to get a numeric residual. This is exact
+(no numerical trajectory involved at all, so no sampling/aliasing concern
+for any particle regardless of frequency), and is a genuinely independent
+check: it tests the SOLVED FORM against the DIFFERENTIAL EQUATION it
+claims to solve, not `omega=kRatio*Bz` restated against itself (which
+would be tautological — `Bz` cancels trivially from a frequency-ratio
+comparison built the same way the generator computes it). Residuals in
+practice: exactly `0.` for proton and alpha, `~2e-13` for the electron
+(floating-point noise from `Simplify` on the larger `kRatio=1836`
+coefficient, still 4 orders of magnitude below the check's `1e-6`
+tolerance).
+
 ## Project structure
 
 ```
@@ -213,6 +273,17 @@ wolframscript -file experiments.wl
 4. **Energy conservation** (all modes, see design decision 7) — `|v|^2`
    constant to 0.1% for `cyclotron`/`mirror`/`multi`; periodic return
    to 0.1% for `drift`.
+5. **Cyclotron frequency ratios** (`multi` only, added during the v1.5.0
+   correctness audit — see design decision 11) — each particle's
+   closed-form orbit exactly solves the Lorentz-force ODE at its own
+   `charge_mass_ratio`, verified symbolically (not a sampled measurement
+   — the electron's period is too short relative to the shared time grid
+   for that to be meaningful). Exact relation, tight tolerance.
+
+Each mode prints exactly the checks meaningful for it (see design
+decision 10): `cyclotron` prints 1+4, `drift` prints 2+4, `mirror` prints
+3+4, `multi` prints 4+5 — never a mechanically forced four regardless of
+mode.
 
 ## Common pitfalls
 

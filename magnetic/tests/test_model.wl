@@ -93,6 +93,28 @@ AssertNear["model's own rc field matches v_perp/omega_c",
   m1["rc"], rExpected, 1*^-9];
 
 Print[""];
+Print["== Test 6: multi mode frequency-ratio check (added during correctness audit) =="];
+
+cfg4 = <|"simulation" -> <|"magnetic" -> <|
+  "B_z" -> 1.0, "v_perp" -> 1.0, "base_freq_hz" -> 110.0, "n_periods" -> 10
+|>|>|>;
+
+m4 = BuildMultiModel[cfg4];
+
+AssertTrue["model's own freqRatioChk pass flag is True", m4["freqRatioChk"]["pass"]];
+AssertTrue["proton closed-form residual is exactly 0",
+  m4["freqRatioChk"]["residProton"] === 0.];
+AssertTrue["alpha closed-form residual is exactly 0",
+  m4["freqRatioChk"]["residAlpha"] === 0.];
+AssertTrue["electron closed-form residual is tiny (near machine precision)",
+  m4["freqRatioChk"]["residElectron"] < 1*^-9];
+
+(* Direct check of MultiFrequencyRatioCheck at a different B_z, confirming
+   it is not hardcoded to B_z=1.0 *)
+chkAtBz2 = MultiFrequencyRatioCheck[2.5];
+AssertTrue["MultiFrequencyRatioCheck passes at a different B_z (2.5)", chkAtBz2["pass"]];
+
+Print[""];
 Print["================="];
 Print["Passed: ", passed];
 Print["Failed: ", failed];

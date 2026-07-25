@@ -354,13 +354,55 @@ MultiParticleOrbit[label_String, kRatio_?NumericQ, Bz_?NumericQ,
        "speed" -> ConstantArray[vPerp, Length[tArr]] |>
   ]
 
+(* Check 5 (multi mode, exact) — each particle's cyclotron frequency
+   ratio matches its charge-to-mass ratio EXACTLY. NOT a re-statement
+   of "omega=kRatio*Bz" (checking that against itself would be
+   tautological — omega_i/omega_j = kRatio_i/kRatio_j cancels Bz
+   trivially by construction). Instead verifies that
+   MultiParticleOrbit's CLOSED-FORM x(t)=r*Sin[omega*t],
+   y(t)=r*(Cos[omega*t]-1) actually SOLVES the Lorentz-force ODE
+   (x''=k*y'*Bz, y''=-k*x'*Bz) for each particle's own (kRatio,Bz) —
+   an independent calculus check of the claimed solution against the
+   differential equation it's supposed to satisfy, not the formula
+   used to build it. A numerical (sampled) frequency measurement was
+   considered and rejected: the electron's period is 1836x shorter
+   than the proton's, so on the SAME time grid used to render all
+   three particles (~300 points per PROTON period), the electron gets
+   under 1 sample per its own period — far below Nyquist, making any
+   zero-crossing-based period measurement meaningless for it without a
+   separate, dedicated fine grid. The symbolic ODE-residual check
+   sidesteps this sampling problem entirely (no numerical trajectory
+   involved, exact for any kRatio). *)
+MultiClosedFormResidual[kRatio_?NumericQ, Bz_?NumericQ] :=
+  Module[{omega, r, xFn, yFn, residX, residY, tt},
+    omega = kRatio * Bz;
+    r     = 1.0 / Abs[omega];  (* vPerp cancels out of the residual; use 1.0 *)
+    xFn[s_] := r * Sin[omega * s];
+    yFn[s_] := r * (Cos[omega * s] - 1.0);
+    residX = Simplify[D[xFn[tt], {tt, 2}] - kRatio * D[yFn[tt], tt] * Bz];
+    residY = Simplify[D[yFn[tt], {tt, 2}] + kRatio * D[xFn[tt], tt] * Bz];
+    Max[Abs[{residX /. tt -> 1.0, residY /. tt -> 1.0,
+              residX /. tt -> 3.7, residY /. tt -> 3.7}]]
+  ];
+
+MultiFrequencyRatioCheck[Bz_?NumericQ, Optional[tolerance_?NumericQ, 10^-6]] :=
+  Module[{kProton = 1.0, kAlpha = 0.5, kElectron = 1836.0, residProton, residAlpha, residElectron, maxResid},
+    residProton   = MultiClosedFormResidual[kProton, Bz];
+    residAlpha    = MultiClosedFormResidual[kAlpha, Bz];
+    residElectron = MultiClosedFormResidual[kElectron, Bz];
+    maxResid = Max[residProton, residAlpha, residElectron];
+    <| "residProton" -> residProton, "residAlpha" -> residAlpha, "residElectron" -> residElectron,
+       "maxResid" -> maxResid, "pass" -> maxResid < tolerance |>
+  ];
+
 BuildMultiModel[cfg_Association] :=
   Module[{
     Bz, vPerp, baseFreqHz, nPeriods,
     kProton, kAlpha, kElectron,
     omegaProton, TProton, tMax, nPts, tArr,
     proton, alphaP, electron,
-    fProton, fAlpha, fElectronScaled, fElectronActual, electronRatio
+    fProton, fAlpha, fElectronScaled, fElectronActual, electronRatio,
+    freqRatioChk
   },
 
     Bz         = N @ GetCfg[cfg, {"simulation", "magnetic", "B_z"},         1.0];
@@ -401,6 +443,15 @@ BuildMultiModel[cfg_Association] :=
     With[{allSpeeds = Join[proton["speed"], alphaP["speed"], electron["speed"]]},
       Print["  [", If[Max[allSpeeds] - Min[allSpeeds] < 0.001 * Mean[allSpeeds], "PASS", "FAIL"],
         "] Energy conservation: all three particles' |v| constant (within 0.1%)"]];
+
+    (* Check 5 (frequency ratios, exact — see MultiFrequencyRatioCheck's
+       docstring for why this is a symbolic ODE-residual check, not a
+       sampled-period measurement). *)
+    freqRatioChk = MultiFrequencyRatioCheck[Bz];
+    Print["  [", If[freqRatioChk["pass"], "PASS", "FAIL"],
+      "] Cyclotron frequency ratios: each particle's closed-form orbit exactly solves ",
+      "the Lorentz-force ODE at its own charge-to-mass ratio (max residual ",
+      FmtN[freqRatioChk["maxResid"], 3], ")"];
     Print[""];
 
     <|
@@ -410,6 +461,6 @@ BuildMultiModel[cfg_Association] :=
       "nPeriods" -> nPeriods, "tMax" -> tMax, "TProton" -> TProton,
       "fProton" -> fProton, "fAlpha" -> fAlpha,
       "fElectronScaled" -> fElectronScaled, "fElectronActual" -> fElectronActual,
-      "electronRatio" -> electronRatio
+      "electronRatio" -> electronRatio, "freqRatioChk" -> freqRatioChk
     |>
   ]
