@@ -45,6 +45,7 @@ stem/
   qubit/            Single qubit: Bloch sphere, gates, Rabi oscillation, Born-rule measurement
   bell/             Entanglement: Bell correlations, CHSH inequality, paired measurement
   grover/           Grover's search algorithm: optimal stopping, classical vs quantum race, rotation geometry
+  quantum_statistics/  Bose-Einstein, Fermi-Dirac, Maxwell-Boltzmann occupation numbers: the quantum/thermo bridge
   config/           Global config defaults (config.json)
   docs/             Workflow guides
 ```
@@ -212,6 +213,11 @@ wolframscript -file thermo/main.wl -- --simulation.mode=ensemble               #
 wolframscript -file thermo/main.wl -- --simulation.mode=cooling                # thermal cooling 1000K→50K
 wolframscript -file thermo/main.wl -- --simulation.mode=equipartition          # monatomic vs diatomic
 
+# Quantum statistics — Bose-Einstein, Fermi-Dirac, Maxwell-Boltzmann
+wolframscript -file quantum_statistics/main.wl                                 # spectrum, three voices, T=300K
+wolframscript -file quantum_statistics/main.wl -- --simulation.mode=temperature  # sweep T, fixed energy
+wolframscript -file quantum_statistics/main.wl -- --simulation.mode=fermi_sea    # FD step, cold to warm
+
 # Monte Carlo — 2D Ising model
 wolframscript -file montecarlo/main.wl                                          # sweep, T 4.0→0.5
 wolframscript -file montecarlo/main.wl -- --simulation.mode=critical            # at T_c
@@ -283,7 +289,7 @@ Each project writes outputs into its own directory:
 
 | Project | Output dir | File types |
 |---------|-----------|------------|
-| all thirty apps | `output/` | CSV, GIF, WAV (+ PNG for signal, quantum, primes, relativity, images, cosmology, waves, lagrange, hydrogen, blackbody, compton, quantum_tunnelling, clt, henon, brownian, qubit, bell, grover) |
+| all thirty-one apps | `output/` | CSV, GIF, WAV (+ PNG for signal, quantum, primes, relativity, images, cosmology, waves, lagrange, hydrogen, blackbody, compton, quantum_tunnelling, clt, henon, brownian, qubit, bell, grover, quantum_statistics) |
 
 Play audio:
 
@@ -322,6 +328,9 @@ afplay lagrange/output/l1_audio.wav
 afplay images/output/images_brightness_audio.wav
 afplay thermo/output/distribution_audio.wav
 afplay thermo/output/cooling_audio.wav
+afplay quantum_statistics/output/quantum_statistics_spectrum.wav
+afplay quantum_statistics/output/quantum_statistics_temperature.wav
+afplay quantum_statistics/output/quantum_statistics_fermi_sea.wav
 afplay montecarlo/output/sweep_audio.wav
 afplay montecarlo/output/critical_audio.wav
 afplay magnetic/output/mirror_audio.wav
@@ -367,7 +376,7 @@ See [RELEASE_NOTES_v1.4.0.md](RELEASE_NOTES_v1.4.0.md) for full app descriptions
 
 ## Demo
 
-Run all thirty apps with their most interesting presets and collect outputs into `demo/`:
+Run all thirty-one apps with their most interesting presets and collect outputs into `demo/`:
 
 ```sh
 wolframscript -file demo.wl
@@ -396,7 +405,7 @@ Check whether a previous demo run completed successfully:
 wolframscript -file demo.wl -- --check-only
 ```
 
-Outputs are collected in `demo/` with a written report at `demo/demo-report.md`. A full run takes approximately five to six minutes (31/31 runs — 30 unique apps, `dynamical` runs twice — including live asteroid data).
+Outputs are collected in `demo/` with a written report at `demo/demo-report.md`. A full run takes approximately five to six minutes (32/32 runs — 31 unique apps, `dynamical` runs twice — including live asteroid data).
 
 ---
 
@@ -617,6 +626,35 @@ side by side, making audible the extra heat capacity a diatomic gas gets
 from rotational degrees of freedom. Named gas presets cover hydrogen,
 helium, nitrogen, oxygen, and argon.
 See [`thermo/README.md`](thermo/README.md).
+
+### quantum_statistics
+
+Sonifies the three occupation-number distributions of statistical
+mechanics — Bose-Einstein, Fermi-Dirac, and Maxwell-Boltzmann — and the
+exact sense in which `thermo/`'s classical picture is a special case of
+the deeper quantum one: an algebraic identity, not just an asymptote,
+shows the fractional deviation of each quantum distribution from the
+classical limit equals the occupation number itself. `spectrum` mode
+(default) sonifies all three simultaneously at a fixed temperature as
+three distinctly-panned, distinctly-registered voices — reusing
+`thermo/`'s additive spectral-envelope technique three times over, so
+the ear can hear directly where the three pictures agree and where
+they part ways. `temperature` mode sweeps temperature at a fixed
+energy; direct calculation (not the commonly assumed "cold=quantum"
+intuition, verified not to transfer to this app's `mu=0` convention)
+shows the three distributions converge at LOW temperature and Bose-
+Einstein diverges at HIGH temperature, exactly the reverse of the
+naive expectation, documented as a verified correction rather than
+silently implemented backwards. `fermi_sea` mode sonifies Fermi-Dirac
+alone, sweeping from a sharp T→0 step function to a smoothed, blurred
+one, using a genuine positive Fermi energy (not `mu=0`) so the complete
+step — both the filled and empty sides — is audible. Four correctness
+checks, all exact: the Fermi-Dirac bound (`n_FD<1`, a direct algebraic
+consequence of the formula), the T→0 step's transition width scaling
+*exactly* linearly with `kT`, and Bose-Einstein's divergence together
+with its domain guard both confirmed to actually engage, not merely
+assumed present.
+See [`quantum_statistics/README.md`](quantum_statistics/README.md).
 
 ### montecarlo
 
@@ -981,7 +1019,7 @@ See [`docs/APPS.md`](docs/APPS.md) for a full listing of each app's config keys.
 
 ## stem-core
 
-All thirty projects load `stem-core` as a shared library. It provides:
+All thirty-one projects load `stem-core` as a shared library. It provides:
 
 - **Config** — `LoadConfig`, `GetCfg`, `DeepMerge` — four-layer config merging and safe key lookup
 - **Sonification pipeline** — `SonifyTrajectory`, `SpatialLayer`, `MotionLayer`, `EventLayer`, `MixLayers`, `RenderAudio`

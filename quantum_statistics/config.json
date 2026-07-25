@@ -1,0 +1,18 @@
+{
+  "version": 1,
+  "app": "quantum_statistics",
+  "description": "Bose-Einstein, Fermi-Dirac, and Maxwell-Boltzmann occupation numbers — the quantum/thermo bridge.",
+  "simulation": {
+    "mode": "spectrum",
+    "quantum_statistics": {
+      "temperature": 300.0,
+      "temp_min": 100.0,
+      "temp_max": 50000.0,
+      "energy_min": 0.001,
+      "energy_max": 2.0,
+      "reference_energy": 1.0,
+      "n_steps": 150,
+      "n_temp_steps": 6
+    }
+  }
+}

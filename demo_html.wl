@@ -109,10 +109,17 @@ $genDate     = DateString[];
    same machinery, completing the v1.6.0 batch, still one step before
    hydrogen's exact atomic spectrum; "bell" already immediately
    precedes "hydrogen" here, so this is a pure insertion too, the same
-   pattern once more. *)
+   pattern once more.
+
+   "quantum_statistics" follows immediately after "thermo", before
+   "montecarlo" -- from thermo/'s classical Maxwell-Boltzmann gas to
+   the deeper quantum statistics it is a limiting case of, still one
+   step before montecarlo's own statistical-mechanics territory;
+   "thermo" already immediately precedes "montecarlo" here, so this is
+   a pure insertion too, the same pattern once more. *)
 $appOrder = {
   "signal", "waves", "fluid", "pendulum", "cellular", "primes", "bayes", "quantum",
-  "qubit", "bell", "grover", "hydrogen", "blackbody", "compton", "quantum_tunnelling", "clt", "brownian", "thermo", "montecarlo", "magnetic", "scattering",
+  "qubit", "bell", "grover", "hydrogen", "blackbody", "compton", "quantum_tunnelling", "clt", "brownian", "thermo", "quantum_statistics", "montecarlo", "magnetic", "scattering",
   "lorenz", "dynamical", "henon", "asteroids", "lagrange", "resonance", "images", "relativity", "cosmology"
 };
 
@@ -833,6 +840,50 @@ appMeta = <|
       "(cold) to red (hot).",
     "cli" -> "wolframscript -file thermo/main.wl",
     "github_path" -> "thermo"
+  |>,
+
+  "quantum_statistics" -> <|
+    "title" -> "Quantum Statistics \[LongDash] Bose-Einstein, Fermi-Dirac, Maxwell-Boltzmann",
+    "description" ->
+      "From thermo/'s classical gas to the deeper quantum statistics it is " <>
+      "a limiting case of. Three occupation-number distributions describe " <>
+      "how many particles sit in a single-particle state of energy " <>
+      "epsilon: Bose-Einstein (bosons, no cap), Fermi-Dirac (fermions, " <>
+      "capped at exactly one per state by the Pauli exclusion principle), " <>
+      "and Maxwell-Boltzmann (the classical limit both quantum " <>
+      "distributions reduce to when energy far exceeds the thermal " <>
+      "scale kT). fermi_sea mode shows the textbook zero-temperature " <>
+      "limit: a sharp step function, exactly filled below the Fermi " <>
+      "energy and exactly empty above it, blurring into a smooth " <>
+      "exponential tail as temperature rises.",
+    "listening_guide" ->
+      "One chord per temperature step, coldest to warmest. Listen for a " <>
+      "bright, sharply-defined texture at the coldest step \[LongDash] " <>
+      "the step function \[LongDash] softening into a duller, more even " <>
+      "wash of sound as temperature rises and the step blurs. Then try " <>
+      "spectrum mode (all three distributions at once, as three " <>
+      "differently-panned voices) and temperature mode (the same three " <>
+      "voices swept over temperature instead of energy).",
+    "primary_wav" -> "quantum_statistics_fermi_sea.wav",
+    "primary_wav_label" -> "Listen \[LongDash] Fermi sea, T-0 step sharpening to blurring",
+    "secondary_wavs" -> {
+      <| "file" -> "quantum_statistics_spectrum.wav",
+         "label" -> "Listen \[LongDash] three distributions at once, T=300K" |>,
+      <| "file" -> "quantum_statistics_temperature.wav",
+         "label" -> "Listen \[LongDash] three distributions swept over temperature" |>
+    },
+    "gif" -> "quantum_statistics_fermi_sea.gif",
+    "gif_static" -> False,
+    "gif_alt" ->
+      "A curve that starts as a sharp step \[LongDash] flat near 1 then " <>
+      "dropping suddenly to flat near 0 \[LongDash] and gradually smooths " <>
+      "into a gentle, gradual slope as temperature rises through several " <>
+      "animated frames.",
+    "cli" -> "wolframscript -file quantum_statistics/main.wl -- --simulation.mode=fermi_sea",
+    "github_path" -> "quantum_statistics",
+    "listening_guide_note" ->
+      "New to this app? See quantum_statistics/LISTENING_GUIDE.md for " <>
+      "the recommended listening sequence across all three modes."
   |>,
 
   "montecarlo" -> <|
@@ -1682,7 +1733,7 @@ Export[$demoHtmlOut, $html, "Text"];
 Print[""];
 STEMHeading["Summary"];
 STEMPrintN["Apps with complete outputs", $nComplete, "", 2];
-Print["  (demo.wl runs 31 passes total, 30 unique apps \[LongDash] dynamical counts twice)"];
+Print["  (demo.wl runs 32 passes total, 31 unique apps \[LongDash] dynamical counts twice)"];
 If[$nIncomplete > 0,
   STEMPrintN["Apps with missing outputs", $nIncomplete, "", 2];
   Print["  (see [WARNING] lines above for which files were missing per app)"]
