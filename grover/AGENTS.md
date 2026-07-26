@@ -275,7 +275,7 @@ mode's own configured `N`):
 5. **`tolerance_?NumericQ:0.05`-style optional-argument patterns parse
    WRONG** in WL — binds as `tolerance_ ? (NumericQ:0.05)`, not
    `Optional[tolerance_?NumericQ, 0.05]`. Same pitfall documented in
-   every prior v1.5.0/v1.6.0 app's `AGENTS.md`; avoided throughout via
+   every prior v1.5.0 app's `AGENTS.md`; avoided throughout via
    explicit `Optional[x_?NumericQ, default]`.
 
 ## Dependencies

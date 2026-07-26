@@ -223,7 +223,7 @@ representative superposition for the Born-rule check):
 1. **`tolerance_?NumericQ:0.05`-style optional-argument patterns parse
    WRONG** in WL — binds as `tolerance_ ? (NumericQ:0.05)`, not
    `Optional[tolerance_?NumericQ, 0.05]`. Same pitfall documented in
-   every prior v1.5.0/v1.6.0 app's `AGENTS.md`; this app avoids it by
+   every prior v1.5.0 app's `AGENTS.md`; this app avoids it by
    using plain `Optional[x_?NumericQ, default]` or dropping the test
    (`x_:default`) throughout.
 2. **`ToString[x]` on a machine real keeps only ~6 significant digits**

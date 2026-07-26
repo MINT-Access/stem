@@ -48,7 +48,7 @@ ExportFermiSeaCSV[model_Association, outCSV_String] :=
 
 
 (* PrintCorrectnessChecks — "Checks: 1[PASS] 2[FAIL] ..." line, consistent
-   with the style used across the v1.5.0/v1.6.0 apps. *)
+   with the style used across the v1.5.0 apps. *)
 PrintCorrectnessChecks[classicalChk_Association, boundChk_Association,
                        stepChk_Association, divergeChk_Association] :=
   Print["  Checks: ",

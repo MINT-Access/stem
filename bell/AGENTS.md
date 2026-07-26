@@ -316,7 +316,7 @@ always at fixed canonical parameters (the derived-optimal CHSH angles):
 2. **`tolerance_?NumericQ:0.05`-style optional-argument patterns parse
    WRONG** in WL — binds as `tolerance_ ? (NumericQ:0.05)`, not
    `Optional[tolerance_?NumericQ, 0.05]`. Same pitfall documented in
-   every prior v1.5.0/v1.6.0 app's `AGENTS.md`; this app avoids it by
+   every prior v1.5.0 app's `AGENTS.md`; this app avoids it by
    using `Optional[x_?NumericQ, default]` explicitly throughout.
 3. **A local hidden-variable model can have ZERO sampling variance at
    specific angle settings** — see design decision 4's final

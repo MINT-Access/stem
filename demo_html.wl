@@ -90,7 +90,7 @@ $genDate     = DateString[];
    more; clt already immediately precedes thermo here, so this is a
    pure insertion.
 
-   v1.6.0 adds "qubit" immediately after "quantum", before "hydrogen" --
+   v1.5.0 adds "qubit" immediately after "quantum", before "hydrogen" --
    from a coherent-state wave packet in a harmonic potential to the
    simplest quantum system of all, a single driven qubit, one step
    before hydrogen's exact atomic spectrum; "quantum" already
@@ -106,7 +106,7 @@ $genDate     = DateString[];
 
    "grover" follows immediately after "bell", before "hydrogen" -- from
    two entangled qubits to a genuine quantum algorithm built from the
-   same machinery, completing the v1.6.0 batch, still one step before
+   same machinery, completing the v1.5.0 batch, still one step before
    hydrogen's exact atomic spectrum; "bell" already immediately
    precedes "hydrogen" here, so this is a pure insertion too, the same
    pattern once more.

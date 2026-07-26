@@ -53,7 +53,7 @@ ExportZoomCSV[model_Association, outCSV_String] :=
 
 
 (* PrintCorrectnessChecks — "Checks: 1[PASS] 2[FAIL] ..." line, consistent
-   with the style used across the v1.5.0/v1.6.0 apps. *)
+   with the style used across the v1.5.0 apps. *)
 PrintCorrectnessChecks[escapeChk_Association, memberChk_Association,
                        cardioidChk_Association, complexityChk_Association] :=
   Print["  Checks: ",

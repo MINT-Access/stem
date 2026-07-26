@@ -48,7 +48,7 @@ Print[""];
 
 (* ── Correctness checks — always at fixed canonical parameters,
    independent of the active mode's own configured parameters, the
-   same convention every prior v1.5.0/v1.6.0 app's checks section
+   same convention every prior v1.5.0 app's checks section
    uses. ── *)
 Print["[1/5] Correctness checks..."];
 STEMSay["Running correctness checks"];

@@ -50,7 +50,7 @@ ExportMeasurementCSV[trialsResult_Association, outCSV_String] :=
 
 
 (* PrintCorrectnessChecks — "Checks: 1[PASS] 2[FAIL] ..." line,
-   consistent with the style used across the v1.5.0/v1.6.0 apps. *)
+   consistent with the style used across the v1.5.0 apps. *)
 PrintCorrectnessChecks[unitaryChk_Association, blochChk_Association,
                        rabiChk_Association, bornChk_Association] :=
   Print["  Checks: ",

@@ -43,7 +43,7 @@ ExportGeometryCSV[model_Association, outCSV_String] :=
 
 
 (* PrintCorrectnessChecks — "Checks: 1[PASS] 2[FAIL] ..." line, consistent
-   with the style used across the v1.5.0/v1.6.0 apps. *)
+   with the style used across the v1.5.0 apps. *)
 PrintCorrectnessChecks[rotChk_Association, optKChk_Association,
                        unitaryChk_Association, closedFormChk_Association] :=
   Print["  Checks: ",
