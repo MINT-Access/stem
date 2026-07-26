@@ -1,6 +1,6 @@
 # STEM Apps — Quick Reference
 
-All twenty-one apps share the same invocation pattern and config system. This
+All thirty-two apps share the same invocation pattern and config system. This
 document covers CLI options, modes, config keys, and output files for each.
 
 ---
@@ -30,6 +30,17 @@ document covers CLI options, modes, config keys, and output files for each.
 | `scattering` | Rutherford alpha-particle scattering | `scatter`, `distribution`, `discovery` | `output/` | No |
 | `resonance` | Orbital resonance | `galilean`, `kirkwood`, `saturn` | `output/` | No |
 | `fluid` | Kármán vortex street | `karman`, `strouhal`, `flag` | `output/` | No |
+| `blackbody` | Planck black body radiation | `spectrum`, `temperature`, `star` | `output/` | No |
+| `compton` | Compton scattering | `scatter`, `sweep`, `energy`, `discovery` | `output/` | No |
+| `quantum_tunnelling` | Quantum tunnelling | `barrier`, `sweep`, `energy` | `output/` | No |
+| `clt` | Central Limit Theorem | `sweep`, `compare`, `dice` | `output/` | No |
+| `henon` | Hénon map (2D chaotic attractor) | `attractor`, `sweep`, `reverse` | `output/` | No |
+| `brownian` | Brownian motion | `walk`, `ensemble`, `temperature` | `output/` | No |
+| `qubit` | Single qubit (Bloch sphere, gates) | `gates`, `rabi`, `measurement` | `output/` | No |
+| `bell` | Entanglement / Bell correlations | `correlations`, `chsh`, `measurement` | `output/` | No |
+| `grover` | Grover's search algorithm | `search`, `compare`, `geometry` | `output/` | No |
+| `quantum_statistics` | Bose-Einstein/Fermi-Dirac/Maxwell-Boltzmann | `spectrum`, `temperature`, `fermi_sea` | `output/` | No |
+| `mandelbrot` | Mandelbrot/Julia sets | `mandelbrot`, `julia`, `zoom` | `output/` | No |
 
 ---
 
@@ -42,7 +53,7 @@ $HardcodedDefaults → config/config.json → <app>/config.json → CLI --key=va
 ```
 
 Keys use dot notation for nesting. CLI overrides accept both
-`--key.subkey=value` and `--key.subkey value` (space form) — all 21 apps
+`--key.subkey=value` and `--key.subkey value` (space form) — all 32 apps
 support both conventions.
 Dump the active config without running the simulation:
 
@@ -1355,3 +1366,623 @@ wolframscript -file fluid/main.wl -- --simulation.fluid.duration=80
   (dedicated 12-period check vs 0.15*U/flagLength within 20%).
 - See [`fluid/LISTENING_GUIDE.md`](../fluid/LISTENING_GUIDE.md) for the
   recommended listening sequence.
+
+---
+
+## blackbody
+
+Sonifies Planck black body radiation: a photon-frequency spectrum sweep,
+a temperature sweep (Wien's displacement law + Stefan-Boltzmann law),
+and a tour of six named stars/remnants.
+
+**Run:**
+```sh
+wolframscript -file blackbody/main.wl                                          # spectrum (default), solar temperature
+wolframscript -file blackbody/main.wl -- --simulation.mode=temperature         # 2500K-40000K sweep
+wolframscript -file blackbody/main.wl -- --simulation.mode=star --simulation.blackbody.preset=rigel
+wolframscript -file blackbody/main.wl -- --simulation.blackbody.temperature=3200
+```
+
+**Key config keys (`blackbody/config.json`):**
+
+| Key | Default | Description |
+|-----|---------|-------------|
+| `simulation.mode` | `"spectrum"` | `"spectrum"`, `"temperature"`, or `"star"` |
+| `simulation.blackbody.temperature` | `5778` | Fixed temperature, K (spectrum mode) |
+| `simulation.blackbody.temp_min` / `temp_max` | `2500` / `40000` | Temperature sweep range, K (temperature mode) |
+| `simulation.blackbody.n_steps` | `100` | Temperature steps (temperature mode) |
+| `simulation.blackbody.preset` | `"sun"` | Named star (star mode): `red_dwarf`, `betelgeuse`, `sun`, `sirius_a`, `rigel`, `white_dwarf`, or `all` for the full tour |
+| `simulation.blackbody.freq_min` / `freq_max` | `1e6` / `1e19` | Physical frequency domain, Hz (all modes) |
+| `simulation.blackbody.n_bins` | `64` | Spectral bins (all modes) |
+| `simulation.blackbody.audio_freq_min` / `audio_freq_max` | `100` / `4000` | Audio pitch range, Hz (all modes) |
+| `simulation.blackbody.chord_duration` | `4.0` | Chord duration, seconds (spectrum, star single preset) |
+| `simulation.blackbody.note_duration` | `0.08` | Sweep note length, seconds (spectrum, star single preset) |
+| `simulation.blackbody.frame_duration` | `0.12` | Seconds per temperature step (temperature mode) |
+| `simulation.blackbody.tour_segment_duration` | `2.5` | Seconds per star (star mode, `preset=all`) |
+
+**Output files:**
+
+| File | Description |
+|------|-------------|
+| `output/spectrum_audio.wav` | Chord + radio-to-X-ray sweep |
+| `output/spectrum.gif` / `.png` | Animated sweep marker / static curve, visible band shaded |
+| `output/spectrum_data.csv` | Per-bin: frequency, wavelength, relative radiance, audio frequency |
+| `output/temperature_audio.wav` | Per-step frames, Wien's-law peak marker, Stefan-Boltzmann loudness |
+| `output/temperature.gif` / `.png` | Animated curve shifting/broadening / composite of representative curves |
+| `output/temperature_data.csv` | Per-step: temperature, peak frequency/wavelength, loudness scale |
+| `output/star_audio.wav` | Single-preset chord+sweep, or full spoken tour (`preset=all`) |
+| `output/star.gif` / `.png` | Single-preset animation/plot, or all-preset tour/composite |
+| `output/star_data.csv` | Single-preset bin table, or per-preset long-format table |
+
+**Notes:**
+- Spectrum mode's spectral envelope reuses `thermo/`'s additive-synthesis
+  technique; the chord-then-sweep structure matches `hydrogen/spectrum`.
+- Four correctness checks run on every invocation: the Rayleigh-Jeans
+  low-frequency limit, the Wien high-frequency limit, Wien's displacement
+  law (numerically located peak vs. `b`), and the Stefan-Boltzmann `T^4`
+  law (numerically integrated).
+- See [`blackbody/LISTENING_GUIDE.md`](../blackbody/LISTENING_GUIDE.md) for
+  the recommended four-step listening sequence.
+
+---
+
+## compton
+
+Sonifies Compton scattering: a single collision event, a continuous
+angle-sweep glissando, an incident-energy sweep across the electron rest
+energy, and a binaural Thomson-vs-Compton historical comparison.
+
+**Run:**
+```sh
+wolframscript -file compton/main.wl                                       # scatter (default), 71pm at 90 degrees
+wolframscript -file compton/main.wl -- --simulation.mode=sweep            # continuous angle glissando
+wolframscript -file compton/main.wl -- --simulation.mode=energy           # 1 keV - 5 MeV incident-energy sweep
+wolframscript -file compton/main.wl -- --simulation.mode=discovery        # Thomson vs Compton, binaural
+wolframscript -file compton/main.wl -- --simulation.compton.angle_deg=180
+```
+
+**Key config keys (`compton/config.json`):**
+
+| Key | Default | Description |
+|-----|---------|-------------|
+| `simulation.mode` | `"scatter"` | `"scatter"`, `"sweep"`, `"energy"`, or `"discovery"` |
+| `simulation.compton.wavelength_pm` | `71.0` | Incident photon wavelength, pm (scatter, sweep, discovery) |
+| `simulation.compton.angle_deg` | `90` | Scattering angle, degrees (scatter, energy) |
+| `simulation.compton.angle_min` / `angle_max` | `0` / `180` | Angle sweep range, degrees (sweep, discovery) |
+| `simulation.compton.energy_min_kev` / `energy_max_kev` | `1` / `5000` | Incident-energy sweep range, keV (energy mode; also the shared pitch-mapping domain for all modes) |
+| `simulation.compton.n_steps` | `100` | Sweep resolution (sweep, energy, discovery) |
+| `simulation.compton.audio_freq_min` / `audio_freq_max` | `200` / `3000` | Audio pitch range, Hz (all modes) |
+| `simulation.compton.frame_duration` | `0.1` | Seconds per dyad frame (energy mode) |
+| `simulation.compton.sweep_duration` | `6.0` | Sweep duration, seconds (sweep mode) |
+| `simulation.compton.discovery_duration` | `8.0` | Duration, seconds (discovery mode) |
+
+**Output files:**
+
+| File | Description |
+|------|-------------|
+| `output/scatter_audio.wav` | Narrated incoming/collision/outgoing/recoil sequence |
+| `output/scatter.gif` / `.png` | Animated / static collision diagram |
+| `output/scatter_data.csv` | Incident/scattered wavelength & energy, angle, recoil energy |
+| `output/sweep_audio.wav` | Continuous angle-sweep glissando |
+| `output/sweep.gif` / `.png` | Animated / static `Delta_lambda` vs. angle curve |
+| `output/sweep_data.csv` | Per-step: angle, `Delta_lambda`, outgoing energy, pan |
+| `output/energy_audio.wav` | Incident-energy sweep, dyad chords, 511 keV accent |
+| `output/energy.gif` / `.png` | Animated / static fractional-energy-loss curve |
+| `output/energy_data.csv` | Per-step: incident/outgoing energy, fractional shift |
+| `output/discovery_audio.wav` | Binaural Thomson (left) vs Compton (right) |
+| `output/discovery.png` | Overlaid classical-flat and Compton-curved predictions |
+| `output/discovery_data.csv` | Per-step: angle, Thomson wavelength, Compton wavelength |
+
+**Notes:**
+- Sweep mode's continuous glissando reuses `relativity/`'s chirp
+  phase-accumulation technique; discovery mode reuses
+  `scattering/discovery`'s binaural classical-vs-quantum structure.
+- Four correctness checks run on every invocation: the forward-scattering
+  limit, the backscatter limit, the Thomson (low-energy) limit, and
+  energy-momentum conservation (two independent computations).
+- See [`compton/LISTENING_GUIDE.md`](../compton/LISTENING_GUIDE.md) for
+  the recommended five-step listening sequence.
+
+---
+
+## quantum_tunnelling
+
+Sonifies quantum tunnelling: a single barrier-crossing event, a
+barrier-width sweep, and an incident-energy sweep across the barrier
+height into the perfect-transmission resonance regime.
+
+**Run:**
+```sh
+wolframscript -file quantum_tunnelling/main.wl                                              # barrier (default)
+wolframscript -file quantum_tunnelling/main.wl -- --simulation.quantum_tunnelling.preset=stm
+wolframscript -file quantum_tunnelling/main.wl -- --simulation.quantum_tunnelling.preset=alpha_decay
+wolframscript -file quantum_tunnelling/main.wl -- --simulation.mode=sweep                   # barrier-width sweep
+wolframscript -file quantum_tunnelling/main.wl -- --simulation.mode=energy                  # energy sweep across V0
+```
+
+**Key config keys (`quantum_tunnelling/config.json`):**
+
+| Key | Default | Description |
+|-----|---------|-------------|
+| `simulation.mode` | `"barrier"` | `"barrier"`, `"sweep"`, or `"energy"` |
+| `simulation.quantum_tunnelling.preset` | `"default"` | Named preset (barrier mode): `default`, `stm`, `alpha_decay`, or `manual` |
+| `simulation.quantum_tunnelling.energy_ev` | `1.0` | Particle energy, eV (barrier `preset=manual`; sweep/energy's fixed companion value) |
+| `simulation.quantum_tunnelling.barrier_height_ev` | `2.0` | Barrier height V0, eV (barrier `preset=manual`, sweep, energy) |
+| `simulation.quantum_tunnelling.barrier_width_nm` | `0.5` | Barrier width L, nm (barrier `preset=manual`, energy) |
+| `simulation.quantum_tunnelling.mass_ev` | `510998.95` | Particle rest mass, eV (barrier `preset=manual`, sweep, energy; default is the electron) |
+| `simulation.quantum_tunnelling.width_min_nm` / `width_max_nm` | `0.1` / `3.0` | Barrier-width sweep range, nm (sweep mode) |
+| `simulation.quantum_tunnelling.energy_min_ev` / `energy_max_ev` | `0.1` / `6.0` | Incident-energy sweep range, eV (energy mode) |
+| `simulation.quantum_tunnelling.n_steps` | `100` | Sweep resolution (sweep, energy) |
+| `simulation.quantum_tunnelling.audio_freq_min` / `audio_freq_max` | `150` / `2500` | Audio pitch range, Hz (all modes) |
+| `simulation.quantum_tunnelling.sweep_duration` | `6.0` | Sweep duration, seconds (sweep mode) |
+| `simulation.quantum_tunnelling.energy_duration` | `8.0` | Duration, seconds (energy mode) |
+
+**Output files:**
+
+| File | Description |
+|------|-------------|
+| `output/barrier_audio.wav` | Narrated single-event sequence (reflected + transmitted, simultaneous) |
+| `output/barrier.gif` / `.png` | Animated / static incoming/barrier/reflected/transmitted diagram |
+| `output/barrier_data.csv` | Preset, E, V0, L, mass, T, R, regime |
+| `output/sweep_audio.wav` | Continuous barrier-width-sweep fade |
+| `output/sweep.gif` / `.png` | Animated / static `T` vs. width curve (log-y) |
+| `output/sweep_data.csv` | Per-step: width, T, R |
+| `output/energy_audio.wav` | Continuous energy sweep, `E=V0` accent, resonance wobble |
+| `output/energy.gif` / `.png` | Animated / static `T` vs. energy curve spanning both regimes |
+| `output/energy_data.csv` | Per-step: energy, T, R, regime |
+
+**Notes:**
+- Barrier mode reuses `compton/scatter`'s discrete narrated-event idiom;
+  sweep mode's log-compressed loudness reuses `blackbody/temperature`'s
+  technique for the same reason (an exponentially collapsing quantity).
+- Four correctness checks run on every invocation: the `L->0` limit, the
+  deep-tunnelling asymptotic, the resonance condition (`T=1` at
+  `k*L=Pi`), and probability conservation (`T+R=1`).
+- See [`quantum_tunnelling/LISTENING_GUIDE.md`](../quantum_tunnelling/LISTENING_GUIDE.md)
+  for the recommended four-step listening sequence.
+
+---
+
+## clt
+
+Sonifies the Central Limit Theorem: a sample-mean sweep for one source
+distribution, a standardized binaural comparison of two sources, and the
+sum of N fair dice.
+
+**Run:**
+```sh
+wolframscript -file clt/main.wl                                        # sweep (default), uniform source
+wolframscript -file clt/main.wl -- --simulation.mode=compare           # binaural: uniform vs exponential
+wolframscript -file clt/main.wl -- --simulation.mode=dice              # sum of N fair dice
+wolframscript -file clt/main.wl -- --simulation.clt.source=bernoulli
+```
+
+**Key config keys (`clt/config.json`):**
+
+| Key | Default | Description |
+|-----|---------|-------------|
+| `simulation.mode` | `"sweep"` | `"sweep"`, `"compare"`, or `"dice"` |
+| `simulation.clt.source` | `"uniform"` | Source distribution (sweep mode): `"uniform"`, `"exponential"`, or `"bernoulli"` |
+| `simulation.clt.bernoulli_p` | `0.5` | Coin bias (sweep/compare, `bernoulli` source only) |
+| `simulation.clt.source_left` / `source_right` | `"uniform"` / `"exponential"` | Left/right channel sources (compare mode) |
+| `simulation.clt.n_max` | `30` (sweep/compare; dice mode uses its own inline default of `10`) | Highest N swept — not declared in config.json |
+| `simulation.clt.n_samples` | `5000` | Monte Carlo samples per N (all modes) |
+| `simulation.clt.n_bins` | `48` | Spectral envelope resolution (all modes) |
+| `simulation.clt.audio_freq_min` / `audio_freq_max` | `100` / `4000` | Audio pitch range, Hz (all modes) |
+| `simulation.clt.frame_duration` | `0.2` | Seconds per N step (all modes) |
+| `simulation.clt.random_seed` | `42` | RNG seed (all modes) |
+
+**Output files:**
+
+| File | Description |
+|------|-------------|
+| `output/sweep_audio.wav` | Narrowing-and-smoothing spectral sweep, N=1..n_max |
+| `output/sweep.gif` / `.png` | Animated sample-mean histogram / small-multiple snapshots |
+| `output/sweep_data.csv` | N, empirical mean, empirical variance, per-bin density |
+| `output/compare_audio.wav` | Binaural standardized-shape convergence |
+| `output/compare.gif` / `.png` | Animated overlaid standardized densities / static overlay at n_max |
+| `output/compare_data.csv` | N, both channels' empirical standardized moments |
+| `output/dice_audio.wav` | Flat-to-bell-shaped dice-sum sweep |
+| `output/dice.gif` / `.png` | Animated dice-sum bar chart / small-multiple snapshots |
+| `output/dice_data.csv` | N, sum value, empirical probability, exact probability (N=1,2) |
+
+**Notes:**
+- Sweep/compare's additive spectral synthesis reuses `thermo/`'s
+  Maxwell-Boltzmann-sweep and `bayes/`'s posterior-narrowing technique.
+- Every density is built via Monte Carlo; exact closed forms (Irwin-Hall,
+  dice combinatorics) are used only as independent references for the
+  correctness checks, never as the sonification path.
+- Four correctness checks run on every invocation: variance scaling
+  (`sigma^2/N`), the Irwin-Hall exact density, dice-sum exact
+  combinatorics, and kurtosis-decay rate.
+- See [`clt/LISTENING_GUIDE.md`](../clt/LISTENING_GUIDE.md) for the
+  recommended four-step listening sequence.
+
+---
+
+## henon
+
+Sonifies the Hénon map — a 2D invertible chaotic attractor built as a
+simplified Poincaré section of the Lorenz attractor. Three modes: the
+canonical strange attractor, a period-doubling parameter sweep, and an
+exact-inverse-map demonstration.
+
+**Run:**
+```sh
+wolframscript -file henon/main.wl                               # attractor (default), a=1.4, b=0.3
+wolframscript -file henon/main.wl -- --simulation.mode=sweep    # period-doubling route to chaos, a 0.2->1.4
+wolframscript -file henon/main.wl -- --simulation.mode=reverse  # forward / reversed / exact-inverse demo
+wolframscript -file henon/main.wl -- --simulation.henon.a=1.2
+```
+
+**Key config keys (`henon/config.json`):**
+
+| Key | Default | Description |
+|-----|---------|-------------|
+| `simulation.mode` | `"attractor"` | `"attractor"`, `"sweep"`, or `"reverse"` |
+| `simulation.henon.a` / `b` | `1.4` / `0.3` | Map parameters (attractor, reverse; `b` also fixed for sweep) |
+| `simulation.henon.x0` / `y0` | `0.1` / `0.1` | Initial condition before the transient (all modes) |
+| `simulation.henon.n_transient` | `500` | Discarded transient iterations (all modes) |
+| `simulation.henon.n_points` | `2000` | Recorded attractor points (attractor mode) |
+| `simulation.henon.a_min` / `a_max` | `0.2` / `1.4` | Parameter sweep range (sweep mode) |
+| `simulation.henon.a_steps` | `250` | Sweep resolution (sweep mode) |
+| `simulation.henon.n_attractor` | `40` | Settled points recorded per sweep step (sweep mode) |
+| `simulation.henon.n_forward` | `40` | Forward segment length (reverse mode) |
+| `simulation.henon.reverse_steps` | `10` | Exact-inverse demonstration length (reverse mode) |
+| `simulation.henon.note_duration` | `0.08` | Seconds per note (sweep, reverse) |
+
+**Output files:**
+
+| File | Description |
+|------|-------------|
+| `output/henon_attractor.wav` | Narrated continuous-trajectory sonification |
+| `output/henon_attractor.gif` / `.png` | Growing point-cloud animation / full static attractor |
+| `output/henon_attractor.csv` | Per-iterate: n, x, y, pitch, pan, volume |
+| `output/henon_sweep.wav` | Discrete-note sweep with 3 landmark events |
+| `output/henon_sweep.gif` / `.png` | Animated / static bifurcation diagram |
+| `output/henon_sweep.csv` | Per-note: a, iteration index, x_n, y_n, pitch, pan, volume, event label |
+| `output/henon_reverse.wav` | Forward / reversed / inverse-demo three-phase audio |
+| `output/henon_reverse.png` | Overlay: forward path, highlighted subsequence, recovered inverse points |
+| `output/henon_reverse.csv` | Per-point: n, x, y, direction |
+
+**Notes:**
+- Attractor mode reuses `lorenz/`'s continuous-trajectory sonification
+  pipeline; sweep mode reuses `dynamical/sweep`'s discrete
+  note-per-iterate idiom.
+- Four correctness checks run on every invocation: the constant Jacobian
+  determinant (`det=-b`), the Lyapunov exponent sum (`log(b)`), the
+  largest Lyapunov exponent vs. the literature benchmark (~0.42), and
+  inverse-map exactness (forward-then-inverse round trip).
+- See [`henon/LISTENING_GUIDE.md`](../henon/LISTENING_GUIDE.md) for the
+  recommended listening sequence.
+
+---
+
+## brownian
+
+Sonifies Brownian motion: a single random walk, an ensemble's sqrt(t)
+RMS-displacement law, and the Stokes-Einstein temperature dependence of
+the diffusion coefficient.
+
+**Run:**
+```sh
+wolframscript -file brownian/main.wl                                   # walk (default), 1 micron particle, room temp
+wolframscript -file brownian/main.wl -- --simulation.mode=ensemble     # 150 walkers, sqrt(t) law
+wolframscript -file brownian/main.wl -- --simulation.mode=temperature  # D(T) via Stokes-Einstein, 275K-350K
+wolframscript -file brownian/main.wl -- --simulation.brownian.particle_radius_um=5.0
+```
+
+**Key config keys (`brownian/config.json`):**
+
+| Key | Default | Description |
+|-----|---------|-------------|
+| `simulation.mode` | `"walk"` | `"walk"`, `"ensemble"`, or `"temperature"` |
+| `simulation.brownian.particle_radius_um` | `1.0` | Particle radius, microns (walk, ensemble, temperature) |
+| `simulation.brownian.viscosity_pa_s` | `0.001` | Fluid dynamic viscosity, Pa·s (walk, ensemble, temperature; water at room temp) |
+| `simulation.brownian.temperature_k` | `293.15` | Fixed temperature, K (walk, ensemble) |
+| `simulation.brownian.n_steps` | `2000` | Steps per walk (walk, ensemble) |
+| `simulation.brownian.dt` | `0.01` | Time step, seconds (all modes) |
+| `simulation.brownian.n_walkers` | `150` | Ensemble size (ensemble mode) |
+| `simulation.brownian.temp_min` / `temp_max` | `275.0` / `350.0` | Temperature sweep range, K (temperature mode) |
+| `simulation.brownian.n_temp_steps` | `6` | Temperature steps (temperature mode) |
+| `simulation.brownian.n_steps_per_frame` | `40` | Per-step snippet length (temperature mode) |
+| `simulation.brownian.frame_duration` | `3.0` | Seconds per snippet (temperature mode) |
+| `simulation.brownian.seed` | `7` | RNG seed (all modes) |
+
+**Output files:**
+
+| File | Description |
+|------|-------------|
+| `output/brownian_walk.wav` | Narrated continuous-trajectory sonification |
+| `output/brownian_walk.gif` / `.png` | Growing path animation / full static path, colour-graded by time |
+| `output/brownian_walk.csv` | Per-step: n, t, x, y, r |
+| `output/brownian_ensemble.wav` | Rising glissando tracking ensemble RMS(t) |
+| `output/brownian_ensemble.png` | RMS(t) vs. individual walkers vs. sqrt(4Dt) theory |
+| `output/brownian_ensemble.csv` | Per-step: n, t, ensemble RMS, ensemble MSD, sample walker r(t) columns |
+| `output/brownian_temperature.wav` | Per-temperature-step audio, coldest to hottest |
+| `output/brownian_temperature.png` | Small-multiples panel, one representative walk per temperature |
+| `output/brownian_temperature.csv` | Per-step: T, D, final/max/RMS displacement |
+
+**Notes:**
+- Walk mode reuses `lorenz/`'s and `henon/attractor`'s continuous-trajectory
+  pipeline (volume from displacement-from-origin rather than speed);
+  ensemble mode reuses `compton/sweep`'s and `relativity/`'s
+  phase-accumulation glissando; temperature mode reuses
+  `thermo/distribution`'s per-step-frame concatenation.
+- Four correctness checks run on every invocation: MSD scaling
+  (`<r^2(t)>` vs. `4Dt`), the Stokes-Einstein realistic scale, exact-zero
+  excess kurtosis at N=8, and sqrt(t) growth shape.
+- See [`brownian/LISTENING_GUIDE.md`](../brownian/LISTENING_GUIDE.md) for
+  the recommended listening sequence.
+
+---
+
+## qubit
+
+Sonifies a single qubit: the Bloch sphere, gate operations, Rabi
+oscillation, and Born-rule measurement. The foundational app of a small
+quantum-computing batch — `bell/` and `grover/` build directly on it.
+
+**Run:**
+```sh
+wolframscript -file qubit/main.wl                                          # gates (default), H,T,H,S,X on |0>
+wolframscript -file qubit/main.wl -- --simulation.mode=rabi                # continuous Rabi oscillation
+wolframscript -file qubit/main.wl -- --simulation.mode=measurement         # 2000 Born-rule measurements
+wolframscript -file qubit/main.wl -- --simulation.qubit.gate_sequence='["H"]'
+```
+
+**Key config keys (`qubit/config.json`):**
+
+| Key | Default | Description |
+|-----|---------|-------------|
+| `simulation.mode` | `"gates"` | `"gates"`, `"rabi"`, or `"measurement"` |
+| `simulation.qubit.gate_sequence` | `["H","T","H","S","X"]` | Gate sequence applied to `\|0>` (gates mode) |
+| `simulation.qubit.initial_theta_deg` / `initial_phi_deg` | `0.0` / `0.0` | Initial Bloch-sphere angles (gates mode; default is `\|0>`) |
+| `simulation.qubit.n_steps_per_gate` | `30` | Animation/trajectory resolution per gate (gates mode) |
+| `simulation.qubit.rabi_frequency` | `1.5` | Rabi frequency Omega (rabi mode) |
+| `simulation.qubit.rabi_duration` | `10.0` | Simulation duration (rabi mode) |
+| `simulation.qubit.n_trials` | `2000` | Independent measurements (measurement mode) |
+| `simulation.qubit.measurement_theta_deg` / `measurement_phi_deg` | `90.0` / `0.0` | State to measure (measurement mode; default is equal superposition) |
+| `simulation.qubit.seed` | `7` | RNG seed (measurement mode) |
+
+**Output files:**
+
+| File | Description |
+|------|-------------|
+| `output/qubit_gates.wav` | Narrated continuous Bloch-vector rotation, per-gate accents |
+| `output/qubit_gates.gif` / `.png` | Animated / full static 3D Bloch sphere with traced path |
+| `output/qubit_gates.csv` | Per-gate: gate name, resulting state, Bloch coordinates |
+| `output/qubit_rabi.wav` | Continuous pitch-glissando tracking P(1)(t) |
+| `output/qubit_rabi.png` | P(1)(t) curve |
+| `output/qubit_rabi.csv` | Per-sample: t, P(0), P(1) |
+| `output/qubit_measurement.wav` | Continuous pitch-glissando tracking the running frequency |
+| `output/qubit_measurement.png` | Running empirical P(0) vs. trial, true value dashed |
+| `output/qubit_measurement.csv` | Per-trial: trial number, outcome, running P(0) |
+
+**Notes:**
+- Gates mode reuses `lorenz/`'s and `henon/attractor`'s continuous-trajectory
+  pipeline (the Bloch vector `{x,y,z}` maps directly onto the trajectory's
+  spatial columns); rabi/measurement reuse the phase-accumulation
+  glissando technique.
+- Four correctness checks run on every invocation: gate unitarity
+  (`U^dagger U=I`), Bloch length conservation (`|r|=1` after every gate),
+  the Rabi formula vs. an independent `NDSolve` integration, and the Born
+  rule via Monte Carlo (20000 trials).
+- See [`qubit/LISTENING_GUIDE.md`](../qubit/LISTENING_GUIDE.md) for the
+  recommended listening sequence.
+
+---
+
+## bell
+
+Sonifies two entangled qubits: Bell correlations, the CHSH inequality,
+and repeated Bell-state measurement — the EPR (1935) -> Bell's theorem
+(1964) -> Aspect (1980s) -> 2022 Nobel Prize story made audible.
+
+**Run:**
+```sh
+wolframscript -file bell/main.wl                                    # correlations (default), binaural sweep
+wolframscript -file bell/main.wl -- --simulation.mode=chsh          # the actual inequality-violating S, as a gauge
+wolframscript -file bell/main.wl -- --simulation.mode=measurement   # 2000 paired Born-rule measurements
+```
+
+**Key config keys (`bell/config.json`):**
+
+| Key | Default | Description |
+|-----|---------|-------------|
+| `simulation.mode` | `"correlations"` | `"correlations"`, `"chsh"`, or `"measurement"` |
+| `simulation.bell.n_steps` | `200` | Sweep resolution (correlations mode) |
+| `simulation.bell.b_angle_deg` | `0.0` | Bob's fixed angle; sweep is over Alice's angle difference from this (correlations mode) |
+| `simulation.bell.chsh_a_deg` / `chsh_ap_deg` | `-45.0` / `45.0` | Alice's two settings, derived-optimal (chsh mode) |
+| `simulation.bell.chsh_b_deg` / `chsh_bp_deg` | `0.0` / `90.0` | Bob's two settings, derived-optimal (chsh mode) |
+| `simulation.bell.alice_angle_deg` / `bob_angle_deg` | `-45.0` / `0.0` | Measurement angles (measurement mode) |
+| `simulation.bell.n_trials` | `2000` | Paired measurement trials (measurement mode) |
+| `simulation.bell.seed` | `11` | RNG seed (measurement mode) |
+
+**Output files:**
+
+| File | Description |
+|------|-------------|
+| `output/bell_correlations.wav` | Binaural: classical (left) vs quantum (right) correlation sweep |
+| `output/bell_correlations.gif` / `.png` | Animated / static `E(a,b)` curve, quantum vs classical overlay |
+| `output/bell_correlations.csv` | Per-step: angle difference, quantum E, classical E |
+| `output/bell_chsh.wav` | Narrated build-up + binaural classical/quantum verdict |
+| `output/bell_chsh.gif` / `.png` | Gauge animation / static final reading, S built up term by term |
+| `output/bell_chsh.csv` | The four correlation terms, S, and both bounds |
+| `output/bell_measurement.wav` | Binaural Alice/Bob outcome clicks, then running-correlation glissando |
+| `output/bell_measurement.png` | Running correlation estimate vs. trial, true value dashed |
+| `output/bell_measurement.csv` | Per-trial: trial number, Alice outcome, Bob outcome, running correlation |
+
+**Notes:**
+- Correlations/measurement reuse the phase-accumulation glissando
+  technique (`compton/sweep`, `relativity/`'s chirp, `qubit/rabi`);
+  correlations' binaural structure is a third member of the
+  `compton/discovery`/`scattering/discovery` classical-vs-quantum lineage.
+- Four correctness checks run on every invocation: Bell state
+  normalization, the quantum correlation formula (`E(a,b)=Cos[a-b]`) vs.
+  an independent diagonalisation-based computation, CHSH optimality
+  (derived angles give `2*Sqrt[2]`), and the local hidden-variable bound
+  (exhaustive enumeration of all 16 deterministic strategies plus a Monte
+  Carlo sweep).
+- See [`bell/LISTENING_GUIDE.md`](../bell/LISTENING_GUIDE.md) for the
+  recommended listening sequence.
+
+---
+
+## grover
+
+Sonifies Grover's search algorithm: the optimal-stopping search curve, a
+binaural classical-vs-quantum speedup race, and the algorithm's own
+literal 2D rotation geometry.
+
+**Run:**
+```sh
+wolframscript -file grover/main.wl                                  # search (default), N=64
+wolframscript -file grover/main.wl -- --simulation.mode=compare     # binaural classical-vs-quantum race
+wolframscript -file grover/main.wl -- --simulation.mode=geometry    # the literal 2D rotation, continuous
+```
+
+**Key config keys (`grover/config.json`):**
+
+| Key | Default | Description |
+|-----|---------|-------------|
+| `simulation.mode` | `"search"` | `"search"`, `"compare"`, or `"geometry"` |
+| `simulation.grover.n_items` | `64` | Database size N, must be a power of 2 (search, compare, geometry) |
+| `simulation.grover.marked_index` | `42` | Index of the marked item (search, compare, geometry) |
+| `simulation.grover.n_iterations` | `12` | Iterations to run, deliberately past the optimum (search, geometry) |
+| `simulation.grover.compare_n_min` / `compare_n_max` | `4.0` / `1048576.0` | Swept N range for the growing-gap chart (compare mode) |
+| `simulation.grover.compare_n_steps` | `100` | Sweep resolution (compare mode) |
+
+**Output files:**
+
+| File | Description |
+|------|-------------|
+| `output/grover_search.wav` | Discrete per-iteration notes, accent at the optimum |
+| `output/grover_search.gif` / `.png` | Animated / static `P(marked)` curve, rise then fall, optimum marked |
+| `output/grover_search.csv` | Per-iteration: iteration k, P(marked) |
+| `output/grover_compare.wav` | Binaural race: classical (left) vs quantum (right) |
+| `output/grover_compare.gif` / `.png` | Classical vs quantum query count, growing gap across N |
+| `output/grover_compare.csv` | N, classical queries, quantum queries |
+| `output/grover_geometry.wav` | Continuous rotation, pan/pitch phase-accumulated |
+| `output/grover_geometry.gif` / `.png` | 2D unit-circle rotation diagram, vector advancing |
+| `output/grover_geometry.csv` | Per-iteration: iteration, angle (rad), amplitude on marked state |
+
+**Notes:**
+- Geometry mode reuses the phase-accumulation technique (`compton/sweep`,
+  `bell/correlations`); compare mode's binaural race is the third member
+  of the `compton/discovery`/`scattering/discovery`/`bell/correlations`
+  classical-vs-quantum lineage.
+- Four correctness checks run on every invocation: the exact rotation
+  angle (the Grover operator, restricted to the `{|w>,|s'>}` subspace,
+  equals `RotationMatrix[2*theta]`), the exact optimal iteration count
+  (vs. direct period-windowed simulation, eight N values), operator
+  unitarity, and the closed form vs. direct matrix simulation.
+- See [`grover/LISTENING_GUIDE.md`](../grover/LISTENING_GUIDE.md) for the
+  recommended listening sequence.
+
+---
+
+## quantum_statistics
+
+Sonifies Bose-Einstein, Fermi-Dirac, and Maxwell-Boltzmann occupation
+numbers — the quantum/thermo bridge completing the connection `thermo/`'s
+classical Maxwell-Boltzmann speed distribution has always implied.
+
+**Run:**
+```sh
+wolframscript -file quantum_statistics/main.wl                                     # spectrum (default), T=300K
+wolframscript -file quantum_statistics/main.wl -- --simulation.mode=temperature    # all three vs T, fixed energy
+wolframscript -file quantum_statistics/main.wl -- --simulation.mode=fermi_sea      # Fermi-Dirac step vs T
+```
+
+**Key config keys (`quantum_statistics/config.json`):**
+
+| Key | Default | Description |
+|-----|---------|-------------|
+| `simulation.mode` | `"spectrum"` | `"spectrum"`, `"temperature"`, or `"fermi_sea"` |
+| `simulation.quantum_statistics.temperature` | `300.0` | Fixed temperature, K (spectrum mode) |
+| `simulation.quantum_statistics.temp_min` / `temp_max` | `100.0` / `50000.0` | Temperature sweep range, K (temperature, fermi_sea) |
+| `simulation.quantum_statistics.energy_min` / `energy_max` | `0.001` / `2.0` | Energy domain, eV (spectrum, fermi_sea) |
+| `simulation.quantum_statistics.reference_energy` | `1.0` | Fixed energy (temperature mode) / Fermi energy mu (fermi_sea mode), eV |
+| `simulation.quantum_statistics.n_steps` | `150` | Energy or temperature resolution (all modes) |
+| `simulation.quantum_statistics.n_temp_steps` | `6` | Temperature frames (fermi_sea mode) |
+
+**Output files:**
+
+| File | Description |
+|------|-------------|
+| `output/quantum_statistics_spectrum.wav` | Three simultaneous voices (BE/FD/MB), distinct pan+register |
+| `output/quantum_statistics_spectrum.gif` / `.png` | Animated / static three-curve overlay (log10 n vs energy) |
+| `output/quantum_statistics_spectrum.csv` | Per-step: energy, n_BE, n_FD, n_MB |
+| `output/quantum_statistics_temperature.wav` | Three voices swept continuously over T, log-compressed |
+| `output/quantum_statistics_temperature.gif` / `.png` | Animated / static three-curve overlay (log10 n vs log10 T) |
+| `output/quantum_statistics_temperature.csv` | Per-step: T, n_BE, n_FD, n_MB at the reference energy |
+| `output/quantum_statistics_fermi_sea.wav` | One spectral frame per T, sharp to blurred |
+| `output/quantum_statistics_fermi_sea.gif` / `.png` | Animated / overlaid FD(eps) step across T steps |
+| `output/quantum_statistics_fermi_sea.csv` | Energy, then one n_FD column per T |
+
+**Notes:**
+- Spectrum/temperature modes reuse `thermo/`'s additive spectral-envelope
+  technique (`SynthesizeAdditiveFrame`) as three simultaneous voices;
+  temperature mode also reuses `blackbody/temperature`'s log-compressed
+  loudness; fermi_sea reuses `thermo/distribution`'s per-T-frame
+  concatenation.
+- Four correctness checks run on every invocation: the classical-limit
+  exact identity, the Fermi-Dirac bound (`n_FD<1`), the T->0 Fermi step's
+  linear-in-`kT` transition width, and Bose-Einstein's divergence as
+  `eps->mu+` with its domain guard.
+- See [`quantum_statistics/LISTENING_GUIDE.md`](../quantum_statistics/LISTENING_GUIDE.md)
+  for the recommended listening sequence.
+
+---
+
+## mandelbrot
+
+Sonifies the Mandelbrot set, its Julia-set counterparts, and
+self-similarity at successively deeper magnifications, via the same
+Hilbert-curve traversal `images/` and `cosmology/sky` use.
+
+**Run:**
+```sh
+wolframscript -file mandelbrot/main.wl                                  # mandelbrot (default), classic set
+wolframscript -file mandelbrot/main.wl -- --simulation.mode=julia       # fixed c, sweep z0
+wolframscript -file mandelbrot/main.wl -- --simulation.mode=zoom        # four successively deeper magnifications
+```
+
+**Key config keys (`mandelbrot/config.json`):**
+
+| Key | Default | Description |
+|-----|---------|-------------|
+| `simulation.mode` | `"mandelbrot"` | `"mandelbrot"`, `"julia"`, or `"zoom"` |
+| `simulation.mandelbrot.max_iterations` | `300` | Escape-iteration cap (all modes) |
+| `simulation.mandelbrot.grid_size` | `64` | Grid side length, must be a power of 2 (all modes) |
+| `simulation.mandelbrot.julia_c_real` / `julia_c_imag` | `-0.123` / `0.745` | Fixed `c` (julia mode; the "Douady rabbit") |
+| `simulation.mandelbrot.zoom_center_real` / `zoom_center_imag` | `-0.743643887037151` / `0.131825904205330` | Zoom centre, a "seahorse valley" boundary point (zoom mode) |
+| `simulation.mandelbrot.zoom_levels` | `4` | Number of successive magnification levels (zoom mode) |
+
+**Output files:**
+
+| File | Description |
+|------|-------------|
+| `output/mandelbrot_mandelbrot.wav` | Per-pixel notes, Hilbert order, orientation clicks |
+| `output/mandelbrot_mandelbrot.gif` / `.png` | Animated Hilbert traversal / full rendered set |
+| `output/mandelbrot_mandelbrot.csv` | Hilbert index, c_real, c_imag, iteration count |
+| `output/mandelbrot_julia.wav` | Same per-pixel technique, swept over z0 instead of c |
+| `output/mandelbrot_julia.gif` / `.png` | Animated Hilbert traversal / full rendered Julia set |
+| `output/mandelbrot_julia.csv` | Hilbert index, z0_real, z0_imag, iteration count |
+| `output/mandelbrot_zoom.wav` | One combined WAV, a chime marks each new zoom level |
+| `output/mandelbrot_zoom.gif` / `.png` | Cycles through zoom levels / all levels shown side by side |
+| `output/mandelbrot_zoom.csv` | Level, magnification, Hilbert index, iteration count |
+
+**Notes:**
+- All three modes reuse `stem-core`'s `HilbertTraversalOrder` and
+  `images/`'s brightness-to-frequency log-mapping (iteration count
+  standing in for brightness).
+- Four correctness checks run on every invocation: the escape-radius
+  argument (six `(c,z)` test points), three exactly-knowable membership
+  facts (`c=0,-1,1`), the main cardioid's exact boundary (three points
+  straddling it), and the boundary's headline "most complex audio" claim,
+  quantified directly (mean pitch-jump 5.4x the interior's, 57.7x the
+  exterior's).
+- See [`mandelbrot/LISTENING_GUIDE.md`](../mandelbrot/LISTENING_GUIDE.md)
+  for the recommended listening sequence.
