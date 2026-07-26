@@ -1,6 +1,6 @@
 # stem
 
-[![Version](https://img.shields.io/badge/version-1.4.0-blue.svg)](RELEASE_NOTES_v1.4.0.md)
+[![Version](https://img.shields.io/badge/version-1.5.0-blue.svg)](RELEASE_NOTES_v1.5.0.md)
 [![Wolfram Language](https://img.shields.io/badge/Wolfram_Language-13%2B-DD1100.svg)](https://www.wolfram.com/engine/)
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](LICENSE)
 
@@ -379,7 +379,7 @@ Start-Process wmplayer signal\output\chord_narrative_full.wav
 Start-Process wmplayer pendulum\output\double_audio.wav
 ```
 
-See [RELEASE_NOTES_v1.4.0.md](RELEASE_NOTES_v1.4.0.md) for full app descriptions, physics notes, and listening guides.
+See [RELEASE_NOTES_v1.5.0.md](RELEASE_NOTES_v1.5.0.md) for full app descriptions, physics notes, and listening guides.
 
 ---
 
