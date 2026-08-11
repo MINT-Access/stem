@@ -76,6 +76,128 @@ both fail silently in terminal contexts on macOS.
 - A motion trail shows the recent path of the bob.
 - `ExportAnimation[solution, params, file, frameRate, speedup]`
   accepts optional frameRate (default 25) and speedup (default 1.0).
+- Plot bounds (`TrajectoryPlotRange`), image dimensions (`FrameImageSize`),
+  and marker sizes are all computed from the actual simulated trajectory,
+  not hardcoded — see "Animation framing" below for why, and for a
+  verification pattern worth reusing before adding any new animation.
+
+## Animation framing: the double-pendulum clipping bug (fixed post-v1.5.0)
+
+**The bug.** `double_animation.gif`'s default preset (angle1=120°,
+angle2=170°) clipped visible content — a rod, its joint, or the whole
+second bob — on 383/501 frames (76%). A sighted reviewer caught this
+before publication; nothing in the app's own tests or correctness
+checks would have, because those check physics (energy conservation,
+period, chaos sensitivity), not rendering.
+
+**Root cause.** `DoublePendulumFrame`/`PendulumFrame` used a hardcoded
+`PlotRange` sized by eyeballing one configuration, not derived from
+what the simulation actually produces. The double pendulum's default
+angles are energetic enough to make `theta1`/`theta2` accumulate past
+±360° (multiple full rotations, confirmed via `MinMax` on the solved
+trajectory) — legitimate, not a bug (see `DoubleEnergyConservationCheck`
+passing to ~1e-8 on the same run) — so the bob's actual swept region
+is close to the full physical disk of radius `L1+L2`, while the old
+fixed range (`{-2.3,2.3} x {-2.5,0.4}`) assumed a much smaller, mostly
+downward arc.
+
+**The fix — three parts, not one:**
+1. `TrajectoryPlotRange[xs, ys, maxReach]` computes bounds from *every*
+   (x,y) point of *both* bobs across the *entire* simulated trajectory
+   (not the frame-subsampled solution), adds a margin that's the larger
+   of 18% of the observed extent or 12% of `maxReach` (the fixed floor
+   keeps low-amplitude runs from looking cropped-tight), then clamps to
+   `maxReach*(1+renderPadFrac)` — `maxReach` (`L` for the simple
+   pendulum, `L1+L2` for the double) is the exact, trajectory-independent
+   kinematic limit, so this clamp can never itself be the source of a
+   clipping bug. Same logic drives both axes and both pendulum modes.
+2. `FrameImageSize` matches the raster's pixel aspect ratio to the
+   `PlotRange`'s data aspect ratio. This is *not* cosmetic: Graphics's
+   default `AspectRatio` (1/GoldenRatio) has nothing to do with the
+   `PlotRange`'s own aspect ratio, so a mismatched fixed `ImageSize` (as
+   the code had before) makes Mathematica **letterbox the plot inside
+   the raster using the same Background colour for the padding as for
+   the in-plot background** — invisibly. Confirmed empirically: a marker
+   placed exactly at the *old* `PlotRange`'s edge rendered ~147px away
+   from the actual image edge in a 900px-tall raster. Any bounding-box
+   check comparing content to the raw image edge would have reported a
+   huge, false margin on a badly-clipped frame. Matching the aspect
+   ratio removes the letterboxing, which is what makes part 3 below
+   meaningful. (Side benefit: bob/pivot disks had been rendering as
+   ellipses, not circles, under the old mismatched aspect — ~11px x 4px
+   for a nominally-round marker — now fixed too.)
+3. Bob/pivot marker radii, previously fixed data-unit constants (0.07,
+   0.04/0.055), now scale with `L` (simple) / `(L1+L2)/2` (double).
+   Framing is tight around the real trajectory now instead of a
+   one-size-fits-all oversized box, so a fixed-size marker would
+   otherwise look absurd for a short preset (`short_pendulum`, L=0.25m)
+   — a giant bob dwarfing its own rod — that the old oversized frame
+   used to mask by making everything look small.
+
+   **This introduced a real regression in its own first draft**, caught
+   only by re-running the Step-4 verification script below: making the
+   bob radius scale with `L` while leaving `TrajectoryPlotRange`'s
+   safety-clamp pad as a flat constant (0.12, sized for the L≈1 default)
+   meant `long_pendulum` (L=2, bob radius 0.07×2=0.14) had a bob bigger
+   than its own clamp pad — clipped at the bottom on 100/376 frames
+   (26.6%). Fixed by making the pad scale with `maxReach` too
+   (`renderPadFrac*maxReach`, 0.12× — comfortably above both the 0.07×
+   simple-pendulum and 0.035× double-pendulum bob-radius-to-maxReach
+   ratios). Left as a cautionary note: a margin/clamp constant that
+   silently assumes something about the *renderer* (marker size) as
+   well as the *trajectory* will break the moment either side changes
+   independently — rescale by the same physical quantity on both sides,
+   or better, verify pixels rather than trust the arithmetic.
+
+**Which animations were actually affected:** every animation this app
+produces uses the same two frame-rendering functions, so all of them
+were exposed to the same bug class, not just `double_animation.gif`.
+Two were confirmed to actually clip on real frames before the fix:
+`double_animation.gif` (383/501 frames, ~76%, the one that got caught)
+and, once marker scaling was added, transiently `long_pendulum_animation.gif`
+(100/376 frames, 26.6%, self-inflicted and caught by re-running
+verification — see above). The rest of the simple-pendulum presets
+(`baseline`, `simple`, `large_angle`, `moon_gravity`, `pushed`,
+`short_pendulum`) never actually clipped under the *old* fixed range —
+their amplitudes (≤69°, or the ~47° pushed reaches) keep the bob well
+inside `{-1.4,1.4} x {-1.4,0.25}` — but they still benefited from the
+fix: the old fixed frame left most presets looking small and
+under-framed (e.g. `short_pendulum`'s bob occupying a few percent of a
+huge empty box), which the new trajectory-fit bounds correct as a side
+effect of computing bounds the right way, not as a separate change.
+
+**Verification pattern (`tests/verify_animation_frames.py`) — reuse
+this for any future animation, here or elsewhere in this project:**
+
+Trusting the bounds arithmetic is not enough — the letterboxing
+discovery above only came from actually rendering pixels and measuring
+them, and the marker-scaling regression only came from re-running that
+same measurement after a code change that looked correct on paper. The
+script: loads every frame of a GIF, classifies each pixel as
+"background/support-line" (near-achromatic AND light — a single rule
+that captures both the pale background and the grey support line,
+including antialiased blends between them, without misclassifying the
+darker pure-grey rod/pivot colours or any chromatic rod/bob/trail
+colour) or "content", takes the content bounding box per frame, and
+requires a genuine (≥3px) margin from every image edge on *every*
+frame, not a sample — reporting exact violating frames and margins,
+not just pass/fail, the same way this app's `main.wl` correctness
+checks report measured numbers rather than bare assertions. Run it
+against every GIF in `output/` with no arguments, or against specific
+paths. It caught both real bugs in this fix (the original 76% clipping
+and the self-inflicted 26.6% long_pendulum regression) and confirmed
+two deliberately extreme stress-test configs (both rods started at
+179°/179°, and an asymmetric-length 150°/-160° config — both driven
+into many full rotations) stayed correctly bounded, clamped to exactly
+`maxReach*(1+renderPadFrac)` as designed.
+
+**A general lesson, not specific to this bug:** the raw pixel edges of
+an exported raster are not reliably the same rectangle as the plot's
+mathematical range unless the image's aspect ratio is explicitly made
+to match the data's aspect ratio. A "does content touch the image
+edge" check is not meaningful — and can silently pass on a badly
+clipped animation — until that's confirmed true for the specific
+rendering pipeline being checked, not assumed.
 
 ## Correctness checks (added during the v1.5.0 correctness audit)
 
