@@ -3,8 +3,8 @@
 
    Provides HilbertTraversalOrder[n] for converting a 2^n × 2^n
    pixel grid into a locality-preserving traversal sequence.
-   Used by the images app; available to future apps (CMB maps,
-   fluid snapshots, etc.) without reimplementation.
+   Used by images/, mandelbrot/, montecarlo/, cosmology/, and
+   hydrogen/.
    ======================================================== *)
 
 

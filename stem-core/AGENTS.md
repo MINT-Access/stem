@@ -1,8 +1,8 @@
 # stem-core — Agent & API Reference
 
-stem-core is a shared Wolfram Language library for all eight STEM sonification
-projects: pendulum, lorenz, asteroids, cellular, signal, quantum, primes, and
-relativity. It consolidates shared helpers into seven modules loaded through a
+stem-core is a shared Wolfram Language library for all thirty-two STEM
+sonification projects in this repository (see the root `README.md` for the
+full list). It consolidates shared helpers into eight modules loaded through a
 single entry point.
 
 ---
@@ -19,11 +19,11 @@ Get[FileNameJoin[{$stemCoreRoot, "init.wl"}]];
 ```
 
 `init.wl` resolves its own location from `$InputFileName`, sets `$stemCoreRoot`,
-and loads the four modules in dependency order:
+and loads the eight modules in dependency order:
 
 ```
 utils.wl  →  scales.wl  →  synth.wl  →  export.wl  →  accessibility.wl
-  →  config.wl  →  sonification.wl
+  →  hilbert.wl  →  config.wl  →  sonification.wl
 ```
 
 `synth.wl` and `export.wl` both call `EnsureDir` from `utils.wl`;
@@ -301,6 +301,28 @@ as `1.0 / frameRate`.
 ```wolfram
 ExportGIF[frames, "output/animation.gif", 30]   (* 30 fps *)
 ExportGIF[frames, "output/animation.gif"]        (* default 25 fps *)
+```
+
+---
+
+### hilbert.wl — Hilbert curve spatial traversal
+
+#### `HilbertTraversalOrder[n_Integer]`
+Returns the list of `{col, row}` pixel coordinates (1-based) visited by the
+Hilbert curve for a `2^n × 2^n` grid, in traversal order — the standard
+`d2xy` bijection, the same one `HilbertCurve[n, 2]` represents geometrically.
+Result has `4^n` pairs, each component in `1..2^n`, covering every cell
+exactly once.
+
+Used to turn a 2D field (an image, a lattice snapshot, a sky map) into a
+1D sequence for sonification while preserving spatial locality — nearby
+cells in the grid end up nearby in the traversal, so nearby cells sound
+close together in time. Used by `images/`, `mandelbrot/`, `montecarlo/`,
+`cosmology/`, and `hydrogen/`.
+
+```wolfram
+order = HilbertTraversalOrder[6];   (* 64x64 grid, 4096 cells *)
+values = grid[[#[[2]], #[[1]]]] & /@ order   (* sample the grid in traversal order *)
 ```
 
 ---
