@@ -241,6 +241,7 @@ same residual lorenz's reference fix leaves.
 wolframscript -file main.wl                                            # gates, H-T-H-S-X from |0>
 wolframscript -file main.wl -- --simulation.mode=rabi                   # Rabi oscillation, Omega=1.5
 wolframscript -file main.wl -- --simulation.mode=measurement            # 2000 Born-rule measurements
+wolframscript -file main.wl -- --simulation.qubit.gate_sequence='["H"]' # single Hadamard
 wolframscript -file main.wl -- --config-dump
 
 wolframscript -file tests/test_model.wl

@@ -122,7 +122,12 @@ LoadJsonConfig[path_String] :=
 
    Value coercion rules:
      "true"  → True   "false" → False
-     numeric (including negative) → number   otherwise → string as-is
+     numeric (including negative) → number
+     JSON array, e.g. ["H","X"] or [1,0.0,0.0] → a real WL List, parsed
+       the same way config.json's own array-valued keys are (a value
+       overriding a list-valued config key should round-trip through
+       the same JSON syntax whether it's set in the file or on the CLI)
+     otherwise → string as-is
 
    "--config-dump" and bare "--key" flags (no "=") are ignored
    here; "--config-dump" is handled separately in LoadConfig.
@@ -134,9 +139,30 @@ LoadJsonConfig[path_String] :=
      "--sonification.scale=Phrygian"
        → <| "sonification" -> <| "scale" -> "Phrygian" |> |>
      "--simulation.simple.angle_deg=-30"
-       → <| "simulation" -> <| "simple" -> <| "angle_deg" -> -30 |> |> |>  *)
+       → <| "simulation" -> <| "simple" -> <| "angle_deg" -> -30 |> |> |>
+     "--simulation.qubit.gate_sequence=[\"H\",\"X\"]"
+       → <| "simulation" -> <| "qubit" -> <| "gate_sequence" -> {"H","X"} |> |> |>  *)
 
 $numericPattern = ("-" | "") ~~ NumberString;
+
+(* ParseListLiteral
+   If rawVal looks like a JSON array (starts with "[", ends with "]"),
+   attempts to parse it as JSON and returns a real List on success.
+   Returns $Failed (never throws, never prints) on anything that isn't
+   valid JSON, so the caller can fall back to treating rawVal as a
+   plain string — the same safe-fallback shape as every other coercion
+   rule here. Deliberately JSON syntax, not WL list syntax ({...}),
+   since config.json's own array-valued keys are JSON and a CLI
+   override should accept the same syntax a user would type in the
+   file. *)
+
+ParseListLiteral[rawVal_String] :=
+  If[StringStartsQ[rawVal, "["] && StringEndsQ[rawVal, "]"],
+    Module[{parsed = Quiet[ImportString[rawVal, "RawJSON"]]},
+      If[ListQ[parsed], parsed, $Failed]
+    ],
+    $Failed
+  ]
 
 ParseCliOverrides[args_List] :=
   Module[{kvArgs, bareFlags, parsed},
@@ -152,15 +178,17 @@ ParseCliOverrides[args_List] :=
     ];
     parsed = Map[
       Function[arg,
-        Module[{stripped, parts, keyPath, rawVal, value, keys},
+        Module[{stripped, parts, keyPath, rawVal, value, keys, listVal},
           stripped = StringDrop[arg, 2];
           parts    = StringSplit[stripped, "=", 2];
           keyPath  = parts[[1]];
           rawVal   = If[Length[parts] > 1, parts[[2]], "true"];
+          listVal  = ParseListLiteral[rawVal];
           value    = Which[
             rawVal === "true",                       True,
             rawVal === "false",                      False,
             StringMatchQ[rawVal, $numericPattern],   ToExpression[rawVal],
+            listVal =!= $Failed,                     listVal,
             True,                                    rawVal
           ];
           (* Build a nested Association from dot-separated path *)

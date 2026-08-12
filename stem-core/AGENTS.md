@@ -379,11 +379,22 @@ Converts `--key=value` and `--section.key=value` strings into a nested
 Association ready for `DeepMerge`. Value coercion:
 - `"true"` / `"false"` → `True` / `False`
 - numeric strings (including negative, e.g. `"-30"`) → number via `ToExpression`
+- a JSON array, e.g. `["H","X"]` or `[1,0.0,0.0]` → a real WL `List`, via
+  `ImportString[..., "RawJSON"]` (same syntax `config.json`'s own
+  array-valued keys use, so a value overriding a list-valued key round-trips
+  through the same syntax whether it's set in the file or on the CLI).
+  Anything between `[` and `]` that isn't valid JSON falls back to a plain
+  string rather than erroring.
 - everything else → string
 
 Bare flags without `=` (other than `--config-dump`) print a `[WARNING]` line
 but are otherwise ignored; apps that recognise bare flags should strip them
 from `cliArgs` before calling `LoadConfig`.
+
+Shell quoting note: `[` and `]` are glob characters in most shells, so a
+list-valued override needs quoting, e.g.
+`--simulation.qubit.gate_sequence='["H","X"]'` (single quotes prevent the
+shell from expanding or eating the brackets before Wolfram ever sees them).
 
 ```wolfram
 (* --simulation.simple.angle_deg=-30  →  <|"simulation"→<|"simple"→<|"angle_deg"→-30|>|>|> *)

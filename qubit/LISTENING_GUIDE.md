@@ -58,6 +58,9 @@ estimate, not an exact formula).
 
 - Use headphones — `gates` mode's stereo pan carries real spatial
   information tracking the Bloch vector's x-coordinate.
+- Try `--simulation.qubit.gate_sequence='["H"]'` for the simplest
+  possible single-gate rotation, easiest to follow on the Bloch sphere
+  PNG/GIF.
 - Try `--simulation.qubit.rabi_frequency=4.0` for a much faster Rabi
   oscillation — the pitch wobble noticeably speeds up.
 - Try `--simulation.qubit.measurement_theta_deg=36.87` for a skewed
