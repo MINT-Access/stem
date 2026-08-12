@@ -24,6 +24,12 @@ Get[FileNameJoin[{$projectRoot, "src", "output.wl"}]];
 Get[FileNameJoin[{$projectRoot, "src", "animate.wl"}]];
 Get[FileNameJoin[{$projectRoot, "src", "sonify.wl"}]];
 
+(* ExportSonification needs a config Association (for
+   sonification.pitch.min_hz/max_hz etc.) separate from the per-experiment
+   params above, which override only the simulation physics. Loaded once,
+   with no CLI overrides, same as any other default run. *)
+cfg = LoadConfig["lorenz"];
+
 (* -------------------------------------------------------
    PRESETS
    ------------------------------------------------------- *)
@@ -34,7 +40,6 @@ label     = "classic";
 params    = <| "Sigma"->10.0, "Rho"->28.0, "Beta"->8/3,
                "InitX"->1.0, "InitY"->1.0, "InitZ"->1.0,
                "TimeEnd"->40.0, "TimeStep"->0.005 |>;
-scaleName = "MinorPentatonic";
 dualAnim  = False;
 *)
 
@@ -44,7 +49,6 @@ label     = "butterfly";
 params    = <| "Sigma"->10.0, "Rho"->28.0, "Beta"->8/3,
                "InitX"->1.0, "InitY"->1.0, "InitZ"->1.0,
                "TimeEnd"->30.0, "TimeStep"->0.005 |>;
-scaleName = "MajorPentatonic";
 dualAnim  = True;   (* side-by-side divergence animation *)
 *)
 
@@ -54,7 +58,6 @@ label     = "stable";
 params    = <| "Sigma"->10.0, "Rho"->24.0, "Beta"->8/3,
                "InitX"->1.0, "InitY"->1.0, "InitZ"->1.0,
                "TimeEnd"->30.0, "TimeStep"->0.005 |>;
-scaleName = "Major";
 dualAnim  = False;
 *)
 
@@ -64,7 +67,6 @@ label     = "wild";
 params    = <| "Sigma"->10.0, "Rho"->99.96, "Beta"->8/3,
                "InitX"->1.0, "InitY"->1.0, "InitZ"->1.0,
                "TimeEnd"->20.0, "TimeStep"->0.005 |>;
-scaleName = "WholeTone";
 dualAnim  = False;
 *)
 
@@ -74,7 +76,6 @@ label     = "slow";
 params    = <| "Sigma"->4.0, "Rho"->28.0, "Beta"->8/3,
                "InitX"->1.0, "InitY"->1.0, "InitZ"->1.0,
                "TimeEnd"->60.0, "TimeStep"->0.005 |>;
-scaleName = "Minor";
 dualAnim  = False;
 *)
 
@@ -85,7 +86,6 @@ label     = "butterfly";
 params    = <| "Sigma"->10.0, "Rho"->28.0, "Beta"->8/3,
                "InitX"->1.0, "InitY"->1.0, "InitZ"->1.0,
                "TimeEnd"->30.0, "TimeStep"->0.005 |>;
-scaleName = "MajorPentatonic";
 dualAnim  = True;
 
 (* -------------------------------------------------------
@@ -96,7 +96,6 @@ Print["=== Lorenz Experiment: ", label, " ==="];
 Print["  sigma=", params["Sigma"],
       "  rho=",   params["Rho"],
       "  beta=",  N[params["Beta"], 4]];
-Print["  Scale: ", scaleName];
 Print["  Dual animation: ", dualAnim];
 Print[""];
 
@@ -131,7 +130,7 @@ Print[""];
 Print["[4/4] Sonification..."];
 outWAV = FileNameJoin[{$projectRoot, "output",
   "lorenz_audio_" <> label <> ".wav"}];
-ExportSonification[solution, outWAV, "Scale" -> scaleName];
+ExportSonification[solution, params, cfg, outWAV];
 Print["  ", outWAV];
 Print[""];
 

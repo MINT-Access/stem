@@ -18,6 +18,12 @@ Get[FileNameJoin[{$projectRoot, "src", "output.wl"}]];
 Get[FileNameJoin[{$projectRoot, "src", "animate.wl"}]];
 Get[FileNameJoin[{$projectRoot, "src", "sonify.wl"}]];
 
+(* ExportSonification needs a config Association (for
+   sonification.pitch.min_hz/max_hz etc.) separate from the per-experiment
+   params below, which override only the simulation physics. Loaded once,
+   with no CLI overrides, same as any other default run. *)
+$cfg = LoadConfig["pendulum"];
+
 
 (* --- Helper: run one named experiment --- *)
 
@@ -41,7 +47,7 @@ RunExperiment[name_String, params_Association] :=
     ExportAnimation[sol, params, gifFile, 25, 1.0];
     Print["    GIF -> ", gifFile];
 
-    ExportSonification[sol, params, wavFile];
+    ExportSonification[sol, params, $cfg, wavFile];
     Print["    WAV -> ", wavFile];
   ]
 
