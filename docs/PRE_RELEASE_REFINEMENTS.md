@@ -379,7 +379,12 @@ archival pattern. Root README.md's version badge already pointed to
 
 ---
 
-**v1.4.0 consolidation complete. Project enters strategic pause phase.
-Next development phase: v1.5.0 (date TBD).**
+**v1.4.0 consolidation complete. v1.5.0 has since shipped (eleven new
+apps, plus a full correctness audit that found and fixed five real
+bugs) — see `RELEASE_NOTES_v1.5.0.md` for the full writeup. That
+release did not go through this document's per-pass tracking workflow,
+so no `v1.5.0 consolidation` entries appear above; nothing was left
+open here that needed one. Project enters strategic pause phase again.
+Next development phase: v1.6.0 (date TBD).**
 
-*Last updated: 2026-07-06*
+*Last updated: 2026-08-12*
