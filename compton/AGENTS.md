@@ -258,10 +258,12 @@ design decision 6 for why none of them abort):
    closing paren in prose, reads as the comment's own `*)`). Checked
    for and avoided throughout this app's comments; watch for it if you
    add more.
-3. **`Animate*` functions return their actual rendered frame count**,
-   not the requested `nFrames` — `main.wl` passes this return value to
-   `STEMDescribeGIF` directly (same convention as every other app's
-   `AGENTS.md`).
+3. **`Animate*` functions return `{actualNFrames, frameRate}`**, both
+   solved from the caller-supplied `targetDuration` and the `nFrames`
+   render budget (see "Animation/audio duration sync" below) — not the
+   requested `nFrames` and not a fixed frame rate. `main.wl` destructures
+   this pair and passes both to `STEMDescribeGIF` directly (same
+   convention as every other app's `AGENTS.md`).
 4. **Bare `Graphics[...]` with an extreme x:y data-range aspect ratio
    renders squished unless `AspectRatio` is set explicitly.** `sweep`/
    `energy`/`discovery`'s curve plots have data ranges like `{0,180}` x
@@ -296,3 +298,67 @@ design decision 6 for why none of them abort):
 `thermo/src/speech.wl`, and `scattering/src/sonify.wl`'s identical
 pattern — now a sixth independent copy, still out of scope for
 stem-core consolidation per every prior app's own build spec.
+
+## Animation/audio duration sync (fixed post-v1.5.0)
+
+**The bug.** `AnimateScatter`/`AnimateSweep`/`AnimateEnergy` built a
+hardcoded 40-frame GIF at a hardcoded frame rate (15/12/12 fps) with no
+relationship to the WAV they ship alongside. Measured before the fix:
+`scatter.gif` played 2.80s against a 39.11s WAV (13.97x), `sweep.gif`
+3.20s against 22.09s (6.90x), `energy.gif` 3.20s against 30.03s
+(9.38x). The mismatch was worst on `main.wl`'s default invocations,
+which bake a spoken intro/outro into the WAV via `BuildIntroBuffer`
+(`speech.wl`) — the spoken text alone runs 15-35s, dwarfing the 1-3s of
+actual collision/sweep/energy audio underneath it. `experiments.wl`'s
+presets (no speech) were much closer, e.g. 0.91x-1.88x, because their
+WAVs were shorter to begin with, not because the GIF logic was any
+different.
+
+**Root cause.** Same pattern as `lorenz/`: GIF frame count and frame
+rate were literal constants, decoupled from however long the paired
+WAV turned out to be. Unlike `lorenz`, where WAV duration is a single
+known quantity (`solution[[-1,1]]`) available before rendering, here
+the true source of truth is the *fully assembled* WAV — intro speech +
+pause + main sonification + pause + outro speech — whose length isn't
+known until `BuildIntroBuffer` has actually run (`speech.wl`'s TTS
+calls; duration isn't predictable from text length alone). `main.wl`
+was rendering the animation *before* synthesising audio, so the
+correct target duration didn't exist yet at the point the GIF was
+built.
+
+**The fix.** `Animate*` (`src/animate.wl`) now take a
+`targetDuration_?NumericQ` argument and treat `nFrames` (still default
+40) as a render budget, not a literal count: `frameRate =
+Clip[nFrames/targetDuration, {$MinAnimationFps, $MaxAnimationFps}]`
+(2-30 fps) and `actualNFrames = Max[2, Round[frameRate *
+targetDuration]]`, so playback duration lands on `targetDuration`
+exactly regardless of how short or long it is — same fps-clamp
+reasoning as `lorenz/src/animate.wl`. `AnimateSweep`/`AnimateEnergy`
+also dropped their `DeleteDuplicates` on the sampled step indices:
+deduping shrank the frame count below `actualNFrames` whenever
+`targetDuration` demanded more frames than the model has steps
+(routine once a long spoken intro dominates the duration), silently
+pulling the GIF back out of sync; a repeated index just holds that
+frame on screen longer, which is harmless. `main.wl` was reordered per
+mode (scatter/sweep/energy) to synthesise and export the full WAV
+*first*, then pass `wavDuration = Length[finalLeft]/sr` into the
+`Animate*` call; `experiments.wl`'s presets pass `Length[audio]/$sr`
+from the buffers they already build before calling `Animate*` (no
+reordering needed there — audio was already built first). `discovery`
+mode has no GIF and needed no change.
+
+**Verification (before -> after, full exported files, GIF-format
+centisecond duration quantization accounts for the small residual
+above 1.0x):**
+
+| file | before (wav/gif ratio) | after |
+|---|---|---|
+| `scatter.gif` (default, spoken intro/outro) | 13.97x (2.80s vs 39.11s) | 1.003x (39.00s vs 39.11s, 78fr @ 2fps) |
+| `sweep.gif` (default, spoken intro) | 6.90x (3.20s vs 22.09s) | 1.004x (22.00s vs 22.09s, 44fr @ 2fps) |
+| `energy.gif` (default, spoken intro) | 9.38x (3.20s vs 30.03s) | 1.001x (30.00s vs 30.03s, 60fr @ 2fps) |
+| `scatter_*_animation.gif` (experiments, no speech) | 0.91x (2.80s vs 2.55s) | 1.062x (2.40s vs 2.55s, 40fr @ ~15.7fps) |
+| `sweep_default_animation.gif` (experiments) | 1.88x (3.20s vs 6.00s) | 1.000x (6.00s vs 6.00s, 40fr @ ~6.7fps) |
+| `energy_default_animation.gif` (experiments) | 3.12x (3.20s vs 10.00s) | 1.000x (10.00s vs 10.00s, 40fr @ 4fps) |
+
+`tests/test_model.wl` (25 tests, physics-only, untouched by this fix)
+still passes 25/25 after regenerating all outputs.

@@ -220,6 +220,57 @@ guessing it.
    order 4 (16x16), maximum order 8 (256x256).  Values of `sky_resolution`
    between powers of two are rounded to the nearest power of two.
 
+## Animation framing: GIF/WAV duration sync (fixed post-v1.5.0)
+
+**The bug.** `AnimateSky` rendered a hardcoded 32 frames at a hardcoded
+10 fps — a fixed 3.2s clip regardless of how long the accompanying
+`SonifySkyMap` WAV actually ran. `SonifySkyMap`'s duration is
+`nPix * noteDur` (one `StemSynthNote` per Hilbert-traversal pixel), which
+scales with `sky_resolution` (`nPix = actualN^2`) and `time_stretch`
+(folded into `noteDur` at the `main.wl` call site). At the default
+64x64 resolution this measured as GIF=3.2s vs WAV=131.1s — a ~41x
+mismatch, the GIF finishing before the sonification was 3% done. Every
+`sky_resolution` preset was wrong in the same way, just by a different
+factor (`sky_small` 32x32: GIF 3.2s vs WAV 8.2s; `sky_large` 128x128:
+GIF 3.2s vs WAV 131.1s again capped by the same fixed 32 frames).
+
+**Root cause.** Same shape as the bug already fixed in `lorenz/`
+(see `lorenz/src/animate.wl`): GIF frame count/rate was a literal
+constant unrelated to the value driving WAV length.
+
+**The fix.** `AnimateSky[skyModel, outGIF, frameBudget_Integer:32]` in
+`cosmology/src/animate.wl` now derives `targetDuration = nPix * noteDur`
+from `skyModel` (which already carries both — no call-site signature
+change needed in `main.wl`/`experiments.wl`, unlike `lorenz` where the
+duration isn't otherwise available to the animator). `frameBudget`
+(default 32, same as the old literal) is a render-rate budget, not a
+frame count: `frameRate = Clip[frameBudget/targetDuration,
+{$MinAnimationFps, $MaxAnimationFps}]` (2-30 fps, `$MinAnimationFps`/
+`$MaxAnimationFps` defined at the top of `animate.wl`), then
+`nGIFFrames = Max[2, Round[frameRate * targetDuration]]` so playback
+duration lands on `targetDuration` exactly at any resolution — frame
+count is what flexes at the fps clamp boundary, not duration.
+`ExportGIF`/`STEMDescribeGIF` are called with the actual computed
+`frameRate`/`nGIFFrames` instead of the old `10`/`nGIFFrames` literals.
+
+**Verification** (regenerated via `wolframscript -file main.wl --
+--simulation.mode=sky` and `wolframscript -file experiments.wl`,
+measured with `PIL`/`wave` frame-duration summation):
+
+| Preset | sky_resolution | Before (GIF / WAV) | After (GIF / WAV) |
+|---|---|---|---|
+| `sky_small`  | 32x32  | 3.2s / 8.2s   | 8.32s / 8.20s (ratio 1.015) |
+| `sky_medium` (default) | 64x64 | 3.2s / 131.1s | 33.0s / 32.8s (ratio 1.007) |
+| `sky_large`  | 128x128 | 3.2s / 131.1s | 131.0s / 131.1s (ratio 0.999) |
+
+`sky_medium` and `sky_large` both land on the 2 fps floor (their
+`frameBudget/targetDuration` is below 2), so `sky_medium`'s frame count
+grows to 66 and `sky_large`'s to 262 to keep exact duration sync at that
+floor rate; `sky_small`'s 3.91 fps is unclamped. `spectrum` mode has no
+GIF output and is unaffected. All 27 `tests/test_model.wl` unit tests
+still pass after the change (they cover the analytic model and physical
+correctness checks, not rendering).
+
 ## Dependencies
 
 - **stem-core**: `init.wl`, `LoadConfig`, `GetCfg`, `DeepMerge`,

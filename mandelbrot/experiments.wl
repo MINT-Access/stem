@@ -21,7 +21,8 @@ RunExperiment[name_String, overrides_Association] :=
   Module[{cfg, mode, sr,
           mandelbrotModel, juliaModel, zoomModel,
           outWAV, outGIF, outPNG, outCSV,
-          rawBuffer, freqAssigned, introText, introBuffer, pauseBuffer, finalBuffer, totalDurSec},
+          rawBuffer, freqAssigned, introText, introBuffer, pauseBuffer, finalBuffer, totalDurSec,
+          gifFrames, gifFps},
 
     Print[""];
     STEMHeading["Experiment: " <> name];
@@ -52,7 +53,8 @@ RunExperiment[name_String, overrides_Association] :=
         totalDurSec = N[Length[finalBuffer]] / sr;
         STEMDescribeWAV[outWAV, totalDurSec];
 
-        AnimateAndExportField[mandelbrotModel, outGIF, outPNG];
+        {gifFrames, gifFps} = AnimateAndExportField[mandelbrotModel, outGIF, outPNG, totalDurSec];
+        STEMDescribeGIF[outGIF, gifFrames, gifFps];
         ExportMandelbrotCSV[mandelbrotModel, outCSV],
 
       mode === "julia",
@@ -70,7 +72,8 @@ RunExperiment[name_String, overrides_Association] :=
         totalDurSec = N[Length[finalBuffer]] / sr;
         STEMDescribeWAV[outWAV, totalDurSec];
 
-        AnimateAndExportField[juliaModel, outGIF, outPNG];
+        {gifFrames, gifFps} = AnimateAndExportField[juliaModel, outGIF, outPNG, totalDurSec];
+        STEMDescribeGIF[outGIF, gifFrames, gifFps];
         ExportJuliaCSV[juliaModel, outCSV],
 
       mode === "zoom",
@@ -88,7 +91,8 @@ RunExperiment[name_String, overrides_Association] :=
         totalDurSec = N[Length[finalBuffer]] / sr;
         STEMDescribeWAV[outWAV, totalDurSec];
 
-        AnimateZoom[zoomModel, outGIF, outPNG];
+        {gifFrames, gifFps} = AnimateZoom[zoomModel, outGIF, outPNG, totalDurSec];
+        STEMDescribeGIF[outGIF, gifFrames, gifFps];
         ExportZoomCSV[zoomModel, outCSV]
     ];
 

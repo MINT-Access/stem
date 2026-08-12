@@ -18,7 +18,21 @@
    measurement: qubit/measurement's running-frequency-convergence style
      (a growing curve plus a dashed true-value reference line),
      PNG-only -- no natural animation content beyond the curve itself.
+
+   GIF playback duration (correlations, chsh) is driven by
+   targetDuration — the actual WAV length (intro speech + pause +
+   sonification), not a fixed frame count/rate — so the animation and
+   its sonification stay in sync. nFrames is a RENDER BUDGET, not a
+   literal frame count: frameRate is solved as nFrames/targetDuration
+   and clamped to [$MinAnimationFps,$MaxAnimationFps] (2-30 fps), then
+   the actual frame count is recomputed from the clamped rate so
+   playback duration always equals targetDuration exactly. See
+   lorenz/src/animate.wl's ExportAnimation for the reference version of
+   this pattern.
    ======================================================== *)
+
+$MinAnimationFps = 2;
+$MaxAnimationFps = 30;
 
 
 (* ========================================================
@@ -46,12 +60,17 @@ RenderCorrelationsFrame[model_Association, upTo_Integer] :=
   ];
 
 AnimateCorrelations[model_Association, outGif_String, outPng_String,
-                    Optional[nFrames_Integer, 40]] :=
-  Module[{nSteps, indices, frames, delta, EQ, EC, staticPlt},
-    nSteps  = model["nSteps"];
-    indices = DeleteDuplicates[Round[Subdivide[1, nSteps, Min[nFrames, nSteps] - 1]]];
+                    targetDuration_?NumericQ, Optional[nFrames_Integer, 150]] :=
+  Module[{nSteps, frameRate, actualNFrames, indices, frames, delta, EQ, EC, staticPlt},
+    nSteps        = model["nSteps"];
+    frameRate     = Clip[nFrames / targetDuration, {$MinAnimationFps, $MaxAnimationFps}];
+    actualNFrames = Max[2, Round[frameRate * targetDuration]];
+    indices       = Clip[Round[Subdivide[1, nSteps, actualNFrames - 1]], {1, nSteps}];
+    Print["  Rendering ", Length[indices], " correlation frames at ", FmtN[frameRate, 3],
+          " fps (", FmtN[Length[indices] / frameRate, 3],
+          "s, matching audio duration ", FmtN[targetDuration, 3], "s)..."];
     frames  = RenderCorrelationsFrame[model, #] & /@ indices;
-    ExportGIF[frames, outGif, 12];
+    ExportGIF[frames, outGif, frameRate];
 
     delta = model["deltaDegArr"]; EQ = model["EQuantumArr"]; EC = model["EClassicalArr"];
     staticPlt = Graphics[
@@ -70,7 +89,7 @@ AnimateCorrelations[model_Association, outGif_String, outPng_String,
     ];
     Export[outPng, staticPlt, "PNG"];
     Print["  PNG: ", outPng];
-    Length[frames]
+    {Length[frames], frameRate}
   ];
 
 
@@ -102,20 +121,46 @@ RenderChshFrame[cumValue_?NumericQ, model_Association, stepLabel_String] :=
     ]
   ];
 
-AnimateChsh[model_Association, outGif_String, outPng_String] :=
-  Module[{terms, labels, cum, frames, staticPlt},
+(* The four cumulative-sum terms are a fixed discrete narrative build-up
+   (mirroring the audio's own four-note build-up, see sonify.wl) — not
+   a continuous trajectory to subsample. actualNFrames is instead split
+   between a reveal phase (evenly sampling the 4 build-up steps, which
+   naturally repeats a step across several consecutive frames rather
+   than skipping any) and a holdFrac share spent holding the final,
+   fully-built verdict frame — the same reveal+hold split
+   asteroids/src/animate.wl's ExportAnimation uses for its discrete
+   per-asteroid reveal. *)
+AnimateChsh[model_Association, outGif_String, outPng_String,
+           targetDuration_?NumericQ, Optional[nFrames_Integer, 150],
+           Optional[holdFrac_?NumericQ, 0.3]] :=
+  Module[{terms, labels, cum, nSteps, frameRate, actualNFrames, holdCount,
+          revealCount, revealIndices, frames, staticPlt},
     terms  = {model["Eab"], -model["Eabp"], model["Eapb"], model["Eapbp"]};
     labels = {"E(a,b)", "E(a,b)-E(a,b')", "+E(a',b)", "S = " <> ToString[NumberForm[model["S"], {5, 3}]]};
-    cum = Accumulate[terms];
-    frames = MapThread[RenderChshFrame[#1, model, #2] &, {cum, labels}];
-    (* hold the final frame a little longer *)
-    frames = Join[frames, ConstantArray[Last[frames], 3]];
-    ExportGIF[frames, outGif, 2];
+    cum    = Accumulate[terms];
+    nSteps = Length[cum];
+
+    frameRate     = Clip[nFrames / targetDuration, {$MinAnimationFps, $MaxAnimationFps}];
+    actualNFrames = Max[2, Round[frameRate * targetDuration]];
+    holdCount     = Max[1, Round[actualNFrames * holdFrac]];
+    revealCount   = Max[1, actualNFrames - holdCount];
+    revealIndices = If[revealCount <= 1, {nSteps},
+      Clip[Round[Subdivide[1, nSteps, revealCount - 1]], {1, nSteps}]];
+
+    Print["  Rendering ", actualNFrames, " CHSH gauge frames (", Length[revealIndices],
+          " reveal + ", holdCount, " hold) at ", FmtN[frameRate, 3],
+          " fps (", FmtN[actualNFrames / frameRate, 3],
+          "s, matching audio duration ", FmtN[targetDuration, 3], "s)..."];
+
+    frames = RenderChshFrame[cum[[#]], model, labels[[#]]] & /@ revealIndices;
+    (* hold the final (verdict) frame for the rest of the budget *)
+    frames = Join[frames, ConstantArray[Last[frames], holdCount]];
+    ExportGIF[frames, outGif, frameRate];
 
     staticPlt = RenderChshFrame[model["S"], model, "S"];
     Export[outPng, staticPlt, "PNG"];
     Print["  PNG: ", outPng];
-    Length[frames]
+    {Length[frames], frameRate}
   ];
 
 

@@ -133,13 +133,17 @@ Which[
     finalBuffer = Join[introBuffer, pauseBuffer, sonifyResult["buffer"]];
     EnsureDir[outWAV];
     ExportAudioBuffer[finalBuffer, outWAV, sr];
-    STEMDescribeWAV[outWAV, N[Length[finalBuffer]] / sr];
+    $audioDur = N[Length[finalBuffer]] / sr;
+    STEMDescribeWAV[outWAV, $audioDur];
     Print[""];
 
+    (* GIF duration synced to the WAV's actual total duration
+       (including its spoken intro) — see hydrogen/AGENTS.md "GIF/WAV
+       duration sync". *)
     Print["[3/4] Rendering Hilbert-sweep animation..."];
     STEMSay["Rendering orbital animation"];
     AnimateOrbital[orbitalModel, FileNameJoin[{$outDir, "orbitals.gif"}],
-                                 FileNameJoin[{$outDir, "orbitals.png"}]];
+                                 FileNameJoin[{$outDir, "orbitals.png"}], $audioDur];
     Print[""];
 
     Print["[4/4] Exporting data table..."];
@@ -198,13 +202,14 @@ Which[
     outWAV = FileNameJoin[{$outDir, "spectrum_audio.wav"}];
     EnsureDir[outWAV];
     ExportAudioBuffer[fullBuffer, outWAV, sr];
-    STEMDescribeWAV[outWAV, N[Length[fullBuffer]] / sr];
+    $audioDur = N[Length[fullBuffer]] / sr;
+    STEMDescribeWAV[outWAV, $audioDur];
     Print[""];
 
     Print["[4/5] Rendering sweep animation..."];
     STEMSay["Rendering spectrum animation"];
-    AnimateSpectrum[spectrumResult, FileNameJoin[{$outDir, "spectrum.gif"}]];
-    STEMDescribeGIF[FileNameJoin[{$outDir, "spectrum.gif"}], nLines, 8];
+    {$gifFrames, $gifFps} = AnimateSpectrum[spectrumResult, FileNameJoin[{$outDir, "spectrum.gif"}], $audioDur];
+    STEMDescribeGIF[FileNameJoin[{$outDir, "spectrum.gif"}], $gifFrames, $gifFps];
     Print[""];
 
     Print["[5/5] Exporting data table..."];
@@ -256,13 +261,14 @@ Which[
     outWAV = FileNameJoin[{$outDir, "transitions_audio.wav"}];
     EnsureDir[outWAV];
     Export[outWAV, Sound[SampledSoundList[{finalLeft, finalRight}, sr]], "WAV"];
-    STEMDescribeWAV[outWAV, N[Length[finalLeft]] / sr];
+    $audioDur = N[Length[finalLeft]] / sr;
+    STEMDescribeWAV[outWAV, $audioDur];
     Print[""];
 
     Print["[3/5] Rendering Grotrian diagram animation..."];
     STEMSay["Rendering the energy level diagram"];
-    nFrames = AnimateTransitions[cascadesList, nStart, FileNameJoin[{$outDir, "transitions.gif"}]];
-    STEMDescribeGIF[FileNameJoin[{$outDir, "transitions.gif"}], nFrames, 2];
+    {$gifFrames, $gifFps} = AnimateTransitions[cascadesList, nStart, FileNameJoin[{$outDir, "transitions.gif"}], $audioDur];
+    STEMDescribeGIF[FileNameJoin[{$outDir, "transitions.gif"}], $gifFrames, $gifFps];
     Print[""];
 
     Print["[4/5] Exporting data table..."];

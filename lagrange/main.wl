@@ -121,7 +121,9 @@ Which[
 
     Print["[4/5] Rendering PNG and GIF..."];
     STEMSay["Rendering trajectory animation"];
-    AnimateLibration[model, $outDir, $lpts, $mu, $presetLabel];
+    $audioDur = LibrationAudioDuration[model];
+    {$gifFrames, $gifFps} = AnimateLibration[model, $outDir, $lpts, $mu, $presetLabel, $audioDur];
+    STEMDescribeGIF[FileNameJoin[{$outDir, mode <> ".gif"}], $gifFrames, $gifFps];
     Print[""];
 
     Print["[5/5] Sonifying trajectory..."];
@@ -172,7 +174,9 @@ Which[
 
     Print["[4/5] Rendering PNG and GIF..."];
     STEMSay["Rendering L1 escape animation"];
-    AnimateEscape[model, $outDir, $lpts, $mu, $presetLabel];
+    $audioDur = EscapeAudioDuration[model];
+    {$gifFrames, $gifFps} = AnimateEscape[model, $outDir, $lpts, $mu, $presetLabel, $audioDur];
+    STEMDescribeGIF[FileNameJoin[{$outDir, "l1.gif"}], $gifFrames, $gifFps];
     Print[""];
 
     Print["[5/5] Sonifying escape trajectory..."];

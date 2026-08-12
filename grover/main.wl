@@ -86,15 +86,7 @@ Which[
     ExportSearchCSV[searchModel, outCSV];
     Print[""];
 
-    Print["[4/5] Rendering visualisation..."];
-    STEMSay["Rendering visualisation"];
-    outGIF = FileNameJoin[{$projectRoot, "output", "grover_search.gif"}];
-    outPNG = FileNameJoin[{$projectRoot, "output", "grover_search.png"}];
-    AnimateSearch[searchModel, outGIF, outPNG];
-    STEMDescribeGIF[outGIF, Length[searchModel["kArr"]], 4];
-    Print[""];
-
-    Print["[5/5] Synthesising audio..."];
+    Print["[4/5] Synthesising audio..."];
     STEMSay["Synthesising audio"];
     outWAV = FileNameJoin[{$projectRoot, "output", "grover_search.wav"}];
     {rawLeft, rawRight} = BuildSearchAudio[searchModel, 220.0, 1400.0, 0.28, sr];
@@ -106,7 +98,19 @@ Which[
     finalRight = Join[introBuffer, pauseBuffer, rawRight];
     EnsureDir[outWAV];
     Export[outWAV, Sound[SampledSoundList[{finalLeft, finalRight}, sr]], "WAV"];
-    STEMDescribeWAV[outWAV, N[Length[finalLeft]] / sr];
+    $audioDur = N[Length[finalLeft]] / sr;
+    STEMDescribeWAV[outWAV, $audioDur];
+    Print[""];
+
+    (* GIF duration is synced to the WAV's actual total duration
+       (including its spoken intro, only known now that it's built) —
+       see grover/AGENTS.md "GIF/WAV duration sync". *)
+    Print["[5/5] Rendering visualisation..."];
+    STEMSay["Rendering visualisation"];
+    outGIF = FileNameJoin[{$projectRoot, "output", "grover_search.gif"}];
+    outPNG = FileNameJoin[{$projectRoot, "output", "grover_search.png"}];
+    {$gifFrames, $gifFps} = AnimateSearch[searchModel, outGIF, outPNG, $audioDur];
+    STEMDescribeGIF[outGIF, $gifFrames, $gifFps];
     Print[""],
 
   (* ===== compare ===== *)
@@ -125,15 +129,7 @@ Which[
     ExportCompareCSV[compareModel, outCSV];
     Print[""];
 
-    Print["[4/5] Rendering visualisation..."];
-    STEMSay["Rendering visualisation"];
-    outGIF = FileNameJoin[{$projectRoot, "output", "grover_compare.gif"}];
-    outPNG = FileNameJoin[{$projectRoot, "output", "grover_compare.png"}];
-    AnimateCompare[compareModel, outGIF, outPNG];
-    STEMDescribeGIF[outGIF, 40, 12];
-    Print[""];
-
-    Print["[5/5] Synthesising audio..."];
+    Print["[4/5] Synthesising audio..."];
     STEMSay["Synthesising audio"];
     outWAV = FileNameJoin[{$projectRoot, "output", "grover_compare.wav"}];
     {rawLeft, rawRight} = BuildCompareAudio[compareModel, 440.0, 6.0, sr];
@@ -145,7 +141,16 @@ Which[
     finalRight = Join[introBuffer, pauseBuffer, rawRight];
     EnsureDir[outWAV];
     Export[outWAV, Sound[SampledSoundList[{finalLeft, finalRight}, sr]], "WAV"];
-    STEMDescribeWAV[outWAV, N[Length[finalLeft]] / sr];
+    $audioDur = N[Length[finalLeft]] / sr;
+    STEMDescribeWAV[outWAV, $audioDur];
+    Print[""];
+
+    Print["[5/5] Rendering visualisation..."];
+    STEMSay["Rendering visualisation"];
+    outGIF = FileNameJoin[{$projectRoot, "output", "grover_compare.gif"}];
+    outPNG = FileNameJoin[{$projectRoot, "output", "grover_compare.png"}];
+    {$gifFrames, $gifFps} = AnimateCompare[compareModel, outGIF, outPNG, $audioDur];
+    STEMDescribeGIF[outGIF, $gifFrames, $gifFps];
     Print[""],
 
   (* ===== geometry ===== *)
@@ -166,15 +171,7 @@ Which[
     ExportGeometryCSV[geometryModel, outCSV];
     Print[""];
 
-    Print["[4/5] Rendering visualisation..."];
-    STEMSay["Rendering visualisation"];
-    outGIF = FileNameJoin[{$projectRoot, "output", "grover_geometry.gif"}];
-    outPNG = FileNameJoin[{$projectRoot, "output", "grover_geometry.png"}];
-    AnimateGeometry[geometryModel, outGIF, outPNG];
-    STEMDescribeGIF[outGIF, Length[geometryModel["kArr"]], 3];
-    Print[""];
-
-    Print["[5/5] Synthesising audio..."];
+    Print["[4/5] Synthesising audio..."];
     STEMSay["Synthesising audio"];
     outWAV = FileNameJoin[{$projectRoot, "output", "grover_geometry.wav"}];
     {rawLeft, rawRight} = BuildGeometryAudio[geometryModel, 220.0, 1400.0, duration, sr];
@@ -186,7 +183,16 @@ Which[
     finalRight = Join[introBuffer, pauseBuffer, rawRight];
     EnsureDir[outWAV];
     Export[outWAV, Sound[SampledSoundList[{finalLeft, finalRight}, sr]], "WAV"];
-    STEMDescribeWAV[outWAV, N[Length[finalLeft]] / sr];
+    $audioDur = N[Length[finalLeft]] / sr;
+    STEMDescribeWAV[outWAV, $audioDur];
+    Print[""];
+
+    Print["[5/5] Rendering visualisation..."];
+    STEMSay["Rendering visualisation"];
+    outGIF = FileNameJoin[{$projectRoot, "output", "grover_geometry.gif"}];
+    outPNG = FileNameJoin[{$projectRoot, "output", "grover_geometry.png"}];
+    {$gifFrames, $gifFps} = AnimateGeometry[geometryModel, outGIF, outPNG, $audioDur];
+    STEMDescribeGIF[outGIF, $gifFrames, $gifFps];
     Print[""],
 
   (* ===== unknown mode ===== *)

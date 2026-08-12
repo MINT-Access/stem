@@ -105,17 +105,7 @@ Which[
     ExportAttractorCSV[BuildAttractorTrajectory[attractorModel], cfg, outCSV];
     Print[""];
 
-    Print["[4/5] Rendering animation..."];
-    STEMSay["Rendering animation"];
-    outGIF = FileNameJoin[{$projectRoot, "output", "henon_attractor.gif"}];
-    outPNG = FileNameJoin[{$projectRoot, "output", "henon_attractor.png"}];
-    ExportAttractorAnimation[attractorModel["trajectory"], outGIF];
-    ExportAttractorPNG[attractorModel["trajectory"], outPNG];
-    STEMDescribeGIF[outGIF, 100, 12];
-    Print["  PNG written: ", outPNG];
-    Print[""];
-
-    Print["[5/5] Synthesising audio..."];
+    Print["[4/5] Synthesising audio..."];
     STEMSay["Synthesising audio"];
     outWAV = FileNameJoin[{$projectRoot, "output", "henon_attractor.wav"}];
     {rawLeft, rawRight} = AttractorStereoBuffer[attractorModel, cfg];
@@ -127,7 +117,21 @@ Which[
     finalRight = Join[introBuffer, pauseBuffer, rawRight];
     EnsureDir[outWAV];
     Export[outWAV, Sound[SampledSoundList[{finalLeft, finalRight}, sr]], "WAV"];
-    STEMDescribeWAV[outWAV, N[Length[finalLeft]] / sr];
+    $audioDur = N[Length[finalLeft]] / sr;
+    STEMDescribeWAV[outWAV, $audioDur];
+    Print[""];
+
+    (* GIF duration synced to the WAV's actual total duration
+       (including its spoken intro) — see henon/AGENTS.md "GIF/WAV
+       duration sync". *)
+    Print["[5/5] Rendering animation..."];
+    STEMSay["Rendering animation"];
+    outGIF = FileNameJoin[{$projectRoot, "output", "henon_attractor.gif"}];
+    outPNG = FileNameJoin[{$projectRoot, "output", "henon_attractor.png"}];
+    {$gifFrames, $gifFps} = ExportAttractorAnimation[attractorModel["trajectory"], outGIF, $audioDur];
+    ExportAttractorPNG[attractorModel["trajectory"], outPNG];
+    STEMDescribeGIF[outGIF, $gifFrames, $gifFps];
+    Print["  PNG written: ", outPNG];
     Print[""],
 
   (* ===== sweep ===== *)
@@ -166,7 +170,8 @@ Which[
     outWAV = FileNameJoin[{$projectRoot, "output", "henon_sweep.wav"}];
     EnsureDir[outWAV];
     Export[outWAV, Sound[SampledSoundList[{finalLeft, finalRight}, sr]], "WAV"];
-    STEMDescribeWAV[outWAV, N[Length[finalLeft]] / sr];
+    $audioDur = N[Length[finalLeft]] / sr;
+    STEMDescribeWAV[outWAV, $audioDur];
     Print[""];
 
     Print["[4/5] Exporting sweep data..."];
@@ -178,9 +183,9 @@ Which[
     STEMSay["Rendering animation"];
     outGIF = FileNameJoin[{$projectRoot, "output", "henon_sweep.gif"}];
     outPNG = FileNameJoin[{$projectRoot, "output", "henon_sweep.png"}];
-    AnimateSweepBifurcation[sweepModel, landmarks, outGIF];
+    {$gifFrames, $gifFps} = AnimateSweepBifurcation[sweepModel, landmarks, outGIF, $audioDur];
     ExportSweepPNG[sweepModel, landmarks, outPNG];
-    STEMDescribeGIF[outGIF, aSteps - 1, 12];
+    STEMDescribeGIF[outGIF, $gifFrames, $gifFps];
     Print["  PNG written: ", outPNG];
     Print[""],
 

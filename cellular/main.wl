@@ -79,18 +79,20 @@ Which[
     STEMDescribeCSV[outCSV, gens, 6];
     Print[""];
 
+    $targetDuration = CellularAudioDuration[gens, cfg];
+
     Print["[3/4] Rendering animation..."];
     STEMSay["Rendering animation"];
     outGIF = FileNameJoin[{$outDir, "life_" <> pattern <> "_animation.gif"}];
-    AnimateCellular[grid3D, cfg, outGIF];
-    STEMDescribeGIF[outGIF, gens, GetCfg[cfg, {"animation","fps"}, 10]];
+    {$gifFrames, $gifFps} = AnimateCellular[grid3D, cfg, outGIF, $targetDuration];
+    STEMDescribeGIF[outGIF, $gifFrames, $gifFps];
     Print[""];
 
     Print["[4/4] Synthesising audio..."];
     STEMSay["Synthesising audio"];
     outWAV = FileNameJoin[{$outDir, "life_" <> pattern <> "_audio.wav"}];
     SonifyCellular[grid3D, cfg, outWAV];
-    STEMDescribeWAV[outWAV, gens * 0.1];
+    STEMDescribeWAV[outWAV, $targetDuration];
     Print[""],
 
 
@@ -123,18 +125,20 @@ Which[
     STEMDescribeCSV[outCSV, gens, 6];
     Print[""];
 
+    $targetDuration = CellularAudioDuration[gens, cfg];
+
     Print["[3/4] Rendering spacetime diagram..."];
     STEMSay["Rendering spacetime diagram"];
     outGIF = FileNameJoin[{$outDir, "rule110_animation.gif"}];
-    AnimateCellular[grid3D, cfg, outGIF];
-    STEMDescribeGIF[outGIF, 1, GetCfg[cfg, {"animation","fps"}, 10]];
+    {$gifFrames, $gifFps} = AnimateCellular[grid3D, cfg, outGIF, $targetDuration];
+    STEMDescribeGIF[outGIF, $gifFrames, $gifFps];
     Print[""];
 
     Print["[4/4] Synthesising audio..."];
     STEMSay["Synthesising audio"];
     outWAV = FileNameJoin[{$outDir, "rule110_audio.wav"}];
     SonifyCellular[grid3D, cfg, outWAV];
-    STEMDescribeWAV[outWAV, gens * 0.1];
+    STEMDescribeWAV[outWAV, $targetDuration];
     Print[""],
 
 

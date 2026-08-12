@@ -83,8 +83,8 @@ RunExperiment[name_String, overrides_Association] :=
     STEMDescribeWAV[outWAV, totalDurSec];
 
     If[mode === "scan_horizontal",
-      AnimateRasterScan[model, outGIF],
-      AnimateImageTraversal[model, outGIF]
+      AnimateRasterScan[model, outGIF, totalDurSec],
+      AnimateImageTraversal[model, outGIF, totalDurSec]
     ];
     ExportImageData[model, freqAssigned, outCSV];
     ExportImagePNG[model, outPNG];

@@ -20,6 +20,14 @@
 
 (* ── gates mode ────────────────────────────────────────────────────── *)
 
+(* Sane bounds on GIF playback frame rate — see ExportGatesAnimation for
+   how these keep animation/audio duration in sync without forcing an
+   absurdly fast or glacial frame rate at the extremes (duplicated from
+   lorenz/'s src/animate.wl per this codebase's no-shared-src/
+   convention). *)
+$MinAnimationFps = 2;
+$MaxAnimationFps = 30;
+
 BlochSphereGraphics3D[pathSegments_, currentPoint_, title_String:""] :=
   Graphics3D[
     {
@@ -55,14 +63,36 @@ RenderGatesFrame[rPath_List, k_Integer, title_String:""] :=
     BlochSphereGraphics3D[lines, Last[pts], title]
   ];
 
-ExportGatesAnimation[rPath_List, filePath_String, frameRate_:10, nFrames_:80,
-                     title_String:"Qubit Gate Sequence"] :=
-  Module[{indices, frames},
-    indices = Round[Subdivide[1, Length[rPath], nFrames - 1]];
+(* ExportGatesAnimation — GIF playback duration matches the accompanying
+   WAV's actual duration EXACTLY (see AGENTS.md "Animation framing").
+   targetDuration is the caller's already-known TOTAL WAV length (spoken
+   intro + pause + raw sonification) — the same value passed to
+   STEMDescribeWAV — not a quantity derived from rPath itself. Unlike
+   lorenz's solution[[-1,1]], gates mode's raw sonification length is a
+   FIXED configured duration (sonification.duration, default 10s,
+   resampled to fit regardless of gate count via SpatialLayer/
+   MotionLayer's own Rescale) — only the spoken intro (which names the
+   gate sequence) makes the total vary per run, so targetDuration must
+   be measured from the actual finalLeft/sr, not assumed from rPath.
+   nFrames is a RENDER BUDGET, not a literal frame count: frameRate is
+   solved as nFrames/targetDuration and then clamped to
+   {$MinAnimationFps,$MaxAnimationFps}; the frame count then flexes
+   (actualNFrames = Round[frameRate*targetDuration]) so the actual
+   playback duration always equals targetDuration exactly, not just
+   approximately. *)
+ExportGatesAnimation[rPath_List, filePath_String, targetDuration_?NumericQ,
+                     nFrames_:80, title_String:"Qubit Gate Sequence"] :=
+  Module[{frameRate, actualNFrames, indices, frames},
+    frameRate = Clip[nFrames / targetDuration, {$MinAnimationFps, $MaxAnimationFps}];
+    actualNFrames = Max[2, Round[frameRate * targetDuration]];
+    indices = Round[Subdivide[1, Length[rPath], actualNFrames - 1]];
     indices = Max[2, #] & /@ indices;
-    Print["  Rendering ", Length[indices], " frames..."];
+    Print["  Rendering ", Length[indices], " frames at ", FmtN[frameRate, 3],
+          " fps (", FmtN[actualNFrames / frameRate, 3],
+          "s, matching audio duration ", FmtN[targetDuration, 3], "s)..."];
     frames = RenderGatesFrame[rPath, #, title] & /@ indices;
-    ExportGIF[frames, filePath, frameRate]
+    ExportGIF[frames, filePath, frameRate];
+    {actualNFrames, frameRate}
   ];
 
 ExportGatesPNG[rPath_List, filePath_String, title_String:"Qubit Gate Sequence"] :=

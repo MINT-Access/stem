@@ -25,8 +25,9 @@ If[!DirectoryQ[$outDir], CreateDirectory[$outDir]];
 (* --- Helper: run one named Life experiment --- *)
 
 RunLifeExperiment[name_String, cfg_Association] :=
-  Module[{grid3D, gens, outCSV, outGIF, outWAV},
+  Module[{grid3D, gens, targetDuration, outCSV, outGIF, outWAV, gifFrames, gifFps},
     gens = GetCfg[cfg, {"simulation","life","generations"}, 300];
+    targetDuration = CellularAudioDuration[gens, cfg];
     Print[""];
     Print[">>> Experiment: ", name, "  (", gens, " generations)"];
 
@@ -38,8 +39,8 @@ RunLifeExperiment[name_String, cfg_Association] :=
     Print["    CSV -> ", outCSV];
 
     outGIF = FileNameJoin[{$outDir, name <> "_animation.gif"}];
-    AnimateCellular[grid3D, cfg, outGIF];
-    Print["    GIF -> ", outGIF];
+    {gifFrames, gifFps} = AnimateCellular[grid3D, cfg, outGIF, targetDuration];
+    Print["    GIF -> ", outGIF, "  (", gifFrames, " frames at ", FmtN[gifFps, 3], " fps)"];
 
     outWAV = FileNameJoin[{$outDir, name <> "_audio.wav"}];
     SonifyCellular[grid3D, cfg, outWAV];
@@ -50,8 +51,9 @@ RunLifeExperiment[name_String, cfg_Association] :=
 (* --- Helper: run one named Rule110 experiment --- *)
 
 RunRule110Experiment[name_String, cfg_Association] :=
-  Module[{grid3D, gens, outCSV, outGIF, outWAV},
+  Module[{grid3D, gens, targetDuration, outCSV, outGIF, outWAV, gifFrames, gifFps},
     gens = GetCfg[cfg, {"simulation","rule110","generations"}, 200];
+    targetDuration = CellularAudioDuration[gens, cfg];
     Print[""];
     Print[">>> Experiment: ", name, "  (", gens, " generations)"];
 
@@ -63,8 +65,8 @@ RunRule110Experiment[name_String, cfg_Association] :=
     Print["    CSV -> ", outCSV];
 
     outGIF = FileNameJoin[{$outDir, name <> "_animation.gif"}];
-    AnimateCellular[grid3D, cfg, outGIF];
-    Print["    GIF -> ", outGIF];
+    {gifFrames, gifFps} = AnimateCellular[grid3D, cfg, outGIF, targetDuration];
+    Print["    GIF -> ", outGIF, "  (", gifFrames, " frame at ", FmtN[gifFps, 3], " fps)"];
 
     outWAV = FileNameJoin[{$outDir, name <> "_audio.wav"}];
     SonifyCellular[grid3D, cfg, outWAV];

@@ -76,12 +76,12 @@ Which[
 
     Print["[2/4] Sonifying ", $nLP, " listening points..."];
     STEMSay["Sonifying wave propagation at listening points"];
-    SonifyRipple[model, cfg, outWAV];
+    audioDur = SonifyRipple[model, cfg, outWAV];
     Print[""];
 
     Print["[3/4] Exporting ripple animation..."];
     STEMSay["Rendering ripple animation"];
-    AnimateRipple[model, $outDir];
+    AnimateRipple[model, $outDir, audioDur];
     Print[""];
 
     Print["[4/4] Exporting data table (CSV)..."];
@@ -104,12 +104,12 @@ Which[
 
     Print["[2/4] Sonifying moving listening point..."];
     STEMSay["Sonifying wave interference pattern"];
-    SonifyInterference[model, cfg, outWAV];
+    audioDur = SonifyInterference[model, cfg, outWAV];
     Print[""];
 
     Print["[3/4] Exporting interference animation..."];
     STEMSay["Rendering interference pattern animation"];
-    AnimateInterference[model, $outDir];
+    AnimateInterference[model, $outDir, audioDur];
     Print[""];
 
     Print["[4/4] Exporting data table (CSV)..."];

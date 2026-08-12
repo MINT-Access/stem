@@ -11,6 +11,14 @@
    ======================================================== *)
 
 
+(* Sane bounds on GIF playback frame rate -- see each AnimateX function
+   below for how these keep GIF playback duration in sync with the
+   accompanying WAV's real length (spoken intro/outro included) without
+   forcing an absurdly fast or glacial frame rate at the extremes. *)
+$MinAnimationFps = 2;
+$MaxAnimationFps = 30;
+
+
 (* ========================================================
    MODE 1: spectrum — three curves (Log10 n) vs energy, fixed T
    ======================================================== *)
@@ -40,13 +48,30 @@ RenderSpectrumFrame[model_Association, upTo_Integer] :=
     ]
   ];
 
+(* AnimateSpectrum — targetDuration is the accompanying WAV's real,
+   final length in seconds (spoken intro + pause + main sweep audio),
+   the same value STEMDescribeWAV reports; nFrames is a RENDER BUDGET,
+   not a literal frame count -- frameRate is solved as
+   nFrames/targetDuration and clamped to [$MinAnimationFps,
+   $MaxAnimationFps] so a short WAV doesn't demand a strobing frame
+   rate and a long one (spoken intros can run several seconds, on top
+   of an 8s default sweep) doesn't demand an implausibly slow one; the
+   frame COUNT (Round[frameRate*targetDuration]) is what flexes at the
+   clamp boundary so playback duration lands on targetDuration exactly.
+   No DeleteDuplicates on indices: once actualNFrames exceeds nSteps, a
+   repeated index just holds that frame on screen a little longer,
+   which is fine -- deleting repeats would shrink the frame count below
+   actualNFrames and pull playback back out of sync. Returns
+   {actualNFrames, frameRate} for STEMDescribeGIF. *)
 AnimateSpectrum[model_Association, outGif_String, outPng_String,
-               Optional[nFrames_Integer, 40]] :=
-  Module[{nSteps, indices, frames, eps, logBE, logFD, logMB, yMin, yMax, staticPlt},
+               targetDuration_?NumericQ, Optional[nFrames_Integer, 40]] :=
+  Module[{nSteps, frameRate, actualNFrames, indices, frames, eps, logBE, logFD, logMB, yMin, yMax, staticPlt},
     nSteps  = model["nSteps"];
-    indices = DeleteDuplicates[Round[Subdivide[1, nSteps, Min[nFrames, nSteps] - 1]]];
+    frameRate     = Clip[nFrames / targetDuration, {$MinAnimationFps, $MaxAnimationFps}];
+    actualNFrames = Max[2, Round[frameRate * targetDuration]];
+    indices = Round[Subdivide[1, nSteps, actualNFrames - 1]];
     frames  = RenderSpectrumFrame[model, #] & /@ indices;
-    ExportGIF[frames, outGif, 12];
+    ExportGIF[frames, outGif, frameRate];
 
     eps = model["epsArr"];
     logBE = QsSafeLog10[model["beArr"]]; logFD = QsSafeLog10[model["fdArr"]]; logMB = QsSafeLog10[model["mbArr"]];
@@ -70,7 +95,7 @@ AnimateSpectrum[model_Association, outGif_String, outPng_String,
     ];
     Export[outPng, staticPlt, "PNG"];
     Print["  PNG: ", outPng];
-    Length[frames]
+    {actualNFrames, frameRate}
   ];
 
 
@@ -98,13 +123,17 @@ RenderTemperatureFrame[model_Association, upTo_Integer] :=
     ]
   ];
 
+(* AnimateTemperature — same targetDuration/nFrames-budget contract as
+   AnimateSpectrum above (see that docstring for the full rationale). *)
 AnimateTemperature[model_Association, outGif_String, outPng_String,
-                   Optional[nFrames_Integer, 40]] :=
-  Module[{nSteps, indices, frames, logT, logBE, logFD, logMB, yMin, yMax, staticPlt},
+                   targetDuration_?NumericQ, Optional[nFrames_Integer, 40]] :=
+  Module[{nSteps, frameRate, actualNFrames, indices, frames, logT, logBE, logFD, logMB, yMin, yMax, staticPlt},
     nSteps  = model["nSteps"];
-    indices = DeleteDuplicates[Round[Subdivide[1, nSteps, Min[nFrames, nSteps] - 1]]];
+    frameRate     = Clip[nFrames / targetDuration, {$MinAnimationFps, $MaxAnimationFps}];
+    actualNFrames = Max[2, Round[frameRate * targetDuration]];
+    indices = Round[Subdivide[1, nSteps, actualNFrames - 1]];
     frames  = RenderTemperatureFrame[model, #] & /@ indices;
-    ExportGIF[frames, outGif, 12];
+    ExportGIF[frames, outGif, frameRate];
 
     logT = Log10[model["TArr"]];
     logBE = QsSafeLog10[model["beArr"]]; logFD = QsSafeLog10[model["fdArr"]]; logMB = QsSafeLog10[model["mbArr"]];
@@ -130,7 +159,7 @@ AnimateTemperature[model_Association, outGif_String, outPng_String,
     ];
     Export[outPng, staticPlt, "PNG"];
     Print["  PNG: ", outPng];
-    Length[frames]
+    {actualNFrames, frameRate}
   ];
 
 
@@ -161,13 +190,25 @@ RenderFermiSeaFrame[model_Association, TIdx_Integer] :=
     ]
   ];
 
-AnimateFermiSea[model_Association, outGif_String, outPng_String] :=
-  Module[{nT, frames, staticPlt},
+(* AnimateFermiSea — same targetDuration/nFrames-budget contract as
+   AnimateSpectrum (see its docstring). baseIndices lays out the
+   original pacing -- the coldest (sharpest) and warmest (most blurred)
+   T steps each held twice before/after the full sweep -- as a sequence
+   of T-array indices; sampleIdx then resamples that sequence to
+   actualNFrames slots (repeats hold a frame longer, same "no
+   DeleteDuplicates" idiom as the other two modes) so playback duration
+   lands on targetDuration exactly while keeping the head/tail dwell. *)
+AnimateFermiSea[model_Association, outGif_String, outPng_String,
+                targetDuration_?NumericQ, Optional[nFrames_Integer, 40]] :=
+  Module[{nT, baseIndices, frameRate, actualNFrames, sampleIdx, frames, staticPlt},
     nT = Length[model["TArr"]];
-    frames = RenderFermiSeaFrame[model, #] & /@ Range[1, nT];
-    (* hold first (sharpest) and last (most blurred) frames a little longer *)
-    frames = Join[{First[frames], First[frames]}, frames, {Last[frames], Last[frames]}];
-    ExportGIF[frames, outGif, 2];
+    (* hold first (sharpest) and last (most blurred) T steps a little longer *)
+    baseIndices = Join[{1, 1}, Range[1, nT], {nT, nT}];
+    frameRate     = Clip[nFrames / targetDuration, {$MinAnimationFps, $MaxAnimationFps}];
+    actualNFrames = Max[2, Round[frameRate * targetDuration]];
+    sampleIdx = Round[Subdivide[1, Length[baseIndices], actualNFrames - 1]];
+    frames = RenderFermiSeaFrame[model, baseIndices[[#]]] & /@ sampleIdx;
+    ExportGIF[frames, outGif, frameRate];
 
     staticPlt = Graphics[
       {
@@ -193,5 +234,5 @@ AnimateFermiSea[model_Association, outGif_String, outPng_String] :=
     ];
     Export[outPng, staticPlt, "PNG"];
     Print["  PNG: ", outPng];
-    Length[frames]
+    {actualNFrames, frameRate}
   ];

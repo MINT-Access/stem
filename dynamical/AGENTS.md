@@ -233,6 +233,60 @@ including x0).
    unexpected `NumberForm` output. Wrap in `N[...]` before passing to
    `FmtN` when the value might be exact.
 
+## Animation framing: GIF/WAV duration mismatch (fixed post-v1.5.0)
+
+**The bug.** `AnimateSweepBifurcation`/`AnimateIterateTimeSeries` in
+`src/animate.wl` built a fixed-size batch of frames (default `nFrames
+= 60`, hardcoded `ExportGIF[frames, outGIF, 12]` — 12 fps) with no
+reference to the WAV's actual duration. The WAV's length is driven
+entirely by the sonification's own event timing — `nSteps *
+$sweepNotesPerStep * noteDuration` for sweep mode, `n * noteDuration`
+for iterate mode, both plus the spoken intro and pause — which has
+nothing to do with 60 frames at 12 fps (a fixed 5.0s of GIF playback
+before quantization). Measured on the pre-fix `dynamical/output/`
+files: `iterate.gif` played 4.8s against a 36.45s WAV (7.6x too fast),
+and `sweep.gif` played 4.8s against a 120.11s WAV (25.0x too fast) —
+in both cases the GIF finished its loop and restarted many times over
+before the audio was even a fraction done.
+
+**Root cause.** Same pattern as lorenz/pendulum/rossler: frame count
+and frame rate were literal constants disconnected from the
+sonification's true length, rather than derived from it.
+
+**The fix.** `AnimateSweepBifurcation` and `AnimateIterateTimeSeries`
+now take a required `targetDuration_?NumericQ` argument — callers pass
+`totalDurSec` (the same WAV-length value already computed and passed
+to `STEMDescribeWAV` right before the animation call, so no new state
+is needed). `nFrames` (default 150) is reinterpreted as a *render
+budget*, not a literal count: `frameRate = Clip[nFrames /
+targetDuration, {$MinAnimationFps, $MaxAnimationFps}]` with
+`$MinAnimationFps = 2` and `$MaxAnimationFps = 30`, then
+`actualNFrames = Max[2, Round[frameRate * targetDuration]]` is what
+actually gets rendered. The clamp keeps a short iterate run (~30-40s)
+from demanding a strobing frame rate and a long sweep (300s+) from
+demanding an implausibly slow one; frame count is what flexes at the
+clamp boundary, so playback duration always lands on `targetDuration`
+exactly (modulo GIF's 1/100s `DisplayDurations` quantization). Both
+functions return `{actualNFrames, frameRate}` for `STEMDescribeGIF`.
+`main.wl` and `experiments.wl` were updated to pass `totalDurSec` and
+capture/report the returned pair instead of the old hardcoded `60, 12`.
+
+**Verification.** Re-rendered default sweep and iterate outputs plus
+6 experiment presets and compared GIF vs. WAV duration with a Python
+`PIL`/`wave` script:
+
+| file | before (gif / wav / ratio) | after (gif / wav / ratio) |
+|---|---|---|
+| `sweep.gif` | 4.8s / 120.11s / 25.0x | 344.0s / 344.11s / 1.0003x |
+| `iterate.gif` | 4.8s / 36.45s / 7.6x | 33.0s / 32.55s / 0.986x |
+| `sweep_full.gif` | n/a (new) | 99.0s / 98.86s / 0.999x |
+| `sweep_cascade_zoom.gif` | n/a (new) | 81.5s / 81.58s / 1.001x |
+| `iterate_fixed_point.gif` | n/a (new) | 36.0s / 35.77s / 0.994x |
+| `iterate_deep_chaos.gif` | n/a (new) | 33.0s / 32.53s / 0.986x |
+
+All post-fix ratios sit within ~1.5% of 1.0, the residual being GIF's
+inherent centisecond duration quantization, not a code error.
+
 ## Dependencies
 
 - **stem-core**: `init.wl`, `LoadConfig`, `GetCfg`, `DeepMerge`,

@@ -109,8 +109,8 @@ Which[
 
     Print["[3/4] Rendering animation..."];
     STEMSay["Rendering the hyperbolic trajectory animation"];
-    nFrames = AnimateScatter[model, outGIF];
-    STEMDescribeGIF[outGIF, nFrames, $ScatFrameRate];
+    {nFrames, gifFps} = AnimateScatter[model, outGIF, ScatterMainDuration[model]];
+    STEMDescribeGIF[outGIF, nFrames, gifFps];
     Print[""];
 
     Print["[4/4] Sonifying..."];
@@ -144,8 +144,8 @@ Which[
 
     Print["[3/4] Rendering animation..."];
     STEMSay["Rendering the impact parameter versus scattering angle animation"];
-    nFrames = AnimateDistribution[model, outGIF];
-    STEMDescribeGIF[outGIF, nFrames, $ScatFrameRate];
+    {nFrames, gifFps} = AnimateDistribution[model, outGIF, DistributionMainDuration[model, cfg]];
+    STEMDescribeGIF[outGIF, nFrames, gifFps];
     Print[""];
 
     Print["[4/4] Sonifying..."];
@@ -178,8 +178,8 @@ Which[
 
     Print["[3/4] Rendering animation..."];
     STEMSay["Rendering the side-by-side angular distribution histograms"];
-    nFrames = AnimateDiscovery[model, outGIF];
-    STEMDescribeGIF[outGIF, nFrames, $ScatFrameRate];
+    {nFrames, gifFps} = AnimateDiscovery[model, outGIF, DiscoveryMainDuration[cfg]];
+    STEMDescribeGIF[outGIF, nFrames, gifFps];
     Print[""];
 
     Print["[4/4] Sonifying (binaural: Thomson left, Rutherford right)..."];

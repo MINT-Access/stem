@@ -150,8 +150,8 @@ Which[
 
     Print["[4/5] Rendering bifurcation diagram animation..."];
     STEMSay["Rendering the bifurcation diagram"];
-    AnimateSweepBifurcation[sweepModel, sweepResult["eventRs"], outGIF];
-    STEMDescribeGIF[outGIF, 60, 12];
+    {$gifFrames, $gifFps} = AnimateSweepBifurcation[sweepModel, sweepResult["eventRs"], outGIF, totalDurSec];
+    STEMDescribeGIF[outGIF, $gifFrames, $gifFps];
     Print[""];
 
     Print["[5/5] Exporting data table..."];
@@ -209,8 +209,8 @@ Which[
 
     Print["[4/5] Rendering time-series animation..."];
     STEMSay["Rendering the time series"];
-    AnimateIterateTimeSeries[iterateModel, outGIF];
-    STEMDescribeGIF[outGIF, 60, 12];
+    {$gifFrames, $gifFps} = AnimateIterateTimeSeries[iterateModel, outGIF, totalDurSec];
+    STEMDescribeGIF[outGIF, $gifFrames, $gifFps];
     Print[""];
 
     Print["[5/5] Exporting data table..."];

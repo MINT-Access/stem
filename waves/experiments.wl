@@ -14,7 +14,7 @@ $outDir = FileNameJoin[{$projectRoot, "output"}];
 If[!DirectoryQ[$outDir], CreateDirectory[$outDir]];
 
 RunExperiment[name_String, mode_String, overrides_Association] :=
-  Module[{cfg, model, outWAV, outCSV},
+  Module[{cfg, model, outWAV, outCSV, audioDur},
     Print[""];
     STEMHeading["Experiment: " <> name];
     cfg    = DeepMerge[LoadConfig["waves", {}], overrides];
@@ -23,13 +23,13 @@ RunExperiment[name_String, mode_String, overrides_Association] :=
     Which[
       mode === "ripple",
         model = RippleModel[cfg];
-        SonifyRipple[model, cfg, outWAV];
-        AnimateRipple[model, $outDir];
+        audioDur = SonifyRipple[model, cfg, outWAV];
+        AnimateRipple[model, $outDir, audioDur];
         ExportRippleData[model, outCSV],
       mode === "interference",
         model = InterferenceModel[cfg];
-        SonifyInterference[model, cfg, outWAV];
-        AnimateInterference[model, $outDir];
+        audioDur = SonifyInterference[model, cfg, outWAV];
+        AnimateInterference[model, $outDir, audioDur];
         ExportInterferenceData[model, outCSV]
     ];
     Print["  Experiment done: ", name]

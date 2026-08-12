@@ -236,6 +236,19 @@ ResolveBaseNoteDuration[cfg_Association] :=
   ]
 
 
+(* CellularAudioDuration
+   The WAV's exact playback duration in seconds: nGen * base_note_duration
+   (see BuildNoteAudio's nSamples = sr * nGen * baseNoteDur — total
+   duration is fixed by generation count and tempo alone, independent
+   of how generations are grouped into runs). Exposed so call sites
+   (main.wl, experiments.wl) can pass it into AnimateCellular as
+   targetDuration BEFORE SonifyCellular actually runs, keeping GIF and
+   WAV playback length in sync without computing the WAV first. *)
+
+CellularAudioDuration[nGen_Integer, cfg_Association] :=
+  N[nGen * ResolveBaseNoteDuration[cfg]]
+
+
 (* BuildNoteAudio
    Synthesises one held note per run into a stereo buffer.
      Pitch    — mean population of the run, mapped onto the minor

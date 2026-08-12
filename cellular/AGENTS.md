@@ -15,13 +15,14 @@ mode-agnostic.
                        `GoLStep`, `GoLNeighbors`, `LifeGrid`
 - `src/output.wl`    — `ExportCellularStats[grid3D, filePath]`,
                        `PrintCellularSummary[grid3D, modeName]`
-- `src/animate.wl`   — `AnimateCellular[grid3D, cfg, outPath]`,
+- `src/animate.wl`   — `AnimateCellular[grid3D, cfg, outPath, targetDuration]`,
                        `CellularFrame[genGrid, cellPx]`
 - `src/sonify.wl`    — `SonifyCellular[grid3D, cfg, outPath]`,
                        `GridToTrajectory[grid3D, cfg]`,
                        `ComputeArticulations`, `ComputeRuns`, `RunNoteDuration`,
                        `BuildNoteAudio`, `DetectPopulationEvents`,
-                       `ExportArticulationCSV`, `SynthBurst`
+                       `ExportArticulationCSV`, `SynthBurst`,
+                       `ResolveBaseNoteDuration`, `CellularAudioDuration`
 - `output/`          — All output files (not committed)
 
 ## How to run
@@ -146,9 +147,85 @@ the note-based pitch/volume mapping):
 
 ## Animation dispatch
 
-`AnimateCellular` branches on grid shape:
-- `nRows > 1` (Life): renders one `ArrayPlot` frame per generation → animated GIF
+`AnimateCellular[grid3D, cfg, outPath, targetDuration]` branches on grid shape:
+- `nRows > 1` (Life): renders frames subsampled from the `nGen` generations → animated GIF
 - `nRows == 1` (Rule 110): renders full spacetime diagram as PNG + single-frame GIF
+
+## Animation framing: GIF/WAV duration sync (fixed post-v1.5.0)
+
+**The bug.** GIF playback duration was hardcoded independent of the
+WAV it accompanies. Measured before the fix: Life variants (`chaos`,
+`glider_gun`, `rpentomino_default`) rendered exactly `nGen` frames at
+the config's fixed `animation.fps` (10) — always 30s regardless of
+audio length — while the WAV ran `nGen * base_note_duration` (18s at
+the 0.06s/generation default), a 1.667x GIF/WAV ratio. Rule 110
+(`rule110`, `rule110_sparse`, `rule110_dense`) was far worse: its
+spacetime-diagram branch exports the single static frame via
+`ExportGIF[{spacetimePlot}, outPath, fps]` with the same `fps=10`,
+which for a **one-frame** GIF means a 0.1s hold — against a ~20s WAV
+(`200 gens * 0.10s`, rule110's own `base_note_duration` override), a
+~200x mismatch, an order of magnitude worse than the Life case because
+frame count wasn't the free variable there at all — it was pinned at 1
+by design (the triangular pattern is only legible as a whole; see
+"Animation dispatch" above), so the usual "hardcoded fps" framing
+doesn't even apply to it.
+
+**The fix — two different mechanisms, not one, because the two grid
+shapes have fundamentally different GIF structures:**
+1. **Life** — `AnimateCellular` now treats `nGen` as a render budget
+   rather than a literal frame count: `frameRate = Clip[nGen /
+   targetDuration, {$MinAnimationFps, $MaxAnimationFps}]` (2-30 fps,
+   mirrors lorenz's `src/animate.wl`), then `actualNFrames =
+   Round[frameRate * targetDuration]`, then frames are subsampled from
+   the `nGen` generations via evenly-spaced indices
+   (`Round[Subdivide[1, nGen, actualNFrames - 1]]`). At the default
+   0.06s/generation tempo this clamp never bites (`nGen/targetDuration
+   = 1/base_note_duration ≈ 16.7 fps`, comfortably inside `[2,30]`,
+   so `actualNFrames == nGen` and every generation still gets its own
+   frame) — the subsampling path only activates at tempo extremes
+   outside that range.
+2. **Rule 110** — there is no frame rate to clamp; the single spacetime
+   frame's GIF delay is set directly to `targetDuration` (`frameRate =
+   1.0 / Max[targetDuration, 0.1]`), so one loop cycle holds the image
+   on screen for exactly as long as the WAV plays, instead of
+   inheriting the Life branch's `animation.fps`, which was never
+   meaningful for a one-frame export.
+
+Both branches derive `targetDuration` the same way: `nGen *
+ResolveBaseNoteDuration[cfg]`, exposed as `CellularAudioDuration[nGen,
+cfg]` in `sonify.wl` so call sites (`main.wl`, `experiments.wl`) can
+compute it *before* running `SonifyCellular` and pass it into
+`AnimateCellular` as `targetDuration` — the same value used to size
+`nSamples` in `BuildNoteAudio`, so GIF and WAV are provably the same
+length rather than independently-computed values that happen to
+match. `AnimateCellular` returns `{actualNFrames, frameRate}` for
+`STEMDescribeGIF` reporting.
+
+**Verification** (`gif_duration`/`wav_duration` via PIL/`wave`, summed
+per-frame `DisplayDurations` vs. WAV frame count / sample rate):
+
+| file | before (gif/wav) | after (gif/wav) |
+|---|---|---|
+| `life_rpentomino_animation.gif` | 30.0s / 18.0s = 1.667x | 18.0s / 18.0s = 1.000x |
+| `chaos_animation.gif` | 30.0s / 18.0s = 1.667x | 18.0s / 18.0s = 1.000x |
+| `glider_gun_animation.gif` | 30.0s / 18.0s = 1.667x | 18.0s / 18.0s = 1.000x |
+| `rule110_animation.gif` | 0.1s / 20.0s = 0.005x (200x off) | 20.0s / 20.0s = 1.000x |
+| `rule110_sparse_animation.gif` | 0.1s / 20.0s = 0.005x | 12.0s / 12.0s = 1.000x |
+| `rule110_dense_animation.gif` | 0.1s / 20.0s = 0.005x | 12.0s / 12.0s = 1.000x |
+
+(`rule110_sparse`/`rule110_dense` land on 12.0s not 20.0s because
+`experiments.wl`'s literal per-experiment `cfg` Associations don't
+include `simulation.cellular.rule110.base_note_duration`, so
+`ResolveBaseNoteDuration` falls through to the shared 0.06s default —
+pre-existing behaviour, unrelated to this fix; the sync invariant
+holds regardless of which tempo actually applies.)
+
+`life_gliderlgun_animation.gif`/`_audio.wav` (dated Jun 27, predating
+the run-length-note `sonify.wl` refactor) were deliberately **not**
+regenerated — no current code path writes that filename (`main.wl`
+writes `life_<pattern>_*`, `experiments.wl` writes `glider_gun_*`), so
+it is orphaned output from a stale pipeline, not a case this fix
+needed to touch.
 
 ## Common pitfalls
 

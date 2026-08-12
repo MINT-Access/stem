@@ -88,15 +88,12 @@ Which[
     ExportCorrelationsCSV[corrModel, outCSV];
     Print[""];
 
-    Print["[4/5] Rendering visualisation..."];
-    STEMSay["Rendering visualisation"];
-    outGIF = FileNameJoin[{$projectRoot, "output", "bell_correlations.gif"}];
-    outPNG = FileNameJoin[{$projectRoot, "output", "bell_correlations.png"}];
-    AnimateCorrelations[corrModel, outGIF, outPNG];
-    STEMDescribeGIF[outGIF, 40, 12];
-    Print[""];
-
-    Print["[5/5] Synthesising audio..."];
+    (* Audio is synthesised before the GIF (swapped from the original
+       4/5-then-5/5 order) because the GIF's playback duration must match
+       the WAV's ACTUAL total length (intro speech + pause + sweep) —
+       intro speech length depends on the platform TTS engine and is not
+       knowable in advance, so it must be measured after ExportAudioBuffer. *)
+    Print["[4/5] Synthesising audio..."];
     STEMSay["Synthesising audio"];
     outWAV = FileNameJoin[{$projectRoot, "output", "bell_correlations.wav"}];
     {rawLeft, rawRight} = BuildCorrelationsAudio[corrModel, 220.0, 1400.0, duration, sr];
@@ -108,7 +105,16 @@ Which[
     finalRight = Join[introBuffer, pauseBuffer, rawRight];
     EnsureDir[outWAV];
     Export[outWAV, Sound[SampledSoundList[{finalLeft, finalRight}, sr]], "WAV"];
-    STEMDescribeWAV[outWAV, N[Length[finalLeft]] / sr];
+    wavDuration = N[Length[finalLeft]] / sr;
+    STEMDescribeWAV[outWAV, wavDuration];
+    Print[""];
+
+    Print["[5/5] Rendering visualisation..."];
+    STEMSay["Rendering visualisation"];
+    outGIF = FileNameJoin[{$projectRoot, "output", "bell_correlations.gif"}];
+    outPNG = FileNameJoin[{$projectRoot, "output", "bell_correlations.png"}];
+    {$gifFrames, $gifFps} = AnimateCorrelations[corrModel, outGIF, outPNG, wavDuration];
+    STEMDescribeGIF[outGIF, $gifFrames, $gifFps];
     Print[""],
 
   (* ===== chsh ===== *)
@@ -125,15 +131,12 @@ Which[
     ExportChshCSV[chshModel, outCSV];
     Print[""];
 
-    Print["[4/5] Rendering visualisation..."];
-    STEMSay["Rendering the gauge"];
-    outGIF = FileNameJoin[{$projectRoot, "output", "bell_chsh.gif"}];
-    outPNG = FileNameJoin[{$projectRoot, "output", "bell_chsh.png"}];
-    AnimateChsh[chshModel, outGIF, outPNG];
-    STEMDescribeGIF[outGIF, 7, 2];
-    Print[""];
-
-    Print["[5/5] Synthesising audio..."];
+    (* Audio before GIF (swapped from the original 4/5-then-5/5 order) —
+       see the correlations mode's comment above; same reason: the GIF's
+       playback duration must match the WAV's actual total length, which
+       depends on the platform TTS intro's length and is only known
+       after ExportAudioBuffer runs. *)
+    Print["[4/5] Synthesising audio..."];
     STEMSay["Synthesising audio"];
     outWAV = FileNameJoin[{$projectRoot, "output", "bell_chsh.wav"}];
     {rawLeft, rawRight} = BuildChshAudio[chshModel, 220.0, 1400.0, 2.5, sr];
@@ -145,7 +148,16 @@ Which[
     finalRight = Join[introBuffer, pauseBuffer, rawRight];
     EnsureDir[outWAV];
     Export[outWAV, Sound[SampledSoundList[{finalLeft, finalRight}, sr]], "WAV"];
-    STEMDescribeWAV[outWAV, N[Length[finalLeft]] / sr];
+    wavDuration = N[Length[finalLeft]] / sr;
+    STEMDescribeWAV[outWAV, wavDuration];
+    Print[""];
+
+    Print["[5/5] Rendering visualisation..."];
+    STEMSay["Rendering the gauge"];
+    outGIF = FileNameJoin[{$projectRoot, "output", "bell_chsh.gif"}];
+    outPNG = FileNameJoin[{$projectRoot, "output", "bell_chsh.png"}];
+    {$gifFrames, $gifFps} = AnimateChsh[chshModel, outGIF, outPNG, wavDuration];
+    STEMDescribeGIF[outGIF, $gifFrames, $gifFps];
     Print[""],
 
   (* ===== measurement ===== *)

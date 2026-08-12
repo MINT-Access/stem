@@ -312,6 +312,55 @@ Order 6 covers 64×64; order 7 covers 128×128.
    specific to this file — worth remembering anywhere a test-constrained
    pattern needs a default value.
 
+## GIF/WAV duration sync (fixed post-v1.5.0)
+
+**The bug.** `images_brightness.gif` measured 3.2s vs
+`images_brightness_audio.wav` 98.9s — a 31x mismatch. All four modes
+shared the same code path and were equally affected.
+
+**Root cause.** `AnimateImageTraversal`/`AnimateRasterScan` exported a
+fixed 32 frames at a fixed 10 fps (3.2s) regardless of how long the
+matching WAV actually plays — the same fixed-nFrames/fixed-frameRate
+pattern found repo-wide, decoupled from the per-pixel note buffer
+(`nPixels * note_duration_base`, here 4096 x 0.02s = 81.9s) plus the
+spoken intro baked directly into the audio buffer (`BuildIntroBuffer` in
+`speech.wl`, prepended in `main.wl`) whose length isn't known until the
+platform TTS engine actually renders it.
+
+**The fix.** Both `Animate*` functions now take a `targetDuration`
+argument and solve `frameRate` from a frame-count *budget* (150) divided
+by `targetDuration`, clamped to `[$ImagesMinGifFps, $ImagesMaxGifFps]`
+(2-30 fps), with the frame count recomputed at the clamp boundary so
+playback duration lands almost exactly on `targetDuration` — same
+reasoning as `lorenz/src/animate.wl`'s `ExportAnimation`
+(`hydrogen/AnimateOrbital` is the same adaptation of this same
+traversal-sweep idiom, and was fixed the same way — see its AGENTS.md
+entry). `main.wl`/`experiments.wl` already computed `totalDurSec` (the
+WAV's actual total sample count `/ sr`, including the spoken intro)
+*before* calling `Animate*`, so no call-site reordering was needed — the
+value just needed to be threaded through as `targetDuration`.
+
+**Verification (regenerated via `wolframscript -file main.wl` for all
+four modes, plus all 13 `experiments.wl` presets):**
+
+| Mode | GIF before | WAV | GIF after | Ratio after |
+|------|-----------|-----|-----------|-------------|
+| brightness | 3.2s | 98.93s | 99.00s | 1.00x |
+| scan_horizontal | 3.2s* | 99.85s | 100.00s | 1.00x |
+| colour | 3.2s* | 105.74s | 105.50s | 1.00x |
+| hsb | 3.2s* | 100.77s | 101.00s | 1.00x |
+
+*scan_horizontal/colour/hsb weren't individually measured pre-fix (only
+`images_brightness.gif` existed in `output/` before this fix), but shared
+the identical fixed 32-frames-@-10fps code path as brightness mode, so
+the same ~3.2s pre-fix duration applies. Spot-checked presets
+(`brightness_gaussian`, `colour_temperature`, `hsb_quantum`,
+`brightness_fast_notes`, `scan_horizontal_gaussian`) all land within
+2% of their WAV's duration post-fix.
+
+`tests/test_model.wl` (51/51 tests, unaffected by this change) still
+passes.
+
 ## Physics / image modification guidance
 
 Built-in test images are generated analytically from formulas — no file loading.

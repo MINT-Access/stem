@@ -186,6 +186,55 @@ qubit/
   output/                          — generated files (gitignored)
 ```
 
+## Animation framing: GIF/WAV duration sync (fixed post-v1.5.0)
+
+**The bug.** `gates` mode is the only mode with a GIF (`rabi`/`measurement`
+are plot/audio-only, so they were never affected). `ExportGatesAnimation`
+took hardcoded `frameRate_:10, nFrames_:80` — always exactly 8.00s of
+playback — regardless of the paired WAV's actual length. Measured before
+the fix: `gates_default` GIF 8.00s vs WAV 24.50s (3.06x), `gates_hadamard_only`
+8.00s vs 22.14s (2.77x), `gates_long_sequence` 8.00s vs 27.48s (3.43x).
+
+**Root cause, and why it's not the lorenz pattern verbatim.** lorenz's
+WAV duration is `solution[[-1,1]]`, a physically meaningful quantity
+known right after simulating. `gates` mode has no such quantity: the
+*raw* sonification content (`GatesStereoBuffer`, via `SpatialLayer`/
+`MotionLayer`/`EventLayer`) is resampled to a **fixed configured length**
+(`sonification.duration`, 10.0s by default, from `$HardcodedDefaults` and
+`config/config.json`) regardless of gate count — `Rescale` inside those
+stem-core layers stretches or compresses whatever `rPath` length exists
+onto that fixed window. What actually varies the WAV's *total* length
+per run is the spoken intro (`BuildGatesIntroText`, naming every gate in
+the sequence) prepended ahead of a 0.4s pause and the 10.0s raw buffer —
+longer sequences literally take longer to narrate. So the correct sync
+target isn't a property of `rPath` or of `sonification.duration` alone;
+it's the actual rendered `Length[finalLeft]/sr` — the same value already
+passed to `STEMDescribeWAV` — which isn't known until intro speech has
+been synthesized.
+
+**The fix.** `ExportGatesAnimation` in `src/animate.wl` now takes
+`targetDuration_?NumericQ` (the caller's already-known total WAV length)
+plus `nFrames_:80` as a render budget rather than a literal count, with
+the same `frameRate = Clip[nFrames/targetDuration, {$MinAnimationFps,
+$MaxAnimationFps}]` / `actualNFrames = Round[frameRate*targetDuration]`
+scheme lorenz uses (`$MinAnimationFps=2, $MaxAnimationFps=30`, duplicated
+into this file per the no-shared-src/ convention), returning
+`{actualNFrames, frameRate}` for `STEMDescribeGIF`. Because the WAV's
+length depends on intro-speech synthesis, `main.wl`'s gates branch had
+to be **reordered** — audio ([4/5]) now runs before animation ([5/5]),
+the reverse of before — so `totalDurSec` exists before `ExportGatesAnimation`
+is called. `experiments.wl`'s `RunExperiment` already synthesized audio
+before calling `ExportGatesAnimation`, so it only needed the new
+`targetDuration` argument, not reordering.
+
+**Verified after the fix** (same GIF/WAV pairs, PIL `ImageSequence` frame
+durations vs `wave` module frame count): `gates_default` 24.80s vs
+24.50s WAV (0.988x), `gates_hadamard_only` 22.40s vs 22.14s (0.988x),
+`gates_long_sequence` 30.40s vs 30.38s (1.000x). The residual ~1-2% gap
+is GIF's own per-frame duration field being quantized to integer
+centiseconds — an inherent format limit, not an app bug, matching the
+same residual lorenz's reference fix leaves.
+
 ## How to run
 
 ```sh

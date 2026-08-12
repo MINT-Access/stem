@@ -193,10 +193,60 @@ Expected output: `Passed: 34  Failed: 0` (exits 0).
 |---|---|
 | `output/l4_trajectory.csv` | 600 rows × 9 columns: t, x, y, vx, vy, omega, r1, r2, dist_L4 |
 | `output/l4.png` | Static trajectory plot, black background |
-| `output/l4.gif` | 32-frame animated traversal at 10 fps |
+| `output/l4.gif` | Animated traversal, frame count/fps solved so playback duration matches `l4_audio.wav` (see "Animation framing" below) |
 | `output/l4_audio.wav` | Stereo WAV, 44.1 kHz |
 | `output/l5_*` | Same structure for L5 mode |
 | `output/l1_*` | L1 escape: 500 rows, dL1 instead of dLP |
+
+---
+
+## Animation framing: GIF/WAV duration sync (fixed post-v1.5.0)
+
+**The bug.** `AnimateLibration`/`AnimateEscape` (`src/animate.wl`) hardcoded
+`nFrames = 32` and exported the GIF at a fixed `10` fps — always a 3.2 s
+loop, no matter how long the paired WAV played. Measured before the fix:
+`l1.gif` 3.2 s vs `l1_audio.wav` 8.0 s (2.5x), `l4.gif`/`l5.gif` 3.2 s vs
+18.85 s audio (5.9x). Watching the GIF loop 2-6 times per single audio
+playthrough with no relationship between the two.
+
+**Root cause.** Same decoupling bug as `lorenz/src/animate.wl` before its
+fix: frame count and frame rate were literal constants, independent of the
+trajectory/audio duration. The WAV's duration, by contrast, was already
+derived from the physics — `SonifyLibration` used
+`Max[15 s, 0.5 * tEnd]` and `SonifyEscape` used `Max[8 s, 0.6 * tActual]`
+(`tEnd`/`tActual` come from the model's integration length) — so only the
+GIF side was static.
+
+**The fix.** `LibrationAudioDuration[model]`/`EscapeAudioDuration[model]`
+(new, in `src/sonify.wl`) now hold that duration formula as a single
+source of truth, called both by `SonifyLibration`/`SonifyEscape` (for the
+WAV) and by `main.wl` before calling `AnimateLibration`/`AnimateEscape`
+(for the GIF). `AnimateLibration`/`AnimateEscape` take a new
+`targetDuration` argument and an `nFrameBudget` (default 150, matching
+lorenz's convention): `frameRate = Clip[nFrameBudget/targetDuration,
+{2, 30}]`, `nFrames = Max[2, Round[frameRate * targetDuration]]`. Both
+functions now return `{nFrames, frameRate}`, which `main.wl` passes to
+`STEMDescribeGIF` for accessible reporting. `MakeLagrangeFrame` and the
+frame-sampling math are unchanged — only how many frames get rendered and
+at what rate.
+
+**Verification.** Regenerated `l1`, `l4`, `l5` (sun_jupiter defaults) plus
+an `earth_moon` L4 variant, then re-measured actual GIF/WAV durations:
+
+| Pair | Before (GIF / WAV, ratio) | After (GIF / WAV, ratio) |
+|---|---|---|
+| l1 | 3.2 s / 8.00 s (2.50x) | 7.50 s / 8.00 s (1.07x) |
+| l4 | 3.2 s / 18.85 s (5.89x) | 19.50 s / 18.85 s (0.97x) |
+| l5 | 3.2 s / 18.85 s (5.89x) | 19.50 s / 18.85 s (0.97x) |
+| l4 (earth_moon) | — | 19.50 s / 18.85 s (0.97x) |
+
+The residual few-percent drift (not exactly 1.00x) is GIF format
+quantization, not a leftover bug: `ExportGIF`'s `DisplayDurations` is
+rounded to the nearest 1/100 s per frame by the GIF encoder, and that
+per-frame rounding accumulates over 150 frames. Lorenz's own regenerated
+output shows the same floor (~0.99-1.00x on its non-legacy pairs). All 43
+cases in `tests/test_model.wl` still pass (unaffected — that suite only
+covers `model.wl` physics, not animation/sonification).
 
 ---
 
@@ -205,4 +255,4 @@ Expected output: `Passed: 34  Failed: 0` (exits 0).
 - **`$mu` must be set before `Get[src/model.wl]` is called**: The EOM functions use `$mu` via delayed evaluation. If `$mu` is undefined the functions will return symbolic expressions and NDSolve will fail. In tests, set `$mu` immediately after loading `stem-core`.
 - **Large perturbation → check 3 fails**: The libration region shrinks as μ increases. With `earth_moon` preset and `perturbation=0.15`, the particle may escape L4. This is physically correct, not a bug.
 - **L1 integration may not stop early for very small perturbation**: With `perturbation=0.001`, the unstable manifold growth is slow; the WhenEvent threshold (dist > 0.4) may not be reached in 3 orbital periods. Check 4 prints `[WARN]` in that case.
-- **GIF frame count**: Always 32 frames, regardless of duration. For very long runs (`duration_periods=12`), each frame covers ~2.4% of the trajectory.
+- **GIF frame count is a render budget, not a literal count**: `AnimateLibration`/`AnimateEscape` take an `nFrameBudget` (default 150) and solve `frameRate = nFrameBudget / targetDuration`, clamped to 2-30 fps. The actual frame count is `Round[frameRate * targetDuration]`, so it flexes with the audio duration — see "Animation framing" below.

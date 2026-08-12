@@ -2,10 +2,17 @@
    magnetic/src/sonify.wl — Audio synthesis for all four modes
 
    Public API:
-     SonifyCyclotron[model, cfg, outWav]
-     SonifyDrift[model, cfg, outWav]
-     SonifyMirror[model, cfg, outWav]
-     SonifyMulti[model, cfg, outWav]
+     SonifyCyclotron[model, cfg, outWav]  -> total WAV duration (sec)
+     SonifyDrift[model, cfg, outWav]      -> total WAV duration (sec)
+     SonifyMirror[model, cfg, outWav]     -> total WAV duration (sec)
+     SonifyMulti[model, cfg, outWav]      -> total WAV duration (sec)
+
+   Each Sonify* function's return value (threaded up from
+   PrependIntroAndExport) is the TRUE total playback length of the
+   exported WAV -- spoken intro + 0.4s pause + main tone content -- not
+   just the simulated trajectory's duration. main.wl captures this and
+   passes it as the GIF's targetDuration so the animation spans the
+   WAV's actual full length. See AGENTS.md, "GIF/WAV duration sync".
 
    Design decision: manual carrier synthesis, not SonifyTrajectory.
    Every mode needs the tone's OWN frequency to literally equal a
@@ -175,10 +182,15 @@ BuildIntroBuffer[text_String, sr_Integer] :=
 
 
 (* ── PrependIntro — build spoken intro, silence gap, join with the
-   main stereo buffer, normalise, and export. *)
+   main stereo buffer, normalise, and export.  Returns the WAV's TRUE
+   total duration in seconds (intro + 0.4s pause + main content) -- the
+   full playback length of the exported file, not just the main
+   content's length -- so callers (main.wl) can pass it on as the GIF's
+   targetDuration and keep animation and audio in sync end-to-end,
+   including the spoken intro. See AGENTS.md, "GIF/WAV duration sync". *)
 PrependIntroAndExport[introText_String, leftMain_List, rightMain_List,
                       sr_Integer, outWav_String] :=
-  Module[{introBuffer, pauseBuffer, finalLeft, finalRight},
+  Module[{introBuffer, pauseBuffer, finalLeft, finalRight, totalDur},
     Print["  Spoken intro: ", introText];
     introBuffer = BuildIntroBuffer[introText, sr];
     introBuffer = If[Length[introBuffer] > 0, NormalizeBuffer[introBuffer, 0.95], introBuffer];
@@ -187,7 +199,9 @@ PrependIntroAndExport[introText_String, leftMain_List, rightMain_List,
     finalRight  = Join[introBuffer, pauseBuffer, rightMain];
     EnsureDir[outWav];
     ExportAudioBuffer[NormalizeBuffer[{finalLeft, finalRight}, 0.92], outWav, sr];
-    STEMDescribeWAV[outWav, N[Length[finalLeft]] / sr]
+    totalDur = N[Length[finalLeft]] / sr;
+    STEMDescribeWAV[outWav, totalDur];
+    totalDur
   ]
 
 

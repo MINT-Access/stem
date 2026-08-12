@@ -105,8 +105,8 @@ Which[
     Print["[4/5] Rendering animation..."];
     STEMSay["Rendering animation"];
     outGIF = FileNameJoin[{$projectRoot, "output", "lorenz_animation.gif"}];
-    ExportAnimation[solution, outGIF, 30, 150, "Lorenz Attractor"];
-    STEMDescribeGIF[outGIF, 150, 30];
+    {$gifFrames, $gifFps} = ExportAnimation[solution, outGIF, solution[[-1, 1]], 150, "Lorenz Attractor"];
+    STEMDescribeGIF[outGIF, $gifFrames, $gifFps];
     Print[""];
 
     Print["[5/5] Synthesising audio..."];
@@ -176,8 +176,8 @@ Which[
     Print["[4/5] Rendering animation..."];
     STEMSay["Rendering animation"];
     outGIF = FileNameJoin[{$projectRoot, "output", "rossler_animation.gif"}];
-    ExportAnimation[solution, outGIF, 30, 150, "Rossler Attractor"];
-    STEMDescribeGIF[outGIF, 150, 30];
+    {$gifFrames, $gifFps} = ExportAnimation[solution, outGIF, solution[[-1, 1]], 150, "Rossler Attractor"];
+    STEMDescribeGIF[outGIF, $gifFrames, $gifFps];
     Print[""];
 
     Print["[5/5] Synthesising audio..."];

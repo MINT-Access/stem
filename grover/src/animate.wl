@@ -15,6 +15,32 @@
    ======================================================== *)
 
 
+(* Each Animate* below used to export at a fixed frame rate (4/12/3 fps
+   respectively) with a frame count tied only to the number of discrete
+   simulation steps/sweep points -- completely decoupled from how long
+   the matching WAV actually plays once its spoken intro is included
+   (measured: grover_search.gif 3.25s vs grover_search.wav 18.67s,
+   grover_compare.gif 3.2s vs 21.25s, grover_geometry.gif 4.29s vs
+   26.69s). targetDuration below is the actual total WAV duration
+   (main.wl/experiments.wl now build the audio, including its spoken
+   intro, before rendering the GIF so this value is known exactly, not
+   estimated). nFrames is a RENDER BUDGET: frameRate is solved as
+   nFrames/targetDuration then clamped to [$GroverMinGifFps,
+   $GroverMaxGifFps] so the frame COUNT is what flexes at the clamp
+   boundary, keeping actual playback duration exactly targetDuration.
+   Same pattern as lorenz/src/animate.wl's ExportAnimation. Search and
+   geometry modes have only as many distinct visual states as Grover
+   iterations (often far fewer than the render budget); when that
+   happens Subdivide's rounding naturally holds a state across several
+   consecutive frames rather than erroring. *)
+$GroverMinGifFps = 2;
+$GroverMaxGifFps = 30;
+$GroverGifFrameBudget = 150;
+
+GroverGifRate[targetDuration_?NumericQ, nFrames_:$GroverGifFrameBudget] :=
+  Clip[nFrames / targetDuration, {$GroverMinGifFps, $GroverMaxGifFps}];
+
+
 (* ========================================================
    MODE 1: search — P(marked) vs iteration, optimum marked
    ======================================================== *)
@@ -38,12 +64,14 @@ RenderSearchFrame[model_Association, upTo_Integer] :=
     ]
   ];
 
-AnimateSearch[model_Association, outGif_String, outPng_String] :=
-  Module[{n, indices, frames, kArr, probArr, optimalK, staticPlt},
+AnimateSearch[model_Association, outGif_String, outPng_String, targetDuration_?NumericQ] :=
+  Module[{n, frameRate, nFrames, indices, frames, kArr, probArr, optimalK, staticPlt},
     n = Length[model["kArr"]];
-    indices = Range[1, n];
+    frameRate = GroverGifRate[targetDuration];
+    nFrames   = Max[2, Round[frameRate * targetDuration]];
+    indices = Clip[Round[Subdivide[1, n, nFrames - 1]], {1, n}];
     frames = RenderSearchFrame[model, #] & /@ indices;
-    ExportGIF[frames, outGif, 4];
+    ExportGIF[frames, outGif, frameRate];
 
     kArr = model["kArr"]; probArr = model["probArr"]; optimalK = model["optimalK"];
     staticPlt = Graphics[
@@ -63,7 +91,7 @@ AnimateSearch[model_Association, outGif_String, outPng_String] :=
     ];
     Export[outPng, staticPlt, "PNG"];
     Print["  PNG: ", outPng];
-    Length[frames]
+    {Length[frames], frameRate}
   ];
 
 
@@ -93,13 +121,14 @@ RenderCompareFrame[model_Association, upTo_Integer] :=
     ]
   ];
 
-AnimateCompare[model_Association, outGif_String, outPng_String,
-              Optional[nFrames_Integer, 40]] :=
-  Module[{nSteps, indices, frames, logN, classicalArr, quantumArr, staticPlt},
+AnimateCompare[model_Association, outGif_String, outPng_String, targetDuration_?NumericQ] :=
+  Module[{nSteps, frameRate, nFrames, indices, frames, logN, classicalArr, quantumArr, staticPlt},
     nSteps = Length[model["nArr"]];
-    indices = DeleteDuplicates[Round[Subdivide[1, nSteps, Min[nFrames, nSteps] - 1]]];
+    frameRate = GroverGifRate[targetDuration];
+    nFrames   = Max[2, Round[frameRate * targetDuration]];
+    indices = Clip[Round[Subdivide[1, nSteps, nFrames - 1]], {1, nSteps}];
     frames = RenderCompareFrame[model, #] & /@ indices;
-    ExportGIF[frames, outGif, 12];
+    ExportGIF[frames, outGif, frameRate];
 
     logN = Log10[model["nArr"]];
     classicalArr = Log10[model["classicalArr"]];
@@ -120,7 +149,7 @@ AnimateCompare[model_Association, outGif_String, outPng_String,
     ];
     Export[outPng, staticPlt, "PNG"];
     Print["  PNG: ", outPng];
-    Length[frames]
+    {Length[frames], frameRate}
   ];
 
 
@@ -152,14 +181,17 @@ RenderGeometryFrame[model_Association, upTo_Integer] :=
     ]
   ];
 
-AnimateGeometry[model_Association, outGif_String, outPng_String] :=
-  Module[{n, frames, staticPlt},
+AnimateGeometry[model_Association, outGif_String, outPng_String, targetDuration_?NumericQ] :=
+  Module[{n, frameRate, nFrames, indices, frames, staticPlt},
     n = Length[model["kArr"]];
-    frames = RenderGeometryFrame[model, #] & /@ Range[1, n];
-    ExportGIF[frames, outGif, 3];
+    frameRate = GroverGifRate[targetDuration];
+    nFrames   = Max[2, Round[frameRate * targetDuration]];
+    indices = Clip[Round[Subdivide[1, n, nFrames - 1]], {1, n}];
+    frames = RenderGeometryFrame[model, #] & /@ indices;
+    ExportGIF[frames, outGif, frameRate];
 
     staticPlt = RenderGeometryFrame[model, n];
     Export[outPng, staticPlt, "PNG"];
     Print["  PNG: ", outPng];
-    Length[frames]
+    {Length[frames], frameRate}
   ];

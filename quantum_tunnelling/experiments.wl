@@ -45,7 +45,7 @@ PrintBarrierSummary[bar1];
 {l1, r1} = BuildBarrierAudio[bar1, $audioFreqMin, $audioFreqMax, $sr];
 RunToFile["barrier_default", l1, r1];
 AnimateBarrier[bar1, FileNameJoin[{$outDir, "barrier_default_animation.gif"}],
-                     FileNameJoin[{$outDir, "barrier_default_plot.png"}]];
+                     FileNameJoin[{$outDir, "barrier_default_plot.png"}], N[Length[l1]] / $sr];
 ExportBarrierCSV[bar1, FileNameJoin[{$outDir, "barrier_default_stats.csv"}]];
 
 (* --- barrier_stm: scanning tunnelling microscope scale --- *)
@@ -56,7 +56,7 @@ PrintBarrierSummary[bar2];
 {l2, r2} = BuildBarrierAudio[bar2, $audioFreqMin, $audioFreqMax, $sr];
 RunToFile["barrier_stm", l2, r2];
 AnimateBarrier[bar2, FileNameJoin[{$outDir, "barrier_stm_animation.gif"}],
-                     FileNameJoin[{$outDir, "barrier_stm_plot.png"}]];
+                     FileNameJoin[{$outDir, "barrier_stm_plot.png"}], N[Length[l2]] / $sr];
 ExportBarrierCSV[bar2, FileNameJoin[{$outDir, "barrier_stm_stats.csv"}]];
 
 (* --- barrier_alpha_decay: illustrative nuclear scale --- *)
@@ -67,7 +67,7 @@ PrintBarrierSummary[bar3];
 {l3, r3} = BuildBarrierAudio[bar3, $audioFreqMin, $audioFreqMax, $sr];
 RunToFile["barrier_alpha_decay", l3, r3];
 AnimateBarrier[bar3, FileNameJoin[{$outDir, "barrier_alpha_decay_animation.gif"}],
-                     FileNameJoin[{$outDir, "barrier_alpha_decay_plot.png"}]];
+                     FileNameJoin[{$outDir, "barrier_alpha_decay_plot.png"}], N[Length[l3]] / $sr];
 ExportBarrierCSV[bar3, FileNameJoin[{$outDir, "barrier_alpha_decay_stats.csv"}]];
 
 (* --- barrier_manual: a custom manual configuration, resonance-adjacent --- *)
@@ -80,7 +80,7 @@ PrintBarrierSummary[bar4];
 {l4, r4} = BuildBarrierAudio[bar4, $audioFreqMin, $audioFreqMax, $sr];
 RunToFile["barrier_manual", l4, r4];
 AnimateBarrier[bar4, FileNameJoin[{$outDir, "barrier_manual_animation.gif"}],
-                     FileNameJoin[{$outDir, "barrier_manual_plot.png"}]];
+                     FileNameJoin[{$outDir, "barrier_manual_plot.png"}], N[Length[l4]] / $sr];
 ExportBarrierCSV[bar4, FileNameJoin[{$outDir, "barrier_manual_stats.csv"}]];
 
 (* --- sweep_default: full 0.1-3nm width sweep --- *)
@@ -93,7 +93,7 @@ PrintSweepSummary[sweep1];
 {ls1, rs1} = BuildSweepAudio[sweep1, $audioFreqMin, $audioFreqMax, 6.0, $sr];
 RunToFile["sweep_default", ls1, rs1];
 AnimateSweep[sweep1, FileNameJoin[{$outDir, "sweep_default_animation.gif"}],
-                     FileNameJoin[{$outDir, "sweep_default_plot.png"}]];
+                     FileNameJoin[{$outDir, "sweep_default_plot.png"}], 6.0];
 ExportSweepCSV[sweep1, FileNameJoin[{$outDir, "sweep_default_stats.csv"}]];
 
 (* --- energy_default: full 0.1-6eV energy sweep, crossing V0=2eV --- *)
@@ -106,7 +106,7 @@ PrintEnergySummary[energy1];
 {le1, re1} = BuildEnergyAudio[energy1, $audioFreqMin, $audioFreqMax, 8.0, $sr];
 RunToFile["energy_default", le1, re1];
 AnimateEnergy[energy1, FileNameJoin[{$outDir, "energy_default_animation.gif"}],
-                       FileNameJoin[{$outDir, "energy_default_plot.png"}]];
+                       FileNameJoin[{$outDir, "energy_default_plot.png"}], 8.0];
 ExportEnergyCSV[energy1, FileNameJoin[{$outDir, "energy_default_stats.csv"}]];
 
 (* --- energy_wide: a wider sweep showing several resonance peaks --- *)
@@ -119,7 +119,7 @@ PrintEnergySummary[energy2];
 {le2, re2} = BuildEnergyAudio[energy2, $audioFreqMin, $audioFreqMax, 8.0, $sr];
 RunToFile["energy_wide", le2, re2];
 AnimateEnergy[energy2, FileNameJoin[{$outDir, "energy_wide_animation.gif"}],
-                       FileNameJoin[{$outDir, "energy_wide_plot.png"}]];
+                       FileNameJoin[{$outDir, "energy_wide_plot.png"}], 8.0];
 ExportEnergyCSV[energy2, FileNameJoin[{$outDir, "energy_wide_stats.csv"}]];
 
 Print[""];

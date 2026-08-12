@@ -5,9 +5,18 @@
      AnimateRelativity[model, cfg, outDir]
 
    Outputs:
-     chirp.gif — 60-frame animated GIF revealing the waveform left-to-right
+     chirp.gif — animated GIF revealing the waveform left-to-right, timed
+                  to play back over the same duration as chirp.wav
      chirp.png — static two-panel PNG: waveform + frequency evolution
    ======================================================== *)
+
+
+(* Sane bounds on GIF playback frame rate — see the targetDuration/fps
+   solve in AnimateRelativity and AnimateGeodesic for how these keep
+   animation/audio duration in sync without forcing an absurdly fast
+   or glacial frame rate at the extremes. *)
+$MinAnimationFps = 2;
+$MaxAnimationFps = 30;
 
 
 (* DecimateForPlot
@@ -37,9 +46,10 @@ AnimateRelativity[model_Association, cfg_Association, outDir_String] :=
     mode, tFull, hFull, fFull, mergerIdx, tc,
     tInspiral, hInspiral, fInspiral,
     n, nInspiral,
+    srModel, timeStretch, freqShift, targetDuration,
     fps, width, height,
     hMax, fPeak, fQnm, tTotal,
-    nFrames, frameIndices, frames,
+    nFramesBudget, nFrames, frameIndices, frames,
     frame, revealN, revealT, revealH, revealF,
     dotT, dotF,
     wavePanel, freqPanel,
@@ -63,7 +73,6 @@ AnimateRelativity[model_Association, cfg_Association, outDir_String] :=
   n         = Length[tFull];
   nInspiral = mergerIdx;
 
-  fps    = GetCfg[cfg, {"animation","fps"},    30];
   width  = GetCfg[cfg, {"animation","width"},  800];
   height = GetCfg[cfg, {"animation","height"}, 400];
 
@@ -73,12 +82,35 @@ AnimateRelativity[model_Association, cfg_Association, outDir_String] :=
   tTotal = Last[tFull];
   mergerT = tc;
 
-  (* ── 60-frame animated GIF ──────────────────────────── *)
-  nFrames = 60;
+  (* Target GIF playback duration = chirp.wav's actual duration, not the raw
+     model time tTotal. ChirpToAudio (src/sonify.wl) time-stretches/shifts the
+     raw signal by timeStretch/freqShift, so the audible WAV is a different
+     length than the model's own time array. Recomputing the same formula
+     here (rather than reading it back from the WAV) keeps animate/sonify
+     independent while landing on an identical duration. *)
+  srModel        = Round @ model["sample_rate"];
+  timeStretch    = N @ GetCfg[cfg, {"sonification","chirp","time_stretch"},    4.0];
+  freqShift      = N @ GetCfg[cfg, {"sonification","chirp","frequency_shift"}, 1.0];
+  targetDuration = N[(n - 1) / srModel] * timeStretch / freqShift;
+
+  (* ── Animated GIF ──────────────────────────────────────
+     nFramesBudget is a RENDER BUDGET, not a literal frame count: fps is
+     solved as nFramesBudget/targetDuration and clamped to
+     [$MinAnimationFps, $MaxAnimationFps] so a very short or very long
+     chirp.wav doesn't demand a strobing or glacial frame rate. The frame
+     COUNT is what flexes at the clamp boundary, so playback duration
+     always equals targetDuration exactly, matching chirp.wav. *)
+  nFramesBudget = 60;
+  fps     = Clip[nFramesBudget / targetDuration, {$MinAnimationFps, $MaxAnimationFps}];
+  nFrames = Max[2, Round[fps * targetDuration]];
 
   (* Distribute frames over the full signal (inspiral + ringdown) *)
-  frameIndices = Round @ Subdivide[1, n, nFrames];
+  frameIndices = Round @ Subdivide[1, n, nFrames - 1];
   frameIndices = Clip[frameIndices, {1, n}];
+
+  Print["  Rendering ", Length[frameIndices], " frames at ", FmtN[fps, 3],
+        " fps (", FmtN[Length[frameIndices] / fps, 3],
+        "s, matching chirp.wav duration ", FmtN[targetDuration, 3], "s)..."];
 
   frames = Map[
     Function[fi,
@@ -153,7 +185,7 @@ AnimateRelativity[model_Association, cfg_Association, outDir_String] :=
 
   gifPath = FileNameJoin[{outDir, "chirp.gif"}];
   ExportGIF[frames, gifPath, fps];
-  STEMDescribeGIF[gifPath, nFrames, fps];
+  STEMDescribeGIF[gifPath, Length[frameIndices], fps];
 
   (* ── Static PNG: full waveform + frequency evolution ── *)
   Print["  Exporting static PNG..."];
@@ -223,8 +255,8 @@ AnimateGeodesic[model_Association, cfg_Association, outDir_String] :=
   Module[{
     orbitType, tauArr, rArr, phiArr, n, tauEnd,
     xRs, yRs, rMaxRs, plotRange,
-    fps, width,
-    nFrames, frameIndices, frames,
+    targetDuration, fps, width,
+    nFramesBudget, nFrames, frameIndices, frames,
     orbitColor, particleColor,
     bhDisk, photonSphereCircle, iscoCircle,
     revealXY, dotXY, fi,
@@ -241,8 +273,14 @@ AnimateGeodesic[model_Association, cfg_Association, outDir_String] :=
   xRs = model["x"] / 2.0;
   yRs = model["y"] / 2.0;
 
-  fps   = GetCfg[cfg, {"animation","fps"},   30];
   width = GetCfg[cfg, {"animation","width"}, 800];
+
+  (* Target GIF playback duration = geodesic.wav's actual duration.
+     SonifyGeodesic (src/sonify.wl) sizes the WAV directly off this same
+     config key — sonification.geodesic.duration_s — rather than off
+     tau_max_m/n_steps, so reading it here keeps the animation in sync
+     without needing the WAV to already exist. *)
+  targetDuration = N @ GetCfg[cfg, {"sonification","geodesic","duration_s"}, 10.0];
 
   rMaxRs    = model["r_max"] / 2.0 * 1.18;   (* axis half-extent in r_s *)
   plotRange = {{-rMaxRs, rMaxRs}, {-rMaxRs, rMaxRs}};
@@ -267,9 +305,20 @@ AnimateGeodesic[model_Association, cfg_Association, outDir_String] :=
     {}
   ];
 
-  (* ── Animated GIF: 60 frames revealing the trajectory ── *)
-  nFrames      = 60;
-  frameIndices = Clip[Round @ Subdivide[1, n, nFrames], {1, n}];
+  (* ── Animated GIF: playback duration matches geodesic.wav ──
+     nFramesBudget is a RENDER BUDGET, not a literal frame count: fps is
+     solved as nFramesBudget/targetDuration and clamped to
+     [$MinAnimationFps, $MaxAnimationFps] so playback duration always
+     equals targetDuration exactly (frame COUNT flexes at the clamp),
+     regardless of duration_s or the trajectory's own proper time span. *)
+  nFramesBudget = 60;
+  fps           = Clip[nFramesBudget / targetDuration, {$MinAnimationFps, $MaxAnimationFps}];
+  nFrames       = Max[2, Round[fps * targetDuration]];
+  frameIndices  = Clip[Round @ Subdivide[1, n, nFrames - 1], {1, n}];
+
+  Print["  Rendering ", Length[frameIndices], " frames at ", FmtN[fps, 3],
+        " fps (", FmtN[Length[frameIndices] / fps, 3],
+        "s, matching geodesic.wav duration ", FmtN[targetDuration, 3], "s)..."];
 
   frames = Map[
     Function[fi,
@@ -303,7 +352,7 @@ AnimateGeodesic[model_Association, cfg_Association, outDir_String] :=
 
   gifPath = FileNameJoin[{outDir, "geodesic.gif"}];
   ExportGIF[frames, gifPath, fps];
-  STEMDescribeGIF[gifPath, nFrames, fps];
+  STEMDescribeGIF[gifPath, Length[frameIndices], fps];
 
   (* ── Static PNG: full trajectory ── *)
   Print["  Exporting static PNG..."];

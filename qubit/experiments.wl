@@ -26,7 +26,8 @@ RunExperiment[name_String, overrides_Association] :=
           Omega, tMax, nTrials, seed, sr, duration,
           alpha0, beta0, gatesResult, tVals, p1Vals, trialsResult,
           outWAV, outGIF, outPNG, outCSV,
-          rawLeft, rawRight, introText, introBuffer, pauseBuffer, finalLeft, finalRight, totalDurSec},
+          rawLeft, rawRight, introText, introBuffer, pauseBuffer, finalLeft, finalRight, totalDurSec,
+          gifFrames, gifFps},
 
     Print[""];
     STEMHeading["Experiment: " <> name];
@@ -68,7 +69,10 @@ RunExperiment[name_String, overrides_Association] :=
         totalDurSec = N[Length[finalLeft]] / sr;
         STEMDescribeWAV[outWAV, totalDurSec];
 
-        ExportGatesAnimation[gatesResult["rPath"], outGIF];
+        (* GIF playback duration matches this same totalDurSec exactly —
+           see AGENTS.md "Animation framing". *)
+        {gifFrames, gifFps} = ExportGatesAnimation[gatesResult["rPath"], outGIF, totalDurSec];
+        STEMDescribeGIF[outGIF, gifFrames, gifFps];
         ExportGatesPNG[gatesResult["rPath"], outPNG];
         ExportGatesCSV[gatesResult, outCSV],
 

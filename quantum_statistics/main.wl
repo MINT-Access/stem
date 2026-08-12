@@ -89,15 +89,7 @@ Which[
     ExportSpectrumCSV[spectrumModel, outCSV];
     Print[""];
 
-    Print["[4/5] Rendering visualisation..."];
-    STEMSay["Rendering visualisation"];
-    outGIF = FileNameJoin[{$projectRoot, "output", "quantum_statistics_spectrum.gif"}];
-    outPNG = FileNameJoin[{$projectRoot, "output", "quantum_statistics_spectrum.png"}];
-    AnimateSpectrum[spectrumModel, outGIF, outPNG];
-    STEMDescribeGIF[outGIF, 40, 12];
-    Print[""];
-
-    Print["[5/5] Synthesising audio..."];
+    Print["[4/5] Synthesising audio..."];
     STEMSay["Synthesising audio"];
     outWAV = FileNameJoin[{$projectRoot, "output", "quantum_statistics_spectrum.wav"}];
     {rawLeft, rawRight} = BuildSpectrumAudio[spectrumModel, 60, duration, sr];
@@ -109,7 +101,16 @@ Which[
     finalRight = Join[introBuffer, pauseBuffer, rawRight];
     EnsureDir[outWAV];
     Export[outWAV, Sound[SampledSoundList[{finalLeft, finalRight}, sr]], "WAV"];
-    STEMDescribeWAV[outWAV, N[Length[finalLeft]] / sr];
+    wavDuration = N[Length[finalLeft]] / sr;
+    STEMDescribeWAV[outWAV, wavDuration];
+    Print[""];
+
+    Print["[5/5] Rendering visualisation..."];
+    STEMSay["Rendering visualisation"];
+    outGIF = FileNameJoin[{$projectRoot, "output", "quantum_statistics_spectrum.gif"}];
+    outPNG = FileNameJoin[{$projectRoot, "output", "quantum_statistics_spectrum.png"}];
+    {$gifFrames, $gifFps} = AnimateSpectrum[spectrumModel, outGIF, outPNG, wavDuration];
+    STEMDescribeGIF[outGIF, $gifFrames, $gifFps];
     Print[""],
 
   (* ===== temperature ===== *)
@@ -130,15 +131,7 @@ Which[
     ExportTemperatureCSV[temperatureModel, outCSV];
     Print[""];
 
-    Print["[4/5] Rendering visualisation..."];
-    STEMSay["Rendering visualisation"];
-    outGIF = FileNameJoin[{$projectRoot, "output", "quantum_statistics_temperature.gif"}];
-    outPNG = FileNameJoin[{$projectRoot, "output", "quantum_statistics_temperature.png"}];
-    AnimateTemperature[temperatureModel, outGIF, outPNG];
-    STEMDescribeGIF[outGIF, 40, 12];
-    Print[""];
-
-    Print["[5/5] Synthesising audio..."];
+    Print["[4/5] Synthesising audio..."];
     STEMSay["Synthesising audio"];
     outWAV = FileNameJoin[{$projectRoot, "output", "quantum_statistics_temperature.wav"}];
     {rawLeft, rawRight} = BuildTemperatureAudio[temperatureModel, duration, sr];
@@ -150,7 +143,16 @@ Which[
     finalRight = Join[introBuffer, pauseBuffer, rawRight];
     EnsureDir[outWAV];
     Export[outWAV, Sound[SampledSoundList[{finalLeft, finalRight}, sr]], "WAV"];
-    STEMDescribeWAV[outWAV, N[Length[finalLeft]] / sr];
+    wavDuration = N[Length[finalLeft]] / sr;
+    STEMDescribeWAV[outWAV, wavDuration];
+    Print[""];
+
+    Print["[5/5] Rendering visualisation..."];
+    STEMSay["Rendering visualisation"];
+    outGIF = FileNameJoin[{$projectRoot, "output", "quantum_statistics_temperature.gif"}];
+    outPNG = FileNameJoin[{$projectRoot, "output", "quantum_statistics_temperature.png"}];
+    {$gifFrames, $gifFps} = AnimateTemperature[temperatureModel, outGIF, outPNG, wavDuration];
+    STEMDescribeGIF[outGIF, $gifFrames, $gifFps];
     Print[""],
 
   (* ===== fermi_sea ===== *)
@@ -169,15 +171,7 @@ Which[
     ExportFermiSeaCSV[fermiSeaModel, outCSV];
     Print[""];
 
-    Print["[4/5] Rendering visualisation..."];
-    STEMSay["Rendering visualisation"];
-    outGIF = FileNameJoin[{$projectRoot, "output", "quantum_statistics_fermi_sea.gif"}];
-    outPNG = FileNameJoin[{$projectRoot, "output", "quantum_statistics_fermi_sea.png"}];
-    AnimateFermiSea[fermiSeaModel, outGIF, outPNG];
-    STEMDescribeGIF[outGIF, fermiSeaModel["nTSteps"], 2];
-    Print[""];
-
-    Print["[5/5] Synthesising audio..."];
+    Print["[4/5] Synthesising audio..."];
     STEMSay["Synthesising audio"];
     outWAV = FileNameJoin[{$projectRoot, "output", "quantum_statistics_fermi_sea.wav"}];
     {rawLeft, rawRight} = BuildFermiSeaAudio[fermiSeaModel, 220.0, 1400.0, 1.2, sr];
@@ -189,7 +183,16 @@ Which[
     finalRight = Join[introBuffer, pauseBuffer, rawRight];
     EnsureDir[outWAV];
     Export[outWAV, Sound[SampledSoundList[{finalLeft, finalRight}, sr]], "WAV"];
-    STEMDescribeWAV[outWAV, N[Length[finalLeft]] / sr];
+    wavDuration = N[Length[finalLeft]] / sr;
+    STEMDescribeWAV[outWAV, wavDuration];
+    Print[""];
+
+    Print["[5/5] Rendering visualisation..."];
+    STEMSay["Rendering visualisation"];
+    outGIF = FileNameJoin[{$projectRoot, "output", "quantum_statistics_fermi_sea.gif"}];
+    outPNG = FileNameJoin[{$projectRoot, "output", "quantum_statistics_fermi_sea.png"}];
+    {$gifFrames, $gifFps} = AnimateFermiSea[fermiSeaModel, outGIF, outPNG, wavDuration];
+    STEMDescribeGIF[outGIF, $gifFrames, $gifFps];
     Print[""],
 
   (* ===== unknown mode ===== *)

@@ -98,14 +98,7 @@ Which[
     ExportScatterCSV[model, FileNameJoin[{$outDir, "scatter_data.csv"}]];
     Print[""];
 
-    Print["[2/4] Rendering collision diagram..."];
-    STEMSay["Rendering the collision diagram"];
-    nFrames = AnimateScatter[model, FileNameJoin[{$outDir, "scatter.gif"}],
-                             FileNameJoin[{$outDir, "scatter.png"}]];
-    STEMDescribeGIF[FileNameJoin[{$outDir, "scatter.gif"}], nFrames, 15];
-    Print[""];
-
-    Print["[3/4] Synthesising audio with spoken intro/outro..."];
+    Print["[2/4] Synthesising audio with spoken intro/outro..."];
     STEMSay["Sonifying the collision"];
     introText = BuildScatterIntroText[model];
     outroText = BuildScatterOutroText[model];
@@ -123,7 +116,15 @@ Which[
     outWAV = FileNameJoin[{$outDir, "scatter_audio.wav"}];
     EnsureDir[outWAV];
     ExportAudioBuffer[NormalizeBuffer[{finalLeft, finalRight}, 0.92], outWAV, sr];
-    STEMDescribeWAV[outWAV, N[Length[finalLeft]] / sr];
+    wavDuration = N[Length[finalLeft]] / sr;
+    STEMDescribeWAV[outWAV, wavDuration];
+    Print[""];
+
+    Print["[3/4] Rendering collision diagram..."];
+    STEMSay["Rendering the collision diagram"];
+    {$gifFrames, $gifFps} = AnimateScatter[model, FileNameJoin[{$outDir, "scatter.gif"}],
+                             FileNameJoin[{$outDir, "scatter.png"}], wavDuration];
+    STEMDescribeGIF[FileNameJoin[{$outDir, "scatter.gif"}], $gifFrames, $gifFps];
     Print[""];
 
     Print["[4/4] Done."];
@@ -145,14 +146,7 @@ Which[
     ExportSweepCSV[model, FileNameJoin[{$outDir, "sweep_data.csv"}]];
     Print[""];
 
-    Print["[2/4] Rendering sweep animation and static plot..."];
-    STEMSay["Rendering the wavelength shift animation"];
-    nFrames = AnimateSweep[model, FileNameJoin[{$outDir, "sweep.gif"}],
-                           FileNameJoin[{$outDir, "sweep.png"}]];
-    STEMDescribeGIF[FileNameJoin[{$outDir, "sweep.gif"}], nFrames, 12];
-    Print[""];
-
-    Print["[3/4] Synthesising audio with spoken intro..."];
+    Print["[2/4] Synthesising audio with spoken intro..."];
     STEMSay["Sonifying the angle sweep"];
     introText = BuildSweepIntroText[model];
     Print["  Spoken intro: ", introText];
@@ -166,7 +160,15 @@ Which[
     outWAV = FileNameJoin[{$outDir, "sweep_audio.wav"}];
     EnsureDir[outWAV];
     ExportAudioBuffer[NormalizeBuffer[{finalLeft, finalRight}, 0.92], outWAV, sr];
-    STEMDescribeWAV[outWAV, N[Length[finalLeft]] / sr];
+    wavDuration = N[Length[finalLeft]] / sr;
+    STEMDescribeWAV[outWAV, wavDuration];
+    Print[""];
+
+    Print["[3/4] Rendering sweep animation and static plot..."];
+    STEMSay["Rendering the wavelength shift animation"];
+    {$gifFrames, $gifFps} = AnimateSweep[model, FileNameJoin[{$outDir, "sweep.gif"}],
+                           FileNameJoin[{$outDir, "sweep.png"}], wavDuration];
+    STEMDescribeGIF[FileNameJoin[{$outDir, "sweep.gif"}], $gifFrames, $gifFps];
     Print[""];
 
     Print["[4/4] Done."];
@@ -188,14 +190,7 @@ Which[
     ExportEnergyCSV[model, FileNameJoin[{$outDir, "energy_data.csv"}]];
     Print[""];
 
-    Print["[2/4] Rendering energy sweep animation and static plot..."];
-    STEMSay["Rendering the fractional energy loss animation"];
-    nFrames = AnimateEnergy[model, FileNameJoin[{$outDir, "energy.gif"}],
-                            FileNameJoin[{$outDir, "energy.png"}]];
-    STEMDescribeGIF[FileNameJoin[{$outDir, "energy.gif"}], nFrames, 12];
-    Print[""];
-
-    Print["[3/4] Synthesising audio with spoken intro..."];
+    Print["[2/4] Synthesising audio with spoken intro..."];
     STEMSay["Sonifying the incident energy sweep"];
     introText = BuildEnergyIntroText[model];
     Print["  Spoken intro: ", introText];
@@ -208,7 +203,15 @@ Which[
     outWAV = FileNameJoin[{$outDir, "energy_audio.wav"}];
     EnsureDir[outWAV];
     ExportAudioBuffer[NormalizeBuffer[{finalLeft, finalRight}, 0.92], outWAV, sr];
-    STEMDescribeWAV[outWAV, N[Length[finalLeft]] / sr];
+    wavDuration = N[Length[finalLeft]] / sr;
+    STEMDescribeWAV[outWAV, wavDuration];
+    Print[""];
+
+    Print["[3/4] Rendering energy sweep animation and static plot..."];
+    STEMSay["Rendering the fractional energy loss animation"];
+    {$gifFrames, $gifFps} = AnimateEnergy[model, FileNameJoin[{$outDir, "energy.gif"}],
+                            FileNameJoin[{$outDir, "energy.png"}], wavDuration];
+    STEMDescribeGIF[FileNameJoin[{$outDir, "energy.gif"}], $gifFrames, $gifFps];
     Print[""];
 
     Print["[4/4] Done."];

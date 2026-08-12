@@ -148,14 +148,14 @@ Which[
     introText    = BuildSweepIntroText[nSize, TStart, TEnd, Tc];
     Print["  Spoken intro: ", introText];
     sonifyResult = SonifyIsingRun[sweepResult, sweepResult["T"], Tc, cfg];
-    ExportWithIntro[sonifyResult, introText, outWAV];
+    totalDur = ExportWithIntro[sonifyResult, introText, outWAV];
     PrintSweepSummary[sweepResult, Tc, sonifyResult];
     Print[""];
 
     Print["[3/", $nSteps5, "] Rendering animation..."];
     STEMSay["Rendering the spin-grid animation"];
-    nFramesRendered = AnimateSweep[sweepResult, Tc, outGIF, 60];
-    STEMDescribeGIF[outGIF, nFramesRendered, 10];
+    {$gifFrames, $gifFps} = AnimateSweep[sweepResult, Tc, outGIF, totalDur];
+    STEMDescribeGIF[outGIF, $gifFrames, $gifFps];
     Print[""];
 
     Print["[4/", $nSteps5, "] Exporting data table..."];
@@ -192,14 +192,14 @@ Which[
     introText    = BuildCriticalIntroText[TFixed];
     Print["  Spoken intro: ", introText];
     sonifyResult = SonifyIsingRun[critResult, Missing[], Tc, cfg];
-    ExportWithIntro[sonifyResult, introText, outWAV];
+    totalDur = ExportWithIntro[sonifyResult, introText, outWAV];
     PrintCriticalSummary[critResult, TFixed, sonifyResult];
     Print[""];
 
     Print["[3/", $nSteps5, "] Rendering animation..."];
     STEMSay["Rendering the spin-grid animation"];
-    nFramesRendered = AnimateCritical[critResult, TFixed, outGIF, 60];
-    STEMDescribeGIF[outGIF, nFramesRendered, 10];
+    {$gifFrames, $gifFps} = AnimateCritical[critResult, TFixed, outGIF, totalDur];
+    STEMDescribeGIF[outGIF, $gifFrames, $gifFps];
     Print[""];
 
     Print["[4/", $nSteps5, "] Exporting data table..."];
@@ -239,14 +239,14 @@ Which[
     introText    = BuildQuenchIntroText[THot, TCold];
     Print["  Spoken intro: ", introText];
     sonifyResult = SonifyIsingRun[quenchResult, Missing[], Tc, cfg];
-    ExportWithIntro[sonifyResult, introText, outWAV];
+    totalDur = ExportWithIntro[sonifyResult, introText, outWAV];
     PrintQuenchSummary[quenchResult, TCold, sonifyResult];
     Print[""];
 
     Print["[3/", $nSteps5, "] Rendering animation..."];
     STEMSay["Rendering the domain-coarsening animation"];
-    nFramesRendered = AnimateQuench[quenchResult, TCold, outGIF, 60];
-    STEMDescribeGIF[outGIF, nFramesRendered, 10];
+    {$gifFrames, $gifFps} = AnimateQuench[quenchResult, TCold, outGIF, totalDur];
+    STEMDescribeGIF[outGIF, $gifFrames, $gifFps];
     Print[""];
 
     Print["[4/", $nSteps5, "] Exporting data table..."];

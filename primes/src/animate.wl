@@ -9,6 +9,20 @@
    ======================================================== *)
 
 
+(* Sane bounds on GIF playback frame rate for AnimateGaps — see that
+   function for how these keep gaps_animation.gif's playback duration
+   matched to gaps_audio.wav's duration without forcing an absurdly
+   fast or glacial frame rate at the extremes (mirrors lorenz's
+   $MinAnimationFps/$MaxAnimationFps in lorenz/src/animate.wl). *)
+$MinAnimationFps = 2;
+$MaxAnimationFps = 30;
+
+(* Render budget: target number of progressive-reveal frames before the
+   fps/duration solve below adjusts the actual count. Not a hard cap —
+   see AnimateGaps. *)
+$GapsFrameBudget = 50;
+
+
 (* ── Ulam spiral visualisation ────────────────────────── *)
 
 AnimateUlam[model_Association, cfg_Association, outDir_String] :=
@@ -84,7 +98,8 @@ AnimateUlam[model_Association, cfg_Association, outDir_String] :=
 
 AnimateGaps[model_Association, cfg_Association, outDir_String] :=
   Module[{gaps, primes, meanGap, twinCount, maxGapDisplay,
-          fps, width, height, nGaps, step,
+          width, height, nGaps, tempoBpm, targetDuration,
+          frameRate, actualNFrames,
           frameEnds, nFrames, frames, histPlot,
           gapDist, sortedGapVals, distCounts,
           finalFrame, gifPath},
@@ -94,20 +109,34 @@ AnimateGaps[model_Association, cfg_Association, outDir_String] :=
     meanGap       = model["mean_gap"];
     twinCount     = model["twin_prime_count"];
     maxGapDisplay = GetCfg[cfg, {"simulation","gaps","max_gap_display"}, 72];
-    fps    = GetCfg[cfg, {"animation","fps"},    12];
     width  = GetCfg[cfg, {"animation","width"},  600];
     height = GetCfg[cfg, {"animation","height"}, 600];
 
     nGaps = Length[gaps];
 
-    (* Cap at 50 frames so large counts stay responsive *)
-    step     = Max[50, Ceiling[nGaps / 50]];
-    frameEnds = Range[step, nGaps, step];
-    If[Length[frameEnds] === 0 || Last[frameEnds] =!= nGaps,
-      AppendTo[frameEnds, nGaps]];
-    nFrames = Length[frameEnds];
+    (* Target duration must match SonifyGaps' baseDuration exactly (same
+       formula, same tempo_bpm config key) so gaps_animation.gif's
+       playback time equals gaps_audio.wav's length. *)
+    tempoBpm       = GetCfg[cfg, {"sonification","gaps","tempo_bpm"}, 120];
+    targetDuration = 30.0 * 120.0 / N[tempoBpm];
 
-    Print["  Building ", nFrames, " animation frames (step=", step, ")..."];
+    (* $GapsFrameBudget is a render-budget target, not a literal frame
+       count: frameRate is solved from budget/duration and clamped to
+       [$MinAnimationFps, $MaxAnimationFps], then the frame count is
+       recomputed from the clamped rate so total playback time equals
+       targetDuration exactly (same reasoning as ExportAnimation in
+       lorenz/src/animate.wl). Frames are spread evenly across the gap
+       sequence via Subdivide so the reveal still progresses smoothly. *)
+    frameRate     = Clip[$GapsFrameBudget / targetDuration,
+                          {$MinAnimationFps, $MaxAnimationFps}];
+    actualNFrames = Min[nGaps, Max[2, Round[frameRate * targetDuration]]];
+
+    frameEnds = Max[1, #] & /@ Round[Subdivide[1, nGaps, actualNFrames - 1]];
+    nFrames   = Length[frameEnds];
+
+    Print["  Building ", nFrames, " animation frames at ", FmtN[frameRate, 3],
+          " fps (", FmtN[nFrames / frameRate, 3],
+          "s, matching audio duration ", FmtN[targetDuration, 3], "s)..."];
 
     (* Gap frequency histogram for the final frame inset *)
     gapDist       = model["gap_distribution"];
@@ -160,8 +189,8 @@ AnimateGaps[model_Association, cfg_Association, outDir_String] :=
 
     gifPath = FileNameJoin[{outDir, "gaps_animation.gif"}];
     EnsureDir[gifPath];
-    ExportGIF[frames, gifPath, fps];
-    STEMDescribeGIF[gifPath, nFrames, fps];
+    ExportGIF[frames, gifPath, frameRate];
+    STEMDescribeGIF[gifPath, nFrames, frameRate];
 
     STEMSay[ToString[Length[primes]] <> " primes analysed. " <>
       "Mean gap " <> ToString[Round[meanGap, 0.01]] <> ". " <>

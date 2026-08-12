@@ -12,6 +12,13 @@
    ======================================================== *)
 
 
+(* Sane bounds on GIF playback frame rate — see ExportAnimation for how
+   these get used to keep animation/audio duration in sync without
+   forcing an absurdly fast or glacial frame rate at the extremes. *)
+$MinAnimationFps = 2;
+$MaxAnimationFps = 30;
+
+
 (* ProjectXZ
    Project a {t,x,y,z} point onto the x-z plane (classic view). *)
 
@@ -87,50 +94,83 @@ ComputePlotRange[solution_List] :=
 
 
 (* ExportAnimation
-   Builds frames and writes an animated GIF.
+   Builds frames and writes an animated GIF whose PLAYBACK DURATION
+   matches targetDuration — normally the same trajectory duration
+   (solution[[-1,1]]) used to size the accompanying WAV, so the GIF and
+   its sonification stay in sync instead of the GIF racing through the
+   whole trajectory in a few seconds while the audio plays for the
+   simulation's real length.
 
-   solution  — output of SolveLorenz
-   filePath  — destination, e.g. "output/lorenz_animation.gif"
-   frameRate — GIF fps (default 30)
-   nFrames   — total number of frames (default 120)
-   title     — optional label shown on the animation *)
+   nFrames is a RENDER BUDGET, not a literal frame count: frameRate is
+   solved as nFrames/targetDuration and then clamped to
+   [$MinAnimationFps, $MaxAnimationFps] (2-30 fps) so a very short
+   trajectory doesn't demand a strobing frame rate and a very long one
+   doesn't demand an implausibly slow one — the frame COUNT is what
+   flexes at the clamp boundary (recomputed as Round[frameRate *
+   targetDuration]) so the actual playback duration always equals
+   targetDuration exactly, not just approximately.
 
-ExportAnimation[solution_List, filePath_String,
-                frameRate_:30, nFrames_:120, title_String:"Lorenz Attractor"] :=
+   solution      — output of SolveLorenz
+   filePath      — destination, e.g. "output/lorenz_animation.gif"
+   targetDuration — desired GIF playback length in seconds
+   nFrames       — frame-count budget at the nominal rate (default 150)
+   title         — optional label shown on the animation
+
+   Returns {actualNFrames, frameRate} so callers can report what was
+   actually rendered (STEMDescribeGIF wants both). *)
+
+ExportAnimation[solution_List, filePath_String, targetDuration_?NumericQ,
+                nFrames_:150, title_String:"Lorenz Attractor"] :=
   Module[
-    {plotRange, indices, frames},
+    {plotRange, indices, frames, frameRate, actualNFrames},
+
+    frameRate = Clip[nFrames / targetDuration,
+      {$MinAnimationFps, $MaxAnimationFps}];
+    actualNFrames = Max[2, Round[frameRate * targetDuration]];
 
     plotRange = ComputePlotRange[solution];
 
     (* Indices into solution, evenly spaced, always ending at last point *)
-    indices = Round[Subdivide[1, Length[solution], nFrames - 1]];
+    indices = Round[Subdivide[1, Length[solution], actualNFrames - 1]];
     indices = Max[2, #] & /@ indices;   (* at least 2 points to draw *)
 
-    Print["  Rendering ", Length[indices], " frames..."];
+    Print["  Rendering ", Length[indices], " frames at ", FmtN[frameRate, 3],
+          " fps (", FmtN[Length[indices] / frameRate, 3],
+          "s, matching audio duration ", FmtN[targetDuration, 3], "s)..."];
 
     frames = RenderFrame[solution, #, plotRange, title] & /@ indices;
 
-    ExportGIF[frames, filePath, frameRate]
+    ExportGIF[frames, filePath, frameRate];
+    {actualNFrames, frameRate}
   ]
 
 
 (* ExportDualAnimation
    Side-by-side animation of two trajectories (butterfly effect).
-   sol1, sol2 — outputs of SolveLorenzPair *)
+   sol1, sol2 — outputs of SolveLorenzPair.
+   targetDuration, nFrames — same meaning and sync purpose as in
+   ExportAnimation; the accompanying WAV is sonified from sol1, so
+   callers should pass sol1[[-1,1]] as targetDuration. *)
 
 ExportDualAnimation[sol1_List, sol2_List, filePath_String,
-                    frameRate_:30, nFrames_:120] :=
+                    targetDuration_?NumericQ, nFrames_:150] :=
   Module[
-    {allPts, plotRange, indices, frames},
+    {allPts, plotRange, indices, frames, frameRate, actualNFrames},
+
+    frameRate = Clip[nFrames / targetDuration,
+      {$MinAnimationFps, $MaxAnimationFps}];
+    actualNFrames = Max[2, Round[frameRate * targetDuration]];
 
     (* Compute a shared plot range covering both trajectories *)
     allPts   = Join[sol1, sol2];
     plotRange = ComputePlotRange[allPts];
 
-    indices = Round[Subdivide[1, Length[sol1], nFrames - 1]];
+    indices = Round[Subdivide[1, Length[sol1], actualNFrames - 1]];
     indices = Max[2, #] & /@ indices;
 
-    Print["  Rendering ", Length[indices], " dual frames..."];
+    Print["  Rendering ", Length[indices], " dual frames at ", FmtN[frameRate, 3],
+          " fps (", FmtN[Length[indices] / frameRate, 3],
+          "s, matching audio duration ", FmtN[targetDuration, 3], "s)..."];
 
     frames = Map[
       Function[k,
@@ -149,5 +189,6 @@ ExportDualAnimation[sol1_List, sol2_List, filePath_String,
       indices
     ];
 
-    ExportGIF[frames, filePath, frameRate]
+    ExportGIF[frames, filePath, frameRate];
+    {actualNFrames, frameRate}
   ]

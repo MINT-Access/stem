@@ -18,6 +18,23 @@
      full sonification character.
    ======================================================== *)
 
+
+(* SonificationDuration
+   Total WAV duration in seconds for n asteroids, given the configured
+   note/gap durations — the exact formula ExportSonification uses
+   internally to size the audio. Factored out so callers (namely the
+   GIF animation, which must render for exactly this long to stay in
+   sync with the audio) can compute it up front without having to
+   synthesise audio first. *)
+
+SonificationDuration[n_Integer, cfg_Association] :=
+  Module[{noteDur, gapDur},
+    noteDur = GetCfg[cfg, {"sonification","motion","noteDuration"}, 0.55];
+    gapDur  = GetCfg[cfg, {"sonification","motion","gapDuration"},  0.12];
+    n * (noteDur + gapDur)
+  ]
+
+
 ExportSonification[asteroids_List, cfg_Association, filePath_String] :=
   Module[
     {n, noteDur, gapDur, stepDur,

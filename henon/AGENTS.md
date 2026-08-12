@@ -361,6 +361,63 @@ at canonical (a,b)=(1.4,0.3) (see design decision 6 for why):
    anywhere in this app, use the same `FreeQ`-first pattern, not a
    predicate check alone.
 
+## GIF/WAV duration sync (fixed post-v1.5.0)
+
+**The bug.** `henon_attractor.gif` measured 8.0s vs `henon_attractor.wav`
+28.57s (3.6x); `henon_sweep.gif` 19.92s vs `henon_sweep.wav` 140.33s
+(7.0x). Preset-derived GIFs showed the same pattern
+(`attractor_weakly_dissipative.gif` 8.0s vs 28.72s;
+`sweep_cascade_zoom.gif`/`sweep_chaos_zoom.gif` 11.92s vs ~74.3s each).
+
+**Root cause.** `ExportAttractorAnimation` and `AnimateSweepBifurcation`
+exported at a fixed 12 fps with a frame count tied only to the number of
+discrete simulated states (100 evenly-spaced trajectory points for
+attractor mode; `a_steps - 1` for sweep mode) — the same
+fixed-nFrames/fixed-frameRate pattern found repo-wide, decoupled from
+how long the matching WAV actually plays. Both modes' WAVs also carry a
+spoken intro baked directly into the audio buffer (`BuildIntroBuffer` in
+`speech.wl`, prepended in `main.wl`/`experiments.wl`) whose length isn't
+known until the platform TTS engine actually renders it — for attractor
+mode this intro (a full descriptive sentence) is longer than the 10s
+core sonification itself (`sonification.duration`'s global default),
+which is why the mismatch is dominated by intro length, not just frame
+count. Note: Hénon is a discrete map, not an ODE — there is no
+`solution[[-1,1]]`-style continuous simulated time to size a GIF against;
+the correct sync target here is the WAV's own actual total sample count.
+
+**The fix.** Both `Animate*` functions now take a `targetDuration`
+argument and solve `frameRate` from a frame-count *budget* (150) divided
+by `targetDuration`, clamped to `[$HenonMinGifFps, $HenonMaxGifFps]`
+(2-30 fps), with the frame count recomputed at the clamp boundary so
+playback duration lands almost exactly on `targetDuration` — same
+reasoning as `lorenz/src/animate.wl`'s `ExportAnimation`. Sweep mode has
+only `a_steps` discrete bifurcation-diagram states (no "in between"
+values); when the render budget forces more frames than that (as it does
+at the `$HenonMinGifFps` floor for a ~140s sweep), `Subdivide`'s
+rounding holds a state across several consecutive frames rather than
+erroring — the same handling `fluid/AnimateStrouhal` uses. Because the
+true duration is only known once the intro speech is synthesised,
+`main.wl` was reordered to build the WAV *before* rendering the GIF
+for both modes, passing the WAV's actual total sample count `/ sr`
+straight through as `targetDuration`; `experiments.wl` already built
+audio before animating and only needed the value threaded into its
+`ExportAttractorAnimation`/`AnimateSweepBifurcation` calls. `reverse`
+mode has no GIF (PNG only) and was untouched.
+
+**Verification (regenerated via `wolframscript -file main.wl` for both
+modes, plus 5 experiment presets via `experiments.wl`):**
+
+| Output | GIF before | WAV | GIF after | Ratio after |
+|--------|-----------|-----|-----------|-------------|
+| henon_attractor | 8.0s | 28.57s | 28.50s | 1.00x |
+| henon_sweep | 19.92s | 140.33s | 140.50s | 1.00x |
+| attractor_weakly_dissipative | 8.0s | 28.72s | 28.50s | 0.99x |
+| sweep_cascade_zoom | 11.92s | 74.34s | 75.00s | 1.01x |
+| sweep_chaos_zoom | 11.92s | 74.24s | 73.50s | 0.99x |
+
+`tests/test_model.wl` (39/39 tests, unaffected by this change) still
+passes.
+
 ## Dependencies
 
 - **stem-core**: `init.wl`, `LoadConfig`, `GetCfg`, `DeepMerge`,

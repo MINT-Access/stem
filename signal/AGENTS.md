@@ -106,6 +106,61 @@ multiple mode runs coexist in `output/` without overwriting each other.
   one `[WARNING]` print if *any* narrative segment had to fall back to
   silence, rather than one warning per segment.
 
+## Animation/audio sync: the GIF-duration bug (fixed post-v1.5.0)
+
+**Special case for this app.** Unlike most apps in the suite (one WAV
+paired with one GIF), `signal` exports FOUR WAVs per mode:
+`{mode}_clean.wav`, `{mode}_noisy.wav`, `{mode}_recovered.wav` — all
+three normalised stages of the raw signal, all exported at the same
+duration (`analysis["duration"]`, i.e. `dur` from `config.json`) — plus
+`{mode}_narrative_full.wav`, a completely different timeline: spoken
+intro/transitions/summary interleaved with full replays of clean,
+noisy, and recovered, measured at 36-39s vs. `dur`'s 3-4s (10-13x
+longer). `main.wl`'s closing line even points the user at
+`narrative_full.wav` as "the" audio to play. It would be easy to assume
+that's the GIF's sync partner — it is not.
+
+**Sync target: `dur` (== the clean/noisy/recovered WAV duration), not
+narrative_full.wav.** `AnimateSignal`'s GIF is built from
+`TimeDomainPanels` windows that slice `clean`/`noisy`/`recovered`
+(length `sr*dur` each) into `nFrames` consecutive, non-overlapping
+segments and sweep across them once, in order. That sweep is a direct
+visualisation of the `dur`-second raw-signal timeline — it has no
+correspondence to `narrative_full.wav`'s structure (speech segments,
+pauses, three separate full-length replays). So `dur` — shared exactly
+by `{mode}_clean/noisy/recovered.wav` — is the only timeline the GIF's
+content actually depicts.
+
+**The bug.** `AnimateSignal` (`src/animate.wl`) had `nFrames = 10`
+hardcoded and read `animation.fps` from config (default 10) — giving a
+GIF that always played for exactly 10/10 = 1.0s, regardless of `dur`.
+Measured before the fix: `am`/`chord_animation.gif` at 1.0s vs. their
+3.0s `_clean.wav` (0.33x — GIF finishes 3x too fast); `sweep` at 1.0s
+vs. 4.0s (0.25x).
+
+**The fix.** `animation.fps` is now clamped to `[$MinAnimationFps,
+$MaxAnimationFps]` = `[2, 30]`, and the frame count is what scales with
+duration to hit it exactly: `nFrames = Max[2, Round[fps * dur]]`. The
+clamp exists so an extreme custom `duration` override can't demand a
+strobing or glacial frame rate — the frame *count* absorbs the
+scaling, not the rate. `windowSize = Floor[nSamples / nFrames]` and the
+frame-building `Table` already looped generically over `nFrames`, so no
+other changes were needed inside `AnimateSignal`; `main.wl`/
+`experiments.wl` call sites are unchanged since duration is read
+internally from `analysis["duration"]`, not passed in.
+
+**Verified after regenerating all three presets** (`wolframscript
+-file main.wl -- --simulation.mode={chord,am,sweep}`):
+
+| mode  | GIF before | `_clean.wav` | ratio before | GIF after | ratio after |
+|-------|-----------|--------------|---------------|-----------|--------------|
+| chord | 1.0s (10f)| 3.0s         | 0.33x         | 3.0s (30f)| 1.00x        |
+| am    | 1.0s (10f)| 3.0s         | 0.33x         | 3.0s (30f)| 1.00x        |
+| sweep | 1.0s (10f)| 4.0s         | 0.25x         | 4.0s (40f)| 1.00x        |
+
+`tests/test_model.wl` (13 assertions, model/analysis correctness only —
+does not cover animation timing) still passes 13/0 after the fix.
+
 ## Dependencies
 
 - Mathematica or Wolfram Engine (any recent version)

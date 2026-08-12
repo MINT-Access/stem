@@ -134,14 +134,15 @@ Which[
     finalRight  = Join[introBuffer, pauseBuffer, coinAudio["right"]];
     EnsureDir[outWAV];
     ExportAudioBuffer[NormalizeBuffer[{finalLeft, finalRight}, 0.92], outWAV, sr];
-    STEMDescribeWAV[outWAV, N[Length[finalLeft]] / sr];
+    wavDuration = N[Length[finalLeft]] / sr;
+    STEMDescribeWAV[outWAV, wavDuration];
     PrintCoinSummary[coinSeq, thetaTrue, coinAudio["convergenceFlipIdx"]];
     Print[""];
 
     Print["[4/", $nSteps5, "] Rendering animation..."];
     STEMSay["Rendering the Beta posterior animation"];
-    nFramesRendered = AnimateCoin[coinSeq, thetaTrue, outGIF, 60];
-    STEMDescribeGIF[outGIF, nFramesRendered, 12];
+    {$gifFrames, $gifFps} = AnimateCoin[coinSeq, thetaTrue, outGIF, wavDuration];
+    STEMDescribeGIF[outGIF, $gifFrames, $gifFps];
     Print[""];
 
     Print["[5/", $nSteps5, "] Exporting data table..."];
@@ -181,14 +182,15 @@ Which[
     finalRight  = Join[introBuffer, pauseBuffer, gaussAudio["right"]];
     EnsureDir[outWAV];
     ExportAudioBuffer[NormalizeBuffer[{finalLeft, finalRight}, 0.92], outWAV, sr];
-    STEMDescribeWAV[outWAV, N[Length[finalLeft]] / sr];
+    wavDuration = N[Length[finalLeft]] / sr;
+    STEMDescribeWAV[outWAV, wavDuration];
     PrintGaussianSummary[gaussSeq, muTrue, mu0, gaussAudio["convergenceObsIdx"]];
     Print[""];
 
     Print["[4/", $nSteps5, "] Rendering animation..."];
     STEMSay["Rendering the Gaussian posterior animation"];
-    nFramesRendered = AnimateGaussian[gaussSeq, muLo, muHi, muTrue, mu0, outGIF, 60];
-    STEMDescribeGIF[outGIF, nFramesRendered, 12];
+    {$gifFrames, $gifFps} = AnimateGaussian[gaussSeq, muLo, muHi, muTrue, mu0, outGIF, wavDuration];
+    STEMDescribeGIF[outGIF, $gifFrames, $gifFps];
     Print[""];
 
     Print["[5/", $nSteps5, "] Exporting data table..."];
@@ -223,14 +225,15 @@ Which[
     finalRight  = Join[introBuffer, pauseBuffer, modelAudio["right"]];
     EnsureDir[outWAV];
     ExportAudioBuffer[NormalizeBuffer[{finalLeft, finalRight}, 0.92], outWAV, sr];
-    STEMDescribeWAV[outWAV, N[Length[finalLeft]] / sr];
+    wavDuration = N[Length[finalLeft]] / sr;
+    STEMDescribeWAV[outWAV, wavDuration];
     PrintModelSummary[modelSeq, thetaAlt, thetaTrue, modelAudio["crossOneIdx"], modelAudio["crossTwoIdx"]];
     Print[""];
 
     Print["[4/", $nSteps5, "] Rendering animation..."];
     STEMSay["Rendering the Bayes factor meter"];
-    nFramesRendered = AnimateModel[modelFlips, modelSeq, outGIF, 60];
-    STEMDescribeGIF[outGIF, nFramesRendered, 10];
+    {$gifFrames, $gifFps} = AnimateModel[modelFlips, modelSeq, outGIF, wavDuration];
+    STEMDescribeGIF[outGIF, $gifFrames, $gifFps];
     Print[""];
 
     Print["[5/", $nSteps5, "] Exporting data table..."];

@@ -120,14 +120,17 @@ outCSV = FileNameJoin[{$projectRoot, "output",
 ExportResults[asteroids, outCSV];
 STEMDescribeCSV[outCSV, Length[asteroids], 17];
 
-(* 3. Animation *)
+(* 3. Animation — targetDuration is the audio's own duration formula
+   (SonificationDuration), computed up front so the GIF's playback
+   length matches the WAV exactly instead of racing ahead of it. *)
 Print[""];
 Print["[3/4] Rendering solar system animation..."];
 STEMSay["Rendering solar system animation"];
+trajDuration = SonificationDuration[Length[asteroids], cfg];
 outGIF = FileNameJoin[{$projectRoot, "output",
   "asteroids_" <> startDate <> "_" <> endDate <> ".gif"}];
-ExportAnimation[asteroids, outGIF, startDate, endDate, 10];
-STEMDescribeGIF[outGIF, Length[asteroids] + 30, 10];
+{$gifFrames, $gifFps} = ExportAnimation[asteroids, outGIF, startDate, endDate, trajDuration];
+STEMDescribeGIF[outGIF, $gifFrames, $gifFps];
 
 (* 4. Sonification *)
 Print[""];

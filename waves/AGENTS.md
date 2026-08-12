@@ -61,11 +61,11 @@ wolframscript -file waves/experiments.wl
 | File | Description |
 |------|-------------|
 | `ripple_audio.wav` | Stereo WAV: listening-point displacements, panned L-R |
-| `ripple.gif` | 32-frame false-colour animation with LP yellow dots |
+| `ripple.gif` | False-colour animation with LP yellow dots, played back over the WAV's duration (see "GIF/WAV timing sync" below) |
 | `ripple.png` | Plot3D surface at final time (TemperatureMap colour) |
 | `ripple_data.csv` | Table: t_s, disp_lp1_units, disp_lp2_units, ... |
 | `interference_audio.wav` | Mono WAV via SonifyTrajectory (pan follows x-position) |
-| `interference.gif` | 32-frame animation: moving LP (yellow), sources (green) |
+| `interference.gif` | Animation: moving LP (yellow), sources (green), played back over the WAV's duration (see "GIF/WAV timing sync" below) |
 | `interference.png` | Final frame showing settled fringe pattern |
 | `interference_data.csv` | Table: t_s, lp_x_units, displacement_units, disp_fixed_units |
 
@@ -174,6 +174,62 @@ config.json + CLI args
 5. **Interference sweep timing**: the LP is stationary at x=0 for exactly
    `Floor[nT/2]` steps, then sweeps from xLPMin to xLPMax over the remaining
    steps.  The audio crossover at `tEnd/2` in the GIF matches this.
+
+## GIF/WAV timing sync (fixed post-v1.5.0)
+
+**The bug.** `AnimateRipple`/`AnimateInterference` built a fixed 32-frame
+GIF at a hardcoded 10 fps (`"DisplayDurations" -> ConstantArray[0.1, 32]`)
+— always exactly 3.2s — while `SonifyRipple`/`SonifyInterference` size the
+WAV from the simulated `tEnd` stretched by a fixed factor (5x for ripple,
+4x for interference; e.g. default `tEnd=4.0` -> 20s ripple WAV, 16s
+interference WAV). The two durations were computed independently and had
+no relationship. Measured before the fix: `ripple.gif` 3.2s vs
+`ripple_audio.wav` 20.0s (6.25x); `interference.gif` 3.2s vs
+`interference_audio.wav` 16.0s (5.0x).
+
+**Root cause.** Same shape as the decoupled-duration bug fixed in
+`lorenz/src/animate.wl` (`ExportAnimation`) — a literal frame count and
+frame rate baked into the GIF export with no reference to the audio
+duration actually being produced elsewhere in the same run.
+
+**The fix.** `SonifyRipple`/`SonifyInterference` (`src/sonify.wl`) now
+return the audio duration (`audioDurR`/`audioDurI`) they computed, instead
+of discarding it after the `STEMDescribeWAV` call. `AnimateRipple`/
+`AnimateInterference` (`src/animate.wl`) take a new `targetDuration_?NumericQ`
+parameter plus an `nFrames_:150` **render budget** (not a literal frame
+count): `frameRate = Clip[nFrames/targetDuration, {$MinAnimationFps,
+$MaxAnimationFps}]` (2-30 fps), then `actualNFrames =
+Max[2, Round[frameRate*targetDuration]]` — the frame count is what flexes
+at the clamp boundary so playback duration equals `targetDuration` exactly
+even for very short or very long simulations. `main.wl` and
+`experiments.wl` now capture the sonify functions' return value and pass
+it straight into the matching animate call, so the GIF always plays back
+over the same duration as its WAV.
+
+**Verification.** Regenerated both pairs (`wolframscript -file main.wl`
+default and `-- --simulation.mode=interference`) and re-measured with
+Python (`PIL.ImageSequence` summed frame durations vs `wave` module frame
+count / rate):
+
+| Pair | Before (GIF vs WAV) | After (GIF vs WAV) |
+|------|---------------------|---------------------|
+| ripple | 3.2s vs 20.0s (6.25x) | 19.5s vs 20.0s |
+| interference | 3.2s vs 16.0s (5.0x) | 16.5s vs 16.0s |
+
+The residual ~0.5s gap after the fix is GIF-format centisecond delay
+quantization (frame delays are stored in 1/100s units, so a frame rate
+like 7.5 fps -> 133.3ms/frame rounds to 130ms and drifts over 150 frames)
+— the same residual seen in `lorenz`'s post-fix GIFs (e.g.
+`lorenz_animation.gif` 40.5s vs `lorenz_audio.wav` 40.0s). It is a format
+limitation, not a duration-calculation bug; the math (`targetDuration`,
+`frameRate`, `actualNFrames`) is exact.
+
+All 8 `experiments.wl` presets were also re-run to confirm the fps clamp
+holds across the config space actually exercised (7.5-9.375 fps for
+default-length runs, down to 3.75 fps for `ripple_large_membrane`
+(`tEnd=8`, audioDur=40s) and 4.6875 fps for `interference_slow_wave`
+(`tEnd=8`, audioDur=32s) — both comfortably inside `[$MinAnimationFps,
+$MaxAnimationFps] = [2, 30]`).
 
 ## Dependencies
 

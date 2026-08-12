@@ -21,6 +21,31 @@
    ======================================================== *)
 
 
+(* ExportAttractorAnimation/AnimateSweepBifurcation used to export at a
+   fixed frame rate (12 fps) with a frame count decoupled from how long
+   the matching WAV actually plays once its spoken intro is included
+   (measured: henon_attractor.gif 8.0s vs henon_attractor.wav 28.57s;
+   henon_sweep.gif 19.92s vs henon_sweep.wav 140.33s). targetDuration
+   below is the actual total WAV duration (main.wl/experiments.wl build
+   the audio, including its spoken intro, before rendering the GIF, so
+   this value is known exactly). nFrames is a RENDER BUDGET: frameRate
+   is solved as nFrames/targetDuration then clamped to
+   [$HenonMinGifFps, $HenonMaxGifFps] so the frame COUNT flexes at the
+   clamp boundary, keeping actual playback duration exactly
+   targetDuration — same pattern as lorenz/src/animate.wl's
+   ExportAnimation. Sweep mode has only as many distinct bifurcation-
+   diagram states as a_steps (discrete Reynolds-style sweep points, no
+   "in between"); when the render budget exceeds that, Subdivide's
+   rounding holds a state across consecutive frames rather than
+   erroring, same as fluid's AnimateStrouhal. *)
+$HenonMinGifFps = 2;
+$HenonMaxGifFps = 30;
+$HenonGifFrameBudget = 150;
+
+HenonGifRate[targetDuration_?NumericQ, nFrames_:$HenonGifFrameBudget] :=
+  Clip[nFrames / targetDuration, {$HenonMinGifFps, $HenonMaxGifFps}];
+
+
 (* ── shared colour ramp (attractor + sweep) ────────────────────────
    Matches lorenz/'s blue -> cyan -> orange -> red gradient
    (early -> recent), duplicated per the same no-shared-src/
@@ -69,15 +94,19 @@ RenderAttractorFrame[trajectory_List, k_Integer, plotRange_, title_String:""] :=
 
 (* ExportAttractorAnimation — growing point-cloud GIF, lorenz-style
    evenly-spaced frame indices always ending at the full point set. *)
-ExportAttractorAnimation[trajectory_List, filePath_String,
-                         frameRate_:12, nFrames_:100, title_String:"Hénon Attractor"] :=
-  Module[{plotRange, indices, frames},
+ExportAttractorAnimation[trajectory_List, filePath_String, targetDuration_?NumericQ,
+                         nFrames_:$HenonGifFrameBudget, title_String:"Hénon Attractor"] :=
+  Module[{plotRange, frameRate, actualNFrames, indices, frames},
+    frameRate     = HenonGifRate[targetDuration, nFrames];
+    actualNFrames = Max[2, Round[frameRate * targetDuration]];
     plotRange = ComputeAttractorPlotRange[trajectory];
-    indices = Round[Subdivide[1, Length[trajectory], nFrames - 1]];
+    indices = Round[Subdivide[1, Length[trajectory], actualNFrames - 1]];
     indices = Max[2, #] & /@ indices;
-    Print["  Rendering ", Length[indices], " frames..."];
+    Print["  Rendering ", Length[indices], " frames at ", N[frameRate], " fps (",
+          N[Length[indices] / frameRate], "s, matching audio duration ", N[targetDuration], "s)..."];
     frames = RenderAttractorFrame[trajectory, #, plotRange, title] & /@ indices;
-    ExportGIF[frames, filePath, frameRate]
+    ExportGIF[frames, filePath, frameRate];
+    {actualNFrames, frameRate}
   ];
 
 (* ExportAttractorPNG — full static attractor, all points, sized and
@@ -143,15 +172,23 @@ ComputeSweepYRange[attractors_List] :=
   ];
 
 AnimateSweepBifurcation[sweepModel_Association, landmarks_Association, filePath_String,
-                        frameRate_:12] :=
-  Module[{aValues, attractors, nSteps, yRange, frames},
+                        targetDuration_?NumericQ, nFrames_:$HenonGifFrameBudget] :=
+  Module[{aValues, attractors, nSteps, yRange, frameRate, actualNFrames, indices, frames},
     aValues    = sweepModel["aValues"];
     attractors = sweepModel["attractors"];
     nSteps     = Length[aValues];
     yRange     = ComputeSweepYRange[attractors];
-    Print["  Rendering ", nSteps, " bifurcation-diagram frames..."];
-    frames = Table[RenderSweepFrame[aValues, attractors, k, landmarks, yRange], {k, 2, nSteps}];
-    ExportGIF[frames, filePath, frameRate]
+    frameRate     = HenonGifRate[targetDuration, nFrames];
+    actualNFrames = Max[2, Round[frameRate * targetDuration]];
+    (* nSteps discrete a-steps are the only distinct visual states;
+       Subdivide's rounding naturally holds a state across consecutive
+       frames when actualNFrames exceeds nSteps - 1. *)
+    indices = Clip[Round[Subdivide[2, nSteps, actualNFrames - 1]], {2, nSteps}];
+    Print["  Rendering ", Length[indices], " bifurcation-diagram frames at ", N[frameRate],
+          " fps (", N[Length[indices] / frameRate], "s, matching audio duration ", N[targetDuration], "s)..."];
+    frames = RenderSweepFrame[aValues, attractors, #, landmarks, yRange] & /@ indices;
+    ExportGIF[frames, filePath, frameRate];
+    {actualNFrames, frameRate}
   ];
 
 ExportSweepPNG[sweepModel_Association, landmarks_Association, filePath_String] :=

@@ -2,28 +2,53 @@
    scattering/src/animate.wl — GIF rendering for all three modes
 
    Public API:
-     AnimateScatter[model, outGif]      -> nFrames rendered
-     AnimateDistribution[model, outGif] -> nFrames rendered
-     AnimateDiscovery[model, outGif]    -> nFrames rendered
-   ======================================================== *)
+     AnimateScatter[model, outGif, targetDuration]      -> {nFrames, fps}
+     AnimateDistribution[model, outGif, targetDuration] -> {nFrames, fps}
+     AnimateDiscovery[model, outGif, targetDuration]    -> {nFrames, fps}
 
-$ScatFrames    = 40;
-$ScatFrameRate = 15;
+   targetDuration is the GIF's intended PLAYBACK length in seconds --
+   callers pass the same "main content" duration basis (see
+   ScatterMainDuration / DistributionMainDuration / DiscoveryMainDuration
+   in sonify.wl) used to size the matching WAV's main buffer, so the
+   animation and its sonification play for the same length instead of
+   the GIF racing through a fixed 40-frame/15-fps count in ~2.7s while
+   the audio (main content plus spoken intro/outro) runs many times
+   longer.
+
+   $ScatFrameBudget is a RENDER BUDGET, not a literal frame count: the
+   frame rate is solved as budget/targetDuration and clamped to
+   [$ScatMinFps, $ScatMaxFps] so a very short trajectory doesn't demand
+   a strobing frame rate and a very long one doesn't demand an
+   implausibly slow one -- the frame COUNT is what flexes at the clamp
+   boundary (recomputed as Round[fps * targetDuration]) so actual
+   playback duration always equals targetDuration exactly. *)
+
+$ScatFrameBudget = 150;
+$ScatMinFps      = 2;
+$ScatMaxFps      = 30;
+
+ScatAnimationRate[targetDuration_?NumericQ] :=
+  Clip[$ScatFrameBudget / targetDuration, {$ScatMinFps, $ScatMaxFps}]
 
 
 (* ========================================================
    SCATTER MODE — 2D hyperbolic trajectory around the nucleus
    ======================================================== *)
 
-AnimateScatter[model_Association, outGif_String] :=
+AnimateScatter[model_Association, outGif_String, targetDuration_?NumericQ] :=
   Module[{
-    xArr, yArr, speedArr, nPts, nFrames, speedMin, speedMax,
+    xArr, yArr, speedArr, nPts, nFrames, frameRate, speedMin, speedMax,
     vInitHat, vFinalHat, p0, pf, extend, footPoint,
     incomingA, incomingB, outgoingA, outgoingB,
     angle1, angle2, arcR, plotHalfRange, thetaDeg, frames
   },
     xArr = model["x"]; yArr = model["y"]; speedArr = model["speed"];
-    nPts = Length[xArr]; nFrames = $ScatFrames;
+    nPts = Length[xArr];
+    frameRate = ScatAnimationRate[targetDuration];
+    nFrames = Max[2, Round[frameRate * targetDuration]];
+    Print["  Rendering ", nFrames, " frames at ", FmtN[frameRate, 3],
+          " fps (", FmtN[nFrames / frameRate, 3],
+          "s, matching audio duration ", FmtN[targetDuration, 3], "s)..."];
     {speedMin, speedMax} = MinMax[speedArr];
     thetaDeg = model["thetaAnalyticDeg"];
 
@@ -87,8 +112,8 @@ AnimateScatter[model_Association, outGif_String] :=
       ],
       {k, nFrames}
     ];
-    ExportGIF[frames, outGif, $ScatFrameRate];
-    nFrames
+    ExportGIF[frames, outGif, frameRate];
+    {nFrames, frameRate}
   ]
 
 
@@ -96,10 +121,14 @@ AnimateScatter[model_Association, outGif_String] :=
    DISTRIBUTION MODE — b vs theta scatter plot + growing histogram
    ======================================================== *)
 
-AnimateDistribution[model_Association, outGif_String] :=
-  Module[{b, thetaDeg, n, bmax, nFrames, curveB, curveTheta, histMax, frames},
+AnimateDistribution[model_Association, outGif_String, targetDuration_?NumericQ] :=
+  Module[{b, thetaDeg, n, bmax, nFrames, frameRate, curveB, curveTheta, histMax, frames},
     b = model["b"]; thetaDeg = model["thetaDeg"]; n = model["n"]; bmax = model["bmax"];
-    nFrames = $ScatFrames;
+    frameRate = ScatAnimationRate[targetDuration];
+    nFrames = Max[2, Round[frameRate * targetDuration]];
+    Print["  Rendering ", nFrames, " frames at ", FmtN[frameRate, 3],
+          " fps (", FmtN[nFrames / frameRate, 3],
+          "s, matching audio duration ", FmtN[targetDuration, 3], "s)..."];
 
     curveB     = N @ Subdivide[0.05, bmax, 200];
     curveTheta = 2.0 * ArcCot[curveB] * 180.0 / Pi;
@@ -129,8 +158,8 @@ AnimateDistribution[model_Association, outGif_String] :=
       ],
       {k, nFrames}
     ];
-    ExportGIF[frames, outGif, $ScatFrameRate];
-    nFrames
+    ExportGIF[frames, outGif, frameRate];
+    {nFrames, frameRate}
   ]
 
 
@@ -138,11 +167,16 @@ AnimateDistribution[model_Association, outGif_String] :=
    DISCOVERY MODE — Thomson vs Rutherford side-by-side histograms
    ======================================================== *)
 
-AnimateDiscovery[model_Association, outGif_String] :=
-  Module[{thomsonThetaDeg, rutherfordThetaDeg, n, nFrames, histMax, frames},
+AnimateDiscovery[model_Association, outGif_String, targetDuration_?NumericQ] :=
+  Module[{thomsonThetaDeg, rutherfordThetaDeg, n, nFrames, frameRate, histMax, frames},
     thomsonThetaDeg    = model["thomsonThetaDeg"];
     rutherfordThetaDeg = model["rutherfordThetaDeg"];
-    n = model["n"]; nFrames = $ScatFrames;
+    n = model["n"];
+    frameRate = ScatAnimationRate[targetDuration];
+    nFrames = Max[2, Round[frameRate * targetDuration]];
+    Print["  Rendering ", nFrames, " frames at ", FmtN[frameRate, 3],
+          " fps (", FmtN[nFrames / frameRate, 3],
+          "s, matching audio duration ", FmtN[targetDuration, 3], "s)..."];
     histMax = Max[8.0, 0.6 * n];
 
     frames = Table[
@@ -168,6 +202,6 @@ AnimateDiscovery[model_Association, outGif_String] :=
       ],
       {k, nFrames}
     ];
-    ExportGIF[frames, outGif, $ScatFrameRate];
-    nFrames
+    ExportGIF[frames, outGif, frameRate];
+    {nFrames, frameRate}
   ]

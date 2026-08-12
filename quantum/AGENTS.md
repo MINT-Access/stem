@@ -111,6 +111,48 @@ expected by `SonifyTrajectory`:
 Sonification duration is overridden to `Last[t]` (simulation time span)
 via `DeepMerge` before calling `SonifyTrajectory`.
 
+## Animation framing: GIF/WAV duration sync (fixed post-v1.5.0)
+
+**The bug.** `AnimateQuantum` built the GIF from a fixed `animation.frameRate`
+config value (default 10 fps) applied to a stride-capped frame count
+(`nt` subsampled down to ≤100 frames), with no reference to how long the
+accompanying WAV actually plays. `SonifyQuantum`, meanwhile, sonifies at
+`duration -> Last[t]` (the real simulated time span). These two durations
+have no reason to agree, and for `box` they didn't: measured before the
+fix, `box_density.gif` played **10.1 s** against `box_audio.wav`'s
+**20.0 s** — a 0.5x ratio, the GIF finishing its loop while the audio was
+only half done. `qho` happened to land close (GIF 12.6 s vs. WAV 12.55 s,
+ratio ~1.0) purely because its config's `nt=252` and `timestep=0.05` made
+the old stride/frameRate arithmetic coincidentally line up — not because
+the code accounted for duration at all.
+
+**Root cause.** Same pattern as `lorenz/src/animate.wl`'s original bug:
+GIF playback length was a function of a hardcoded frame rate and a
+frame-count cap, not of the simulation's actual duration. `box`'s default
+`duration=20.0` with `timestep=0.05` gives `nt=401`; the old
+`stride = Floor[401/100] = 4` capped the GIF to 101 frames, and at the
+fixed 10 fps that is 10.1 s of playback regardless of `Last[t]`.
+
+**The fix.** `AnimateQuantum` (`src/animate.wl`) now derives frame rate
+from `nt` and `targetDuration = Last[tVals]` — the same value
+`SonifyQuantum` already uses for the WAV — instead of reading
+`animation.frameRate` from config: `frameRate = Clip[nt / targetDuration,
+{$MinAnimationFps, $MaxAnimationFps}]` (2–30 fps), then `nFrames =
+Max[2, Round[frameRate * targetDuration]]` and `frameIndices =
+Round[Subdivide[1, nt, nFrames - 1]]`. The frame *count* is what flexes
+at the fps clamp so playback lands on `targetDuration` exactly even at
+the extremes (very short or very long runs), matching the approach in
+`lorenz/src/animate.wl` and `cellular/src/animate.wl`. `animation.frameRate`
+in `config.json` is no longer read; it's left in place unused, same as
+`cellular`'s `animation.fps`.
+
+**Verified after the fix** (measured with Pillow + `wave`, same method as
+before): `box` GIF 20.05 s vs. WAV 20.0 s (ratio 1.0025); `qho` GIF 12.6 s
+vs. WAV 12.55 s (ratio 1.004). Both regenerated via
+`wolframscript -file main.wl -- --simulation.mode=qho` /
+`--simulation.mode=box`. `tests/test_model.wl` still passes 14/14
+(unaffected — it covers `model.wl`/sonify math, not animation timing).
+
 ## Performance
 
 Time evolution uses a single matrix multiply instead of explicit timestep loops:

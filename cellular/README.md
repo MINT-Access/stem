@@ -74,11 +74,11 @@ All outputs are prefixed with the mode and pattern name.
 
 | File | Description |
 |------|-------------|
-| `life_{pattern}_animation.gif` | One frame per generation, 10 fps |
+| `life_{pattern}_animation.gif` | One frame per generation (subsampled at tempo extremes); frame rate is solved so playback duration matches the WAV exactly |
 | `life_{pattern}_audio.wav` | Sonification of population dynamics |
 | `life_{pattern}_stats.csv` | Per-generation: population, density, deltas |
 | `life_{pattern}_data.csv` | Per-generation: population, note articulation, run length |
-| `rule110_animation.gif` | Single-frame GIF of the spacetime diagram |
+| `rule110_animation.gif` | Single-frame GIF of the spacetime diagram, held on screen for exactly the WAV's duration |
 | `rule110_animation_spacetime.png` | Full spacetime PNG (200 gen × 120 cells) |
 | `rule110_audio.wav` | Sonification of Rule 110 population dynamics |
 | `rule110_stats.csv` | Per-generation statistics |

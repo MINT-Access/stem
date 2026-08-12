@@ -175,13 +175,15 @@ If[Length[channels] === 1,
 STEMDescribeWAV[outWAV, totalDurSec];
 Print[""];
 
+(* GIF duration synced to the WAV's actual total duration (including
+   its spoken intro) — see images/AGENTS.md "GIF/WAV duration sync". *)
 Print["[4/5] Rendering traversal animation..."];
 STEMSay["Rendering traversal animation"];
-If[mode === "scan_horizontal",
-  AnimateRasterScan[model, outGIF],
-  AnimateImageTraversal[model, outGIF]
+{$gifFrames, $gifFps} = If[mode === "scan_horizontal",
+  AnimateRasterScan[model, outGIF, totalDurSec],
+  AnimateImageTraversal[model, outGIF, totalDurSec]
 ];
-STEMDescribeGIF[outGIF, 32, 10];
+STEMDescribeGIF[outGIF, $gifFrames, $gifFps];
 Print[""];
 
 Print["[5/5] Exporting data table and source image..."];

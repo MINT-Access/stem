@@ -2,13 +2,34 @@
    resonance/src/animate.wl — GIF rendering for all three modes
 
    Public API:
-     AnimateGalilean[model, outGif] -> nFrames rendered
-     AnimateKirkwood[model, outGif] -> nFrames rendered
-     AnimateSaturn[model, outGif]   -> nFrames rendered
+     AnimateGalilean[model, outGif, targetDuration, nFrames_:150] -> {actualNFrames, frameRate}
+     AnimateKirkwood[model, outGif, targetDuration, nFrames_:150] -> {actualNFrames, frameRate}
+     AnimateSaturn[model, outGif, targetDuration, nFrames_:150]   -> {actualNFrames, frameRate}
+
+   targetDuration is the desired GIF playback length in seconds --
+   callers pass the same duration value used to size the accompanying
+   WAV's main body (see sonify.wl's GalileanMainDurationSec /
+   ChordSweepMainDurationSec) so GIF and audio stay in sync instead of
+   the GIF racing through the whole animation in a few seconds while
+   the audio plays for the sonification's real length. nFrames is a
+   RENDER BUDGET, not a literal frame count -- see AGENTS.md.
    ======================================================== *)
 
-$ResonanceGifFrames    = 60;
-$ResonanceGifFrameRate = 15;
+(* Sane bounds on GIF playback frame rate -- see AnimateGalilean /
+   AnimateKirkwood / AnimateSaturn for how these keep animation/audio
+   duration in sync without forcing an absurdly fast or glacial frame
+   rate at the extremes (same idiom lorenz/src/animate.wl's
+   ExportAnimation uses). *)
+$MinAnimationFps = 2;
+$MaxAnimationFps = 30;
+
+(* Default render BUDGET (not a literal frame count) passed as the
+   4th argument to Animate* below: frameRate is solved as
+   nFrames/targetDuration and clamped to [$MinAnimationFps,
+   $MaxAnimationFps], then the actual frame count is recomputed as
+   Round[frameRate*targetDuration] so playback duration equals
+   targetDuration exactly. *)
+$ResonanceGifFrames = 150;
 
 
 (* ========================================================
@@ -70,15 +91,18 @@ MakeGalileanFrame[tNow_?NumericQ, trailTimes_List, plotHalfRange_?NumericQ] :=
     ImageSize  -> 460, Frame -> False, Axes -> False]
   ];
 
-AnimateGalilean[model_Association, outGif_String] :=
-  Module[{tEnd, nFrames, frameTimes, trailSpan, plotHalfRange, frames},
+AnimateGalilean[model_Association, outGif_String, targetDuration_?NumericQ, nFrames_:$ResonanceGifFrames] :=
+  Module[{tEnd, frameRate, actualNFrames, frameTimes, trailSpan, plotHalfRange, frames},
     tEnd = model["tEnd"];
-    nFrames = $ResonanceGifFrames;
-    frameTimes = N @ Subdivide[0.0, tEnd, nFrames - 1];
+    frameRate = Clip[nFrames / targetDuration, {$MinAnimationFps, $MaxAnimationFps}];
+    actualNFrames = Max[2, Round[frameRate * targetDuration]];
+    frameTimes = N @ Subdivide[0.0, tEnd, actualNFrames - 1];
     trailSpan = $TIo / 3.0;  (* short fading trail, ~1/3 of an Io period *)
     plotHalfRange = 1.25 * model["rGa"];
 
-    Print["  Rendering ", nFrames, " galilean orbital frames..."];
+    Print["  Rendering ", actualNFrames, " galilean orbital frames at ", FmtN[frameRate, 3],
+      " fps (", FmtN[actualNFrames / frameRate, 3], "s, matching audio duration ",
+      FmtN[targetDuration, 3], "s)..."];
     frames = Map[
       Function[tNow,
         Module[{trailTimes},
@@ -88,8 +112,8 @@ AnimateGalilean[model_Association, outGif_String] :=
       ],
       frameTimes
     ];
-    ExportGIF[frames, outGif, $ResonanceGifFrameRate];
-    nFrames
+    ExportGIF[frames, outGif, frameRate];
+    {actualNFrames, frameRate}
   ];
 
 
@@ -130,14 +154,21 @@ CurrentKirkwoodLabel[cursorA_?NumericQ, resonances_List, gapWidth_?NumericQ] :=
     If[MissingQ[nearest], "", nearest["label"] <> " resonance"]
   ];
 
-AnimateKirkwood[model_Association, outGif_String] :=
-  Module[{aVals, rhoVals, resonances, gapWidth, aMin, aMax, nFrames, indices, frames},
+AnimateKirkwood[model_Association, outGif_String, targetDuration_?NumericQ, nFrames_:$ResonanceGifFrames] :=
+  Module[{aVals, rhoVals, resonances, gapWidth, aMin, aMax, frameRate, actualNFrames, indices, frames},
     aVals = model["aVals"]; rhoVals = model["rhoVals"]; resonances = model["resonances"];
     gapWidth = model["gapWidth"]; aMin = model["aMin"]; aMax = model["aMax"];
-    nFrames = Min[$ResonanceGifFrames, model["nSteps"]];
-    indices = DeleteDuplicates[Round[Subdivide[1, model["nSteps"], nFrames - 1]]];
 
-    Print["  Rendering ", Length[indices], " kirkwood sweep frames..."];
+    frameRate = Clip[nFrames / targetDuration, {$MinAnimationFps, $MaxAnimationFps}];
+    (* capped at nSteps -- the sweep has only that many distinct
+       positions to show; see AGENTS.md for the (rare, only at very
+       small n_steps) drift this cap can still cause *)
+    actualNFrames = Min[model["nSteps"], Max[2, Round[frameRate * targetDuration]]];
+    indices = DeleteDuplicates[Round[Subdivide[1, model["nSteps"], actualNFrames - 1]]];
+
+    Print["  Rendering ", Length[indices], " kirkwood sweep frames at ", FmtN[frameRate, 3],
+      " fps (", FmtN[Length[indices] / frameRate, 3], "s, matching audio duration ",
+      FmtN[targetDuration, 3], "s)..."];
     frames = Map[
       Function[i,
         RenderKirkwoodFrame[aVals, rhoVals, resonances, aVals[[i]],
@@ -145,8 +176,8 @@ AnimateKirkwood[model_Association, outGif_String] :=
       ],
       indices
     ];
-    ExportGIF[frames, outGif, $ResonanceGifFrameRate];
-    Length[frames]
+    ExportGIF[frames, outGif, frameRate];
+    {Length[frames], frameRate}
   ];
 
 
@@ -189,18 +220,22 @@ RenderSaturnFrame[rVals_List, rhoVals_List, regions_List, cursorR_?NumericQ,
     Axes -> False]
   ];
 
-AnimateSaturn[model_Association, outGif_String] :=
-  Module[{rVals, rhoVals, regions, rMin, rMax, nFrames, indices, frames},
+AnimateSaturn[model_Association, outGif_String, targetDuration_?NumericQ, nFrames_:$ResonanceGifFrames] :=
+  Module[{rVals, rhoVals, regions, rMin, rMax, frameRate, actualNFrames, indices, frames},
     rVals = model["rVals"]; rhoVals = model["rhoVals"]; regions = model["regions"];
     rMin = model["rMin"]; rMax = model["rMax"];
-    nFrames = Min[$ResonanceGifFrames, model["nSteps"]];
-    indices = DeleteDuplicates[Round[Subdivide[1, model["nSteps"], nFrames - 1]]];
 
-    Print["  Rendering ", Length[indices], " saturn ring sweep frames..."];
+    frameRate = Clip[nFrames / targetDuration, {$MinAnimationFps, $MaxAnimationFps}];
+    actualNFrames = Min[model["nSteps"], Max[2, Round[frameRate * targetDuration]]];
+    indices = DeleteDuplicates[Round[Subdivide[1, model["nSteps"], actualNFrames - 1]]];
+
+    Print["  Rendering ", Length[indices], " saturn ring sweep frames at ", FmtN[frameRate, 3],
+      " fps (", FmtN[Length[indices] / frameRate, 3], "s, matching audio duration ",
+      FmtN[targetDuration, 3], "s)..."];
     frames = Map[
       Function[i, RenderSaturnFrame[rVals, rhoVals, regions, rVals[[i]], rMin, rMax]],
       indices
     ];
-    ExportGIF[frames, outGif, $ResonanceGifFrameRate];
-    Length[frames]
+    ExportGIF[frames, outGif, frameRate];
+    {Length[frames], frameRate}
   ];

@@ -217,6 +217,70 @@ All coordinates plotted in r_s units (r_s = 2M). Reference circles:
 - **Dashed orange circle** — photon sphere at r = 1.5 r_s
 - **Dashed grey circle** — ISCO at r = 3 r_s (massive-particle modes only)
 
+## Animation framing: GIF/WAV duration sync fix
+
+**The bug.** `AnimateRelativity`/`AnimateGeodesic` built exactly 60 GIF frames
+at a fixed `animation.fps` (config default 30), so GIF playback duration was
+`nFrames/fps` — a constant, unrelated to the accompanying WAV's actual length.
+Measured before the fix (default config): `chirp.gif` played 1.83s against a
+3.58s `chirp.wav` (ratio 1.96×); `geodesic.gif` played 1.83s against a 10.0s
+`geodesic.wav` (ratio 5.46×). Same root cause as the GIF/WAV desync already
+fixed in `lorenz/src/animate.wl` (`ExportAnimation`), but the two modes here
+derive their WAV length very differently, so each needed its own diagnosis:
+
+- **chirp** — `SonifyRelativity`/`ChirpToAudio` (`src/sonify.wl`) time-stretch
+  and pitch-shift the raw strain: `chirp.wav` duration = `T_model ×
+  time_stretch / frequency_shift`, where `T_model = (n-1)/sample_rate` is the
+  *un-stretched* model duration. The animation had no notion of this at all —
+  it revealed the waveform over 60 frames regardless of `T_model`, let alone
+  the stretched duration.
+- **geodesic** — `SonifyGeodesic` doesn't derive audio length from the
+  trajectory (`tau`/`n_steps`) at all; it just synthesizes
+  `sonification.geodesic.duration_s` (config default 10s) of audio outright,
+  mapping the trajectory onto that fixed span. So the "true duration" to sync
+  to is a config value, not a computed physical quantity.
+
+**The fix**, in `src/animate.wl` (both `AnimateRelativity`'s chirp branch and
+`AnimateGeodesic`, following `lorenz`'s pattern): each function now computes
+a `targetDuration` — for chirp, the same `T_model × time_stretch /
+frequency_shift` formula `ChirpToAudio` uses (read from `model` + the same
+`sonification.chirp.*` config keys, so it lands on chirp.wav's real length
+without needing the WAV to already exist); for geodesic, `duration_s` read
+straight from `sonification.geodesic.duration_s` (the same key
+`SonifyGeodesic` uses). `nFramesBudget` (60, unchanged) is now a *render
+budget*, not a literal count: `fps = Clip[nFramesBudget/targetDuration,
+{$MinAnimationFps, $MaxAnimationFps}]` (2–30 fps, constants defined at the
+top of `animate.wl`), and the actual frame count flexes at the clamp
+boundary (`Max[2, Round[fps*targetDuration]]`) so playback duration always
+equals `targetDuration` exactly, not approximately.
+
+**Verified** (regenerated via `wolframscript -file main.wl`, measured with
+Pillow/`wave`):
+
+| Pair | Before (GIF vs WAV) | After (GIF vs WAV) |
+|------|---------------------|---------------------|
+| chirp (default, GW150914 masses) | 1.83s vs 3.58s (1.96×) | 3.6s vs 3.58s |
+| geodesic (default, bound orbit) | 1.83s vs 10.0s (5.46×) | 10.2s vs 10.0s |
+
+Also regenerated with non-default parameters to confirm the fix generalizes
+rather than being tuned to the default config: geodesic `plunging` orbit
+with `--sonification.geodesic.duration_s 4` produced a 4.2s GIF against a
+4.0s WAV (60 frames @ 15 fps, exactly `nFramesBudget/targetDuration`). A
+chirp run with `--simulation.chirp.preset gw170817` (uncapped, ~752s
+coalescence-scale WAV) correctly drove `fps` down to the `$MinAnimationFps`
+floor (2 fps, 1504 frames) — proving the clamp engages at the opposite
+extreme too, though such a long render was aborted rather than let finish
+since it wasn't needed to confirm the formula. The small residual gap
+(GIF slightly longer than WAV, ~1-2%) is `ExportGIF`'s frame delay being
+quantized to whole centiseconds — the same residual `lorenz` exhibits, not
+something this fix introduces.
+
+`output/gw150914.wav`, `output/gw170817.wav`, and `output/stellar.wav`
+(the three preset-comparison WAVs `SonifyRelativity` always writes) are
+intentionally audio-only with no GIF counterpart and were left untouched —
+they're direct-comparison sonifications of named real events, not simulation
+trajectories with a natural visual pairing.
+
 ## Common pitfalls
 
 - **Underscores in Module variable names.** `Module[{M_m, rS_m, ...}]` fails:

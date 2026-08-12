@@ -93,7 +93,7 @@ All outputs are prefixed with the mode name so multiple modes coexist in
 | `{mode}_waveform.png` | Time domain: clean + noisy overlay |
 | `{mode}_spectrum.png` | Power spectrum: clean + noisy + peak markers |
 | `{mode}_recovery.png` | Time domain: clean + recovered overlay |
-| `{mode}_animation.gif` | 10-frame GIF zooming through time windows |
+| `{mode}_animation.gif` | GIF zooming through time windows, playback duration matches signal `duration` (same length as the `_clean`/`_noisy`/`_recovered` WAVs) |
 | `{mode}_spectrum.csv` | Per-bin: frequency_hz, power_clean, power_noisy, power_recovered |
 
 ## The narrative WAV

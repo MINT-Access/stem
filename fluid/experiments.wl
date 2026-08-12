@@ -14,27 +14,31 @@ $outDir = FileNameJoin[{$projectRoot, "output"}];
 If[!DirectoryQ[$outDir], CreateDirectory[$outDir]];
 
 RunExperiment[name_String, mode_String, overrides_Association] :=
-  Module[{cfg, model, outWAV, outCSV},
+  Module[{cfg, model, outWAV, outCSV, audioDur},
     Print[""];
     STEMHeading["Experiment: " <> name];
     cfg    = DeepMerge[LoadConfig["fluid", {}], overrides];
     outWAV = FileNameJoin[{$outDir, name <> "_audio.wav"}];
     outCSV = FileNameJoin[{$outDir, name <> "_data.csv"}];
+    (* Sonify before Animate: GIF duration is synced to the actual WAV
+       duration returned by Sonify* (see fluid/AGENTS.md "GIF/WAV
+       duration sync"), which isn't known until the intro speech has
+       actually been synthesised. *)
     Which[
       mode === "karman",
         model = KarmanModel[cfg];
-        AnimateKarman[model, $outDir];
-        SonifyKarman[model, cfg, outWAV];
+        audioDur = SonifyKarman[model, cfg, outWAV];
+        AnimateKarman[model, $outDir, audioDur];
         ExportKarmanCSV[model, outCSV],
       mode === "strouhal",
         model = StrouhalSweepModel[cfg];
-        AnimateStrouhal[model, $outDir];
-        SonifyStrouhal[model, cfg, outWAV];
+        audioDur = SonifyStrouhal[model, cfg, outWAV];
+        AnimateStrouhal[model, $outDir, audioDur];
         ExportStrouhalCSV[model, outCSV],
       mode === "flag",
         model = FlagModel[cfg];
-        AnimateFlag[model, $outDir];
-        SonifyFlag[model, cfg, outWAV];
+        audioDur = SonifyFlag[model, cfg, outWAV];
+        AnimateFlag[model, $outDir, audioDur];
         ExportFlagCSV[model, outCSV]
     ];
     Print["  Experiment done: ", name]

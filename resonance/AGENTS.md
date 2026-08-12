@@ -189,6 +189,82 @@ wolframscript -file experiments.wl
 4. **Musical interval** (`galilean`) — the three assigned pitches
    (C3/C4/C5) have frequency ratios 1:2:4 within 0.01%.
 
+## Animation framing: GIF/WAV duration sync (fixed post-v1.5.0)
+
+**The bug.** `AnimateGalilean`/`AnimateKirkwood`/`AnimateSaturn` built
+every GIF from a fixed `$ResonanceGifFrames = 60` at a fixed
+`$ResonanceGifFrameRate = 15` — a constant 4.2s of playback regardless
+of the sonification's actual length. Measured before the fix (Python,
+counting per-frame GIF `duration` fields against WAV sample counts):
+
+| mode | GIF (old) | WAV | ratio |
+|------|-----------|-----|-------|
+| galilean | 4.2s | 57.0s | 13.6x |
+| kirkwood | 4.2s | 36.9s | 8.8x |
+| saturn   | 4.2s | 34.4s | 8.2x |
+
+**Root cause.** Same shape as the bug already fixed in
+`lorenz/src/animate.wl` (`ExportAnimation`): frame count and frame rate
+were both hardcoded constants, decoupled from whatever duration
+`sonify.wl` actually gave the WAV.
+
+**The fix.** `Animate*` now take a `targetDuration` argument (GIF
+playback length in seconds) and an `nFrames` render-budget default
+(150, not a literal frame count): `frameRate = Clip[nFrames /
+targetDuration, {$MinAnimationFps, $MaxAnimationFps}]` (2-30 fps),
+then `actualNFrames = Max[2, Round[frameRate * targetDuration]]` so
+playback duration equals `targetDuration` exactly even at the fps
+clamp boundary. Returns `{actualNFrames, frameRate}` so
+`STEMDescribeGIF` reports the real numbers. `kirkwood`/`saturn` also
+cap `actualNFrames` at `model["nSteps"]` (the sweep only has that many
+distinct belt/ring positions to show) — harmless with default configs
+(`n_steps` 200-300 comfortably exceeds the 150-frame budget) but a
+genuine, documented limit at very small `n_steps`.
+
+`targetDuration` is **the WAV's main-body duration, not its total file
+length**: `GalileanMainDurationSec[model]` (`= tEnd *
+$ResonanceIoPeriodSeconds`) and `ChordSweepMainDurationSec[model,
+cfg]` (`= chord_duration + 0.4 + duration_per_step * n_steps`), both in
+`src/sonify.wl`, mirror the arithmetic `BuildGalileanAudio`/
+`BuildKirkwoodAudio`/`BuildSaturnAudio` use internally, without
+depending on the WAV having been built yet (animation renders before
+sonification in `main.wl`'s pipeline) — the same "pass the same
+duration value used to size the WAV" idiom `lorenz` uses via
+`solution[[-1,1]]`.
+
+**This intentionally does not close the gap completely**, and that gap
+is structural, not a leftover bug: every mode's WAV is
+`PrependIntroAndExport`-prefixed with a spoken introduction (TTS,
+duration unknown until speech synthesis actually runs) plus a 0.4s
+pause, which the GIF has no visual content for and which can't be
+computed ahead of the animation render without reordering the whole
+pipeline. Matching the GIF to the *main content* duration (not the
+intro-inclusive WAV file length) is the same choice lorenz's reference
+fix makes — `solution[[-1,1]]` is lorenz's trajectory duration, not any
+padded file length either. Measured after the fix:
+
+| mode | GIF (new) | WAV (total) | ratio |
+|------|-----------|-------------|-------|
+| galilean | 31.5s (150 frames @ 4.69 fps) | 57.0s | 1.81x |
+| kirkwood | 15.0s (150 frames @ 10.42 fps) | 36.9s | 2.46x |
+| saturn   | 15.0s (150 frames @ 10.42 fps) | 34.4s | 2.30x |
+
+The remaining ratio is entirely the spoken-intro segment (confirmed:
+GIF duration tracks each mode's computed main-body duration —
+32.0s/14.4s/14.4s target vs 31.5s/15.0s/15.0s actual; the small
+per-mode offset is the GIF format's own 1/100s frame-duration
+quantization — e.g. galilean's 1/4.6875s = 0.2133s per-frame interval
+rounds to 0.21s in the file, times 150 frames = 31.5s rather than
+32.0s — not a bug in the fix) — down from 8-13.6x to a predictable,
+intro-sized 1.8-2.5x, not an arbitrary mismatch.
+
+Changed: `src/animate.wl` (`Animate*` signatures/bodies,
+`$MinAnimationFps`/`$MaxAnimationFps`, `$ResonanceGifFrames` now a
+render budget), `src/sonify.wl` (`GalileanMainDurationSec`,
+`ChordSweepMainDurationSec`), `main.wl` (all three call sites pass
+`targetDuration` and capture `{nFrames, gifFps}` for
+`STEMDescribeGIF`).
+
 ## Common pitfalls
 
 1. **`kirkwood`'s frequency range is not controlled by

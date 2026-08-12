@@ -46,7 +46,7 @@ PrintScatterSummary[scat1];
 {l1, r1} = BuildScatterAudio[scat1, $audioFreqMin, $audioFreqMax, $EMinKev, $EMaxKev, $sr];
 RunToFile["scatter_compton1923", l1, r1];
 AnimateScatter[scat1, FileNameJoin[{$outDir, "scatter_compton1923_animation.gif"}],
-                      FileNameJoin[{$outDir, "scatter_compton1923_plot.png"}]];
+                      FileNameJoin[{$outDir, "scatter_compton1923_plot.png"}], N[Length[l1]] / $sr];
 ExportScatterCSV[scat1, FileNameJoin[{$outDir, "scatter_compton1923_stats.csv"}]];
 
 (* --- scatter_backscatter: theta=180, maximum possible shift --- *)
@@ -57,7 +57,7 @@ PrintScatterSummary[scat2];
 {l2, r2} = BuildScatterAudio[scat2, $audioFreqMin, $audioFreqMax, $EMinKev, $EMaxKev, $sr];
 RunToFile["scatter_backscatter", l2, r2];
 AnimateScatter[scat2, FileNameJoin[{$outDir, "scatter_backscatter_animation.gif"}],
-                      FileNameJoin[{$outDir, "scatter_backscatter_plot.png"}]];
+                      FileNameJoin[{$outDir, "scatter_backscatter_plot.png"}], N[Length[l2]] / $sr];
 ExportScatterCSV[scat2, FileNameJoin[{$outDir, "scatter_backscatter_stats.csv"}]];
 
 (* --- scatter_gammaray: a much higher-energy photon (1 MeV), dramatic shift --- *)
@@ -68,7 +68,7 @@ PrintScatterSummary[scat3];
 {l3, r3} = BuildScatterAudio[scat3, $audioFreqMin, $audioFreqMax, $EMinKev, $EMaxKev, $sr];
 RunToFile["scatter_gammaray", l3, r3];
 AnimateScatter[scat3, FileNameJoin[{$outDir, "scatter_gammaray_animation.gif"}],
-                      FileNameJoin[{$outDir, "scatter_gammaray_plot.png"}]];
+                      FileNameJoin[{$outDir, "scatter_gammaray_plot.png"}], N[Length[l3]] / $sr];
 ExportScatterCSV[scat3, FileNameJoin[{$outDir, "scatter_gammaray_stats.csv"}]];
 
 (* --- sweep_default: full 0-180 degree sweep at Compton's own wavelength --- *)
@@ -79,7 +79,7 @@ PrintSweepSummary[sweep1];
 {ls1, rs1} = BuildSweepAudio[sweep1, $audioFreqMin, $audioFreqMax, $EMinKev, $EMaxKev, 6.0, $sr];
 RunToFile["sweep_default", ls1, rs1];
 AnimateSweep[sweep1, FileNameJoin[{$outDir, "sweep_default_animation.gif"}],
-                     FileNameJoin[{$outDir, "sweep_default_plot.png"}]];
+                     FileNameJoin[{$outDir, "sweep_default_plot.png"}], N[Length[ls1]] / $sr];
 ExportSweepCSV[sweep1, FileNameJoin[{$outDir, "sweep_default_stats.csv"}]];
 
 (* --- energy_default: full 1 keV - 5 MeV incident-energy sweep --- *)
@@ -90,7 +90,7 @@ PrintEnergySummary[energy1];
 {le1, re1} = BuildEnergyAudio[energy1, $audioFreqMin, $audioFreqMax, 0.1, $sr];
 RunToFile["energy_default", le1, re1];
 AnimateEnergy[energy1, FileNameJoin[{$outDir, "energy_default_animation.gif"}],
-                       FileNameJoin[{$outDir, "energy_default_plot.png"}]];
+                       FileNameJoin[{$outDir, "energy_default_plot.png"}], N[Length[le1]] / $sr];
 ExportEnergyCSV[energy1, FileNameJoin[{$outDir, "energy_default_stats.csv"}]];
 
 (* --- discovery_default: binaural Thomson vs Compton comparison --- *)

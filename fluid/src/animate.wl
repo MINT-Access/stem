@@ -2,7 +2,27 @@
    fluid/src/animate.wl — GIF rendering for karman/strouhal/flag
    ======================================================== *)
 
-$FluidGifFrameRate = 8;
+(* GIF playback duration used to be decoupled from the accompanying WAV:
+   a fixed $FluidGifFrameRate (8 fps) times a fixed frame count (32, or up
+   to 50 for strouhal) gave a GIF of ~4-6.5s regardless of how long the
+   sonification actually ran (karman/flag ~40-46s, strouhal ~47s, once
+   the spoken intro is included -- see sonify.wl's
+   FluidPrependIntroAndExport, which now returns the actual total WAV
+   duration so callers can pass it here as targetDuration).
+
+   nFrames below is a RENDER BUDGET, not a literal frame count: frameRate
+   is solved as nFrames/targetDuration then clamped to
+   [$FluidMinGifFps, $FluidMaxGifFps] so a short run doesn't demand a
+   strobing frame rate and a long one doesn't demand an implausibly slow
+   one -- the frame COUNT is what flexes at the clamp boundary (recomputed
+   as Round[frameRate*targetDuration]) so actual playback duration always
+   equals targetDuration exactly. Same pattern as lorenz/src/animate.wl. *)
+$FluidMinGifFps = 2;
+$FluidMaxGifFps = 30;
+$FluidGifFrameBudget = 150;
+
+FluidGifRate[targetDuration_?NumericQ, nFrames_:$FluidGifFrameBudget] :=
+  Clip[nFrames / targetDuration, {$FluidMinGifFps, $FluidMaxGifFps}];
 
 
 (* ── Shared vortex-flow-field renderer (karman mode + strouhal's
@@ -34,11 +54,12 @@ RenderVortexFlowGraphic[vortexList_List, dCyl_?NumericQ, titleText_String] :=
 (* ════════════════════════════════════════════════════════
    KARMAN MODE
    ════════════════════════════════════════════════════════ *)
-AnimateKarman[model_Association, outDir_String] :=
-  Module[{nFrames, frameTimes, frames, outGIF, sim, dCyl, titleFn},
+AnimateKarman[model_Association, outDir_String, targetDuration_?NumericQ] :=
+  Module[{nFrames, frameRate, frameTimes, frames, outGIF, sim, dCyl, titleFn},
     sim   = model["sim"];
     dCyl  = model["D"];
-    nFrames = 32;
+    frameRate = FluidGifRate[targetDuration];
+    nFrames   = Max[2, Round[frameRate * targetDuration]];
     frameTimes = N @ Subdivide[0.02 * model["duration"], model["duration"], nFrames - 1];
     titleFn[t_] := "Karman vortex street -- Re=" <> ToString[NumberForm[model["Re"], {5,1}]] <>
                    "   t=" <> ToString[NumberForm[t, {5,1}]];
@@ -49,9 +70,9 @@ AnimateKarman[model_Association, outDir_String] :=
     ];
 
     outGIF = FileNameJoin[{outDir, "karman.gif"}];
-    ExportGIF[frames, outGIF, $FluidGifFrameRate];
-    STEMDescribeGIF[outGIF, nFrames, $FluidGifFrameRate];
-    nFrames
+    ExportGIF[frames, outGIF, frameRate];
+    STEMDescribeGIF[outGIF, nFrames, frameRate];
+    {nFrames, frameRate}
   ];
 
 
@@ -111,18 +132,23 @@ RenderStrouhalFrame[model_Association, upToIdx_Integer] :=
     Column[{topPanel, RenderStrouhalBottomPanel[model, upToIdx]}, Spacings -> 0.6]
   ];
 
-AnimateStrouhal[model_Association, outDir_String] :=
-  Module[{nFrames, indices, frames, outGIF},
-    nFrames = Min[50, model["reSteps"]];
+AnimateStrouhal[model_Association, outDir_String, targetDuration_?NumericQ] :=
+  Module[{nFrames, frameRate, indices, frames, outGIF},
+    frameRate = FluidGifRate[targetDuration];
+    nFrames   = Max[2, Round[frameRate * targetDuration]];
+    (* model["reSteps"] discrete Re steps are the only distinct visual
+       states available; if nFrames exceeds that (short targetDuration
+       forcing the fps clamp up), Subdivide's rounding naturally repeats
+       indices -- a brief hold on a state rather than an error. *)
     indices = Round[Subdivide[1, model["reSteps"], nFrames - 1]];
     indices = Max[1, #] & /@ indices;
 
     frames = RenderStrouhalFrame[model, #] & /@ indices;
 
     outGIF = FileNameJoin[{outDir, "strouhal.gif"}];
-    ExportGIF[frames, outGIF, $FluidGifFrameRate];
-    STEMDescribeGIF[outGIF, Length[frames], $FluidGifFrameRate];
-    Length[frames]
+    ExportGIF[frames, outGIF, frameRate];
+    STEMDescribeGIF[outGIF, Length[frames], frameRate];
+    {Length[frames], frameRate}
   ];
 
 
@@ -181,14 +207,15 @@ RenderFlagFrame[shape_List, trail_List, flagLength_?NumericQ] :=
     ]
   ];
 
-AnimateFlag[model_Association, outDir_String] :=
-  Module[{yTipInterp, nFrames, frameTimes, flagLength, fFlag, nSeg,
+AnimateFlag[model_Association, outDir_String, targetDuration_?NumericQ] :=
+  Module[{yTipInterp, nFrames, frameRate, frameTimes, flagLength, fFlag, nSeg,
           shapes, trailLen, frames, outGIF},
     yTipInterp = Interpolation[Transpose[{model["model"]["tArr"], model["model"]["yArr"]}]];
     flagLength = model["flagLength"];
     fFlag      = model["model"]["fFlag"];
     nSeg       = 24;
-    nFrames    = 32;
+    frameRate  = FluidGifRate[targetDuration];
+    nFrames    = Max[2, Round[frameRate * targetDuration]];
     trailLen   = 6;
 
     frameTimes = N @ Subdivide[0.0, model["duration"], nFrames - 1];
@@ -203,7 +230,7 @@ AnimateFlag[model_Association, outDir_String] :=
     ];
 
     outGIF = FileNameJoin[{outDir, "flag.gif"}];
-    ExportGIF[frames, outGIF, $FluidGifFrameRate];
-    STEMDescribeGIF[outGIF, nFrames, $FluidGifFrameRate];
-    nFrames
+    ExportGIF[frames, outGIF, frameRate];
+    STEMDescribeGIF[outGIF, nFrames, frameRate];
+    {nFrames, frameRate}
   ];

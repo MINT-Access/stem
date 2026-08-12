@@ -1,19 +1,40 @@
 (* ========================================================
    src/animate.wl — Cellular automata animation export
 
-   AnimateCellular[grid3D, cfg, outPath]
+   AnimateCellular[grid3D, cfg, outPath, targetDuration]
 
    For Game of Life (nRows > 1):
      Renders one ArrayPlot frame per generation and exports
      an animated GIF.  Cell size is derived from canvas size
-     and grid dimensions — not hardcoded.
+     and grid dimensions — not hardcoded.  Playback duration is
+     matched to targetDuration (the accompanying WAV's exact
+     length, generations * base_note_duration — see
+     ResolveBaseNoteDuration in sonify.wl) by solving frame rate
+     from the render budget nGen/targetDuration and clamping it
+     to a sane range; see ExportGIFForLife below.
 
    For Rule 110 (nRows == 1):
      The spacetime diagram (all generations stacked vertically)
      is exported as a PNG and as a single-frame GIF for pipeline
      consistency.  The full spacetime view is necessary because
-     the Rule 110 triangle pattern is only legible as a whole.
+     the Rule 110 triangle pattern is only legible as a whole, so
+     there is no frame rate to solve for — instead the single
+     frame's hold time (its GIF "delay") is set directly to
+     targetDuration, so a viewer holding the GIF open for one loop
+     sees it for as long as the WAV plays.
    ======================================================== *)
+
+
+(* Sane bounds on Game-of-Life GIF playback frame rate — mirrors
+   lorenz's src/animate.wl. Keeps a very short WAV (few generations,
+   large base_note_duration) from demanding a strobing frame rate, and
+   a very long one from demanding an implausibly slow one. Frame COUNT
+   (subsampled from the nGen generations, see AnimateCellular) is what
+   flexes at the clamp boundary so playback duration still lands on
+   targetDuration exactly. Not used by the Rule 110 branch, which has
+   no frame rate to clamp — see module header above. *)
+$MinAnimationFps = 2;
+$MaxAnimationFps = 30;
 
 
 (* CellularFrame
@@ -32,15 +53,25 @@ CellularFrame[genGrid_?MatrixQ, cellPx_Integer] :=
 
 (* AnimateCellular
    Dispatches on grid shape:
-     nRows > 1  → animated GIF (one frame per generation)
-     nRows == 1 → spacetime PNG + single-frame GIF            *)
+     nRows > 1  → animated GIF (frames subsampled from the nGen
+                  generations, frame rate solved from targetDuration)
+     nRows == 1 → spacetime PNG + single-frame GIF held for
+                  targetDuration
 
-AnimateCellular[grid3D_List, cfg_Association, outPath_String] :=
-  Module[{nGen, nRows, nCols, fps, width, height, cellPx,
-          frames, spacetime, spacetimePlot, pngPath},
+   targetDuration is the accompanying WAV's exact duration in seconds
+   (generations * base_note_duration — see ResolveBaseNoteDuration in
+   sonify.wl; callers compute it via CellularAudioDuration) so GIF and
+   WAV playback stay in sync. animation.fps from config is no longer
+   used for either branch — see AGENTS.md "Animation framing" for why.
+
+   Returns {actualNFrames, frameRate} for STEMDescribeGIF reporting. *)
+
+AnimateCellular[grid3D_List, cfg_Association, outPath_String, targetDuration_?NumericQ] :=
+  Module[{nGen, nRows, nCols, width, height, cellPx,
+          frames, spacetime, spacetimePlot, pngPath,
+          frameRate, actualNFrames, indices},
 
     {nGen, nRows, nCols} = Dimensions[grid3D];
-    fps    = GetCfg[cfg, {"animation","fps"},    10];
     width  = GetCfg[cfg, {"animation","width"},  480];
     height = GetCfg[cfg, {"animation","height"}, 480];
 
@@ -49,7 +80,13 @@ AnimateCellular[grid3D_List, cfg_Association, outPath_String] :=
 
     If[nRows === 1,
 
-      (* ── Rule 110: spacetime diagram ── *)
+      (* ── Rule 110: spacetime diagram ──
+         One static frame; its GIF "frame rate" only controls how long
+         that single frame is held before the (infinite) loop repeats,
+         so set it directly from targetDuration rather than clamping —
+         a slow hold isn't a strobing/glacial-playback concern the way
+         a multi-frame rate would be. Guard against a degenerate
+         (near-zero or negative) targetDuration with a 0.1s floor. *)
       Print["  Building Rule 110 spacetime diagram (", nGen, " gen x ", nCols, " cells)..."];
       STEMSay["Building Rule 110 spacetime diagram"];
 
@@ -67,21 +104,41 @@ AnimateCellular[grid3D_List, cfg_Association, outPath_String] :=
       Export[pngPath, spacetimePlot, "PNG"];
       Print["  Spacetime PNG — ", pngPath];
 
-      ExportGIF[{spacetimePlot}, outPath, fps],
+      frameRate = 1.0 / Max[targetDuration, 0.1];
+      Print["  Single-frame GIF held for ", FmtN[Max[targetDuration, 0.1], 3],
+            "s per loop (matching audio duration)..."];
 
-      (* ── Game of Life: animated GIF ── *)
-      Print["  Rendering ", nGen, " frames (", nRows, "x", nCols,
-            " grid, ", cellPx, " px/cell)..."];
-      STEMSay["Rendering " <> ToString[nGen] <> " frames"];
+      ExportGIF[{spacetimePlot}, outPath, frameRate];
+      {1, frameRate},
+
+      (* ── Game of Life: animated GIF ──
+         nGen is a render budget, not a literal frame count: frameRate
+         is solved as nGen/targetDuration and clamped to
+         [$MinAnimationFps, $MaxAnimationFps], then actualNFrames is
+         recomputed as Round[frameRate * targetDuration] so playback
+         duration lands on targetDuration exactly even when the clamp
+         bites. Frames are indices into the nGen generations, evenly
+         subsampled (identical to nGen when unclamped, which is the
+         common case at the default 0.06s/generation tempo). *)
+      frameRate = Clip[nGen / targetDuration, {$MinAnimationFps, $MaxAnimationFps}];
+      actualNFrames = Max[2, Round[frameRate * targetDuration]];
+      indices = Round[Subdivide[1, nGen, actualNFrames - 1]];
+
+      Print["  Rendering ", Length[indices], " frames (", nRows, "x", nCols,
+            " grid, ", cellPx, " px/cell) at ", FmtN[frameRate, 3], " fps (",
+            FmtN[Length[indices] / frameRate, 3],
+            "s, matching audio duration ", FmtN[targetDuration, 3], "s)..."];
+      STEMSay["Rendering " <> ToString[Length[indices]] <> " frames"];
 
       frames = Table[
-        (If[Mod[g, 50] === 1 && g > 1,
-           STEMSay["Rendered " <> ToString[g-1] <> " of " <>
-                   ToString[nGen] <> " frames"]];
-         CellularFrame[grid3D[[g]], cellPx]),
-        {g, 1, nGen}
+        (If[Mod[i, 50] === 1 && i > 1,
+           STEMSay["Rendered " <> ToString[i-1] <> " of " <>
+                   ToString[Length[indices]] <> " frames"]];
+         CellularFrame[grid3D[[indices[[i]]]], cellPx]),
+        {i, 1, Length[indices]}
       ];
 
-      ExportGIF[frames, outPath, fps]
+      ExportGIF[frames, outPath, frameRate];
+      {actualNFrames, frameRate}
     ]
   ]

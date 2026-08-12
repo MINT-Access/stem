@@ -20,6 +20,10 @@ Get[FileNameJoin[{$projectRoot, "src", "output.wl"}]];
 Get[FileNameJoin[{$projectRoot, "src", "animate.wl"}]];
 Get[FileNameJoin[{$projectRoot, "src", "sonify.wl"}]];
 
+(* Needed only to compute SonificationDuration for the GIF's targetDuration
+   below — this script does not otherwise read config overrides. *)
+cfg = LoadConfig["asteroids", {}];
+
 (* -------------------------------------------------------
    PRESETS
    ------------------------------------------------------- *)
@@ -151,7 +155,8 @@ Print[""];
 Print["[3/4] Animation..."];
 outGIF = FileNameJoin[{$projectRoot, "output",
   "asteroids_" <> label <> ".gif"}];
-ExportAnimation[asteroids, outGIF, startDate, endDate, 10];
+trajDurationForGIF = SonificationDuration[Length[asteroids], cfg];
+ExportAnimation[asteroids, outGIF, startDate, endDate, trajDurationForGIF];
 Print["  GIF: ", outGIF];
 
 Print[""];

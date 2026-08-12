@@ -1,6 +1,20 @@
 (* ========================================================
    bayes/src/animate.wl — GIF animations for all three modes
+
+   GIF playback duration is driven by targetDuration — the actual WAV
+   length (intro speech + pause + sonification, N[Length[finalLeft]]/sr
+   from main.wl), not a fixed frame count/rate — so the animation and
+   its sonification stay in sync. nFrames is a RENDER BUDGET, not a
+   literal frame count: frameRate is solved as nFrames/targetDuration
+   and clamped to [$MinAnimationFps,$MaxAnimationFps] (2-30 fps), then
+   the actual frame count is recomputed from the clamped rate so
+   playback duration always equals targetDuration exactly. See
+   lorenz/src/animate.wl's ExportAnimation for the reference version of
+   this pattern.
    ======================================================== *)
+
+$MinAnimationFps = 2;
+$MaxAnimationFps = 30;
 
 
 (* ── Mode 1: coin — Beta posterior narrowing ─────────────────────── *)
@@ -29,14 +43,19 @@ RenderCoinFrame[stepAssoc_Association, thetaTrue_?NumericQ, priorVariance_?Numer
     ]
   ];
 
-AnimateCoin[seq_List, thetaTrue_?NumericQ, outGIF_String, Optional[nFrames_Integer, 60]] :=
-  Module[{n = Length[seq], indices, priorVariance, frames},
+AnimateCoin[seq_List, thetaTrue_?NumericQ, outGIF_String, targetDuration_?NumericQ,
+           Optional[nFrames_Integer, 150]] :=
+  Module[{n = Length[seq], indices, priorVariance, frameRate, actualNFrames, frames},
     priorVariance = BetaVariance[1.0, 1.0];
-    indices = DeleteDuplicates[Round[Subdivide[1, n, Min[nFrames, n] - 1]]];
-    Print["  Rendering ", Length[indices], " coin posterior frames..."];
+    frameRate     = Clip[nFrames / targetDuration, {$MinAnimationFps, $MaxAnimationFps}];
+    actualNFrames = Max[2, Round[frameRate * targetDuration]];
+    indices       = Clip[Round[Subdivide[1, n, actualNFrames - 1]], {1, n}];
+    Print["  Rendering ", Length[indices], " coin posterior frames at ", FmtN[frameRate, 3],
+          " fps (", FmtN[Length[indices] / frameRate, 3],
+          "s, matching audio duration ", FmtN[targetDuration, 3], "s)..."];
     frames = RenderCoinFrame[seq[[#]], thetaTrue, priorVariance] & /@ indices;
-    ExportGIF[frames, outGIF, 12];
-    Length[frames]
+    ExportGIF[frames, outGIF, frameRate];
+    {Length[frames], frameRate}
   ];
 
 
@@ -79,13 +98,17 @@ RenderGaussianFrame[stepAssoc_Association, muLo_?NumericQ, muHi_?NumericQ,
   ];
 
 AnimateGaussian[seq_List, muLo_?NumericQ, muHi_?NumericQ, muTrue_?NumericQ, mu0_?NumericQ,
-               outGIF_String, Optional[nFrames_Integer, 60]] :=
-  Module[{n = Length[seq], indices, frames},
-    indices = DeleteDuplicates[Round[Subdivide[1, n, Min[nFrames, n] - 1]]];
-    Print["  Rendering ", Length[indices], " gaussian posterior frames..."];
+               outGIF_String, targetDuration_?NumericQ, Optional[nFrames_Integer, 150]] :=
+  Module[{n = Length[seq], indices, frameRate, actualNFrames, frames},
+    frameRate     = Clip[nFrames / targetDuration, {$MinAnimationFps, $MaxAnimationFps}];
+    actualNFrames = Max[2, Round[frameRate * targetDuration]];
+    indices       = Clip[Round[Subdivide[1, n, actualNFrames - 1]], {1, n}];
+    Print["  Rendering ", Length[indices], " gaussian posterior frames at ", FmtN[frameRate, 3],
+          " fps (", FmtN[Length[indices] / frameRate, 3],
+          "s, matching audio duration ", FmtN[targetDuration, 3], "s)..."];
     frames = RenderGaussianFrame[seq[[#]], muLo, muHi, muTrue, mu0] & /@ indices;
-    ExportGIF[frames, outGIF, 12];
-    Length[frames]
+    ExportGIF[frames, outGIF, frameRate];
+    {Length[frames], frameRate}
   ];
 
 
@@ -148,12 +171,16 @@ RenderModelFrame[flips_List, stepAssoc_Association, meterRange_?NumericQ] :=
     }, Background -> Black]
   ];
 
-AnimateModel[flips_List, modelSeq_List, outGIF_String, Optional[nFrames_Integer, 60],
-            Optional[meterRange_?NumericQ, 3.0]] :=
-  Module[{n = Length[modelSeq], indices, frames},
-    indices = DeleteDuplicates[Round[Subdivide[1, n, Min[nFrames, n] - 1]]];
-    Print["  Rendering ", Length[indices], " Bayes factor meter frames..."];
+AnimateModel[flips_List, modelSeq_List, outGIF_String, targetDuration_?NumericQ,
+            Optional[nFrames_Integer, 150], Optional[meterRange_?NumericQ, 3.0]] :=
+  Module[{n = Length[modelSeq], indices, frameRate, actualNFrames, frames},
+    frameRate     = Clip[nFrames / targetDuration, {$MinAnimationFps, $MaxAnimationFps}];
+    actualNFrames = Max[2, Round[frameRate * targetDuration]];
+    indices       = Clip[Round[Subdivide[1, n, actualNFrames - 1]], {1, n}];
+    Print["  Rendering ", Length[indices], " Bayes factor meter frames at ", FmtN[frameRate, 3],
+          " fps (", FmtN[Length[indices] / frameRate, 3],
+          "s, matching audio duration ", FmtN[targetDuration, 3], "s)..."];
     frames = RenderModelFrame[flips, modelSeq[[#]], meterRange] & /@ indices;
-    ExportGIF[frames, outGIF, 10];
-    Length[frames]
+    ExportGIF[frames, outGIF, frameRate];
+    {Length[frames], frameRate}
   ];

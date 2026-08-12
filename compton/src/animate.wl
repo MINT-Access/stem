@@ -8,7 +8,25 @@
    drawn once, a marker walks along it); discovery's static overlay
    plot has no GIF (per the build spec's own outputs list -- a single
    comparison plot IS the point for that mode, not an animation).
-   ======================================================== *)
+
+   Every AnimateX function below takes a targetDuration_?NumericQ (the
+   duration, in seconds, of the WAV it will be played alongside -- the
+   FULL exported file, spoken intro/outro included, since that is what
+   a listener actually starts and stops in sync with the GIF) and an
+   nFrames RENDER BUDGET, not a literal frame count: frameRate is
+   solved as nFrames/targetDuration and clamped to
+   [$MinAnimationFps, $MaxAnimationFps] so a short clip doesn't demand
+   a strobing frame rate and a long one (compton's spoken intros
+   routinely run 15-35s, dwarfing the 1-3s of actual collision/sweep
+   audio) doesn't demand an implausibly slow one; actualNFrames
+   (Round[frameRate*targetDuration]) is what flexes at the clamp
+   boundary so playback duration always lands on targetDuration
+   exactly. See AGENTS.md's "Animation/audio duration sync" entry for
+   the bug this replaced (GIFs built from a fixed 40 frames at a fixed
+   15/12 fps, entirely decoupled from the WAV -- ratios up to ~14x). *)
+
+$MinAnimationFps = 2;
+$MaxAnimationFps = 30;
 
 
 (* ── Mode 1: scatter — collision diagram ─────────────────────────── *)
@@ -93,13 +111,16 @@ ScatterDiagramGraphics[model_Association, revealFrac_?NumericQ] :=
   ];
 
 AnimateScatter[model_Association, outGif_String, outPng_String,
-              Optional[nFrames_Integer, 40]] :=
-  Module[{frames},
-    frames = Table[ScatterDiagramGraphics[model, N[k] / nFrames], {k, nFrames}];
-    ExportGIF[frames, outGif, 15];
+              targetDuration_?NumericQ, Optional[nFrames_Integer, 40]] :=
+  Module[{frameRate, actualNFrames, frames},
+    frameRate     = Clip[nFrames / targetDuration, {$MinAnimationFps, $MaxAnimationFps}];
+    actualNFrames = Max[2, Round[frameRate * targetDuration]];
+
+    frames = Table[ScatterDiagramGraphics[model, N[k] / actualNFrames], {k, actualNFrames}];
+    ExportGIF[frames, outGif, frameRate];
     Export[outPng, ScatterDiagramGraphics[model, 1.0], "PNG"];
     Print["  PNG: ", outPng];
-    nFrames
+    {actualNFrames, frameRate}
   ];
 
 
@@ -119,12 +140,20 @@ RenderSweepFrame[model_Association, upTo_Integer] :=
   ];
 
 AnimateSweep[model_Association, outGif_String, outPng_String,
-            Optional[nFrames_Integer, 40]] :=
-  Module[{nSteps, indices, frames, staticPlt},
-    nSteps  = model["nSteps"];
-    indices = DeleteDuplicates[Round[Subdivide[1, nSteps, Min[nFrames, nSteps] - 1]]];
+            targetDuration_?NumericQ, Optional[nFrames_Integer, 40]] :=
+  Module[{nSteps, frameRate, actualNFrames, indices, frames, staticPlt},
+    nSteps        = model["nSteps"];
+    frameRate     = Clip[nFrames / targetDuration, {$MinAnimationFps, $MaxAnimationFps}];
+    actualNFrames = Max[2, Round[frameRate * targetDuration]];
+
+    (* No DeleteDuplicates: a step index repeating (when actualNFrames
+       exceeds nSteps, common once targetDuration includes a long
+       spoken intro) just holds that frame on screen longer, which is
+       fine -- deleting repeats would shrink the frame count below
+       actualNFrames and pull playback duration back out of sync. *)
+    indices = Round[Subdivide[1, nSteps, actualNFrames - 1]];
     frames  = RenderSweepFrame[model, #] & /@ indices;
-    ExportGIF[frames, outGif, 12];
+    ExportGIF[frames, outGif, frameRate];
 
     staticPlt = Graphics[
       {GrayLevel[0.15], Thickness[0.0025], Line[Transpose[{model["thetaDegArr"], model["deltaLambdaArr"]}]]},
@@ -137,7 +166,7 @@ AnimateSweep[model_Association, outGif_String, outPng_String,
     ];
     Export[outPng, staticPlt, "PNG"];
     Print["  PNG: ", outPng];
-    Length[frames]
+    {actualNFrames, frameRate}
   ];
 
 
@@ -163,12 +192,18 @@ RenderEnergyFrame[model_Association, upTo_Integer] :=
   ];
 
 AnimateEnergy[model_Association, outGif_String, outPng_String,
-             Optional[nFrames_Integer, 40]] :=
-  Module[{nSteps, indices, frames, logE, staticPlt},
-    nSteps  = model["nSteps"];
-    indices = DeleteDuplicates[Round[Subdivide[1, nSteps, Min[nFrames, nSteps] - 1]]];
+             targetDuration_?NumericQ, Optional[nFrames_Integer, 40]] :=
+  Module[{nSteps, frameRate, actualNFrames, indices, frames, logE, staticPlt},
+    nSteps        = model["nSteps"];
+    frameRate     = Clip[nFrames / targetDuration, {$MinAnimationFps, $MaxAnimationFps}];
+    actualNFrames = Max[2, Round[frameRate * targetDuration]];
+
+    (* No DeleteDuplicates -- see AnimateSweep for why: a repeated
+       index just holds a frame longer, keeping actualNFrames (hence
+       playback duration) exact. *)
+    indices = Round[Subdivide[1, nSteps, actualNFrames - 1]];
     frames  = RenderEnergyFrame[model, #] & /@ indices;
-    ExportGIF[frames, outGif, 12];
+    ExportGIF[frames, outGif, frameRate];
 
     logE = Log10[model["EArr"]];
     staticPlt = Graphics[
@@ -187,7 +222,7 @@ AnimateEnergy[model_Association, outGif_String, outPng_String,
     ];
     Export[outPng, staticPlt, "PNG"];
     Print["  PNG: ", outPng];
-    Length[frames]
+    {actualNFrames, frameRate}
   ];
 
 

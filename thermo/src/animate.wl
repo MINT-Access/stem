@@ -3,6 +3,44 @@
    ======================================================== *)
 
 
+(* Sane bounds on GIF playback frame rate — see ExportTimedGIF for how
+   these keep animation/audio duration in sync without forcing an
+   absurdly fast or glacial frame rate at the extremes. *)
+$MinAnimationFps = 2;
+$MaxAnimationFps = 30;
+
+(* ExportTimedGIF
+   Exports frames as a GIF whose PLAYBACK DURATION matches
+   targetDuration exactly — normally the same duration used to size the
+   accompanying WAV (see main.wl/experiments.wl call sites), so the GIF
+   and its sonification stay in sync instead of the GIF racing through
+   at a fixed, duration-unrelated frame rate while the audio plays for
+   however long the sonification actually takes (intro speech included).
+
+   frameRate is solved as Length[frames]/targetDuration and clamped to
+   [$MinAnimationFps, $MaxAnimationFps] so a short sweep doesn't demand
+   a strobing frame rate and a long one doesn't demand an implausibly
+   slow one. If the clamp binds, the frame COUNT is what flexes
+   (recomputed as Round[frameRate*targetDuration], padding by repeating
+   the final frame or trimming trailing frames) so playback duration
+   still lands on targetDuration, not just approximately.
+
+   Returns {actualNFrames, frameRate} so callers can report what was
+   actually rendered/played back (STEMDescribeGIF wants both). *)
+ExportTimedGIF[frames_List, filePath_String, targetDuration_?NumericQ] :=
+  Module[{n = Length[frames], frameRate, desiredN, finalFrames},
+    frameRate = Clip[n / targetDuration, {$MinAnimationFps, $MaxAnimationFps}];
+    desiredN  = Max[2, Round[frameRate * targetDuration]];
+    finalFrames = Which[
+      desiredN === n, frames,
+      desiredN < n,   frames[[1 ;; desiredN]],
+      True,           Join[frames, ConstantArray[Last[frames], desiredN - n]]
+    ];
+    ExportGIF[finalFrames, filePath, frameRate];
+    {desiredN, frameRate}
+  ];
+
+
 (* ── Mode 1: distribution ─────────────────────────────────────────── *)
 
 RenderDistributionFrame[T_?NumericQ, massAmu_?NumericQ, TStart_?NumericQ, TEnd_?NumericQ,
@@ -37,7 +75,7 @@ RenderDistributionFrame[T_?NumericQ, massAmu_?NumericQ, TStart_?NumericQ, TEnd_?
   ];
 
 AnimateDistribution[distResult_Association, massAmu_?NumericQ, TEndFull_?NumericQ,
-                    outGIF_String, Optional[nFrames_Integer, 60]] :=
+                    outGIF_String, targetDuration_?NumericQ, Optional[nFrames_Integer, 150]] :=
   Module[{TVals, TStart, TEnd, indices, vGlobalMax, frames},
     TVals  = distResult["TVals"];
     TStart = First[TVals];
@@ -47,8 +85,7 @@ AnimateDistribution[distResult_Association, massAmu_?NumericQ, TEndFull_?Numeric
 
     Print["  Rendering ", Length[indices], " distribution frames..."];
     frames = RenderDistributionFrame[TVals[[#]], massAmu, TStart, TEnd, vGlobalMax] & /@ indices;
-    ExportGIF[frames, outGIF, 12];
-    Length[frames]
+    ExportTimedGIF[frames, outGIF, targetDuration]
   ];
 
 
@@ -80,7 +117,8 @@ RenderEnsembleFrame[speeds_List, massAmu_?NumericQ, T_?NumericQ, vGlobalMax_?Num
     ]
   ];
 
-AnimateEnsemble[ensembleModel_Association, outGIF_String, Optional[nFrames_Integer, 60]] :=
+AnimateEnsemble[ensembleModel_Association, outGIF_String, targetDuration_?NumericQ,
+                Optional[nFrames_Integer, 250]] :=
   Module[{history, massAmu, T, vGlobalMax, nSteps, indices, frames},
     history    = ensembleModel["speedsHistory"];
     massAmu    = ensembleModel["massAmu"];
@@ -91,8 +129,7 @@ AnimateEnsemble[ensembleModel_Association, outGIF_String, Optional[nFrames_Integ
 
     Print["  Rendering ", Length[indices], " ensemble histogram frames..."];
     frames = RenderEnsembleFrame[history[[#]], massAmu, T, vGlobalMax, # - 1] & /@ indices;
-    ExportGIF[frames, outGIF, 10];
-    Length[frames]
+    ExportTimedGIF[frames, outGIF, targetDuration]
   ];
 
 
@@ -137,7 +174,7 @@ RenderCoolingFrame[t_?NumericQ, T_?NumericQ, THot_?NumericQ, TCold_?NumericQ, ta
   ];
 
 AnimateCooling[coolResult_Association, massAmu_?NumericQ, outGIF_String,
-              Optional[nFrames_Integer, 60]] :=
+              targetDuration_?NumericQ, Optional[nFrames_Integer, 150]] :=
   Module[{times, TVals, THot, TCold, tau, duration, vGlobalMax, nSteps, indices, frames},
     times    = coolResult["times"];
     TVals    = coolResult["TVals"];
@@ -152,8 +189,7 @@ AnimateCooling[coolResult_Association, massAmu_?NumericQ, outGIF_String,
     Print["  Rendering ", Length[indices], " cooling frames..."];
     frames = RenderCoolingFrame[times[[#]], TVals[[#]], THot, TCold, tau, duration,
                                 massAmu, vGlobalMax] & /@ indices;
-    ExportGIF[frames, outGIF, 10];
-    Length[frames]
+    ExportTimedGIF[frames, outGIF, targetDuration]
   ];
 
 
@@ -188,7 +224,8 @@ RenderEquipartitionFrame[T_?NumericQ] :=
     GraphicsRow[{monoChart, diChart}, Background -> Black, ImageSize -> 640]
   ];
 
-AnimateEquipartition[eqResult_Association, outGIF_String, Optional[nFrames_Integer, 30]] :=
+AnimateEquipartition[eqResult_Association, outGIF_String, targetDuration_?NumericQ,
+                     Optional[nFrames_Integer, 150]] :=
   Module[{TVals, nSteps, indices, frames},
     TVals   = eqResult["TVals"];
     nSteps  = Length[TVals];
@@ -196,6 +233,5 @@ AnimateEquipartition[eqResult_Association, outGIF_String, Optional[nFrames_Integ
 
     Print["  Rendering ", Length[indices], " equipartition frames..."];
     frames = RenderEquipartitionFrame[TVals[[#]]] & /@ indices;
-    ExportGIF[frames, outGIF, 8];
-    Length[frames]
+    ExportTimedGIF[frames, outGIF, targetDuration]
   ];

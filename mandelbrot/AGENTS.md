@@ -157,6 +157,70 @@ or unit tests alone — both are exactly the kind of thing this
 project's "actually view the rendered PNGs/GIFs, don't just trust the
 code" discipline exists to catch.
 
+## Animation framing: the GIF/WAV duration-sync bug (fixed post-v1.5.0)
+
+**The bug.** All three GIFs played back at a small, fixed duration
+completely unrelated to their matching WAV's actual length.
+`AnimateFieldTraversal` (mandelbrot/julia) hardcoded `nGIFFrames=32` at
+a fixed 10fps, always 3.2s. `AnimateZoom` hardcoded `framesPerLevel=8`
+at a fixed 6fps, always `8*nLevels/6`s. Measured before the fix:
+`mandelbrot_mandelbrot.gif` 3.20s vs its WAV 80.23s (25.1x mismatch),
+`mandelbrot_julia.gif` 3.20s vs 76.89s (24.0x), `mandelbrot_zoom.gif`
+5.44s vs 115.31s (21.2x). A listener watching and listening together
+would see the GIF finish and loop roughly 20-25 times before the audio
+even ended.
+
+**Root cause.** Frame count and frame rate were both compile-time
+constants, chosen for a *reasonable-looking* animation in isolation,
+with no relationship to `nPixels` (the Hilbert-traversal length driving
+`BuildFieldAudio`'s one-note-per-pixel duration) or to `nLevels`/the
+per-level note stream length driving `BuildZoomAudio`. Since this app
+is iteration-indexed rather than time-ODE (no `solution[[-1,1]]`-style
+continuous time value to read off), the actual WAV duration is fixed by
+`nPixels * noteDurationBase` (plus per-level chimes/gaps for zoom) plus
+a spoken intro of unpredictable length (real TTS synthesis, not a fixed
+constant) — nothing in the old animate.wl ever looked at any of that.
+
+**The fix.** `AnimateFieldTraversal`/`AnimateAndExportField`/`AnimateZoom`
+(`src/animate.wl`) now take a `targetDuration` argument and treat
+`nFrames` (default 150) as a RENDER BUDGET, not a literal frame count,
+following the same pattern already used by lorenz/, montecarlo/, and
+several other v1.5.0 apps: `frameRate = Clip[nFrames/targetDuration,
+{$MinAnimationFps, $MaxAnimationFps}]` (2-30 fps), then
+`actualNFrames = Round[frameRate * targetDuration]` so playback duration
+matches `targetDuration` almost exactly (frame count is what flexes at
+the clamp). `AnimateZoom` additionally distributes `actualNFrames`
+across levels via cumulative rounding (`Differences[Round[Range[0,
+nLevels]*actualNFrames/nLevels]]`) so every level gets at least one
+frame and the per-level counts still sum to exactly `actualNFrames`.
+Both functions return `{actualNFrames, frameRate}` for `STEMDescribeGIF`.
+
+Since `targetDuration` needs to be the WAV's *actual* total duration
+(spoken intro + 0.4s pause + sonification — the intro's length isn't
+knowable in advance, it comes from real TTS synthesis), `main.wl` and
+`experiments.wl` were reordered so audio is synthesised and exported
+*before* the animation is rendered (steps `[4/5]`/`[5/5]` swapped from
+"render then synthesise" to "synthesise then render"), and the
+resulting `Length[finalBuffer]/sr` is threaded into
+`AnimateAndExportField`/`AnimateZoom` as `targetDuration`.
+
+**Verification.** Re-measured all three default outputs plus all 7
+`experiments.wl` presets after regenerating (`wolframscript -file
+main.wl` x3 modes, `wolframscript -file experiments.wl`):
+
+| file | GIF (before) | WAV | GIF (after) | ratio (after) |
+|---|---|---|---|---|
+| mandelbrot_mandelbrot | 3.20s | 80.23s | 80.00s (160f @ 2fps) | 1.0029x |
+| mandelbrot_julia | 3.20s | 76.89s | 77.00s (154f @ 2fps) | 0.9986x |
+| mandelbrot_zoom | 5.44s | 115.31s | 115.50s (231f @ 2fps) | 0.9984x |
+
+All 7 `experiments.wl` presets (including `julia_fine_grid`'s 261s WAV
+and `zoom_period3_bulb`'s 3-level split) land within 0.1-0.4% of their
+WAV's duration — every case clamps to the 2fps floor since these
+sonifications are all long relative to the 150-frame render budget.
+`tests/test_model.wl` (unaffected by this change — it only tests
+model.wl) still passes 27/27 after the fix.
+
 ## Numeric findings from this build session (new results, not assumed in advance)
 
 - **Boundary complexity, quantified** (default 64x64 grid,

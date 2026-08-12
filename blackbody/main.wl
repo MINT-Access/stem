@@ -137,15 +137,16 @@ Which[
     outWAV = FileNameJoin[{$outDir, "spectrum_audio.wav"}];
     EnsureDir[outWAV];
     ExportAudioBuffer[NormalizeBuffer[{finalLeft, finalRight}, 0.92], outWAV, sr];
-    STEMDescribeWAV[outWAV, N[Length[finalLeft]] / sr];
+    wavDuration = N[Length[finalLeft]] / sr;
+    STEMDescribeWAV[outWAV, wavDuration];
     Print[""];
 
     Print["[4/5] Rendering sweep animation and static plot..."];
     STEMSay["Rendering the spectrum animation"];
     outGIF = FileNameJoin[{$outDir, "spectrum.gif"}];
     outPNG = FileNameJoin[{$outDir, "spectrum.png"}];
-    nFramesRendered = AnimateSpectrum[T, spectrumResult["spec"], freqMin, freqMax, outGIF, outPNG];
-    STEMDescribeGIF[outGIF, nFramesRendered, Max[2, Round[nBins / 6.0]]];
+    {$gifFrames, $gifFps} = AnimateSpectrum[T, spectrumResult["spec"], freqMin, freqMax, outGIF, outPNG, wavDuration];
+    STEMDescribeGIF[outGIF, $gifFrames, $gifFps];
     Print[""];
 
     Print["[5/5] Exporting data table..."];
@@ -189,15 +190,16 @@ Which[
     outWAV = FileNameJoin[{$outDir, "temperature_audio.wav"}];
     EnsureDir[outWAV];
     ExportAudioBuffer[NormalizeBuffer[{finalLeft, finalRight}, 0.92], outWAV, sr];
-    STEMDescribeWAV[outWAV, N[Length[finalLeft]] / sr];
+    wavDuration = N[Length[finalLeft]] / sr;
+    STEMDescribeWAV[outWAV, wavDuration];
     Print[""];
 
     Print["[4/5] Rendering animation and static plot..."];
     STEMSay["Rendering the temperature sweep animation"];
     outGIF = FileNameJoin[{$outDir, "temperature.gif"}];
     outPNG = FileNameJoin[{$outDir, "temperature.png"}];
-    nFramesRendered = AnimateTemperature[tempResult, freqMin, freqMax, outGIF, 60];
-    STEMDescribeGIF[outGIF, nFramesRendered, 12];
+    {$gifFrames, $gifFps} = AnimateTemperature[tempResult, freqMin, freqMax, outGIF, wavDuration];
+    STEMDescribeGIF[outGIF, $gifFrames, $gifFps];
     RenderTemperatureStaticPNG[Tmin, Tmax, freqMin, freqMax, outPNG];
     Print[""];
 
@@ -260,15 +262,16 @@ Which[
       outWAV = FileNameJoin[{$outDir, "star_audio.wav"}];
       EnsureDir[outWAV];
       ExportAudioBuffer[NormalizeBuffer[{finalLeft, finalRight}, 0.92], outWAV, sr];
-      STEMDescribeWAV[outWAV, N[Length[finalLeft]] / sr];
+      wavDuration = N[Length[finalLeft]] / sr;
+      STEMDescribeWAV[outWAV, wavDuration];
       Print[""];
 
       Print["[4/5] Rendering tour animation and static plot..."];
       STEMSay["Rendering the star tour animation"];
       outGIF = FileNameJoin[{$outDir, "star.gif"}];
       outPNG = FileNameJoin[{$outDir, "star.png"}];
-      nFramesRendered = AnimateStarTour[order, $StarPresets, freqMin, freqMax, outGIF];
-      STEMDescribeGIF[outGIF, nFramesRendered, 1];
+      {$gifFrames, $gifFps} = AnimateStarTour[order, $StarPresets, freqMin, freqMax, outGIF, wavDuration];
+      STEMDescribeGIF[outGIF, $gifFrames, $gifFps];
       RenderStarTourStaticPNG[order, $StarPresets, freqMin, freqMax, outPNG];
       Print[""];
 
@@ -306,15 +309,16 @@ Which[
       outWAV = FileNameJoin[{$outDir, "star_audio.wav"}];
       EnsureDir[outWAV];
       ExportAudioBuffer[NormalizeBuffer[{finalLeft, finalRight}, 0.92], outWAV, sr];
-      STEMDescribeWAV[outWAV, N[Length[finalLeft]] / sr];
+      wavDuration = N[Length[finalLeft]] / sr;
+      STEMDescribeWAV[outWAV, wavDuration];
       Print[""];
 
       Print["[4/5] Rendering sweep animation and static plot..."];
       STEMSay["Rendering the " <> preset <> " animation"];
       outGIF = FileNameJoin[{$outDir, "star.gif"}];
       outPNG = FileNameJoin[{$outDir, "star.png"}];
-      nFramesRendered = AnimateSpectrum[T, spectrumResult["spec"], freqMin, freqMax, outGIF, outPNG];
-      STEMDescribeGIF[outGIF, nFramesRendered, Max[2, Round[nBins / 6.0]]];
+      {$gifFrames, $gifFps} = AnimateSpectrum[T, spectrumResult["spec"], freqMin, freqMax, outGIF, outPNG, wavDuration];
+      STEMDescribeGIF[outGIF, $gifFrames, $gifFps];
       Print[""];
 
       Print["[5/5] Exporting data table..."];

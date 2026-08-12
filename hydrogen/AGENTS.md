@@ -257,6 +257,67 @@ for its two sub-checks, and this is intentional, not an inconsistency:
    like almost nothing but a single bright point, since \|psi\|^2 falls
    off very steeply away from its peak.
 
+## GIF/WAV duration sync (fixed post-v1.5.0)
+
+**The bug.** All three modes' GIFs played far shorter than their
+matching WAVs: `orbitals.gif` measured 3.2s vs `orbitals_audio.wav`
+105.6s (33x!), `spectrum.gif` 3.92s vs `spectrum_audio.wav` 43.96s
+(11.2x), `transitions.gif` 6.0s vs `transitions_audio.wav` 54.87s
+(9.1x).
+
+**Root cause.** `AnimateOrbital`/`AnimateSpectrum`/`AnimateTransitions`
+each exported at a fixed frame rate (10/`Max[2,nLines/4]`/2 fps
+respectively) with a frame count tied only to the number of discrete
+simulated states (32 fixed frames for orbitals; one frame per spectral
+line for spectrum; one frame per cascade step, capped at 4
+realisations, for transitions) — the same fixed-nFrames/fixed-frameRate
+pattern found repo-wide, decoupled from how long the matching WAV
+actually plays. All three WAVs also carry a spoken intro baked directly
+into the audio buffer (`BuildIntroBuffer` in `speech.wl`, prepended in
+`main.wl`) whose length depends on the platform TTS engine and isn't
+known ahead of time — for orbitals mode this, plus a long note-per-pixel
+buffer (4096 pixels x 0.02s), is what drives the 33x gap.
+
+**The fix.** Each `Animate*` now takes a `targetDuration` argument and
+solves `frameRate` from a frame-count *budget* (150) divided by
+`targetDuration`, clamped to `[$HydrogenMinGifFps, $HydrogenMaxGifFps]`
+(2-30 fps), with the frame count recomputed at the clamp boundary so
+playback duration lands almost exactly on `targetDuration` — same
+reasoning as `lorenz/src/animate.wl`'s `ExportAnimation`. Spectrum and
+transitions modes have far fewer distinct visual states (spectral
+lines / cascade steps) than the 150-frame budget; `Subdivide`'s
+rounding holds a state across several consecutive frames rather than
+erroring, the same way `fluid/AnimateStrouhal` and `grover/AnimateSearch`
+handle it. `main.wl` already built each mode's full WAV (including its
+spoken intro) *before* calling the matching `Animate*`, so no
+call-site reordering was needed — the WAV's actual total sample count
+`/ sr` is just threaded through as `targetDuration`. `experiments.wl`'s
+per-orbital and per-cascade helpers needed the same value threaded
+through; its `spectrum_full` block has no single narrated WAV (only
+separate chord/sweep files, no intro), so its GIF targets chord+sweep
+duration back to back — the actual listening length of that
+experiment's two WAVs.
+
+**Verification (regenerated via `wolframscript -file main.wl` for all
+three modes, plus 4 experiment presets via `experiments.wl`):**
+
+| Output | GIF before | WAV | GIF after | Ratio after |
+|--------|-----------|-----|-----------|-------------|
+| orbitals | 3.2s | 105.6s | 105.5s | 1.00x |
+| spectrum | 3.92s | 43.96s | 43.5s | 0.99x |
+| transitions | 6.0s | 53.59s* | 54.0s | 1.01x |
+| orbital_1s (preset) | — | 20.48s | 21.0s | 1.03x |
+| orbital_2p (preset) | — | 81.92s | 82.0s | 1.00x |
+| cascade_default (preset) | — | 37.7s | 37.5s | 0.99x |
+| cascade_high (preset) | — | 29.42s | 30.0s | 1.02x |
+
+*transitions mode simulates random cascades on every run (no fixed
+seed in `main.wl`), so the "before" and "after" WAV durations differ
+slightly run to run; the sync ratio is what matters and holds regardless.
+
+`tests/test_model.wl` (23/23 tests, unaffected by this change) still
+passes.
+
 ## Dependencies
 
 - Mathematica or Wolfram Engine (any recent version with

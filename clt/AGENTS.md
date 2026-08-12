@@ -183,6 +183,69 @@ literal integers (e.g. `Count[sums, 7]`) must compare against `7.0`,
 not `7` (`7 === 7.0` is `False` in WL) — `ExactDiceProbability`'s
 callers and the correctness checks were updated accordingly.
 
+### 8. GIF/WAV duration sync — the GIF used to play at a fixed 8/4 fps unrelated to the audio's actual length
+
+**The bug.** `AnimateSweep`/`AnimateCompare` exported at a hardcoded 8
+fps and `AnimateDice` at a hardcoded 4 fps, both completely decoupled
+from `frame_duration` (the config key that actually sizes each N-step's
+audio chunk in `sonify.wl`, default 0.2s). Measured before the fix,
+GIF vs its paired WAV:
+
+| File | GIF (old) | WAV | ratio |
+|---|---|---|---|
+| `sweep.gif` / `sweep_audio.wav` (main.wl, with spoken intro) | 3.90s | 23.78s | 6.10x |
+| `compare.gif` / `compare_audio.wav` (main.wl, with spoken intro) | 3.90s | 26.62s | 6.83x |
+| `dice.gif` / `dice_audio.wav` (main.wl, with spoken intro) | 2.50s | 24.32s | 9.73x |
+| `sweep_bernoulli_animation.gif` / `..._audio.wav` (experiments.wl, no intro) | 3.90s | 6.00s | 1.54x |
+| `dice_default_animation.gif` / `..._audio.wav` (experiments.wl, no intro) | 2.50s | 2.00s | 0.80x |
+
+**Root cause.** Unlike `lorenz/`'s continuous ODE trajectory, CLT's
+animations have exactly one rendered frame per integer `N=1..nMax` —
+frame COUNT is fixed by the content (there is no continuous curve to
+resample at an arbitrary density), so `lorenz/src/animate.wl`'s
+"flex the frame count, keep the frame rate fixed to a render budget"
+approach does not transfer directly. What CAN flex here is the
+playback frame RATE.
+
+**The fix.** `AnimationFrameRate[nMax, targetDuration]` (in
+`src/animate.wl`) computes
+`Clip[nMax/targetDuration, {$MinAnimationFps, $MaxAnimationFps}]`
+(2-30 fps, same clamp bounds as `lorenz/`'s), and all three
+`Animate*` functions now take `targetDuration` as their final argument
+and export at that computed rate instead of a literal 8 or 4. Callers
+(`main.wl`'s three modes, `experiments.wl`'s five presets) pass
+`nMax * frameDur` — the sonified content's OWN length, i.e. exactly
+what `BuildSweepAudio`/`BuildCompareAudio`/`BuildDiceAudio` actually
+return as `"left"`/`"right"` before `main.wl` prepends a spoken intro
+and a 0.4s pause. The intro is deliberately excluded from the sync
+target: it has no visual counterpart (the GIF has nothing to show
+during narration) and its length is TTS-engine/OS-dependent (`say` on
+macOS, `espeak`/`espeak-ng` on Linux, or silent if neither is
+available) — baking a nondeterministic narration length into the
+render pipeline would make the GIF's own duration non-reproducible.
+Within the fps clamp, GIF duration matches `targetDuration` EXACTLY
+(`nMax/frameRate = nMax/(nMax/targetDuration) = targetDuration`); only
+at the clamp's boundary (e.g. an unusually small `nMax` with a long
+`frameDuration`) does it deviate, the same tradeoff `lorenz/`'s own fps
+clamp accepts. Both `Animate*` and `STEMDescribeGIF` now report the
+actual computed fps (previously `STEMDescribeGIF` was called with the
+same hardcoded 8/4 literal, independently of what `ExportGIF` used).
+
+**Verification (after fix).** Content-only sync is exact wherever
+there is no spoken intro (`experiments.wl`'s presets, and the
+`_default` outputs); `main.wl`'s three modes (which DO add a spoken
+intro to the WAV) now sync the GIF to the sweep's own 6.00s/2.00s
+content instead of an arbitrary 3.90s/2.50s, with the intro's spoken
+seconds remaining as an intentional, expected excess (not a bug):
+
+| File | GIF (fixed) | WAV | ratio | frame rate |
+|---|---|---|---|---|
+| `sweep.gif` (main.wl, with intro) | 6.00s | 23.78s | 3.96x (intro speech only) | 5.0 fps |
+| `compare.gif` (main.wl, with intro) | 6.00s | 26.62s | 4.44x (intro speech only) | 5.0 fps |
+| `dice.gif` (main.wl, with intro) | 2.00s | 24.32s | 12.16x (intro speech only) | 5.0 fps |
+| `sweep_bernoulli_animation.gif` (experiments.wl, no intro) | 6.00s | 6.00s | 1.00x | 5.0 fps |
+| `dice_default_animation.gif` (experiments.wl, no intro) | 2.00s | 2.00s | 1.00x | 5.0 fps |
+
 ## Project structure
 
 ```

@@ -13,6 +13,90 @@ J=k=1 units).
 | `critical` | Fixed at T_c (or any T via `T_fixed`) | Stereo WAV; single-panel grid GIF |
 | `quench` | Instantaneous T_hot -> T_cold drop | Stereo WAV; domain-coarsening grid GIF |
 
+## Animation framing: GIF/WAV duration sync (fixed post-v1.5.0)
+
+**The bug.** Every GIF this app produces played for a fixed 6.00s
+(60 frames at a hardcoded 10 fps in `ExportGIF`), regardless of how
+long its matching WAV actually ran. Measured before the fix: `sweep.gif`
+6.00s vs. `sweep_audio.wav` 81.41s (13.6x); `critical.gif` 6.00s vs.
+`critical_audio.wav` 260.42s (43.4x, the worst case — a 64x64
+`critical` run); `quench_large_animation.gif` 6.00s vs.
+`quench_large_audio.wav` 245.76s (41.0x). Every one of the ten GIF/WAV
+pairs in `output/` was affected, with ratios ranging 10.2x-43.4x — the
+GIF always finished almost instantly while the audio kept playing for
+a minute or several minutes.
+
+**Root cause.** `AnimateSweep`/`AnimateCritical`/`AnimateQuench` in
+`src/animate.wl` took a fixed `nFrames_:60` and called
+`ExportGIF[frames, outGIF, 10]` with a literal 10 fps — both constants
+completely decoupled from `SonifyIsingRun`'s actual audio length. This
+app is sweep/iteration-indexed, not time-ODE, but the underlying bug is
+the same class documented in `lorenz/AGENTS.md`/`dynamical/AGENTS.md`:
+a hardcoded frame budget and frame rate with no relationship to how
+long the corresponding WAV plays. Montecarlo's WAV duration is not a
+solved trajectory time value — it comes from `sonify.wl`'s
+`$maxSpatialSnapshots` (60 evenly-spaced sweep snapshots) times the
+per-snapshot Hilbert-scan length (`nPixels * pixel_duration`, itself
+`lattice_size^2 * pixel_duration`), stored as `totalDuration` in
+`SonifyIsingRun`'s return Association, plus (in `main.wl`'s modes only)
+a prepended spoken intro + pause.
+
+**The fix.** `AnimateSweep`/`AnimateCritical`/`AnimateQuench` now take
+a required `targetDuration` argument and an `nFrames` *render budget*
+(default 150, was previously the literal frame count). Frame rate is
+solved as `nFrames/targetDuration` and clamped to `[$MinAnimationFps,
+$MaxAnimationFps] = [2, 30]` fps so a short run (e.g. the 61.44s
+`*_default` presets) doesn't demand a strobing rate and a long one
+(e.g. the 260s 64x64 `critical` run) doesn't demand an implausibly slow
+one; the frame *count* is recomputed as `Round[frameRate *
+targetDuration]` at the clamp boundary so playback duration always
+equals `targetDuration` exactly, not just approximately (same
+`ExportAnimation`/`AnimateSweepBifurcation` pattern as `lorenz/` and
+`dynamical/`, adapted to montecarlo's grid-snapshot indexing instead of
+a solved-trajectory time axis). Each function returns
+`{actualNFrames, frameRate}`. Call sites were updated to supply the
+right duration for each context: `main.wl` captures
+`totalDur = ExportWithIntro[...]` (the full exported WAV length,
+intro included) and passes that; `experiments.wl` (which exports
+without a spoken intro via `RunToFile`) passes
+`sonifyResult["totalDuration"]` directly. Both now capture the
+returned `{frames, fps}` and report it via `STEMDescribeGIF[outGIF,
+frames, fps]` instead of the previous hardcoded `STEMDescribeGIF[outGIF,
+nFramesRendered, 10]`.
+
+**Verification.** Numeric before/after duration measurements (Python,
+`PIL.ImageSequence` for GIF frame-duration sums, `wave` for WAV sample
+counts) were taken for all ten GIF/WAV pairs in `output/` before
+editing any code, confirming the 10.2x-43.4x mismatch above. All ten
+were then regenerated after the fix — `wolframscript -file main.wl`
+(default `sweep`, plus `--simulation.mode=critical
+--simulation.montecarlo.lattice_size=64` and `--simulation.mode=quench`
+to reproduce the bare `critical.gif`/`quench.gif` cases) and
+`wolframscript -file experiments.wl` (all 7 presets) — and re-measured
+with the identical Python method:
+
+| GIF | before (gif / wav / ratio) | after (gif / wav / ratio) |
+|---|---|---|
+| `critical.gif` | 6.00s / 260.42s / 43.4x | 260.50s / 260.42s / 1.000x |
+| `quench_large_animation.gif` | 6.00s / 245.76s / 41.0x | 246.00s / 245.76s / 0.999x |
+| `sweep.gif` | 6.00s / 81.41s / 13.6x | 81.50s / 81.41s / 0.999x |
+| `quench.gif` | 6.00s / 77.63s / 12.9x | 77.50s / 77.63s / 1.002x |
+| `sweep_default_animation.gif` | 6.00s / 61.44s / 10.2x | 61.50s / 61.44s / 0.999x |
+| `sweep_fine_animation.gif` | 6.00s / 61.44s / 10.2x | 61.50s / 61.44s / 0.999x |
+| `critical_default_animation.gif` | 6.00s / 61.44s / 10.2x | 61.50s / 61.44s / 0.999x |
+| `critical_above_animation.gif` | 6.00s / 61.44s / 10.2x | 61.50s / 61.44s / 0.999x |
+| `critical_below_animation.gif` | 6.00s / 61.44s / 10.2x | 61.50s / 61.44s / 0.999x |
+| `quench_default_animation.gif` | 6.00s / 61.44s / 10.2x | 61.50s / 61.44s / 0.999x |
+
+All ten pairs now land within one frame period (≤0.15s) of their WAV's
+actual duration — the 260.42s `critical` case (64x64 lattice, the
+worst pre-fix mismatch) clamps to the 2 fps floor, rendering
+`Round[2 * 260.42] = 521` frames for exactly 260.5s, matching the
+hand-computed prediction made before this run. `wolframscript -file
+tests/test_model.wl` (the app's only test file) was also re-run
+post-fix: **19 passed, 0 failed** — no regressions in the physics
+model, as expected since this fix touches only animation export.
+
 ## Key design decisions (read before modifying sonify.wl)
 
 ### 1. SpatialLayer/MotionLayer directly, not SonifyTrajectory's generic EventLayer

@@ -233,6 +233,44 @@ audio narrates a sequence. The final PNG is simply the last frame
 (the completed gauge), matching every other mode's "GIF animates,
 PNG is the static end state" convention.
 
+### 8. GIF/WAV duration sync (fixed post-v1.5.0)
+
+**The bug.** `AnimateCorrelations` sampled a fixed `nFrames` (default 40,
+`DeleteDuplicates`d) at a fixed 12fps; `AnimateChsh` always rendered
+exactly its 4 build-up frames plus a fixed 3-frame hold at a fixed 2fps
+— none of it tied to the WAV's actual length, which includes a
+spoken-TTS intro of unpredictable duration. Measured before the fix:
+`bell_correlations.gif` was 3.2s against a 24.0s WAV (7.5x);
+`bell_chsh.gif` was 3.5s against a 19.0s WAV (5.4x). (`measurement` mode
+has no GIF — `ExportMeasurementPNG` is static-only by design, see design
+decision 7's PNG-only precedent — so it needed no change.)
+
+**The fix.** Both functions now take `targetDuration` plus `nFrames` as a
+RENDER BUDGET (default 150), with `frameRate =
+Clip[nFrames/targetDuration, {2,30}]` and `actualNFrames` recomputed from
+the clamped rate — same pattern as `lorenz/src/animate.wl`.
+`AnimateCorrelations` samples `actualNFrames` indices evenly across the
+sweep's `nSteps` (no `DeleteDuplicates`, so short targets don't silently
+shrink the frame budget). `AnimateChsh` keeps its discrete four-term
+build-up (there is no continuous quantity to subsample there — see design
+decision 7) but now splits `actualNFrames` into a reveal phase (the 4
+terms, evenly resampled so short/long targets still show all four) and a
+`holdFrac` (default 30%) share holding the final verdict frame — the same
+reveal+hold split `asteroids/src/animate.wl`'s `ExportAnimation` uses for
+its own discrete per-asteroid reveal.
+
+Getting `targetDuration` right required reordering `main.wl`'s
+`correlations`/`chsh` pipeline steps: the WAV's true length is only known
+*after* `Export`/`ExportAudioBuffer` writes it (TTS intro length isn't
+predictable from the text), so audio synthesis now runs BEFORE animation
+rendering in both modes (was the reverse), and the animation call uses
+`wavDuration = N[Length[finalLeft]] / sr` captured right after export.
+`experiments.wl` already computed `totalDurSec` before its `Animate*`
+calls, so only the calls themselves needed the new argument there.
+
+**Verification.** `correlations`: 3.2s → 24.0s GIF (audio 24.00s, 7.50x
+→ 1.00x). `chsh`: 3.5s → 19.5s GIF (audio 19.04s, 5.44x → 1.02x).
+
 ## Rabi-formula-style derivation summary (for reference)
 
 Unlike `qubit/rabi`'s single formula, this app has three separate

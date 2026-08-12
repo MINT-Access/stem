@@ -114,9 +114,13 @@ Which[
 
     Print["[3/4] Rendering animation and static plot..."];
     STEMSay["Rendering the sample mean animation"];
-    nFrames = AnimateSweep[source, bernP, nMax, nSamples, domainLo, domainHi, randomSeed,
-                           FileNameJoin[{$outDir, "sweep.gif"}]];
-    STEMDescribeGIF[FileNameJoin[{$outDir, "sweep.gif"}], nFrames, 8];
+    (* targetDuration = nMax*frameDur, the sonified content's own length --
+       matches sweepAudio's actual "left"/"right" duration, deliberately
+       excluding the spoken intro/pause main.wl prepends below (see
+       animate.wl's file header and AGENTS.md's duration-sync note). *)
+    {nFrames, gifFps} = AnimateSweep[source, bernP, nMax, nSamples, domainLo, domainHi, randomSeed,
+                                     FileNameJoin[{$outDir, "sweep.gif"}], nMax * frameDur];
+    STEMDescribeGIF[FileNameJoin[{$outDir, "sweep.gif"}], nFrames, gifFps];
     RenderSweepSmallMultiple[source, bernP, nMax, nSamples, domainLo, domainHi, randomSeed,
                              FileNameJoin[{$outDir, "sweep.png"}]];
     Print[""];
@@ -166,9 +170,10 @@ Which[
 
     Print["[3/4] Rendering animation and static plot..."];
     STEMSay["Rendering the shape-convergence animation"];
-    nFrames = AnimateCompare[sourceLeft, bernP, sourceRight, bernP, nMax, nSamples,
-                             domainLo, domainHi, randomSeed, FileNameJoin[{$outDir, "compare.gif"}]];
-    STEMDescribeGIF[FileNameJoin[{$outDir, "compare.gif"}], nFrames, 8];
+    {nFrames, gifFps} = AnimateCompare[sourceLeft, bernP, sourceRight, bernP, nMax, nSamples,
+                                       domainLo, domainHi, randomSeed,
+                                       FileNameJoin[{$outDir, "compare.gif"}], nMax * frameDur];
+    STEMDescribeGIF[FileNameJoin[{$outDir, "compare.gif"}], nFrames, gifFps];
     RenderCompareStaticPNG[sourceLeft, bernP, sourceRight, bernP, nMax, nSamples, domainLo, domainHi,
                            randomSeed, FileNameJoin[{$outDir, "compare.png"}]];
     Print[""];
@@ -223,9 +228,9 @@ Which[
 
     Print["[3/4] Rendering animation and static plot..."];
     STEMSay["Rendering the dice sum animation"];
-    nFrames = AnimateDice[nMax, nSamples, domainLo, domainHi, randomSeed,
-                          FileNameJoin[{$outDir, "dice.gif"}]];
-    STEMDescribeGIF[FileNameJoin[{$outDir, "dice.gif"}], nFrames, 4];
+    {nFrames, gifFps} = AnimateDice[nMax, nSamples, domainLo, domainHi, randomSeed,
+                                    FileNameJoin[{$outDir, "dice.gif"}], nMax * frameDur];
+    STEMDescribeGIF[FileNameJoin[{$outDir, "dice.gif"}], nFrames, gifFps];
     RenderDiceSmallMultiple[nMax, nSamples, domainLo, domainHi, randomSeed,
                             FileNameJoin[{$outDir, "dice.png"}]];
     Print[""];

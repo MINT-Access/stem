@@ -65,8 +65,9 @@ RunExperiment[name_String, overrides_Association] :=
         finalRight  = Join[introBuffer, pauseBuffer, coinAudio["right"]];
         EnsureDir[outWAV];
         ExportAudioBuffer[NormalizeBuffer[{finalLeft, finalRight}, 0.92], outWAV, sr];
-        STEMDescribeWAV[outWAV, N[Length[finalLeft]] / sr];
-        AnimateCoin[coinSeq, thetaTrue, outGIF, 60];
+        totalDurSec = N[Length[finalLeft]] / sr;
+        STEMDescribeWAV[outWAV, totalDurSec];
+        AnimateCoin[coinSeq, thetaTrue, outGIF, totalDurSec];
         ExportCoinCSV[coinSeq, outCSV],
 
       mode === "gaussian",
@@ -86,8 +87,9 @@ RunExperiment[name_String, overrides_Association] :=
         finalRight  = Join[introBuffer, pauseBuffer, gaussAudio["right"]];
         EnsureDir[outWAV];
         ExportAudioBuffer[NormalizeBuffer[{finalLeft, finalRight}, 0.92], outWAV, sr];
-        STEMDescribeWAV[outWAV, N[Length[finalLeft]] / sr];
-        AnimateGaussian[gaussSeq, muLo, muHi, muTrue, mu0, outGIF, 60];
+        totalDurSec = N[Length[finalLeft]] / sr;
+        STEMDescribeWAV[outWAV, totalDurSec];
+        AnimateGaussian[gaussSeq, muLo, muHi, muTrue, mu0, outGIF, totalDurSec];
         ExportGaussianCSV[gaussSeq, outCSV],
 
       mode === "model",
@@ -102,8 +104,9 @@ RunExperiment[name_String, overrides_Association] :=
         finalRight  = Join[introBuffer, pauseBuffer, modelAudio["right"]];
         EnsureDir[outWAV];
         ExportAudioBuffer[NormalizeBuffer[{finalLeft, finalRight}, 0.92], outWAV, sr];
-        STEMDescribeWAV[outWAV, N[Length[finalLeft]] / sr];
-        AnimateModel[modelFlips, modelSeq, outGIF, 60];
+        totalDurSec = N[Length[finalLeft]] / sr;
+        STEMDescribeWAV[outWAV, totalDurSec];
+        AnimateModel[modelFlips, modelSeq, outGIF, totalDurSec];
         ExportModelCSV[modelSeq, modelAudio, outCSV]
     ];
 

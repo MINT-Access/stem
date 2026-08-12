@@ -1,9 +1,29 @@
 (* images/src/animate.wl — Hilbert traversal animation *)
 
-(* Render a 32-frame GIF of the Hilbert curve sweeping through the image.
+(* Both Animate* below used to export a fixed 32 frames @ 10 fps (3.2s)
+   regardless of how long the matching WAV actually plays once its
+   spoken intro and per-pixel note buffer are included (measured:
+   images_brightness.gif 3.2s vs images_brightness_audio.wav 98.9s --
+   31x). targetDuration below is the actual total WAV duration
+   (main.wl/experiments.wl build the audio, including its spoken intro,
+   before rendering the GIF, so this value is known exactly). nFrames is
+   a RENDER BUDGET: frameRate is solved as nFrames/targetDuration then
+   clamped to [$ImagesMinGifFps, $ImagesMaxGifFps] so the frame COUNT
+   flexes at the clamp boundary, keeping actual playback duration
+   exactly targetDuration -- same pattern as lorenz/src/animate.wl's
+   ExportAnimation (hydrogen/AnimateOrbital is the same adaptation of
+   this same traversal-sweep idiom). *)
+$ImagesMinGifFps = 2;
+$ImagesMaxGifFps = 30;
+$ImagesGifFrameBudget = 150;
+
+ImagesGifRate[targetDuration_?NumericQ, nFrames_:$ImagesGifFrameBudget] :=
+  Clip[nFrames / targetDuration, {$ImagesMinGifFps, $ImagesMaxGifFps}];
+
+(* Render a GIF of the Hilbert curve sweeping through the image.
    Each frame shows the path grown to that fraction of the traversal. *)
-AnimateImageTraversal[model_Association, outGIF_String] :=
-  Module[{nGIFFrames = 32, processedImg, imgSize, traversal, nPixels,
+AnimateImageTraversal[model_Association, outGIF_String, targetDuration_?NumericQ] :=
+  Module[{processedImg, imgSize, traversal, nPixels, frameRate, nGIFFrames,
           displayData, gCoords, frameUpTo, gifFrames},
     processedImg = model["img"];
     imgSize      = model["imgSize"];
@@ -16,8 +36,10 @@ AnimateImageTraversal[model_Association, outGIF_String] :=
 
     (* Map {col, row} (1-based, row 1 = top) to Graphics coordinates
        where the bottom-left corner is the origin. *)
-    gCoords   = Map[{#[[1]] - 0.5, imgSize - #[[2]] + 0.5} &, traversal];
-    frameUpTo = Table[Max[1, Round[k * nPixels / nGIFFrames]], {k, nGIFFrames}];
+    gCoords    = Map[{#[[1]] - 0.5, imgSize - #[[2]] + 0.5} &, traversal];
+    frameRate  = ImagesGifRate[targetDuration];
+    nGIFFrames = Max[2, Round[frameRate * targetDuration]];
+    frameUpTo  = Table[Max[1, Round[k * nPixels / nGIFFrames]], {k, nGIFFrames}];
 
     gifFrames = Table[
       With[{pathG = gCoords[[1 ;; frameUpTo[[k]]]]},
@@ -34,20 +56,23 @@ AnimateImageTraversal[model_Association, outGIF_String] :=
       {k, nGIFFrames}
     ];
 
-    ExportGIF[gifFrames, outGIF, 10]
+    ExportGIF[gifFrames, outGIF, frameRate];
+    {nGIFFrames, frameRate}
   ];
 
-(* Render a 32-frame GIF of a simple horizontal sweep line moving down the
-   image row by row — the pedagogical scan_horizontal mode's counterpart
-   to AnimateImageTraversal's Hilbert path, so the visual matches the
+(* Render a GIF of a simple horizontal sweep line moving down the image
+   row by row — the pedagogical scan_horizontal mode's counterpart to
+   AnimateImageTraversal's Hilbert path, so the visual matches the
    simpler raster traversal this mode sonifies. *)
-AnimateRasterScan[model_Association, outGIF_String] :=
-  Module[{nGIFFrames = 32, processedImg, imgSize,
+AnimateRasterScan[model_Association, outGIF_String, targetDuration_?NumericQ] :=
+  Module[{processedImg, imgSize, frameRate, nGIFFrames,
           displayData, rowsAt, gifFrames},
     processedImg = model["img"];
     imgSize      = model["imgSize"];
 
     displayData = Reverse @ ImageData[ColorConvert[processedImg, "RGB"]];
+    frameRate  = ImagesGifRate[targetDuration];
+    nGIFFrames = Max[2, Round[frameRate * targetDuration]];
     rowsAt = Table[Max[1, Round[k * imgSize / nGIFFrames]], {k, nGIFFrames}];
 
     gifFrames = Table[
@@ -68,5 +93,6 @@ AnimateRasterScan[model_Association, outGIF_String] :=
       {k, nGIFFrames}
     ];
 
-    ExportGIF[gifFrames, outGIF, 10]
+    ExportGIF[gifFrames, outGIF, frameRate];
+    {nGIFFrames, frameRate}
   ];

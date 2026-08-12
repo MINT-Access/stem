@@ -69,7 +69,7 @@ RunExperiment[name_String, overrides_Association] :=
         totalDurSec = N[Length[finalLeft]] / sr;
         STEMDescribeWAV[outWAV, totalDurSec];
 
-        ExportWalkAnimation[walkTable, outGIF];
+        ExportWalkAnimation[walkTable, outGIF, totalDurSec];
         ExportWalkPNG[walkTable, outPNG];
         ExportWalkCSV[walkTable, outCSV],
 

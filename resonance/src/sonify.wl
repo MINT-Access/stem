@@ -209,6 +209,13 @@ OverlayBurst[leftBuf_List, rightBuf_List, freq_?NumericQ, dur_?NumericQ,
 
 $ResonanceIoPeriodSeconds = 1.0;
 
+(* Main-body duration of the galilean WAV (Io-period tempo applied to
+   tEnd, excluding the spoken intro/pause PrependIntroAndExport adds
+   on top) -- the value the GIF's targetDuration should match, same
+   role lorenz/src/animate.wl's ExportAnimation callers give it via
+   solution[[-1,1]]. *)
+GalileanMainDurationSec[model_Association] := model["tEnd"] * $ResonanceIoPeriodSeconds;
+
 (* Continuous drone: constant frequency, one octave below each moon's
    event pitch -- preserves the exact 4:2:1 ratio (see model.wl's
    $Pitch*Hz) while remaining audibly distinct from the event layer. *)
@@ -300,6 +307,19 @@ SonifyGalilean[model_Association, cfg_Association, outWav_String] :=
       " complete Ganymede orbits, each containing 2 Europa notes and 4 Io notes.";
 
     PrependIntroAndExport[introText, audio["left"], audio["right"], sr, outWav]
+  ]
+
+
+(* Main-body duration of the kirkwood/saturn WAV (chord + fixed pause
+   + sweep, excluding the spoken intro/pause PrependIntroAndExport
+   adds on top) -- shared by both modes since they use the identical
+   chord+pause+sweep structure. This is the value the GIF's
+   targetDuration should match (see GalileanMainDurationSec above). *)
+ChordSweepMainDurationSec[model_Association, cfg_Association] :=
+  Module[{chordDur, stepDur},
+    chordDur = N @ GetCfg[cfg, {"simulation", "resonance", "chord_duration"},     4.0];
+    stepDur  = N @ GetCfg[cfg, {"simulation", "resonance", "duration_per_step"}, 0.05];
+    chordDur + 0.4 + stepDur * model["nSteps"]
   ]
 
 

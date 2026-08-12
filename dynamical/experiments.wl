@@ -21,7 +21,8 @@ RunExperiment[name_String, overrides_Association] :=
           nIterations, noteDuration, x0, sr,
           outWAV, outGIF, outCSV,
           rActual, presetDesc, sweepModel, sweepResult, iterateModel, iterateResult,
-          introText, introBuffer, pauseBuffer, finalLeft, finalRight, totalDurSec},
+          introText, introBuffer, pauseBuffer, finalLeft, finalRight, totalDurSec,
+          gifFrames, gifFps},
 
     Print[""];
     STEMHeading["Experiment: " <> name];
@@ -58,7 +59,8 @@ RunExperiment[name_String, overrides_Association] :=
       Export[outWAV, Sound[SampledSoundList[{finalLeft, finalRight}, sr]], "WAV"];
       totalDurSec = N[Length[finalLeft]] / sr;
       STEMDescribeWAV[outWAV, totalDurSec];
-      AnimateSweepBifurcation[sweepModel, sweepResult["eventRs"], outGIF];
+      {gifFrames, gifFps} = AnimateSweepBifurcation[sweepModel, sweepResult["eventRs"], outGIF, totalDurSec];
+      STEMDescribeGIF[outGIF, gifFrames, gifFps];
       ExportSweepCSV[sweepResult, sweepModel["rValues"], outCSV],
 
       rActual    = PresetR[preset, rCfg];
@@ -75,7 +77,8 @@ RunExperiment[name_String, overrides_Association] :=
       Export[outWAV, Sound[SampledSoundList[{finalLeft, finalRight}, sr]], "WAV"];
       totalDurSec = N[Length[finalLeft]] / sr;
       STEMDescribeWAV[outWAV, totalDurSec];
-      AnimateIterateTimeSeries[iterateModel, outGIF];
+      {gifFrames, gifFps} = AnimateIterateTimeSeries[iterateModel, outGIF, totalDurSec];
+      STEMDescribeGIF[outGIF, gifFrames, gifFps];
       ExportIterateCSV[iterateResult, outCSV]
     ];
 

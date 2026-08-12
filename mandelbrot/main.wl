@@ -90,15 +90,12 @@ Which[
     ExportMandelbrotCSV[mandelbrotModel, outCSV];
     Print[""];
 
-    Print["[4/5] Rendering visualisation..."];
-    STEMSay["Rendering visualisation"];
-    outGIF = FileNameJoin[{$projectRoot, "output", "mandelbrot_mandelbrot.gif"}];
-    outPNG = FileNameJoin[{$projectRoot, "output", "mandelbrot_mandelbrot.png"}];
-    AnimateAndExportField[mandelbrotModel, outGIF, outPNG];
-    STEMDescribeGIF[outGIF, 32, 10];
-    Print[""];
-
-    Print["[5/5] Synthesising audio..."];
+    (* Audio synthesised BEFORE the animation (steps swapped from a
+       naive 4-then-5 numbering) because the GIF's frame rate/count are
+       solved FROM the WAV's actual total duration -- see
+       AnimateAndExportField's duration-sync contract in animate.wl and
+       AGENTS.md, "GIF/WAV duration sync". *)
+    Print["[4/5] Synthesising audio..."];
     STEMSay["Synthesising audio"];
     outWAV = FileNameJoin[{$projectRoot, "output", "mandelbrot_mandelbrot.wav"}];
     {rawBuffer, freqAssigned} = BuildMandelbrotAudio[mandelbrotModel, 200.0, 2200.0, 0.015, sr];
@@ -109,7 +106,16 @@ Which[
     finalBuffer = Join[introBuffer, pauseBuffer, rawBuffer];
     EnsureDir[outWAV];
     Export[outWAV, Sound[SampledSoundList[finalBuffer, sr]], "WAV"];
-    STEMDescribeWAV[outWAV, N[Length[finalBuffer]] / sr];
+    $wavDurationSec = N[Length[finalBuffer]] / sr;
+    STEMDescribeWAV[outWAV, $wavDurationSec];
+    Print[""];
+
+    Print["[5/5] Rendering visualisation..."];
+    STEMSay["Rendering visualisation"];
+    outGIF = FileNameJoin[{$projectRoot, "output", "mandelbrot_mandelbrot.gif"}];
+    outPNG = FileNameJoin[{$projectRoot, "output", "mandelbrot_mandelbrot.png"}];
+    {$gifFrames, $gifFps} = AnimateAndExportField[mandelbrotModel, outGIF, outPNG, $wavDurationSec];
+    STEMDescribeGIF[outGIF, $gifFrames, $gifFps];
     Print[""],
 
   (* ===== julia ===== *)
@@ -128,15 +134,9 @@ Which[
     ExportJuliaCSV[juliaModel, outCSV];
     Print[""];
 
-    Print["[4/5] Rendering visualisation..."];
-    STEMSay["Rendering visualisation"];
-    outGIF = FileNameJoin[{$projectRoot, "output", "mandelbrot_julia.gif"}];
-    outPNG = FileNameJoin[{$projectRoot, "output", "mandelbrot_julia.png"}];
-    AnimateAndExportField[juliaModel, outGIF, outPNG];
-    STEMDescribeGIF[outGIF, 32, 10];
-    Print[""];
-
-    Print["[5/5] Synthesising audio..."];
+    (* Audio synthesised BEFORE the animation -- see the mandelbrot
+       mode's block above for why the numbered steps are swapped. *)
+    Print["[4/5] Synthesising audio..."];
     STEMSay["Synthesising audio"];
     outWAV = FileNameJoin[{$projectRoot, "output", "mandelbrot_julia.wav"}];
     {rawBuffer, freqAssigned} = BuildJuliaAudio[juliaModel, 200.0, 2200.0, 0.015, sr];
@@ -147,7 +147,16 @@ Which[
     finalBuffer = Join[introBuffer, pauseBuffer, rawBuffer];
     EnsureDir[outWAV];
     Export[outWAV, Sound[SampledSoundList[finalBuffer, sr]], "WAV"];
-    STEMDescribeWAV[outWAV, N[Length[finalBuffer]] / sr];
+    $wavDurationSec = N[Length[finalBuffer]] / sr;
+    STEMDescribeWAV[outWAV, $wavDurationSec];
+    Print[""];
+
+    Print["[5/5] Rendering visualisation..."];
+    STEMSay["Rendering visualisation"];
+    outGIF = FileNameJoin[{$projectRoot, "output", "mandelbrot_julia.gif"}];
+    outPNG = FileNameJoin[{$projectRoot, "output", "mandelbrot_julia.png"}];
+    {$gifFrames, $gifFps} = AnimateAndExportField[juliaModel, outGIF, outPNG, $wavDurationSec];
+    STEMDescribeGIF[outGIF, $gifFrames, $gifFps];
     Print[""],
 
   (* ===== zoom ===== *)
@@ -166,15 +175,9 @@ Which[
     ExportZoomCSV[zoomModel, outCSV];
     Print[""];
 
-    Print["[4/5] Rendering visualisation..."];
-    STEMSay["Rendering visualisation"];
-    outGIF = FileNameJoin[{$projectRoot, "output", "mandelbrot_zoom.gif"}];
-    outPNG = FileNameJoin[{$projectRoot, "output", "mandelbrot_zoom.png"}];
-    AnimateZoom[zoomModel, outGIF, outPNG];
-    STEMDescribeGIF[outGIF, 8 * zoomModel["nLevels"], 6];
-    Print[""];
-
-    Print["[5/5] Synthesising audio..."];
+    (* Audio synthesised BEFORE the animation -- see the mandelbrot
+       mode's block above for why the numbered steps are swapped. *)
+    Print["[4/5] Synthesising audio..."];
     STEMSay["Synthesising audio"];
     outWAV = FileNameJoin[{$projectRoot, "output", "mandelbrot_zoom.wav"}];
     {rawBuffer, freqAssigned} = BuildZoomAudio[zoomModel, 200.0, 2200.0, 0.006, sr];
@@ -185,7 +188,16 @@ Which[
     finalBuffer = Join[introBuffer, pauseBuffer, rawBuffer];
     EnsureDir[outWAV];
     Export[outWAV, Sound[SampledSoundList[finalBuffer, sr]], "WAV"];
-    STEMDescribeWAV[outWAV, N[Length[finalBuffer]] / sr];
+    $wavDurationSec = N[Length[finalBuffer]] / sr;
+    STEMDescribeWAV[outWAV, $wavDurationSec];
+    Print[""];
+
+    Print["[5/5] Rendering visualisation..."];
+    STEMSay["Rendering visualisation"];
+    outGIF = FileNameJoin[{$projectRoot, "output", "mandelbrot_zoom.gif"}];
+    outPNG = FileNameJoin[{$projectRoot, "output", "mandelbrot_zoom.png"}];
+    {$gifFrames, $gifFps} = AnimateZoom[zoomModel, outGIF, outPNG, $wavDurationSec];
+    STEMDescribeGIF[outGIF, $gifFrames, $gifFps];
     Print[""],
 
   (* ===== unknown mode ===== *)

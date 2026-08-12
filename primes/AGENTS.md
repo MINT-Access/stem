@@ -140,6 +140,92 @@ where `start = Round[attackTimes[[i]] * sr] + 1` and `len = Min[toneSamples, nBa
 
 Buffer is peak-normalised to 0.95 via `NormalizeBuffer` before export.
 
+## GIF/WAV duration sync — `gaps_animation.gif` (fixed post-v1.5.0)
+
+**The bug.** Like nearly every other app in this repo, `AnimateGaps`
+built `gaps_animation.gif` from a frame count and frame rate that had
+nothing to do with `gaps_audio.wav`'s actual length. Frame count came
+from `step = Max[50, Ceiling[nGaps/50]]` (a data-driven cap on how many
+progressive-reveal snapshots to render), and playback rate was the fixed
+`animation.fps` config value (12). **Measured** on the untouched repo
+before any fix (default config, count=5000, tempo_bpm=120):
+`gaps_animation.gif` played for **4.000 s** (50 frames @ 12 fps, via
+Python `PIL`/`wave` duration measurement) while `gaps_audio.wav` played
+for **30.080 s** — a **7.52x** mismatch. Applying that same old formula
+(verified against the measured default above) to the other `gaps_*`
+presets in `experiments.wl`: `first_thousand` (count=1000) → 20 old
+frames / 12 fps = 1.67 s vs. a 30.08 s WAV, an **18.0x** mismatch;
+`ten_thousand` (count=10000) → 50 old frames / 12 fps = 4.17 s vs.
+30.08 s, **7.2x**; `twin_primes` (tempo_bpm=60, doubling audio to
+60.08 s) → 50 old frames / 12 fps = 4.17 s vs. 60.08 s, **14.4x**. None
+of these ratios have anything to do with each other or with
+`count`/`tempo_bpm`, because frame count and audio duration were computed
+from entirely unrelated formulas.
+
+**Root cause.** `SonifyGaps`'s duration (`baseDuration = 30.0 * 120.0 /
+tempo_bpm`) depends only on `tempo_bpm`, never on `nGaps`/`count`. But
+`AnimateGaps`'s old frame count depended only on `nGaps` (via `step`),
+and its frame rate was a flat config constant — neither term in the GIF
+side of the equation referenced `tempo_bpm` or `baseDuration` at all.
+
+**The fix**, in `AnimateGaps` (`src/animate.wl`): compute the *same*
+`targetDuration = 30.0 * 120.0 / tempo_bpm` that `SonifyGaps` uses (same
+config key, same formula — this is gaps' equivalent of lorenz's
+`solution[[-1,1]]` duration basis, adapted to an index-scan model that
+has no time-ODE). `$GapsFrameBudget` (50) is now a *render budget*, not
+a literal frame count: `frameRate = Clip[$GapsFrameBudget/targetDuration,
+{$MinAnimationFps, $MaxAnimationFps}]` (fps clamped to [2, 30], mirroring
+`lorenz/src/animate.wl`'s `ExportAnimation`), then the actual frame count
+is solved backward from the clamped rate — `Max[2, Round[frameRate *
+targetDuration]]`, capped at `nGaps` — so total playback time equals
+`targetDuration` (not just approximately close to it). Frame endpoints
+are then spread evenly across the gap sequence via `Subdivide[1, nGaps,
+actualNFrames-1]` instead of the old fixed `step`, preserving the
+progressive-reveal effect. No call-site changes were needed in `main.wl`
+or `experiments.wl` — both already pass the same `cfg` to `AnimatePrimes`
+and `SonifyPrimes`, and `tempo_bpm` is read independently by each, so the
+two stay in lockstep automatically for every mode/preset.
+
+**Verified by regenerating and re-measuring** (`wolframscript -file
+main.wl -- --simulation.mode=gaps` and `wolframscript -file
+experiments.wl`, then the same Python `PIL`/`wave` measurement used for
+the "before" numbers above): at the default config, `frameRate` solves
+to 50/30=1.67 fps, clamped up to the 2 fps floor — console reported
+"Building 60 animation frames at 2 fps (30s, matching audio duration
+30.s)", and the regenerated file measured **exactly 30.000 s** (60
+frames), against `gaps_audio.wav`'s **30.080 s** — ratio **1.0027x**
+(down from the measured 7.52x). At `tempo_bpm=60` (the `twin_primes`
+preset via `experiments.wl`, `targetDuration=60.0`, `toneDurMs=120`):
+120 frames at 2 fps, GIF measured **exactly 60.000 s** against
+`gaps_audio.wav`'s **60.120 s** — ratio **1.002x** (down from the
+computed 14.4x for that preset). `first_thousand` and `ten_thousand`
+both hit the identical 60-frames-@-2fps-=30.000s result (console-
+confirmed; `targetDuration` depends only on `tempo_bpm`, which is 120
+for both, matching the default). The residual ~0.08–0.12 s in every
+case is the per-tone release tail (`toneDurMs`, 80 ms default / 120 ms
+for `twin_primes`) trailing the nominal `baseDuration` in the WAV
+buffer — the same kind of small envelope-tail slack lorenz's WAVs have
+past `solution[[-1,1]]`, not a residual sync bug.
+
+`tests/test_model.wl` (17 tests, covers `model.wl` only — no existing
+coverage of `animate.wl`) re-run after the fix: **17 passed, 0 failed**,
+confirming no regression.
+
+**Not fixed, and why: `ulam_spiral.gif`.** `ulam_spiral.gif` is a
+genuine outlier, not the same bug. It's a deliberate **single-frame**
+GIF ("pipeline consistency" per the existing code comment) built from
+`ExportGIF[{primePlot}, gifPath, fps]` with `AnimationRepetitions ->
+Infinity` (stem-core's `ExportGIF`) — every loop redraws the *same*
+frame, so its per-loop delay (`1/fps`) is visually meaningless; a viewer
+sees an unchanging static image no matter what `fps` or "duration" the
+file metadata reports. Measured: 0.08 s (1 frame @ 12 fps) vs.
+`ulam_audio.wav`'s 10.0 s — a huge ratio by the raw-duration metric, but
+stretching a single repeated frame's nominal delay to 10 s would not
+change anything a viewer perceives, and building a real animated
+row-by-row reveal (to genuinely pair with `SonifyUlam`'s row scan) is a
+much larger content change than a timing fix — deliberately left alone
+here as out of scope for a sync-only fix.
+
 ## Output naming
 
 | Mode | Files |
@@ -167,9 +253,10 @@ The final `STEMSay` in main.wl uses `mode <> "_audio.wav"` — valid for both mo
 - **Large `gaps_slow.wav`**: at count=5000 with tempo=120, the slow WAV is 120 s
   at 44100 Hz ≈ 21M samples ≈ 10 MB. The Do loop over 5000 tones runs twice (base
   + slow). This is expected; do not optimise away the second loop.
-- **`AnimateGaps` step size**: capped at `Ceiling[nGaps/50]` to keep frame count
-  ≤ 50. For the default 4999 gaps the step is 100, not 50 — consistent with the
-  "50 frames" output shown in console and `STEMDescribeGIF`.
+- **`AnimateGaps` frame count is duration-driven, not a fixed cap.** `$GapsFrameBudget`
+  (50) is a render-budget target, not a literal frame count — see "GIF/WAV
+  duration sync" below. For the default config (count=5000, tempo_bpm=120) this
+  currently resolves to 60 frames at 2 fps (`$MinAnimationFps` floor), not 50.
 - **`ExportGIF` for single-frame Ulam**: `ExportGIF[{primePlot}, gifPath, fps]`
   wraps the single frame in a list. Do not pass the Graphics object directly.
 

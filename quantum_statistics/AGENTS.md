@@ -181,6 +181,74 @@ mixing. Caught by directly checking `Max[Abs[...]]` on the returned
 buffers during development, not assumed safe from the per-voice
 normalisation alone.
 
+## Animation framing: GIF/WAV duration desync (fixed post-v1.5.0)
+
+**The bug.** All three modes' GIFs played for a fixed, hardcoded
+duration entirely decoupled from their paired WAV's real length.
+`spectrum` and `temperature` rendered `Min[40,nSteps]` frames at a
+hardcoded 12fps (~3.2-3.3s of playback) regardless of the
+`sonification.duration` config value (8.0s by default) driving the
+audio. `fermi_sea` rendered `nTSteps+4` frames (extra holds on the
+coldest/warmest step) at a hardcoded 2fps. Measured directly on the
+committed `output/` files before this fix:
+
+| Pair | GIF | WAV | ratio |
+|------|-----|-----|-------|
+| `fermi_sea` | 5.00s | 22.97s | 0.22x |
+| `spectrum` | 3.20s | 30.62s | 0.10x |
+| `temperature` | 3.20s | 29.69s | 0.11x |
+
+The WAV side runs long chiefly because every mode prepends a spoken
+intro (`BuildIntroBuffer`) plus a 0.4s pause ahead of the main
+sonification — the GIF frame budget never accounted for that, or for
+the config-driven `duration`/`nTSteps` values either.
+
+**Root cause.** Same class of bug as `lorenz/`'s reference fix and
+`compton/`'s prior fix (see those apps' own `animate.wl`/`AGENTS.md`):
+`AnimateSpectrum`/`AnimateTemperature`/`AnimateFermiSea` built a frame
+count and frame rate independent of the length of the audio the GIF
+would actually play alongside.
+
+**The fix.** Each `AnimateX` function in `src/animate.wl` now takes a
+`targetDuration_?NumericQ` parameter — the accompanying WAV's real,
+final length (spoken intro + pause + main audio, the same value
+`STEMDescribeWAV` reports) — plus `nFrames` reinterpreted as a RENDER
+BUDGET rather than a literal count: `frameRate =
+Clip[nFrames/targetDuration, {$MinAnimationFps, $MaxAnimationFps}]`
+(2-30fps), and `actualNFrames = Max[2, Round[frameRate *
+targetDuration]]` is what flexes at the clamp boundary so playback
+lands on `targetDuration` exactly, not approximately. `DeleteDuplicates`
+was dropped from `spectrum`/`temperature`'s frame-index sampling (a
+repeated index just holds a frame slightly longer, which is fine — the
+prior `DeleteDuplicates` would have shrunk the frame count below
+`actualNFrames` and pulled playback back out of sync, the same reason
+`compton/src/animate.wl` dropped it). `fermi_sea`'s original
+coldest/warmest hold pacing is preserved by building a `baseIndices`
+sequence (`{1,1}, Range[1,nT], {nT,nT}`) and resampling THAT to
+`actualNFrames` slots, rather than a fixed 2 extra frames.
+
+Because every mode's WAV includes a spoken intro built AFTER the
+original code path called `AnimateX` in `main.wl`, the mode blocks in
+both `main.wl` and `experiments.wl` were reordered so audio (intro +
+pause + main sonification, exported to disk) is built and its total
+`wavDuration`/`totalDurSec` computed BEFORE `AnimateX` runs — the same
+"audio first, GIF targets the real WAV length" ordering
+`compton/main.wl` already uses.
+
+**Verification status.** Confirmed. All three modes were regenerated
+(`wolframscript -file main.wl -- --simulation.mode={spectrum,temperature,fermi_sea}`)
+and re-measured with the same GIF/WAV duration method:
+
+| Pair | GIF (after) | WAV (after) | ratio |
+|------|-------------|-------------|-------|
+| `fermi_sea` | 23.00s | 22.97s | 1.001x |
+| `spectrum` | 30.50s | 30.62s | 0.996x |
+| `temperature` | 29.50s | 29.69s | 0.994x |
+
+`wolframscript -file tests/test_model.wl` — 26 passed, 0 failed (test
+suite covers `model.wl` only; unaffected by the `animate.wl` change,
+confirms no regressions elsewhere).
+
 ## Numeric findings from this build session (new results, not assumed in advance)
 
 - **Classical-limit threshold**: at `(eps-mu)=10*kT` (T=300K,

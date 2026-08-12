@@ -1,19 +1,23 @@
 (* lagrange/src/sonify.wl — CR3BP trajectory audio synthesis *)
 
+(* Target audio durations — single source of truth, shared with animate.wl
+   so the GIF's playback length can be made to match the WAV exactly. *)
+LibrationAudioDuration[model_Association] := N[Max[15.0, 0.5 * model["tEnd"]]];
+EscapeAudioDuration[model_Association]     := N[Max[8.0, 0.6 * model["tActual"]]];
+
 (* Sonify the l4/l5 libration trajectory.
    Pitch: angular velocity around barycentre; Pan: x-position; Volume: 1/min(r1,r2). *)
 SonifyLibration[model_Association, mode_String, cfg_Association, outWAV_String] :=
-  Module[{tSamp, xV, omV, invDV, nPts, tEnd, lLabel,
+  Module[{tSamp, xV, omV, invDV, nPts, lLabel,
           audioDur, traj, cfgSon},
     tSamp  = model["tSamp"];
     xV     = model["xV"];
     omV    = model["omV"];
     invDV  = model["invDV"];
     nPts   = model["nPts"];
-    tEnd   = model["tEnd"];
     lLabel = model["lLabel"];
 
-    audioDur = N[Max[15.0, 0.5 * tEnd]];
+    audioDur = LibrationAudioDuration[model];
     traj = N @ Transpose[{tSamp, xV, omV, ConstantArray[0.0, nPts], invDV}];
     cfgSon = DeepMerge[cfg, <|"sonification" -> <|
       "duration" -> audioDur,
@@ -26,15 +30,14 @@ SonifyLibration[model_Association, mode_String, cfg_Association, outWAV_String] 
 (* Sonify the L1 escape trajectory.
    Wider pitch range (55-1760 Hz) to make the escape dynamics more dramatic. *)
 SonifyEscape[model_Association, cfg_Association, outWAV_String] :=
-  Module[{tSamp, xV, omV, invDV, nPts, tActual, audioDur, traj, cfgSon},
+  Module[{tSamp, xV, omV, invDV, nPts, audioDur, traj, cfgSon},
     tSamp   = model["tSamp"];
     xV      = model["xV"];
     omV     = model["omV"];
     invDV   = model["invDV"];
     nPts    = model["nPts"];
-    tActual = model["tActual"];
 
-    audioDur = N[Max[8.0, 0.6 * tActual]];
+    audioDur = EscapeAudioDuration[model];
     traj = N @ Transpose[{tSamp, xV, omV, ConstantArray[0.0, nPts], invDV}];
     cfgSon = DeepMerge[cfg, <|"sonification" -> <|
       "duration" -> audioDur,

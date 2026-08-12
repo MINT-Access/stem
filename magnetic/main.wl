@@ -101,15 +101,19 @@ Which[
     ExportCyclotronCSV[model, outCSV];
     Print[""];
 
-    Print["[3/4] Rendering animation..."];
-    STEMSay["Rendering cyclotron orbit animation"];
-    nFrames = AnimateCyclotron[model, outGIF];
-    STEMDescribeGIF[outGIF, nFrames, $MagFrameRate];
+    (* Audio synthesised BEFORE the animation: the GIF's frame rate/count
+       are solved FROM the WAV's actual total duration (intro + pause +
+       tone), so sonify must run first -- see AGENTS.md, "GIF/WAV
+       duration sync". *)
+    Print["[3/4] Sonifying..."];
+    STEMSay["Sonifying cyclotron orbit: pitch is the cyclotron frequency, pan tracks x-position"];
+    wavDuration = SonifyCyclotron[model, cfg, outWAV];
     Print[""];
 
-    Print["[4/4] Sonifying..."];
-    STEMSay["Sonifying cyclotron orbit: pitch is the cyclotron frequency, pan tracks x-position"];
-    SonifyCyclotron[model, cfg, outWAV];
+    Print["[4/4] Rendering animation..."];
+    STEMSay["Rendering cyclotron orbit animation"];
+    {nFrames, gifFps} = AnimateCyclotron[model, outGIF, wavDuration];
+    STEMDescribeGIF[outGIF, nFrames, gifFps];
     Print[""];
 
     STEMHeading["Done"];
@@ -135,15 +139,17 @@ Which[
     ExportDriftCSV[model, outCSV];
     Print[""];
 
-    Print["[3/4] Rendering animation..."];
-    STEMSay["Rendering E cross B drift animation"];
-    nFrames = AnimateDrift[model, outGIF];
-    STEMDescribeGIF[outGIF, nFrames, $MagFrameRate];
+    (* Audio synthesised BEFORE the animation -- see the cyclotron mode
+       block above for why the numbered steps are swapped. *)
+    Print["[3/4] Sonifying..."];
+    STEMSay["Sonifying E cross B drift: pitch tracks x-position, pan tracks the drift in y"];
+    wavDuration = SonifyDrift[model, cfg, outWAV];
     Print[""];
 
-    Print["[4/4] Sonifying..."];
-    STEMSay["Sonifying E cross B drift: pitch tracks x-position, pan tracks the drift in y"];
-    SonifyDrift[model, cfg, outWAV];
+    Print["[4/4] Rendering animation..."];
+    STEMSay["Rendering E cross B drift animation"];
+    {nFrames, gifFps} = AnimateDrift[model, outGIF, wavDuration];
+    STEMDescribeGIF[outGIF, nFrames, gifFps];
     Print[""];
 
     STEMHeading["Done"];
@@ -168,16 +174,18 @@ Which[
     ExportMirrorCSV[model, outCSV];
     Print[""];
 
-    Print["[3/4] Rendering animation..."];
-    STEMSay["Rendering magnetic mirror animation"];
-    nFrames = AnimateMirror[model, outGIF];
-    STEMDescribeGIF[outGIF, nFrames, $MagFrameRate];
-    Print[""];
-
-    Print["[4/4] Sonifying..."];
+    (* Audio synthesised BEFORE the animation -- see the cyclotron mode
+       block above for why the numbered steps are swapped. *)
+    Print["[3/4] Sonifying..."];
     STEMSay["Sonifying magnetic mirror: pitch tracks distance from the midplane, " <>
       "accents mark each reflection"];
-    SonifyMirror[model, cfg, outWAV];
+    wavDuration = SonifyMirror[model, cfg, outWAV];
+    Print[""];
+
+    Print["[4/4] Rendering animation..."];
+    STEMSay["Rendering magnetic mirror animation"];
+    {nFrames, gifFps} = AnimateMirror[model, outGIF, wavDuration];
+    STEMDescribeGIF[outGIF, nFrames, gifFps];
     Print[""];
 
     STEMHeading["Done"];
@@ -203,15 +211,17 @@ Which[
     ExportMultiCSV[model, outCSV];
     Print[""];
 
-    Print["[3/4] Rendering animation..."];
-    STEMSay["Rendering multi-particle animation"];
-    nFrames = AnimateMulti[model, outGIF];
-    STEMDescribeGIF[outGIF, nFrames, $MagFrameRate];
+    (* Audio synthesised BEFORE the animation -- see the cyclotron mode
+       block above for why the numbered steps are swapped. *)
+    Print["[3/4] Sonifying..."];
+    STEMSay["Sonifying the cyclotron chord: proton left, alpha centre, electron right"];
+    wavDuration = SonifyMulti[model, cfg, outWAV];
     Print[""];
 
-    Print["[4/4] Sonifying..."];
-    STEMSay["Sonifying the cyclotron chord: proton left, alpha centre, electron right"];
-    SonifyMulti[model, cfg, outWAV];
+    Print["[4/4] Rendering animation..."];
+    STEMSay["Rendering multi-particle animation"];
+    {nFrames, gifFps} = AnimateMulti[model, outGIF, wavDuration];
+    STEMDescribeGIF[outGIF, nFrames, gifFps];
     Print[""];
 
     STEMHeading["Done"];

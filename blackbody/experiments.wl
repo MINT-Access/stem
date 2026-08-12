@@ -43,11 +43,12 @@ Print[">>> Experiment: spectrum_sun"];
 specSun = BuildSpectrumAudio[5778.0, $nBins, $freqMin, $freqMax, $audioFreqMin, $audioFreqMax,
                              4.0, 0.08, $sr];
 PrintSpectrumSummary[specSun, 5778.0];
-RunToFile["spectrum_sun", Join[specSun["chordL"], specSun["sweepL"]],
-                          Join[specSun["chordR"], specSun["sweepR"]]];
+specSunLeft = Join[specSun["chordL"], specSun["sweepL"]];
+RunToFile["spectrum_sun", specSunLeft, Join[specSun["chordR"], specSun["sweepR"]]];
 AnimateSpectrum[5778.0, specSun["spec"], $freqMin, $freqMax,
   FileNameJoin[{$outDir, "spectrum_sun_animation.gif"}],
-  FileNameJoin[{$outDir, "spectrum_sun_plot.png"}]];
+  FileNameJoin[{$outDir, "spectrum_sun_plot.png"}],
+  N[Length[specSunLeft]] / $sr];
 ExportSpectrumCSV[specSun, FileNameJoin[{$outDir, "spectrum_sun_stats.csv"}]];
 
 (* --- spectrum_red_dwarf: cool star, peak well into the infrared --- *)
@@ -56,11 +57,12 @@ Print[">>> Experiment: spectrum_red_dwarf"];
 specCool = BuildSpectrumAudio[3200.0, $nBins, $freqMin, $freqMax, $audioFreqMin, $audioFreqMax,
                               4.0, 0.08, $sr];
 PrintSpectrumSummary[specCool, 3200.0];
-RunToFile["spectrum_red_dwarf", Join[specCool["chordL"], specCool["sweepL"]],
-                                Join[specCool["chordR"], specCool["sweepR"]]];
+specCoolLeft = Join[specCool["chordL"], specCool["sweepL"]];
+RunToFile["spectrum_red_dwarf", specCoolLeft, Join[specCool["chordR"], specCool["sweepR"]]];
 AnimateSpectrum[3200.0, specCool["spec"], $freqMin, $freqMax,
   FileNameJoin[{$outDir, "spectrum_red_dwarf_animation.gif"}],
-  FileNameJoin[{$outDir, "spectrum_red_dwarf_plot.png"}]];
+  FileNameJoin[{$outDir, "spectrum_red_dwarf_plot.png"}],
+  N[Length[specCoolLeft]] / $sr];
 ExportSpectrumCSV[specCool, FileNameJoin[{$outDir, "spectrum_red_dwarf_stats.csv"}]];
 
 (* --- spectrum_white_dwarf: hot remnant, peak well into the ultraviolet --- *)
@@ -69,11 +71,12 @@ Print[">>> Experiment: spectrum_white_dwarf"];
 specHot = BuildSpectrumAudio[25000.0, $nBins, $freqMin, $freqMax, $audioFreqMin, $audioFreqMax,
                              4.0, 0.08, $sr];
 PrintSpectrumSummary[specHot, 25000.0];
-RunToFile["spectrum_white_dwarf", Join[specHot["chordL"], specHot["sweepL"]],
-                                  Join[specHot["chordR"], specHot["sweepR"]]];
+specHotLeft = Join[specHot["chordL"], specHot["sweepL"]];
+RunToFile["spectrum_white_dwarf", specHotLeft, Join[specHot["chordR"], specHot["sweepR"]]];
 AnimateSpectrum[25000.0, specHot["spec"], $freqMin, $freqMax,
   FileNameJoin[{$outDir, "spectrum_white_dwarf_animation.gif"}],
-  FileNameJoin[{$outDir, "spectrum_white_dwarf_plot.png"}]];
+  FileNameJoin[{$outDir, "spectrum_white_dwarf_plot.png"}],
+  N[Length[specHotLeft]] / $sr];
 ExportSpectrumCSV[specHot, FileNameJoin[{$outDir, "spectrum_white_dwarf_stats.csv"}]];
 
 (* --- temperature_default: full 2500K-40000K sweep --- *)
@@ -84,7 +87,8 @@ tempDefault = BuildTemperatureAudio[2500.0, 40000.0, 100, $nBins, $freqMin, $fre
 PrintTemperatureSummary[tempDefault];
 RunToFile["temperature_default", tempDefault["left"], tempDefault["right"]];
 AnimateTemperature[tempDefault, $freqMin, $freqMax,
-  FileNameJoin[{$outDir, "temperature_default_animation.gif"}], 60];
+  FileNameJoin[{$outDir, "temperature_default_animation.gif"}],
+  N[Length[tempDefault["left"]]] / $sr];
 RenderTemperatureStaticPNG[2500.0, 40000.0, $freqMin, $freqMax,
   FileNameJoin[{$outDir, "temperature_default_plot.png"}]];
 ExportTemperatureCSV[tempDefault, FileNameJoin[{$outDir, "temperature_default_stats.csv"}]];
@@ -97,7 +101,8 @@ tempNarrow = BuildTemperatureAudio[3000.0, 15000.0, 60, $nBins, $freqMin, $freqM
 PrintTemperatureSummary[tempNarrow];
 RunToFile["temperature_narrow", tempNarrow["left"], tempNarrow["right"]];
 AnimateTemperature[tempNarrow, $freqMin, $freqMax,
-  FileNameJoin[{$outDir, "temperature_narrow_animation.gif"}], 40];
+  FileNameJoin[{$outDir, "temperature_narrow_animation.gif"}],
+  N[Length[tempNarrow["left"]]] / $sr];
 RenderTemperatureStaticPNG[3000.0, 15000.0, $freqMin, $freqMax,
   FileNameJoin[{$outDir, "temperature_narrow_plot.png"}]];
 ExportTemperatureCSV[tempNarrow, FileNameJoin[{$outDir, "temperature_narrow_stats.csv"}]];
@@ -109,11 +114,11 @@ tourOrder  = StarOrder[];
 tourResult = BuildStarTourSegments[tourOrder, $StarPresets, $nBins, $freqMin, $freqMax,
                                    $audioFreqMin, $audioFreqMax, 2.5, $sr];
 PrintStarSummary[tourOrder, $StarPresets];
-RunToFile["star_tour",
-  Flatten[Map[#["left"] &, tourResult["segments"]]],
-  Flatten[Map[#["right"] &, tourResult["segments"]]]];
+tourLeft = Flatten[Map[#["left"] &, tourResult["segments"]]];
+RunToFile["star_tour", tourLeft, Flatten[Map[#["right"] &, tourResult["segments"]]]];
 AnimateStarTour[tourOrder, $StarPresets, $freqMin, $freqMax,
-  FileNameJoin[{$outDir, "star_tour_animation.gif"}]];
+  FileNameJoin[{$outDir, "star_tour_animation.gif"}],
+  N[Length[tourLeft]] / $sr];
 RenderStarTourStaticPNG[tourOrder, $StarPresets, $freqMin, $freqMax,
   FileNameJoin[{$outDir, "star_tour_plot.png"}]];
 ExportStarCSV[tourOrder, $StarPresets, $nBins, $freqMin, $freqMax, $audioFreqMin, $audioFreqMax,

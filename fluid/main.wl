@@ -135,14 +135,14 @@ Which[
     ExportKarmanCSV[model, outCSV];
     Print[""];
 
-    Print["[3/4] Rendering vortex street animation..."];
-    STEMSay["Rendering the vortex street animation"];
-    AnimateKarman[model, $outDir];
+    Print["[3/4] Sonifying: Strouhal tone + lift oscillation + shed clicks..."];
+    STEMSay["Sonifying: a steady tone at the Strouhal frequency, with clicks marking each vortex shed"];
+    $audioDur = SonifyKarman[model, cfg, outWAV];
     Print[""];
 
-    Print["[4/4] Sonifying: Strouhal tone + lift oscillation + shed clicks..."];
-    STEMSay["Sonifying: a steady tone at the Strouhal frequency, with clicks marking each vortex shed"];
-    SonifyKarman[model, cfg, outWAV];
+    Print["[4/4] Rendering vortex street animation..."];
+    STEMSay["Rendering the vortex street animation"];
+    AnimateKarman[model, $outDir, $audioDur];
     Print[""];
 
     STEMHeading["Done"];
@@ -174,13 +174,13 @@ Which[
     ExportStrouhalCSV[model, outCSV];
     Print[""];
 
-    Print["[3/4] Rendering flow + Strouhal-curve animation..."];
-    STEMSay["Rendering the flow and Strouhal curve animation"];
-    AnimateStrouhal[model, $outDir];
+    Print["[3/4] Sonifying: silence, onset, then evolving tone..."];
+    $audioDur = SonifyStrouhal[model, cfg, outWAV];
     Print[""];
 
-    Print["[4/4] Sonifying: silence, onset, then evolving tone..."];
-    SonifyStrouhal[model, cfg, outWAV];
+    Print["[4/4] Rendering flow + Strouhal-curve animation..."];
+    STEMSay["Rendering the flow and Strouhal curve animation"];
+    AnimateStrouhal[model, $outDir, $audioDur];
     Print[""];
 
     STEMHeading["Done"];
@@ -212,14 +212,14 @@ Which[
     ExportFlagCSV[model, outCSV];
     Print[""];
 
-    Print["[3/4] Rendering flag animation..."];
-    STEMSay["Rendering the flag animation"];
-    AnimateFlag[model, $outDir];
+    Print["[3/4] Sonifying: flutter tone panning with the flap..."];
+    STEMSay["Sonifying the flag flutter: pitch and pan follow the tip, panning left and right with each flap"];
+    $audioDur = SonifyFlag[model, cfg, outWAV];
     Print[""];
 
-    Print["[4/4] Sonifying: flutter tone panning with the flap..."];
-    STEMSay["Sonifying the flag flutter: pitch and pan follow the tip, panning left and right with each flap"];
-    SonifyFlag[model, cfg, outWAV];
+    Print["[4/4] Rendering flag animation..."];
+    STEMSay["Rendering the flag animation"];
+    AnimateFlag[model, $outDir, $audioDur];
     Print[""];
 
     STEMHeading["Done"];

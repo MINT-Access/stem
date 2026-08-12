@@ -138,13 +138,14 @@ Which[
     finalRight  = Join[introBuffer, pauseBuffer, distResult["right"]];
     EnsureDir[outWAV];
     ExportAudioBuffer[NormalizeBuffer[{finalLeft, finalRight}, 0.92], outWAV, sr];
-    STEMDescribeWAV[outWAV, N[Length[finalLeft]] / sr];
+    wavDuration = N[Length[finalLeft]] / sr;
+    STEMDescribeWAV[outWAV, wavDuration];
     Print[""];
 
     Print["[4/", $nSteps5, "] Rendering animation..."];
     STEMSay["Rendering the distribution animation"];
-    nFramesRendered = AnimateDistribution[distResult, massAmu, TEnd, outGIF, 60];
-    STEMDescribeGIF[outGIF, nFramesRendered, 12];
+    {nFramesRendered, gifFps} = AnimateDistribution[distResult, massAmu, TEnd, outGIF, wavDuration];
+    STEMDescribeGIF[outGIF, nFramesRendered, gifFps];
     Print[""];
 
     Print["[5/", $nSteps5, "] Exporting data table..."];
@@ -186,13 +187,14 @@ Which[
     finalRight  = Join[introBuffer, pauseBuffer, ensResult["right"]];
     EnsureDir[outWAV];
     ExportAudioBuffer[NormalizeBuffer[{finalLeft, finalRight}, 0.92], outWAV, sr];
-    STEMDescribeWAV[outWAV, N[Length[finalLeft]] / sr];
+    wavDuration = N[Length[finalLeft]] / sr;
+    STEMDescribeWAV[outWAV, wavDuration];
     Print[""];
 
     Print["[4/", $nSteps5, "] Rendering animation..."];
     STEMSay["Rendering the ensemble histogram animation"];
-    nFramesRendered = AnimateEnsemble[ensembleModel, outGIF, 60];
-    STEMDescribeGIF[outGIF, nFramesRendered, 10];
+    {nFramesRendered, gifFps} = AnimateEnsemble[ensembleModel, outGIF, wavDuration];
+    STEMDescribeGIF[outGIF, nFramesRendered, gifFps];
     Print[""];
 
     Print["[5/", $nSteps5, "] Exporting data table..."];
@@ -233,13 +235,14 @@ Which[
     finalRight  = Join[introBuffer, pauseBuffer, coolResult["right"]];
     EnsureDir[outWAV];
     ExportAudioBuffer[NormalizeBuffer[{finalLeft, finalRight}, 0.92], outWAV, sr];
-    STEMDescribeWAV[outWAV, N[Length[finalLeft]] / sr];
+    wavDuration = N[Length[finalLeft]] / sr;
+    STEMDescribeWAV[outWAV, wavDuration];
     Print[""];
 
     Print["[4/", $nSteps5, "] Rendering animation..."];
     STEMSay["Rendering the cooling animation"];
-    nFramesRendered = AnimateCooling[coolResult, massAmu, outGIF, 60];
-    STEMDescribeGIF[outGIF, nFramesRendered, 10];
+    {nFramesRendered, gifFps} = AnimateCooling[coolResult, massAmu, outGIF, wavDuration];
+    STEMDescribeGIF[outGIF, nFramesRendered, gifFps];
     Print[""];
 
     Print["[5/", $nSteps5, "] Exporting data table..."];
@@ -291,13 +294,14 @@ Which[
     finalRight  = Join[introBuffer, pauseBuffer, eqResult["right"]];
     EnsureDir[outWAV];
     ExportAudioBuffer[NormalizeBuffer[{finalLeft, finalRight}, 0.92], outWAV, sr];
-    STEMDescribeWAV[outWAV, N[Length[finalLeft]] / sr];
+    wavDuration = N[Length[finalLeft]] / sr;
+    STEMDescribeWAV[outWAV, wavDuration];
     Print[""];
 
     Print["[4/", $nSteps5, "] Rendering animation..."];
     STEMSay["Rendering the equipartition animation"];
-    nFramesRendered = AnimateEquipartition[eqResult, outGIF, 30];
-    STEMDescribeGIF[outGIF, nFramesRendered, 8];
+    {nFramesRendered, gifFps} = AnimateEquipartition[eqResult, outGIF, wavDuration];
+    STEMDescribeGIF[outGIF, nFramesRendered, gifFps];
     Print[""];
 
     Print["[5/", $nSteps5, "] Exporting data table..."];

@@ -54,7 +54,7 @@ RunExperiment[name_String, overrides_Association] :=
         totalDurSec = N[Length[finalLeft]] / sr;
         STEMDescribeWAV[outWAV, totalDurSec];
 
-        AnimateSpectrum[spectrumModel, outGIF, outPNG];
+        AnimateSpectrum[spectrumModel, outGIF, outPNG, totalDurSec];
         ExportSpectrumCSV[spectrumModel, outCSV],
 
       mode === "temperature",
@@ -73,7 +73,7 @@ RunExperiment[name_String, overrides_Association] :=
         totalDurSec = N[Length[finalLeft]] / sr;
         STEMDescribeWAV[outWAV, totalDurSec];
 
-        AnimateTemperature[temperatureModel, outGIF, outPNG];
+        AnimateTemperature[temperatureModel, outGIF, outPNG, totalDurSec];
         ExportTemperatureCSV[temperatureModel, outCSV],
 
       mode === "fermi_sea",
@@ -92,7 +92,7 @@ RunExperiment[name_String, overrides_Association] :=
         totalDurSec = N[Length[finalLeft]] / sr;
         STEMDescribeWAV[outWAV, totalDurSec];
 
-        AnimateFermiSea[fermiSeaModel, outGIF, outPNG];
+        AnimateFermiSea[fermiSeaModel, outGIF, outPNG, totalDurSec];
         ExportFermiSeaCSV[fermiSeaModel, outCSV]
     ];
 

@@ -11,7 +11,30 @@
    squishing a bare Graphics[] plot into an unreadable sliver unless
    AspectRatio is set by hand; avoided here from the start rather than
    discovered again by re-rendering and looking.
-   ======================================================== *)
+
+   GIF/WAV duration sync -- every Animate* function below takes a
+   targetDuration_?NumericQ (the length, in seconds, of the SONIFIED
+   CONTENT it will be played alongside -- barrier's narrated tunnelling
+   event, sweep's/energy's continuous glissando -- deliberately
+   EXCLUDING main.wl's spoken intro/outro: those have no visual
+   counterpart in the diagram/marker animation and their length is
+   TTS-engine dependent, so including them would make the sync target
+   itself unstable across machines; see clt/AGENTS.md's "Animation/audio
+   duration sync" precedent for the same reasoning applied there) and an
+   nFrames RENDER BUDGET, not a literal frame count: frameRate is solved
+   as nFrames/targetDuration and clamped to [$MinAnimationFps,
+   $MaxAnimationFps] so a short clip doesn't demand a strobing frame
+   rate and a long one doesn't demand an implausibly slow one;
+   actualNFrames (Round[frameRate*targetDuration]) is what flexes at
+   the clamp boundary so playback duration always lands on
+   targetDuration exactly. Before this fix, all three modes rendered a
+   fixed 40 frames at a fixed 15/12 fps regardless of the WAV -- with
+   barrier.gif measured at 2.8s against a 47.2s barrier_audio.wav
+   (speech-inclusive), a ~17x mismatch. See AGENTS.md's "Animation/audio
+   duration sync" entry for the full measurement. *)
+
+$MinAnimationFps = 2;
+$MaxAnimationFps = 30;
 
 
 (* ── Mode 1: barrier — transmission/reflection diagram ────────────── *)
@@ -86,13 +109,16 @@ BarrierDiagramGraphics[model_Association, revealFrac_?NumericQ] :=
   ];
 
 AnimateBarrier[model_Association, outGif_String, outPng_String,
-              Optional[nFrames_Integer, 40]] :=
-  Module[{frames},
-    frames = Table[BarrierDiagramGraphics[model, N[k] / nFrames], {k, nFrames}];
-    ExportGIF[frames, outGif, 15];
+              targetDuration_?NumericQ, Optional[nFrames_Integer, 40]] :=
+  Module[{frameRate, actualNFrames, frames},
+    frameRate     = Clip[nFrames / targetDuration, {$MinAnimationFps, $MaxAnimationFps}];
+    actualNFrames = Max[2, Round[frameRate * targetDuration]];
+
+    frames = Table[BarrierDiagramGraphics[model, N[k] / actualNFrames], {k, actualNFrames}];
+    ExportGIF[frames, outGif, frameRate];
     Export[outPng, BarrierDiagramGraphics[model, 1.0], "PNG"];
     Print["  PNG: ", outPng];
-    nFrames
+    {actualNFrames, frameRate}
   ];
 
 
@@ -113,12 +139,19 @@ RenderSweepFrame[model_Association, upTo_Integer] :=
   ];
 
 AnimateSweep[model_Association, outGif_String, outPng_String,
-            Optional[nFrames_Integer, 40]] :=
-  Module[{nSteps, indices, frames, staticPlt},
-    nSteps  = model["nSteps"];
-    indices = DeleteDuplicates[Round[Subdivide[1, nSteps, Min[nFrames, nSteps] - 1]]];
+            targetDuration_?NumericQ, Optional[nFrames_Integer, 40]] :=
+  Module[{nSteps, frameRate, actualNFrames, indices, frames, staticPlt},
+    nSteps        = model["nSteps"];
+    frameRate     = Clip[nFrames / targetDuration, {$MinAnimationFps, $MaxAnimationFps}];
+    actualNFrames = Max[2, Round[frameRate * targetDuration]];
+
+    (* No DeleteDuplicates: a step index repeating (when actualNFrames
+       exceeds nSteps) just holds that frame on screen longer, which is
+       fine -- deleting repeats would shrink the frame count below
+       actualNFrames and pull playback duration back out of sync. *)
+    indices = Round[Subdivide[1, nSteps, actualNFrames - 1]];
     frames  = RenderSweepFrame[model, #] & /@ indices;
-    ExportGIF[frames, outGif, 12];
+    ExportGIF[frames, outGif, frameRate];
 
     staticPlt = Graphics[
       {GrayLevel[0.15], Thickness[0.0025], Line[Transpose[{model["LArr"], Log10[model["TArr"]]}]]},
@@ -132,7 +165,7 @@ AnimateSweep[model_Association, outGif_String, outPng_String,
     ];
     Export[outPng, staticPlt, "PNG"];
     Print["  PNG: ", outPng];
-    Length[frames]
+    {actualNFrames, frameRate}
   ];
 
 
@@ -153,12 +186,16 @@ RenderEnergyFrame[model_Association, upTo_Integer] :=
   ];
 
 AnimateEnergy[model_Association, outGif_String, outPng_String,
-             Optional[nFrames_Integer, 40]] :=
-  Module[{nSteps, indices, frames, staticPlt},
-    nSteps  = model["nSteps"];
-    indices = DeleteDuplicates[Round[Subdivide[1, nSteps, Min[nFrames, nSteps] - 1]]];
+             targetDuration_?NumericQ, Optional[nFrames_Integer, 40]] :=
+  Module[{nSteps, frameRate, actualNFrames, indices, frames, staticPlt},
+    nSteps        = model["nSteps"];
+    frameRate     = Clip[nFrames / targetDuration, {$MinAnimationFps, $MaxAnimationFps}];
+    actualNFrames = Max[2, Round[frameRate * targetDuration]];
+
+    (* No DeleteDuplicates -- same reasoning as AnimateSweep above. *)
+    indices = Round[Subdivide[1, nSteps, actualNFrames - 1]];
     frames  = RenderEnergyFrame[model, #] & /@ indices;
-    ExportGIF[frames, outGif, 12];
+    ExportGIF[frames, outGif, frameRate];
 
     staticPlt = Graphics[
       {
@@ -177,5 +214,5 @@ AnimateEnergy[model_Association, outGif_String, outPng_String,
     ];
     Export[outPng, staticPlt, "PNG"];
     Print["  PNG: ", outPng];
-    Length[frames]
+    {actualNFrames, frameRate}
   ];

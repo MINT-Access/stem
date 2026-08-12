@@ -1,5 +1,15 @@
 (* lagrange/src/animate.wl — CR3BP trajectory GIF and PNG rendering *)
 
+(* GIF playback duration is derived from the target audio duration (see
+   LibrationAudioDuration/EscapeAudioDuration in sonify.wl) rather than a
+   fixed frame count/rate, so the GIF and its matching WAV play for the
+   same length. nFrames below is a RENDER BUDGET, not a literal frame
+   count: the frame rate is solved as nFrames/targetDuration and clamped
+   to a sane fps range; the frame count then flexes at that clamp so the
+   actual playback duration matches targetDuration exactly. *)
+$MinAnimationFps = 2;
+$MaxAnimationFps = 30;
+
 (* Build a single GIF frame showing the trajectory grown to step nShow.
    mu, lpts, markLP, and preset are for visual annotation. *)
 MakeLagrangeFrame[xyAll_List, nShow_Integer, mu_?NumericQ,
@@ -35,11 +45,13 @@ MakeLagrangeFrame[xyAll_List, nShow_Integer, mu_?NumericQ,
   ];
 
 (* Render GIF and PNG for l4/l5 libration.
-   PNG: full static trajectory; GIF: 32-frame animated traversal. *)
+   PNG: full static trajectory; GIF: animated traversal whose playback
+   duration matches targetDuration (the paired WAV's duration). *)
 AnimateLibration[model_Association, outDir_String,
-                 lpts_Association, mu_?NumericQ, preset_String] :=
+                 lpts_Association, mu_?NumericQ, preset_String,
+                 targetDuration_?NumericQ, nFrameBudget_:150] :=
   Module[{xFn, yFn, xV, yV, x0, y0, lPos, lLabel, tEnd,
-          nFrames, nGIFPts, tGIF, xyGIF, gifFrames, gifPath, pngPath, pngGfx,
+          frameRate, nFrames, nGIFPts, tGIF, xyGIF, gifFrames, gifPath, pngPath, pngGfx,
           L1, L2, L3, L4, L5},
     xFn    = model["xFn"];
     yFn    = model["yFn"];
@@ -73,25 +85,32 @@ AnimateLibration[model_Association, outDir_String,
     Export[pngPath, pngGfx, "PNG"];
     Print["  PNG: ", pngPath];
 
-    nFrames  = 32;
-    nGIFPts  = 400;
-    tGIF     = N @ Rescale[Range[nGIFPts], {1, nGIFPts}, {0, tEnd}];
-    xyGIF    = Transpose[{xFn /@ tGIF, yFn /@ tGIF}];
+    frameRate = Clip[nFrameBudget / targetDuration,
+      {$MinAnimationFps, $MaxAnimationFps}];
+    nFrames   = Max[2, Round[frameRate * targetDuration]];
+    nGIFPts   = Max[400, 3 * nFrames];
+    tGIF      = N @ Rescale[Range[nGIFPts], {1, nGIFPts}, {0, tEnd}];
+    xyGIF     = Transpose[{xFn /@ tGIF, yFn /@ tGIF}];
     gifFrames = Table[
       MakeLagrangeFrame[xyGIF, Max[2, Floor[k * nGIFPts / nFrames]],
                         mu, lpts, lLabel, preset],
       {k, nFrames}];
     gifPath = FileNameJoin[{outDir, ToLowerCase[lLabel] <> ".gif"}];
-    ExportGIF[gifFrames, gifPath, 10];
-    Print["  GIF: ", gifPath, " (", nFrames, " frames, 10 fps)"]
+    ExportGIF[gifFrames, gifPath, frameRate];
+    Print["  GIF: ", gifPath, " (", nFrames, " frames, ", FmtN[frameRate, 3],
+          " fps, ", FmtN[nFrames / frameRate, 3],
+          "s, matching audio duration ", FmtN[targetDuration, 3], "s)"];
+    {nFrames, frameRate}
   ];
 
 (* Render GIF and PNG for L1 escape.
-   PNG: full static trajectory in red; GIF: 32-frame animated traversal. *)
+   PNG: full static trajectory in red; GIF: animated traversal whose
+   playback duration matches targetDuration (the paired WAV's duration). *)
 AnimateEscape[model_Association, outDir_String,
-              lpts_Association, mu_?NumericQ, preset_String] :=
+              lpts_Association, mu_?NumericQ, preset_String,
+              targetDuration_?NumericQ, nFrameBudget_:150] :=
   Module[{xFn, yFn, xV, yV, x0, y0, tActual,
-          nFrames, nGIFPts, tGIF, xyGIF, gifFrames, gifPath, pngPath, pngGfx,
+          frameRate, nFrames, nGIFPts, tGIF, xyGIF, gifFrames, gifPath, pngPath, pngGfx,
           L1, L2, L3, L4, L5},
     xFn     = model["xFn"];
     yFn     = model["yFn"];
@@ -123,15 +142,20 @@ AnimateEscape[model_Association, outDir_String,
     Export[pngPath, pngGfx, "PNG"];
     Print["  PNG: ", pngPath];
 
-    nFrames  = 32;
-    nGIFPts  = 400;
-    tGIF     = N @ Rescale[Range[nGIFPts], {1, nGIFPts}, {0, tActual}];
-    xyGIF    = Transpose[{xFn /@ tGIF, yFn /@ tGIF}];
+    frameRate = Clip[nFrameBudget / targetDuration,
+      {$MinAnimationFps, $MaxAnimationFps}];
+    nFrames   = Max[2, Round[frameRate * targetDuration]];
+    nGIFPts   = Max[400, 3 * nFrames];
+    tGIF      = N @ Rescale[Range[nGIFPts], {1, nGIFPts}, {0, tActual}];
+    xyGIF     = Transpose[{xFn /@ tGIF, yFn /@ tGIF}];
     gifFrames = Table[
       MakeLagrangeFrame[xyGIF, Max[2, Floor[k * nGIFPts / nFrames]],
                         mu, lpts, "L1", preset],
       {k, nFrames}];
     gifPath = FileNameJoin[{outDir, "l1.gif"}];
-    ExportGIF[gifFrames, gifPath, 10];
-    Print["  GIF: ", gifPath, " (", nFrames, " frames, 10 fps)"]
+    ExportGIF[gifFrames, gifPath, frameRate];
+    Print["  GIF: ", gifPath, " (", nFrames, " frames, ", FmtN[frameRate, 3],
+          " fps, ", FmtN[nFrames / frameRate, 3],
+          "s, matching audio duration ", FmtN[targetDuration, 3], "s)"];
+    {nFrames, frameRate}
   ];

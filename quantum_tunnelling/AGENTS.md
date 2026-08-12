@@ -277,6 +277,78 @@ below.
    verified to agree) rather than typed out twice at two different,
    silently-inconsistent values.
 
+## Animation/audio duration sync (fixed post-v1.5.0)
+
+**The bug.** All three `Animate*` functions in `src/animate.wl` rendered
+a fixed 40 frames at a fixed frame rate (15fps for `barrier`, 12fps for
+`sweep`/`energy`) regardless of how long the accompanying WAV actually
+was — the same decoupled-GIF-and-audio bug fixed as the reference
+pattern in `lorenz/src/animate.wl`. Measured before the fix (real files
+in `output/`, not estimated): `barrier.gif` 2.80s vs `barrier_audio.wav`
+47.23s (16.87x), `energy.gif` 3.20s vs `energy_audio.wav` 38.01s
+(11.88x), `sweep.gif` 3.20s vs `sweep_audio.wav` 23.88s (7.46x). The
+speech-free preset variants from `experiments.wl` (e.g.
+`barrier_default_animation.gif` 2.80s vs `barrier_default_audio.wav`
+2.55s) were already close to sync by coincidence — their WAV has no
+spoken intro/outro to inflate it — confirming the fixed-frame-count GIF
+itself was the constant, and the mismatch scaled with however much
+narration `main.wl` happened to prepend.
+
+**The fix.** Each `Animate*` (`AnimateBarrier`, `AnimateSweep`,
+`AnimateEnergy`) now takes a `targetDuration_?NumericQ` and treats
+`nFrames` as a render budget: `frameRate = Clip[nFrames/targetDuration,
+{$MinAnimationFps, $MaxAnimationFps}]` (2-30fps), then
+`actualNFrames = Max[2, Round[frameRate*targetDuration]]` — the frame
+*count* flexes at the clamp boundary so playback duration lands on
+`targetDuration` exactly (see `src/animate.wl`'s file header, adapted
+from `lorenz/src/animate.wl`'s `ExportAnimation`).
+
+The one design choice specific to this app: `targetDuration` is the
+**sonified content's own length** (barrier's narrated tunnelling event,
+`sweep`'s/`energy`'s glissando), not the full exported WAV. `main.wl`'s
+spoken intro/outro is deliberately excluded — it has no visual
+counterpart in the diagram/marker animation, and its length is
+TTS-engine dependent (`SpeechSynthesize` vs platform-TTS vs text-only
+fallback all produce different, unpredictable durations), so including
+it would make the sync target itself unstable across machines. This
+mirrors `clt/AGENTS.md`'s "Animation/audio duration sync" precedent,
+not `lorenz`'s (`lorenz` has no speech track to exclude). For `sweep`/
+`energy` this value was already sitting in a variable (`sweepDuration`/
+`energyDuration`, the same duration passed to `BuildSweepAudio`/
+`BuildEnergyAudio`) so no reordering was needed. For `barrier`,
+`main.wl`'s audio-synthesis step was moved *before* the GIF-rendering
+step so `AnimateBarrier` can be called with `N[Length[mainL]]/sr` — the
+narrated event's own measured length — rather than duplicating
+`sonify.wl`'s internal `noteDur`/`clickDur`/`gapDur` constants as a
+second, driftable copy in `main.wl`.
+
+**Verification (regenerated files, measured with Pillow/`wave`, not
+estimated):**
+
+| file | before | after (GIF vs main-content target) |
+|---|---|---|
+| `barrier.gif` / `barrier_audio.wav` (47.23s total) | 2.80s / 16.87x | 2.40s vs 2.55s target (1.06x) |
+| `sweep.gif` / `sweep_audio.wav` (23.88s total) | 3.20s / 7.46x | 6.00s vs 6.00s target (1.00x) |
+| `energy.gif` / `energy_audio.wav` (38.01s total) | 3.20s / 11.88x | 8.00s vs 8.00s target (1.00x) |
+| `barrier_stm_animation.gif` / `_audio.wav` | — | 2.40s vs 2.55s (1.06x) |
+| `sweep_default_animation.gif` / `_audio.wav` | — | 6.00s vs 6.00s (1.00x) |
+| `energy_default_animation.gif` / `_audio.wav` | — | 8.00s vs 8.00s (1.00x) |
+
+`sweep`/`energy` land exactly on target because their solved frame rates
+(6.67fps, 5fps) happen to divide evenly into GIF's native centisecond
+delay granularity. `barrier`'s solved rate (~15.7fps, delay ~6.4
+centiseconds) rounds to 6 centiseconds per frame in the exported GIF,
+leaving a ~6% residual (2.40s vs the 2.55s target) — the same class of
+quantization `lorenz`'s own reference-pattern output shows in practice
+(spot-measured here, not documented in `lorenz/AGENTS.md`: its
+`lorenz_animation.gif`/`lorenz_audio.wav` pair comes out 40.5s vs a
+40.0s target, ~1.25% off, at its lower/coarser frame rate). This is a
+GIF-format limitation (`"DisplayDurations"` rounds to 1/100s in
+`ExportGIF`, `stem-core/src/export.wl`), not a defect in the
+frame-count/frame-rate formula itself — going from a 16.87x mismatch to
+1.06x is the fix this entry is about, and closing the remaining ~6%
+would require a different export mechanism entirely, out of scope here.
+
 ## Dependencies
 
 - **stem-core**: `init.wl`, `LoadConfig`, `GetCfg`, `DeepMerge`,

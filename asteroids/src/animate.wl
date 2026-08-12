@@ -285,17 +285,54 @@ BuildFrame[asteroids_List, angles_List, k_Integer,
   ]
 
 
-(* ExportAnimation *)
+(* Sane bounds on GIF playback frame rate — see ExportAnimation for how
+   these get used to keep animation/audio duration in sync without
+   forcing an absurdly fast or glacial frame rate at the extremes. *)
+$MinAnimationFps = 2;
+$MaxAnimationFps = 30;
+
+
+(* ExportAnimation
+   Builds frames and writes an animated GIF whose PLAYBACK DURATION
+   matches targetDuration — the same value (SonificationDuration[n, cfg])
+   used to size the accompanying WAV, so the reveal-by-reveal GIF and its
+   sonification stay in sync instead of the GIF racing through all n
+   asteroids in a couple of seconds while the audio plays for much longer.
+
+   nFrames is a RENDER BUDGET (total frames, reveal + final hold), not a
+   literal frame count: frameRate is solved as nFrames/targetDuration and
+   clamped to [$MinAnimationFps, $MaxAnimationFps] (2-30 fps) so a short
+   sonification doesn't demand a strobing frame rate and a long one
+   doesn't demand an implausibly slow one — actualNFrames (recomputed as
+   Round[frameRate*targetDuration]) is what flexes at the clamp boundary,
+   so playback duration always equals targetDuration exactly.
+
+   Of actualNFrames, a holdFrac share (default 15%) is spent holding the
+   fully-revealed picture at the end; the rest is spent revealing
+   asteroids, sampled evenly across the n asteroids via Subdivide (same
+   as lorenz's continuous-trajectory frame sampling) — for small n this
+   naturally repeats a given reveal count across several consecutive
+   frames rather than skipping any asteroid.
+
+   Returns {actualNFrames, frameRate} so callers can report what was
+   actually rendered (STEMDescribeGIF wants both). *)
 
 ExportAnimation[asteroids_List, filePath_String,
                 startDate_String, endDate_String,
-                frameRate_:12] :=
+                targetDuration_?NumericQ, nFrames_:150, holdFrac_:0.15] :=
   Module[
-    {maxDist, n, dateRange, angles, frames, holdFrames, allFrames},
+    {maxDist, n, dateRange, angles, frameRate, actualNFrames,
+     holdCount, revealCount, revealIndices, frames, holdFrames, allFrames},
 
     maxDist = Max[#["missDistanceKm"] & /@ asteroids] * 1.05;
     n       = Length[asteroids];
     dateRange = startDate <> " – " <> endDate;
+
+    frameRate = Clip[nFrames / targetDuration,
+      {$MinAnimationFps, $MaxAnimationFps}];
+    actualNFrames = Max[2, Round[frameRate * targetDuration]];
+    holdCount     = Max[1, Round[actualNFrames * holdFrac]];
+    revealCount   = Max[1, actualNFrames - holdCount];
 
     (* Use pre-computed geocentric angles if available (set by AugmentAsteroidsWithAngles
        in main.wl); fall back to seeded random for backward compatibility with
@@ -305,20 +342,28 @@ ExportAnimation[asteroids_List, filePath_String,
       (SeedRandom[42]; RandomReal[{0, 2*Pi}, n])
     ];
 
-    Print["  Rendering ", n + Round[frameRate * 3], " frames for ",
-          n, " asteroids..."];
+    Print["  Rendering ", actualNFrames, " frames (", revealCount,
+          " reveal + ", holdCount, " hold) at ", FmtN[frameRate, 3],
+          " fps (", FmtN[actualNFrames / frameRate, 3],
+          "s, matching audio duration ", FmtN[targetDuration, 3],
+          "s) for ", n, " asteroids..."];
 
-    (* One frame per asteroid appearing, farthest first (list is closest-first
-       so we reverse for the reveal, then show full picture at end) *)
-    frames = Table[
-      BuildFrame[Reverse[asteroids], Reverse[angles], k,
-                 maxDist, dateRange],
-      {k, 1, n}
-    ];
+    (* Reveal count k for each frame, evenly sampled across 1..n so every
+       asteroid gets shown even when revealCount < n, and small n holds
+       naturally when revealCount > n. *)
+    revealIndices = If[revealCount <= 1, {n},
+      Clip[Round[Subdivide[1, n, revealCount - 1]], {1, n}]];
 
-    (* Hold the final frame for 3 s *)
-    holdFrames = ConstantArray[Last[frames], Round[frameRate * 3]];
+    (* One frame per sampled reveal count, farthest first (list is
+       closest-first so we reverse for the reveal, then show full
+       picture at end) *)
+    frames = BuildFrame[Reverse[asteroids], Reverse[angles], #,
+                 maxDist, dateRange] & /@ revealIndices;
+
+    (* Hold the final (fully-revealed) frame *)
+    holdFrames = ConstantArray[Last[frames], holdCount];
     allFrames  = Join[frames, holdFrames];
 
-    ExportGIF[allFrames, filePath, frameRate]
+    ExportGIF[allFrames, filePath, frameRate];
+    {actualNFrames, frameRate}
   ]

@@ -278,6 +278,52 @@ mode's own configured `N`):
    every prior v1.5.0 app's `AGENTS.md`; avoided throughout via
    explicit `Optional[x_?NumericQ, default]`.
 
+## GIF/WAV duration sync (fixed post-v1.5.0)
+
+**The bug.** All three modes' GIFs played far shorter than their
+matching WAVs: `grover_search.gif` measured 3.25s vs `grover_search.wav`
+18.67s (5.7x), `grover_compare.gif` 3.2s vs 21.25s (6.6x),
+`grover_geometry.gif` 4.29s vs 26.69s (6.2x).
+
+**Root cause.** `AnimateSearch`/`AnimateCompare`/`AnimateGeometry`
+exported at a fixed frame rate (4/12/3 fps respectively) with a frame
+count tied only to the number of discrete simulation steps or sweep
+points — the same fixed-nFrames/fixed-frameRate pattern found across
+the repo, decoupled from how long the matching sonification actually
+plays. As in `fluid/`, the WAV also carries a spoken intro
+(`BuildIntroBuffer` in `speech.wl`) prepended directly into the audio
+buffer in `main.wl`/`experiments.wl`, whose length depends on the
+platform TTS engine and isn't known ahead of time.
+
+**The fix.** Each `Animate*` now takes a `targetDuration` argument and
+solves `frameRate` from a frame-count *budget* (150) divided by
+`targetDuration`, clamped to `[$GroverMinGifFps, $GroverMaxGifFps]`
+(2-30 fps), with the frame count recomputed at the clamp boundary so
+playback duration lands almost exactly on `targetDuration` — same
+reasoning as `lorenz/src/animate.wl`'s `ExportAnimation`. Search and
+geometry modes have far fewer distinct visual states (Grover iterations,
+often ~10-15) than the 150-frame budget; `Subdivide`'s rounding holds
+each state across several consecutive frames rather than erroring, the
+same way `AnimateStrouhal` handles it in `fluid/`. Because the true
+duration is only known once the intro speech is synthesised,
+`main.wl` was reordered to build the WAV (steps renumbered 4→5) *before*
+rendering the GIF (5→4) for all three modes, passing the WAV's actual
+total sample count `/ sr` straight through as `targetDuration`;
+`experiments.wl` already built audio before animating and only needed
+the same value threaded into its `Animate*` calls.
+
+**Verification (regenerated via `wolframscript -file main.wl` for all
+three modes):**
+
+| Mode | GIF before | WAV | GIF after | Ratio after |
+|------|-----------|-----|-----------|-------------|
+| search | 3.25s | 18.67s | 18.00s | 0.96x |
+| compare | 3.2s | 21.25s | 21.00s | 0.99x |
+| geometry | 4.29s | 26.69s | 27.00s | 1.01x |
+
+`tests/test_model.wl` (24/24 tests, unaffected by this change) still
+passes.
+
 ## Dependencies
 
 - **stem-core**: `init.wl`, `LoadConfig`, `GetCfg`, `DeepMerge`,

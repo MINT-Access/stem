@@ -2,10 +2,37 @@
    hydrogen/src/animate.wl — Visualisation for all three modes
 
    Public API:
-     AnimateOrbital[orbitalModel, outGIF, outPNG]
-     AnimateSpectrum[spectrumResult, outGIF]
-     AnimateTransitions[cascadesList, nStart, outGIF]
+     AnimateOrbital[orbitalModel, outGIF, outPNG, targetDuration]
+     AnimateSpectrum[spectrumResult, outGIF, targetDuration]
+     AnimateTransitions[cascadesList, nStart, outGIF, targetDuration]
    ======================================================== *)
+
+
+(* All three Animate* below used to export at a fixed frame rate/frame
+   count (orbitals: 32 frames @ 10 fps; spectrum: nLines frames @
+   Max[2,nLines/4] fps; transitions: N frames @ 2 fps) entirely
+   decoupled from how long the matching WAV actually plays once its
+   spoken intro is included (measured: orbitals.gif 3.2s vs
+   orbitals_audio.wav 105.6s -- 33x; spectrum.gif 3.92s vs
+   spectrum_audio.wav 43.96s -- 11.2x; transitions.gif 6.0s vs
+   transitions_audio.wav 54.87s -- 9.1x). targetDuration below is the
+   actual total WAV duration (main.wl builds each mode's audio,
+   including its spoken intro, before rendering the matching GIF, so
+   this value is known exactly). nFrames is a RENDER BUDGET: frameRate
+   is solved as nFrames/targetDuration then clamped to
+   [$HydrogenMinGifFps, $HydrogenMaxGifFps] so the frame COUNT flexes
+   at the clamp boundary, keeping actual playback duration exactly
+   targetDuration -- same pattern as lorenz/src/animate.wl's
+   ExportAnimation. Spectrum and transitions modes have only as many
+   distinct visual states as spectral lines / cascade steps (often far
+   fewer than the render budget); Subdivide's rounding holds a state
+   across consecutive frames when that happens, rather than erroring. *)
+$HydrogenMinGifFps = 2;
+$HydrogenMaxGifFps = 30;
+$HydrogenGifFrameBudget = 150;
+
+HydrogenGifRate[targetDuration_?NumericQ, nFrames_:$HydrogenGifFrameBudget] :=
+  Clip[nFrames / targetDuration, {$HydrogenMinGifFps, $HydrogenMaxGifFps}];
 
 
 (* ── Orbitals: Hilbert sweep over the coloured density map ────────
@@ -34,9 +61,9 @@ OrbitalDensityToRGB[density_List] :=
     Map[List @@ OrbitalColorFunction[#] &, logNorm, {2}]
   ];
 
-AnimateOrbital[orbitalModel_Association, outGIF_String, outPNG_String] :=
+AnimateOrbital[orbitalModel_Association, outGIF_String, outPNG_String, targetDuration_?NumericQ] :=
   Module[{density, gridSize, traversal, nPixels, rgbGrid, displayData,
-          gCoords, nGIFFrames = 32, frameUpTo, gifFrames, staticFig},
+          gCoords, frameRate, nGIFFrames, frameUpTo, gifFrames, staticFig},
 
     density   = orbitalModel["density"];
     gridSize  = orbitalModel["gridSize"];
@@ -50,6 +77,8 @@ AnimateOrbital[orbitalModel_Association, outGIF_String, outPNG_String] :=
     displayData = Reverse[rgbGrid];
 
     gCoords = Map[{#[[1]] - 0.5, gridSize - #[[2]] + 0.5} &, traversal];
+    frameRate  = HydrogenGifRate[targetDuration];
+    nGIFFrames = Max[2, Round[frameRate * targetDuration]];
     frameUpTo = Table[Max[1, Round[k * nPixels / nGIFFrames]], {k, nGIFFrames}];
 
     gifFrames = Table[
@@ -64,8 +93,8 @@ AnimateOrbital[orbitalModel_Association, outGIF_String, outPNG_String] :=
       ],
       {k, nGIFFrames}
     ];
-    ExportGIF[gifFrames, outGIF, 10];
-    STEMDescribeGIF[outGIF, nGIFFrames, 10];
+    ExportGIF[gifFrames, outGIF, frameRate];
+    STEMDescribeGIF[outGIF, nGIFFrames, frameRate];
 
     staticFig = Graphics[
       {Raster[displayData, {{0, 0}, {gridSize, gridSize}}]},
@@ -125,16 +154,22 @@ SpectrumFrame[sweepLines_List, sweepAmps_List, revealCount_Integer] :=
     ]
   ];
 
-AnimateSpectrum[spectrumResult_Association, outGIF_String] :=
-  Module[{lines, order, sweepLines, sweepAmps, nLines, frames},
+AnimateSpectrum[spectrumResult_Association, outGIF_String, targetDuration_?NumericQ] :=
+  Module[{lines, order, sweepLines, sweepAmps, nLines, frameRate, nFrames, indices, frames},
     lines      = spectrumResult["lines"];
     order      = spectrumResult["sweepOrder"];
     sweepLines = lines[[order]];
     sweepAmps  = spectrumResult["amps"][[order]];
     nLines     = Length[sweepLines];
-    frames = Table[SpectrumFrame[sweepLines, sweepAmps, k], {k, 1, nLines}];
-    ExportGIF[frames, outGIF, Max[2, Round[nLines / 4.0]]];
-    nLines
+    frameRate  = HydrogenGifRate[targetDuration];
+    nFrames    = Max[2, Round[frameRate * targetDuration]];
+    (* nLines discrete spectral-line reveal states are the only distinct
+       visual states; Subdivide's rounding naturally holds a state
+       across consecutive frames when nFrames exceeds nLines. *)
+    indices = Clip[Round[Subdivide[1, nLines, nFrames - 1]], {1, nLines}];
+    frames = SpectrumFrame[sweepLines, sweepAmps, #] & /@ indices;
+    ExportGIF[frames, outGIF, frameRate];
+    {nFrames, frameRate}
   ];
 
 
@@ -180,10 +215,10 @@ GrotrianFrame[maxN_Integer, stepsShown_List, realizationIdx_Integer] :=
     ]
   ];
 
-AnimateTransitions[cascadesList_List, nStart_Integer, outGIF_String] :=
-  Module[{nRealToShow, frames},
+AnimateTransitions[cascadesList_List, nStart_Integer, outGIF_String, targetDuration_?NumericQ] :=
+  Module[{nRealToShow, allFrames, nAvail, frameRate, nFrames, indices, frames},
     nRealToShow = Min[4, Length[cascadesList]];
-    frames = Flatten[
+    allFrames = Flatten[
       Table[
         Table[
           GrotrianFrame[nStart, cascadesList[[real, 1 ;; k]], real],
@@ -193,6 +228,14 @@ AnimateTransitions[cascadesList_List, nStart_Integer, outGIF_String] :=
       ],
       1
     ];
-    ExportGIF[frames, outGIF, 2];
-    Length[frames]
+    nAvail    = Length[allFrames];
+    frameRate = HydrogenGifRate[targetDuration];
+    nFrames   = Max[2, Round[frameRate * targetDuration]];
+    (* nAvail discrete cascade-step states are the only distinct visual
+       states; Subdivide's rounding holds a state across consecutive
+       frames when nFrames exceeds nAvail. *)
+    indices = Clip[Round[Subdivide[1, nAvail, nFrames - 1]], {1, nAvail}];
+    frames = allFrames[[indices]];
+    ExportGIF[frames, outGIF, frameRate];
+    {nFrames, frameRate}
   ];

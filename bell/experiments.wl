@@ -53,7 +53,7 @@ RunExperiment[name_String, overrides_Association] :=
         totalDurSec = N[Length[finalLeft]] / sr;
         STEMDescribeWAV[outWAV, totalDurSec];
 
-        AnimateCorrelations[corrModel, outGIF, outPNG];
+        AnimateCorrelations[corrModel, outGIF, outPNG, totalDurSec];
         ExportCorrelationsCSV[corrModel, outCSV],
 
       mode === "chsh",
@@ -72,7 +72,7 @@ RunExperiment[name_String, overrides_Association] :=
         totalDurSec = N[Length[finalLeft]] / sr;
         STEMDescribeWAV[outWAV, totalDurSec];
 
-        AnimateChsh[chshModel, outGIF, outPNG];
+        AnimateChsh[chshModel, outGIF, outPNG, totalDurSec];
         ExportChshCSV[chshModel, outCSV],
 
       mode === "measurement",

@@ -14,7 +14,32 @@
    output.wl's CSV columns -- see sonify.wl's file header for the full
    channel-assignment note (compton/AGENTS.md design decision 8 is the
    reason this is called out explicitly here rather than assumed).
-   ======================================================== *)
+
+   GIF/WAV duration sync -- Animate{Sweep,Compare,Dice} each render
+   EXACTLY nMax frames, one per N=1..nMax; that frame COUNT is fixed by
+   the content (there is one distinct histogram/bar-chart state per N,
+   not a resamplable continuous trajectory the way lorenz's ODE
+   solution is), so unlike lorenz/src/animate.wl's ExportAnimation this
+   file cannot flex frame count to hit an exact target duration. What
+   flexes instead is the playback frame RATE: callers pass
+   targetDuration (= nMax * frameDuration, the sonified content's own
+   length, BEFORE main.wl's spoken intro/pause are prepended -- the
+   intro has no visual counterpart and its length is TTS-engine
+   dependent, so it is deliberately excluded from the sync target, see
+   AGENTS.md's "Animation/audio duration sync" section), clamped to
+   [$MinAnimationFps,$MaxAnimationFps] so neither a tiny nMax nor a
+   long frameDuration forces a strobing/molasses playback rate. Inside
+   that clamp range GIF duration matches targetDuration exactly
+   (nMax/frameRate = nMax/(nMax/targetDuration) = targetDuration); only
+   at the clamp's own boundary does it deviate, same tradeoff
+   lorenz/AGENTS.md accepts for its own fps clamp. *)
+
+$MinAnimationFps = 2;
+$MaxAnimationFps = 30;
+
+(* AnimationFrameRate — shared by all three Animate* functions below. *)
+AnimationFrameRate[nMax_Integer, targetDuration_?NumericQ] :=
+  Clip[N[nMax] / targetDuration, {$MinAnimationFps, $MaxAnimationFps}];
 
 
 (* ClampToDomain — Histogram[data,{lo,hi,dx}] bins are half-open even
@@ -54,13 +79,16 @@ RenderSweepFrame[sourceName_String, p_?NumericQ, nStep_Integer, nSamples_Integer
   ];
 
 AnimateSweep[sourceName_String, p_?NumericQ, nMax_Integer, nSamples_Integer,
-            domainLo_?NumericQ, domainHi_?NumericQ, seed_Integer, outGif_String] :=
-  Module[{frames},
-    Print["  Rendering ", nMax, " sweep frames..."];
+            domainLo_?NumericQ, domainHi_?NumericQ, seed_Integer, outGif_String,
+            targetDuration_?NumericQ] :=
+  Module[{frames, frameRate},
+    frameRate = AnimationFrameRate[nMax, targetDuration];
+    Print["  Rendering ", nMax, " sweep frames at ", ToString[NumberForm[frameRate, {3, 1}]],
+          " fps (", ToString[NumberForm[targetDuration, {4, 2}]], "s target)..."];
     frames = Table[RenderSweepFrame[sourceName, p, k, nSamples, domainLo, domainHi, nMax, seed],
                    {k, nMax}];
-    ExportGIF[frames, outGif, 8];
-    nMax
+    ExportGIF[frames, outGif, frameRate];
+    {nMax, frameRate}
   ];
 
 (* RenderSweepSmallMultiple — a few representative N values side by
@@ -135,15 +163,17 @@ RenderCompareFrame[sourceLeft_String, pLeft_?NumericQ, sourceRight_String, pRigh
 
 AnimateCompare[sourceLeft_String, pLeft_?NumericQ, sourceRight_String, pRight_?NumericQ,
               nMax_Integer, nSamples_Integer, domainLo_?NumericQ, domainHi_?NumericQ,
-              seed_Integer, outGif_String] :=
-  Module[{frames},
-    Print["  Rendering ", nMax, " compare frames..."];
+              seed_Integer, outGif_String, targetDuration_?NumericQ] :=
+  Module[{frames, frameRate},
+    frameRate = AnimationFrameRate[nMax, targetDuration];
+    Print["  Rendering ", nMax, " compare frames at ", ToString[NumberForm[frameRate, {3, 1}]],
+          " fps (", ToString[NumberForm[targetDuration, {4, 2}]], "s target)..."];
     frames = Table[
       RenderCompareFrame[sourceLeft, pLeft, sourceRight, pRight, k, nSamples, domainLo, domainHi, seed],
       {k, nMax}
     ];
-    ExportGIF[frames, outGif, 8];
-    nMax
+    ExportGIF[frames, outGif, frameRate];
+    {nMax, frameRate}
   ];
 
 (* Built directly with White/Black swapped throughout, not via a
@@ -218,12 +248,14 @@ RenderDiceFrame[nStep_Integer, nSamples_Integer, domainLo_?NumericQ, domainHi_?N
   ];
 
 AnimateDice[nMax_Integer, nSamples_Integer, domainLo_?NumericQ, domainHi_?NumericQ,
-           seed_Integer, outGif_String] :=
-  Module[{frames},
-    Print["  Rendering ", nMax, " dice frames..."];
+           seed_Integer, outGif_String, targetDuration_?NumericQ] :=
+  Module[{frames, frameRate},
+    frameRate = AnimationFrameRate[nMax, targetDuration];
+    Print["  Rendering ", nMax, " dice frames at ", ToString[NumberForm[frameRate, {3, 1}]],
+          " fps (", ToString[NumberForm[targetDuration, {4, 2}]], "s target)..."];
     frames = Table[RenderDiceFrame[k, nSamples, domainLo, domainHi, nMax, seed], {k, nMax}];
-    ExportGIF[frames, outGif, 4];
-    nMax
+    ExportGIF[frames, outGif, frameRate];
+    {nMax, frameRate}
   ];
 
 RenderDiceSmallMultiple[nMax_Integer, nSamples_Integer, domainLo_?NumericQ, domainHi_?NumericQ,

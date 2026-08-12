@@ -53,7 +53,7 @@ RunExperiment[name_String, overrides_Association] :=
         totalDurSec = N[Length[finalLeft]] / sr;
         STEMDescribeWAV[outWAV, totalDurSec];
 
-        AnimateSearch[searchModel, outGIF, outPNG];
+        AnimateSearch[searchModel, outGIF, outPNG, totalDurSec];
         ExportSearchCSV[searchModel, outCSV],
 
       mode === "compare",
@@ -72,7 +72,7 @@ RunExperiment[name_String, overrides_Association] :=
         totalDurSec = N[Length[finalLeft]] / sr;
         STEMDescribeWAV[outWAV, totalDurSec];
 
-        AnimateCompare[compareModel, outGIF, outPNG];
+        AnimateCompare[compareModel, outGIF, outPNG, totalDurSec];
         ExportCompareCSV[compareModel, outCSV],
 
       mode === "geometry",
@@ -91,7 +91,7 @@ RunExperiment[name_String, overrides_Association] :=
         totalDurSec = N[Length[finalLeft]] / sr;
         STEMDescribeWAV[outWAV, totalDurSec];
 
-        AnimateGeometry[geometryModel, outGIF, outPNG];
+        AnimateGeometry[geometryModel, outGIF, outPNG, totalDurSec];
         ExportGeometryCSV[geometryModel, outCSV]
     ];
 

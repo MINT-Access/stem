@@ -69,7 +69,8 @@ SonifyRipple[model_Association, cfg_Association, outWAV_String] :=
     STEMDescribeWAV[outWAV, audioDurR];
     Print["  Listen for: wavefront arriving at LP1 (leftmost), then LP2, LP3, LP4 in sequence."];
     Print["  Pan: ", StringRiffle[Map[FmtN[#, {4,2}] &, lpPans], " -> "],
-          "  (left to right)"]
+          "  (left to right)"];
+    audioDurR
   ];
 
 (* Sonify the interference model: moving LP with x-position as pan. *)
@@ -100,5 +101,6 @@ SonifyInterference[model_Association, cfg_Association, outWAV_String] :=
     SonifyTrajectory[trajI, cfgI, outWAV, {}];
     STEMDescribeWAV[outWAV, audioDurI];
     Print["  First half: LP stationary at centre (constructive) -- sustained tone."];
-    Print["  Second half: LP sweeps left-to-right -- loud/quiet fringe bands audible."]
+    Print["  Second half: LP sweeps left-to-right -- loud/quiet fringe bands audible."];
+    audioDurI
   ];

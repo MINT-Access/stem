@@ -212,9 +212,15 @@ FluidBuildIntroBuffer[text_String, sr_Integer] :=
     {}
   ];
 
+(* Returns the ACTUAL total WAV duration (intro speech + pause + main
+   audio, in seconds) rather than Null, so callers can pass it straight
+   to Animate* as targetDuration -- the spoken intro's length depends on
+   the platform TTS engine and isn't known until it's synthesised, so
+   exact GIF/WAV sync requires sonifying before animating (main.wl and
+   experiments.wl call Sonify* before Animate* for this reason). *)
 FluidPrependIntroAndExport[introText_String, leftMain_List, rightMain_List,
                            sr_Integer, outWav_String] :=
-  Module[{introBuffer, pauseBuffer, finalLeft, finalRight},
+  Module[{introBuffer, pauseBuffer, finalLeft, finalRight, totalDur},
     Print["  Spoken intro: ", introText];
     introBuffer = FluidBuildIntroBuffer[introText, sr];
     introBuffer = If[Length[introBuffer] > 0, NormalizeBuffer[introBuffer, 0.95], introBuffer];
@@ -223,7 +229,9 @@ FluidPrependIntroAndExport[introText_String, leftMain_List, rightMain_List,
     finalRight  = Join[introBuffer, pauseBuffer, rightMain];
     EnsureDir[outWav];
     ExportAudioBuffer[NormalizeBuffer[{finalLeft, finalRight}, 0.92], outWav, sr];
-    STEMDescribeWAV[outWav, N[Length[finalLeft]] / sr]
+    totalDur = N[Length[finalLeft]] / sr;
+    STEMDescribeWAV[outWav, totalDur];
+    totalDur
   ];
 
 

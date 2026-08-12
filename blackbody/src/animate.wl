@@ -12,7 +12,21 @@
    at each marked feature); GIF colour/background conventions follow
    thermo/src/animate.wl (black background, blue->red colour blend
    tracking the swept parameter).
+
+   GIF playback duration is driven by targetDuration — the actual WAV
+   length (spoken intro/outro + chord/sweep/segments, N[Length[
+   finalLeft]]/sr from main.wl), not a fixed frame count/rate — so the
+   animation and its sonification stay in sync. nFrames is a RENDER
+   BUDGET, not a literal frame count: frameRate is solved as
+   nFrames/targetDuration and clamped to [$MinAnimationFps,
+   $MaxAnimationFps] (2-30 fps), then the actual frame count is
+   recomputed from the clamped rate so playback duration always equals
+   targetDuration exactly. See lorenz/src/animate.wl's ExportAnimation
+   for the reference version of this pattern.
    ======================================================== *)
+
+$MinAnimationFps = 2;
+$MaxAnimationFps = 30;
 
 
 (* ── Shared curve helpers ─────────────────────────────────────────── *)
@@ -101,14 +115,20 @@ RenderSpectrumSweepFrame[T_?NumericQ, nuMin_?NumericQ, nuMax_?NumericQ,
   ];
 
 AnimateSpectrum[T_?NumericQ, spec_Association, nuMin_?NumericQ, nuMax_?NumericQ,
-               outGIF_String, outPNG_String] :=
-  Module[{nBins, frames},
-    nBins = spec["nBins"];
-    Print["  Rendering ", nBins, " spectrum sweep frames..."];
-    frames = Table[RenderSpectrumSweepFrame[T, nuMin, nuMax, spec, k], {k, nBins}];
-    ExportGIF[frames, outGIF, Max[2, Round[nBins / 6.0]]];
+               outGIF_String, outPNG_String, targetDuration_?NumericQ,
+               Optional[nFrames_Integer, 150]] :=
+  Module[{nBins, frameRate, actualNFrames, indices, frames},
+    nBins         = spec["nBins"];
+    frameRate     = Clip[nFrames / targetDuration, {$MinAnimationFps, $MaxAnimationFps}];
+    actualNFrames = Max[2, Round[frameRate * targetDuration]];
+    indices       = Clip[Round[Subdivide[1, nBins, actualNFrames - 1]], {1, nBins}];
+    Print["  Rendering ", Length[indices], " spectrum sweep frames at ", FmtN[frameRate, 3],
+          " fps (", FmtN[Length[indices] / frameRate, 3],
+          "s, matching audio duration ", FmtN[targetDuration, 3], "s)..."];
+    frames = RenderSpectrumSweepFrame[T, nuMin, nuMax, spec, #] & /@ indices;
+    ExportGIF[frames, outGIF, frameRate];
     RenderSpectrumStaticPNG[T, nuMin, nuMax, outPNG];
-    Length[frames]
+    {Length[frames], frameRate}
   ];
 
 
@@ -137,17 +157,21 @@ RenderTemperatureFrame[T_?NumericQ, Tmin_?NumericQ, Tmax_?NumericQ,
   ];
 
 AnimateTemperature[tempResult_Association, nuMin_?NumericQ, nuMax_?NumericQ,
-                   outGIF_String, Optional[nFrames_Integer, 60]] :=
-  Module[{TVals, Tmin, Tmax, nSteps, indices, frames},
-    TVals   = tempResult["TVals"];
-    Tmin    = First[TVals]; Tmax = Last[TVals];
-    nSteps  = Length[TVals];
-    indices = DeleteDuplicates[Round[Subdivide[1, nSteps, Min[nFrames, nSteps] - 1]]];
+                   outGIF_String, targetDuration_?NumericQ, Optional[nFrames_Integer, 150]] :=
+  Module[{TVals, Tmin, Tmax, nSteps, frameRate, actualNFrames, indices, frames},
+    TVals         = tempResult["TVals"];
+    Tmin          = First[TVals]; Tmax = Last[TVals];
+    nSteps        = Length[TVals];
+    frameRate     = Clip[nFrames / targetDuration, {$MinAnimationFps, $MaxAnimationFps}];
+    actualNFrames = Max[2, Round[frameRate * targetDuration]];
+    indices       = Clip[Round[Subdivide[1, nSteps, actualNFrames - 1]], {1, nSteps}];
 
-    Print["  Rendering ", Length[indices], " temperature-sweep frames..."];
+    Print["  Rendering ", Length[indices], " temperature-sweep frames at ", FmtN[frameRate, 3],
+          " fps (", FmtN[Length[indices] / frameRate, 3],
+          "s, matching audio duration ", FmtN[targetDuration, 3], "s)..."];
     frames = RenderTemperatureFrame[TVals[[#]], Tmin, Tmax, nuMin, nuMax] & /@ indices;
-    ExportGIF[frames, outGIF, 12];
-    Length[frames]
+    ExportGIF[frames, outGIF, frameRate];
+    {Length[frames], frameRate}
   ];
 
 RenderTemperatureStaticPNG[Tmin_?NumericQ, Tmax_?NumericQ, nuMin_?NumericQ, nuMax_?NumericQ,
@@ -231,13 +255,35 @@ RenderStarTourFrame[order_List, presets_Association, upTo_Integer,
     ]
   ];
 
-AnimateStarTour[order_List, presets_Association, nuMin_?NumericQ, nuMax_?NumericQ, outGIF_String] :=
-  Module[{n, frames},
+(* Each star's reveal (order[[1;;k]], faded trail + current highlighted)
+   is a discrete step, one per star, not a continuous quantity to
+   subsample directly -- same situation as asteroids/src/animate.wl's
+   per-asteroid reveal. actualNFrames splits into a reveal phase (evenly
+   sampling the n stars, naturally repeating a star across consecutive
+   frames when the budget exceeds n) and a holdFrac share holding the
+   final, fully-revealed frame. *)
+AnimateStarTour[order_List, presets_Association, nuMin_?NumericQ, nuMax_?NumericQ,
+                outGIF_String, targetDuration_?NumericQ, Optional[nFrames_Integer, 150],
+                Optional[holdFrac_?NumericQ, 0.15]] :=
+  Module[{n, frameRate, actualNFrames, holdCount, revealCount, revealIndices, frames},
     n = Length[order];
-    Print["  Rendering ", n, " star-tour frames..."];
-    frames = Table[RenderStarTourFrame[order, presets, k, nuMin, nuMax], {k, n}];
-    ExportGIF[frames, outGIF, 1];
-    n
+
+    frameRate     = Clip[nFrames / targetDuration, {$MinAnimationFps, $MaxAnimationFps}];
+    actualNFrames = Max[2, Round[frameRate * targetDuration]];
+    holdCount     = Max[1, Round[actualNFrames * holdFrac]];
+    revealCount   = Max[1, actualNFrames - holdCount];
+    revealIndices = If[revealCount <= 1, {n},
+      Clip[Round[Subdivide[1, n, revealCount - 1]], {1, n}]];
+
+    Print["  Rendering ", actualNFrames, " star-tour frames (", Length[revealIndices],
+          " reveal + ", holdCount, " hold) at ", FmtN[frameRate, 3],
+          " fps (", FmtN[actualNFrames / frameRate, 3],
+          "s, matching audio duration ", FmtN[targetDuration, 3], "s)..."];
+
+    frames = RenderStarTourFrame[order, presets, #, nuMin, nuMax] & /@ revealIndices;
+    frames = Join[frames, ConstantArray[Last[frames], holdCount]];
+    ExportGIF[frames, outGIF, frameRate];
+    {Length[frames], frameRate}
   ];
 
 RenderStarTourStaticPNG[order_List, presets_Association, nuMin_?NumericQ, nuMax_?NumericQ,

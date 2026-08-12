@@ -4,8 +4,14 @@
    AnimateSignal[analysis, cfg, outDir]
 
    Produces:
-     {mode}_animation.gif   — 10-frame GIF, each frame a 3-panel view
-                              zoomed to a different time window
+     {mode}_animation.gif   — GIF whose PLAYBACK DURATION matches the
+                              signal duration (analysis["duration"]), each
+                              frame a 3-panel view zoomed to a different
+                              time window; frame count scales with
+                              duration so the GIF stays in sync with
+                              {mode}_clean/noisy/recovered.wav, which are
+                              all exported at that same duration (see
+                              $MinAnimationFps/$MaxAnimationFps below)
      {mode}_waveform.png    — full time-domain: clean + noisy overlay
      {mode}_spectrum.png    — frequency domain: spectra + detected peaks
      {mode}_recovery.png    — full time-domain: clean + recovered overlay
@@ -14,7 +20,22 @@
      Left  — time domain: clean (dark blue) + noisy (orange)
      Centre — power spectrum (log scale), peaks marked
      Right  — time domain: clean (dark blue) + recovered (green)
+
+   Note on {mode}_narrative_full.wav: that file is a DIFFERENT timeline —
+   spoken intro/transitions/summary interleaved with full replays of
+   clean, noisy, and recovered (typically 10-13x longer than `dur`). The
+   GIF's sliding time windows sweep exactly once across `dur` seconds of
+   raw signal, so `dur` (== the clean/noisy/recovered WAV duration) is
+   the correct sync target, not narrative_full.wav.
    ======================================================== *)
+
+
+(* Sane bounds on GIF playback frame rate — see AnimateSignal for how
+   these keep the animation's duration in sync with the {mode}_clean/
+   noisy/recovered WAVs (all sized to `dur`) without forcing an absurdly
+   fast or glacial frame rate at the duration extremes. *)
+$MinAnimationFps = 2;
+$MaxAnimationFps = 30;
 
 
 (* PlotDecimate
@@ -132,8 +153,17 @@ AnimateSignal[analysis_Association, cfg_Association, outDir_String] :=
     freqs     = analysis["known_frequencies"];
 
     nSamples  = Length[clean];
-    nFrames   = 10;
-    fps       = GetCfg[cfg, {"animation","fps"},    10];
+
+    (* GIF playback duration must equal `dur` (the clean/noisy/recovered
+       WAV duration), not the old fixed 10 frames -- which played at a
+       constant ~1s regardless of `dur`, decoupling the GIF from the
+       audio it accompanies. `animation.fps` is still the user-facing
+       nominal frame rate; it is clamped to a sane playback range and
+       the frame COUNT is what scales with `dur` so the exact playback
+       duration matches, not just the rate. *)
+    fps       = Clip[GetCfg[cfg, {"animation","fps"}, 10],
+                  {$MinAnimationFps, $MaxAnimationFps}];
+    nFrames   = Max[2, Round[fps * dur]];
     width     = GetCfg[cfg, {"animation","width"},  800];
     height    = GetCfg[cfg, {"animation","height"}, 400];
 
@@ -183,8 +213,10 @@ AnimateSignal[analysis_Association, cfg_Association, outDir_String] :=
         ImageSize  -> {width, height}],
       "PNG"];
 
-    (* ── Animated GIF: 10 frames, each a 3-panel view of one time window ── *)
-    Print["  Rendering ", nFrames, " GIF frames..."];
+    (* ── Animated GIF: nFrames frames, each a 3-panel view of one time window ── *)
+    Print["  Rendering ", nFrames, " GIF frames at ", FmtN[fps, 3],
+          " fps (", FmtN[nFrames / fps, 3],
+          "s, matching signal duration ", FmtN[dur, 3], "s)..."];
     windowSize = Floor[nSamples / nFrames];
 
     specP = SpectrumPlot[analysis, maxFreqHz];

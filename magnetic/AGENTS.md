@@ -318,3 +318,73 @@ mode.
   `Graphics3D`, `ColorData`, `Blend`, `Export`, `SpeechSynthesize`,
   `AudioQ`, `AudioData`, `AudioSampleRate`, `RunProcess` (platform TTS
   fallback), `Import` (reading TTS-generated WAV files).
+
+## GIF/WAV duration sync (fixed post-v1.5.0)
+
+**The bug.** Every `output/<mode>.gif` played back in a fixed 2.8s
+(40 frames at 15 fps, both hardcoded in `src/animate.wl`) regardless of
+how long the matching `<mode>_audio.wav` actually ran. Measured before
+the fix: `cyclotron.gif` 2.8s vs `cyclotron_audio.wav` 52.6s (18.8x),
+`drift.gif` 2.8s vs 48.6s (17.4x), `mirror.gif` 2.8s vs 47.9s (17.1x),
+`multi.gif` 2.8s vs 61.8s (22.1x). The GIF finished and looped back to
+frame 1 roughly fifteen to twenty times over before the audio was
+even a third of the way through.
+
+**Root cause.** `AnimateCyclotron`/`AnimateDrift`/`AnimateMirror`/
+`AnimateMulti` all took only `[model, outGif]` and rendered exactly
+`$MagFrames = 40` frames at `$MagFrameRate = 15` — constants with no
+reference to the trajectory's actual duration. Meanwhile `sonify.wl`
+sizes each WAV's main content from `model["tMax"]` (cyclotron, drift,
+multi) or `model["duration"]` (mirror) — `nSamples = sr * tMax` — the
+real simulated time span, which varies with `n_periods`, `B_z`,
+`charge_mass_ratio`, and (for mirror) `mirror_duration`. The two
+numbers were computed by completely different code paths and never
+compared.
+
+**The fix — two parts.** (1) `AnimateCyclotron`/`AnimateDrift`/
+`AnimateMirror`/`AnimateMulti` now take a third argument,
+`targetDuration`, and treat `$MagFrameBudget = 150` as a render budget
+rather than a literal frame count: `frameRate =
+Clip[$MagFrameBudget/targetDuration, {$MagMinFps, $MagMaxFps}]` (2-30
+fps), then `nFrames = Round[frameRate * targetDuration]` so playback
+duration equals `targetDuration` exactly, not approximately — the
+frame count is what flexes once the fps clamp kicks in at either
+extreme. Each function returns `{nFrames, frameRate}` instead of a
+bare frame count.
+
+(2) `targetDuration` must be the WAV's TRUE total playback length, not
+just the simulated-content length: `sonify.wl` prepends a spoken intro
+plus a 0.4s pause ahead of the main tone content
+(`PrependIntroAndExport`), so `model["tMax"]`/`model["duration"]` alone
+under-counts the file by `introDuration + 0.4`. `PrependIntroAndExport`
+already computed the true total (`Length[finalLeft]/sr`) for
+`STEMDescribeWAV` but discarded it otherwise — it now **returns** that
+value, so `SonifyCyclotron`/`SonifyDrift`/`SonifyMirror`/`SonifyMulti`
+all return it too (their last statement is a tail call into
+`PrependIntroAndExport`). `main.wl` reorders each mode's block so
+sonify runs *before* animate (`[3/4]` and `[4/4]` swapped, with a
+comment explaining why), captures `wavDuration = SonifyCyclotron[...]`,
+and passes that — not `model["tMax"]`/`model["duration"]` — into
+`AnimateCyclotron[model, outGIF, wavDuration]` (etc.), so the GIF spans
+the WAV's actual full length, spoken intro included.
+
+**Verification.** Before either fix: `cyclotron.gif` 2.800s vs
+`cyclotron_audio.wav` 52.573s (18.78x); `drift.gif` 2.800s vs 48.637s
+(17.37x); `mirror.gif` 2.800s vs 47.866s (17.09x); `multi.gif` 2.800s
+vs 61.783s (22.07x). An intermediate version synced the GIF to
+`tMax`/`duration` only (pre-intro content), which closed most of the
+gap but left a residual ~1.5-2x mismatch from the un-covered spoken
+intro. After threading the WAV's true total duration through:
+`cyclotron.gif` 52.500s vs 52.573s audio (ratio 0.9986); `drift.gif`
+48.000s vs 48.637s (0.9869); `mirror.gif` 48.000s vs 47.866s (1.0028);
+`multi.gif` 61.500s vs 61.783s (0.9954) — all within about 1.5% of
+exact sync (the residual is GIF frame-duration quantization to 1/100s
+increments, not a design gap). Also spot-checked a shorter trajectory
+(`--simulation.magnetic.B_z=2.0`, which roughly halves the WAV to
+36.9s): frame rate auto-adjusted to 4.06 fps (150/36.9, still inside
+the clamp) against the full WAV duration, confirming the budget-based
+rate tracks the *actual exported file*, not just the trajectory. The
+helix branch (`v_parallel!=0`, 3D `Graphics3D` rendering path) was also
+re-verified working under the new frame-count logic. `tests/test_model.wl`:
+18/18 pass, unaffected (the test suite only exercises `model.wl`, not
+`animate.wl`/`sonify.wl`'s export path).

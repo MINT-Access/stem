@@ -120,9 +120,9 @@ If[dualAnim,
   Module[{sol2},
     Print["  Solving perturbed trajectory..."];
     {solution, sol2} = SolveLorenzPair[params, 0.001];
-    ExportDualAnimation[solution, sol2, outGIF, 30, 150];
+    ExportDualAnimation[solution, sol2, outGIF, solution[[-1, 1]], 150];
   ],
-  ExportAnimation[solution, outGIF, 30, 150,
+  ExportAnimation[solution, outGIF, solution[[-1, 1]], 150,
     "Lorenz rho=" <> FmtN[params["Rho"],4]];
 ];
 Print["  ", outGIF];

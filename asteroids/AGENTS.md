@@ -105,9 +105,45 @@ All lists are sorted by missDistanceKm ascending (closest first).
 - Reference rings at 1 LD, 5 LD, 20 LD
 - Cyan dots = safe, red dots = hazardous
 - Dot size proportional to log(diameter)
-- Asteroids revealed farthest → closest, final frame held 3 s
+- Asteroids revealed farthest → closest, final frame held (duration-proportional, see below)
 - Angle from Keplerian orbital elements (JPL SBDB) via `AugmentAsteroidsWithAngles`;
   seeded-random fallback (SeedRandom[42]) if elements unavailable
+
+## GIF/WAV duration sync (fixed post-v1.5.0)
+
+**The bug.** `ExportAnimation` rendered exactly one frame per asteroid plus
+a fixed 3s hold, at a fixed 10fps, so GIF playback length tracked asteroid
+*count*, not the WAV's actual length (which is `n * (noteDuration +
+gapDuration)`, unrelated to frame count/rate). Measured before the fix: the
+default weekly run was 6.0s GIF vs 20.2s WAV (3.4x); the full-year preset
+was 186.9s GIF vs 1232.3s WAV (6.6x); `asteroids_hazardous_only` (n=1) was
+the reverse case, 3.1s GIF vs 0.79s WAV (0.25x, GIF *longer* than audio) —
+the same decoupled-frame-budget bug the lorenz/pendulum audit found
+throughout this app suite, confirmed here by ratios spanning both
+directions of mismatch.
+
+**The fix.** `ExportAnimation` now takes `targetDuration` (the same
+`n * stepDur` value `ExportSonification` sizes the WAV with — computed by
+the new `SonificationDuration[n, cfg]` in `sonify.wl`, factored out so
+`main.wl`/`experiment.wl` can compute it before rendering audio) plus
+`nFrames` as a RENDER BUDGET (default 150). `frameRate =
+Clip[nFrames/targetDuration, {2,30}]`; `actualNFrames` is recomputed from
+the clamped rate so playback duration equals `targetDuration` exactly, the
+same pattern as `lorenz/src/animate.wl`. Of `actualNFrames`, a `holdFrac`
+share (default 15%) holds the fully-revealed final frame; the rest is
+spent revealing asteroids, sampled evenly across `1..n` via `Subdivide`
+(not `DeleteDuplicates`d — for small `n` this naturally repeats a reveal
+count across consecutive frames, acting as an implicit hold, rather than
+shrinking the frame budget below what the clamp computed).
+
+**Verification.** Default weekly run: 6.0s → 24.0s GIF (audio 24.12s,
+ratio 3.67x → 1.00x). A 2013 Chelyabinsk-week preset (67 asteroids): audio
+44.89s, GIF 45.0s. `experiment.wl`'s `ExportAnimation` call site was
+updated the same way; its `ExportSonification` call was found to already
+be broken independently (stale 3-argument signature that doesn't match
+`sonify.wl`'s actual `[asteroids, cfg, filePath]` — confirmed it silently
+no-ops, producing no WAV) — a **pre-existing, unrelated bug**, left
+unfixed and flagged here rather than folded into this change.
 
 ## Orbital mechanics (src/animate.wl)
 

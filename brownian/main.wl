@@ -102,17 +102,13 @@ Which[
     ExportWalkCSV[walkTable, outCSV];
     Print[""];
 
-    Print["[4/5] Rendering animation..."];
-    STEMSay["Rendering animation"];
-    outGIF = FileNameJoin[{$projectRoot, "output", "brownian_walk.gif"}];
-    outPNG = FileNameJoin[{$projectRoot, "output", "brownian_walk.png"}];
-    ExportWalkAnimation[walkTable, outGIF];
-    ExportWalkPNG[walkTable, outPNG];
-    STEMDescribeGIF[outGIF, 100, 12];
-    Print["  PNG written: ", outPNG];
-    Print[""];
-
-    Print["[5/5] Synthesising audio..."];
+    (* Audio before GIF (swapped from the original 4/5-then-5/5 order):
+       the GIF's playback duration must match the WAV's ACTUAL total
+       length (intro speech + pause + walk sonification) — intro speech
+       length depends on the platform TTS engine and is not knowable in
+       advance, so it must be measured after export before the GIF can
+       be sized to match it. *)
+    Print["[4/5] Synthesising audio..."];
     STEMSay["Synthesising audio"];
     outWAV = FileNameJoin[{$projectRoot, "output", "brownian_walk.wav"}];
     {rawLeft, rawRight} = WalkStereoBuffer[walkTable, cfg];
@@ -124,7 +120,18 @@ Which[
     finalRight = Join[introBuffer, pauseBuffer, rawRight];
     EnsureDir[outWAV];
     Export[outWAV, Sound[SampledSoundList[{finalLeft, finalRight}, sr]], "WAV"];
-    STEMDescribeWAV[outWAV, N[Length[finalLeft]] / sr];
+    wavDuration = N[Length[finalLeft]] / sr;
+    STEMDescribeWAV[outWAV, wavDuration];
+    Print[""];
+
+    Print["[5/5] Rendering animation..."];
+    STEMSay["Rendering animation"];
+    outGIF = FileNameJoin[{$projectRoot, "output", "brownian_walk.gif"}];
+    outPNG = FileNameJoin[{$projectRoot, "output", "brownian_walk.png"}];
+    {$gifFrames, $gifFps} = ExportWalkAnimation[walkTable, outGIF, wavDuration];
+    ExportWalkPNG[walkTable, outPNG];
+    STEMDescribeGIF[outGIF, $gifFrames, $gifFps];
+    Print["  PNG written: ", outPNG];
     Print[""],
 
   (* ===== ensemble ===== *)

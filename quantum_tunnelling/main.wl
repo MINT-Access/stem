@@ -97,14 +97,7 @@ Which[
     ExportBarrierCSV[model, FileNameJoin[{$outDir, "barrier_data.csv"}]];
     Print[""];
 
-    Print["[2/4] Rendering barrier diagram..."];
-    STEMSay["Rendering the barrier diagram"];
-    nFrames = AnimateBarrier[model, FileNameJoin[{$outDir, "barrier.gif"}],
-                             FileNameJoin[{$outDir, "barrier.png"}]];
-    STEMDescribeGIF[FileNameJoin[{$outDir, "barrier.gif"}], nFrames, 15];
-    Print[""];
-
-    Print["[3/4] Synthesising audio with spoken intro/outro..."];
+    Print["[2/4] Synthesising audio with spoken intro/outro..."];
     STEMSay["Sonifying the tunnelling event"];
     introText = BuildBarrierIntroText[model];
     outroText = BuildBarrierOutroText[model];
@@ -123,6 +116,18 @@ Which[
     EnsureDir[outWAV];
     ExportAudioBuffer[NormalizeBuffer[{finalLeft, finalRight}, 0.92], outWAV, sr];
     STEMDescribeWAV[outWAV, N[Length[finalLeft]] / sr];
+    Print[""];
+
+    Print["[3/4] Rendering barrier diagram..."];
+    STEMSay["Rendering the barrier diagram"];
+    (* targetDuration = mainL's own length -- the narrated tunnelling
+       event's audio, built above -- deliberately excluding the spoken
+       intro/outro just added to finalLeft/finalRight (no visual
+       counterpart, TTS-length dependent; see animate.wl's file header). *)
+    barrierTargetDuration = N[Length[mainL]] / sr;
+    {nFrames, gifFps} = AnimateBarrier[model, FileNameJoin[{$outDir, "barrier.gif"}],
+                             FileNameJoin[{$outDir, "barrier.png"}], barrierTargetDuration];
+    STEMDescribeGIF[FileNameJoin[{$outDir, "barrier.gif"}], nFrames, gifFps];
     Print[""];
 
     Print["[4/4] Done."];
@@ -146,9 +151,13 @@ Which[
 
     Print["[2/4] Rendering sweep animation and static plot..."];
     STEMSay["Rendering the tunnelling probability animation"];
-    nFrames = AnimateSweep[model, FileNameJoin[{$outDir, "sweep.gif"}],
-                           FileNameJoin[{$outDir, "sweep.png"}]];
-    STEMDescribeGIF[FileNameJoin[{$outDir, "sweep.gif"}], nFrames, 12];
+    (* targetDuration = sweepDuration -- the same value passed to
+       BuildSweepAudio below for the sonified glissando's own length,
+       deliberately excluding main.wl's spoken intro (see animate.wl's
+       file header). *)
+    {nFrames, gifFps} = AnimateSweep[model, FileNameJoin[{$outDir, "sweep.gif"}],
+                           FileNameJoin[{$outDir, "sweep.png"}], sweepDuration];
+    STEMDescribeGIF[FileNameJoin[{$outDir, "sweep.gif"}], nFrames, gifFps];
     Print[""];
 
     Print["[3/4] Synthesising audio with spoken intro..."];
@@ -188,9 +197,12 @@ Which[
 
     Print["[2/4] Rendering energy sweep animation and static plot..."];
     STEMSay["Rendering the transmission versus energy animation"];
-    nFrames = AnimateEnergy[model, FileNameJoin[{$outDir, "energy.gif"}],
-                            FileNameJoin[{$outDir, "energy.png"}]];
-    STEMDescribeGIF[FileNameJoin[{$outDir, "energy.gif"}], nFrames, 12];
+    (* targetDuration = energyDuration -- the same value passed to
+       BuildEnergyAudio below, deliberately excluding main.wl's spoken
+       intro (see animate.wl's file header). *)
+    {nFrames, gifFps} = AnimateEnergy[model, FileNameJoin[{$outDir, "energy.gif"}],
+                            FileNameJoin[{$outDir, "energy.png"}], energyDuration];
+    STEMDescribeGIF[FileNameJoin[{$outDir, "energy.gif"}], nFrames, gifFps];
     Print[""];
 
     Print["[3/4] Synthesising audio with spoken intro..."];

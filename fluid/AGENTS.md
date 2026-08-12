@@ -179,6 +179,53 @@ still trivial in absolute terms.
    Every `Graphics` call in `animate.wl` sets `AspectRatio -> height/width`
    explicitly to override this; do the same for any new panel.
 
+## GIF/WAV duration sync (fixed post-v1.5.0)
+
+**The bug.** All three GIFs played far shorter than their matching WAVs:
+`karman.gif` measured 4.16s vs `karman_audio.wav` 45.65s (11x), `flag.gif`
+4.16s vs `flag_audio.wav` 39.80s (9.6x), `strouhal.gif` 6.5s vs
+`strouhal_audio.wav` 47.28s (7.3x).
+
+**Root cause.** `AnimateKarman`/`AnimateStrouhal`/`AnimateFlag` used a
+fixed frame count (32, or up to 50 for strouhal) at a fixed
+`$FluidGifFrameRate` (8 fps) — the same fixed-nFrames/fixed-frameRate
+pattern found across the repo, decoupled from how long the matching
+sonification actually plays. Unlike lorenz (this app's reference fix),
+fluid's WAVs also carry a **spoken intro** baked directly into the audio
+buffer (`FluidPrependIntroAndExport` in `sonify.wl`) whose length depends
+on the platform TTS engine and isn't known until it's actually
+synthesised — so `model["duration"]` alone (the deterministic sim-time
+value) undershoots the true WAV length by whatever the intro adds (here,
+roughly 20s out of karman's 45.65s total).
+
+**The fix.** `ExportGIF`'s frame rate is now solved from a frame-count
+*budget* (150) divided by a `targetDuration` argument, clamped to
+`[$FluidMinGifFps, $FluidMaxGifFps]` (2-30 fps), with the frame count
+itself recomputed at the clamp boundary (`Round[frameRate *
+targetDuration]`) so playback duration always lands almost exactly on
+`targetDuration` — same reasoning as `lorenz/src/animate.wl`'s
+`ExportAnimation` (see its header comment for the full derivation).
+Because the true target duration is only known once the intro speech has
+been synthesised, `FluidPrependIntroAndExport` now **returns the actual
+total WAV duration** instead of `Null`, and `main.wl`/`experiments.wl`
+were reordered to call `SonifyKarman`/`SonifyStrouhal`/`SonifyFlag`
+*before* `AnimateKarman`/`AnimateStrouhal`/`AnimateFlag`, passing the
+returned duration straight through as `targetDuration`.
+
+**Verification (regenerated via `wolframscript -file main.wl` for all
+three modes):**
+
+| Mode | GIF before | WAV | GIF after | Ratio after |
+|------|-----------|-----|-----------|-------------|
+| karman | 4.16s | 45.65s | 45.00s | 0.99x |
+| strouhal | 6.5s | 47.28s | 48.00s | 1.02x |
+| flag | 4.16s | 39.80s | 40.50s | 1.02x |
+
+The residual ~1-2% is GIF frame-delay quantisation (delays round to
+1/100s), the same order of drift seen in lorenz's own fixed GIFs — not a
+remaining bug. `tests/test_model.wl` (5/5 tests, unaffected by this
+change) still passes.
+
 ## Project structure
 
 ```

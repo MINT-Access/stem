@@ -108,8 +108,8 @@ Which[
 
     Print["[3/4] Rendering orbital animation..."];
     STEMSay["Rendering the Galilean moon orbital animation"];
-    nFrames = AnimateGalilean[model, outGIF];
-    STEMDescribeGIF[outGIF, nFrames, $ResonanceGifFrameRate];
+    {nFrames, gifFps} = AnimateGalilean[model, outGIF, GalileanMainDurationSec[model]];
+    STEMDescribeGIF[outGIF, nFrames, gifFps];
     Print[""];
 
     Print["[4/4] Sonifying: event canon (C3/C4/C5, 4:2:1 ratio) + trajectory drone..."];
@@ -147,8 +147,8 @@ Which[
 
     Print["[3/4] Rendering belt-density sweep animation..."];
     STEMSay["Rendering the asteroid belt density sweep"];
-    nFrames = AnimateKirkwood[model, outGIF];
-    STEMDescribeGIF[outGIF, nFrames, $ResonanceGifFrameRate];
+    {nFrames, gifFps} = AnimateKirkwood[model, outGIF, ChordSweepMainDurationSec[model, cfg]];
+    STEMDescribeGIF[outGIF, nFrames, gifFps];
     Print[""];
 
     Print["[4/4] Sonifying: chord, then sweep with gap silences..."];
@@ -182,8 +182,8 @@ Which[
 
     Print["[3/4] Rendering ring-density sweep animation..."];
     STEMSay["Rendering the Saturn ring density sweep"];
-    nFrames = AnimateSaturn[model, outGIF];
-    STEMDescribeGIF[outGIF, nFrames, $ResonanceGifFrameRate];
+    {nFrames, gifFps} = AnimateSaturn[model, outGIF, ChordSweepMainDurationSec[model, cfg]];
+    STEMDescribeGIF[outGIF, nFrames, gifFps];
     Print[""];
 
     Print["[4/4] Sonifying: chord, then sweep with the Cassini Division as a gap..."];

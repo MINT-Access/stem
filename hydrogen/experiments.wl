@@ -31,7 +31,7 @@ freqMax = 4000.0;
 
 (* --- Helper: run one orbital experiment --- *)
 RunOrbitalExperiment[name_String, label_String, orbitalKey_String, gridSize_Integer] :=
-  Module[{orbitalModel, sonifyResult, outWAV},
+  Module[{orbitalModel, sonifyResult, outWAV, audioDur},
     Print[""];
     Print[">>> Experiment: ", name, "  -- ", label];
 
@@ -42,10 +42,11 @@ RunOrbitalExperiment[name_String, label_String, orbitalKey_String, gridSize_Inte
     sonifyResult = SonifyOrbitals[orbitalModel, freqMin, freqMax, 0.02, sr];
     outWAV = FileNameJoin[{$outDir, name <> "_audio.wav"}];
     ExportAudioBuffer[sonifyResult["buffer"], outWAV, sr];
-    STEMDescribeWAV[outWAV, N[Length[sonifyResult["buffer"]]] / sr];
+    audioDur = N[Length[sonifyResult["buffer"]]] / sr;
+    STEMDescribeWAV[outWAV, audioDur];
 
     AnimateOrbital[orbitalModel, FileNameJoin[{$outDir, name <> ".gif"}],
-                                 FileNameJoin[{$outDir, name <> ".png"}]];
+                                 FileNameJoin[{$outDir, name <> ".png"}], audioDur];
     ExportOrbitalsCSV[orbitalModel, sonifyResult["freqs"], sonifyResult["amps"],
                       FileNameJoin[{$outDir, name <> "_data.csv"}]]
   ];
@@ -54,7 +55,7 @@ RunOrbitalExperiment[name_String, label_String, orbitalKey_String, gridSize_Inte
 (* --- Helper: run one transitions experiment --- *)
 RunTransitionsExperiment[name_String, label_String, nStart_Integer, lStart_Integer,
                          nRealizations_Integer, maxSteps_Integer] :=
-  Module[{cascadesList, sonifyResult, outWAV},
+  Module[{cascadesList, sonifyResult, outWAV, audioDur},
     Print[""];
     Print[">>> Experiment: ", name, "  -- ", label];
 
@@ -67,9 +68,10 @@ RunTransitionsExperiment[name_String, label_String, nStart_Integer, lStart_Integ
     sonifyResult = SonifyCascades[cascadesList, freqMin, freqMax, sr];
     outWAV = FileNameJoin[{$outDir, name <> "_audio.wav"}];
     Export[outWAV, Sound[SampledSoundList[{sonifyResult["left"], sonifyResult["right"]}, sr]], "WAV"];
-    STEMDescribeWAV[outWAV, N[Length[sonifyResult["left"]]] / sr];
+    audioDur = N[Length[sonifyResult["left"]]] / sr;
+    STEMDescribeWAV[outWAV, audioDur];
 
-    AnimateTransitions[cascadesList, nStart, FileNameJoin[{$outDir, name <> ".gif"}]];
+    AnimateTransitions[cascadesList, nStart, FileNameJoin[{$outDir, name <> ".gif"}], audioDur];
     ExportTransitionsCSV[cascadesList, sonifyResult["panLists"], sonifyResult["durLists"],
                          sonifyResult["freqLists"], FileNameJoin[{$outDir, name <> "_data.csv"}]]
   ];
@@ -102,7 +104,11 @@ Print[">>> Experiment: spectrum_full  -- full emission spectrum, n_max=8"];
 spectrumResult = BuildSpectrumAudio[8, freqMin, freqMax, 3.0, 0.3, sr];
 ExportAudioBuffer[spectrumResult["chordBuf"], FileNameJoin[{$outDir, "spectrum_full_chord.wav"}], sr];
 ExportAudioBuffer[spectrumResult["sweepBuf"], FileNameJoin[{$outDir, "spectrum_full_sweep.wav"}], sr];
-AnimateSpectrum[spectrumResult, FileNameJoin[{$outDir, "spectrum_full.gif"}]];
+(* No narrated "full" file here (unlike main.wl's spectrum_audio.wav) --
+   target the GIF at chord+sweep duration back-to-back, the actual
+   listening length of this experiment's two WAVs. *)
+spectrumFullDur = N[Length[spectrumResult["chordBuf"]] + Length[spectrumResult["sweepBuf"]]] / sr;
+AnimateSpectrum[spectrumResult, FileNameJoin[{$outDir, "spectrum_full.gif"}], spectrumFullDur];
 ExportSpectrumCSV[spectrumResult, FileNameJoin[{$outDir, "spectrum_full_data.csv"}]];
 
 (* --- spectrum_lyman_only: transitions ending only at n=1, all-UV chord --- *)

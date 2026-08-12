@@ -104,17 +104,12 @@ Which[
     ExportGatesCSV[gatesResult, outCSV];
     Print[""];
 
-    Print["[4/5] Rendering Bloch sphere animation..."];
-    STEMSay["Rendering the Bloch sphere"];
-    outGIF = FileNameJoin[{$projectRoot, "output", "qubit_gates.gif"}];
-    outPNG = FileNameJoin[{$projectRoot, "output", "qubit_gates.png"}];
-    ExportGatesAnimation[gatesResult["rPath"], outGIF];
-    ExportGatesPNG[gatesResult["rPath"], outPNG];
-    STEMDescribeGIF[outGIF, 80, 10];
-    Print["  PNG written: ", outPNG];
-    Print[""];
-
-    Print["[5/5] Synthesising audio..."];
+    (* Audio is synthesised BEFORE the animation (reversing the original
+       [4/5]/[5/5] order) because the GIF's playback duration must match
+       the WAV's actual total length (intro speech + pause + raw
+       sonification) exactly — see AGENTS.md "Animation framing" — and
+       that length isn't known until the intro speech buffer exists. *)
+    Print["[4/5] Synthesising audio..."];
     STEMSay["Synthesising audio"];
     outWAV = FileNameJoin[{$projectRoot, "output", "qubit_gates.wav"}];
     {rawLeft, rawRight} = GatesStereoBuffer[gatesResult, cfg];
@@ -126,7 +121,18 @@ Which[
     finalRight = Join[introBuffer, pauseBuffer, rawRight];
     EnsureDir[outWAV];
     Export[outWAV, Sound[SampledSoundList[{finalLeft, finalRight}, sr]], "WAV"];
-    STEMDescribeWAV[outWAV, N[Length[finalLeft]] / sr];
+    totalDurSec = N[Length[finalLeft]] / sr;
+    STEMDescribeWAV[outWAV, totalDurSec];
+    Print[""];
+
+    Print["[5/5] Rendering Bloch sphere animation..."];
+    STEMSay["Rendering the Bloch sphere"];
+    outGIF = FileNameJoin[{$projectRoot, "output", "qubit_gates.gif"}];
+    outPNG = FileNameJoin[{$projectRoot, "output", "qubit_gates.png"}];
+    {$gifFrames, $gifFps} = ExportGatesAnimation[gatesResult["rPath"], outGIF, totalDurSec];
+    ExportGatesPNG[gatesResult["rPath"], outPNG];
+    STEMDescribeGIF[outGIF, $gifFrames, $gifFps];
+    Print["  PNG written: ", outPNG];
     Print[""],
 
   (* ===== rabi ===== *)

@@ -112,6 +112,38 @@ reappear, check that a new PDF call site has the same wrapping — do not
 that would defeat the point of a fixed display range (see design note
 in `MuSpectrumBins`'s docstring).
 
+### 7. GIF/WAV duration sync (fixed post-v1.5.0)
+
+**The bug.** `AnimateCoin`/`AnimateGaussian`/`AnimateModel` sampled a
+fixed `nFrames` (default 60, `DeleteDuplicates`d) at a fixed frame rate
+(12fps, 10fps for `model`), entirely decoupled from the WAV's actual
+length — which itself includes a spoken-TTS intro of unpredictable
+duration on top of the sonification proper. Measured before the fix:
+`coin.gif` was 4.8s against a 36.1s WAV (7.5x); `gaussian.gif` 4.8s vs
+35.8s (7.5x); `model.gif` 6.0s vs 40.0s (6.7x) — the same
+decoupled-frame-budget bug `lorenz/AGENTS.md` documents, here made worse
+by the intro speech nobody was accounting for at all.
+
+**The fix.** All three `Animate*` functions now take `targetDuration`
+plus `nFrames` as a RENDER BUDGET (default 150), with
+`frameRate = Clip[nFrames/targetDuration, {2,30}]` and `actualNFrames`
+recomputed from the clamped rate so playback equals `targetDuration`
+exactly — same pattern as `lorenz/src/animate.wl`. The harder part was
+getting `targetDuration` right: the WAV's true length is only known
+*after* `ExportAudioBuffer` writes it (TTS intro length is not
+predictable from the text alone), so `main.wl`/`experiments.wl` capture
+`wavDuration = N[Length[finalLeft]] / sr` right after export and pass
+that into the animation call, rather than trying to precompute it.
+`DeleteDuplicates` on the sampled frame indices was also removed — for
+short `targetDuration`/small `n` combinations it silently shrank the
+frame budget below what the clamp had computed; the new code lets
+indices repeat (an implicit hold on that value) so the actual frame
+count always matches `actualNFrames`.
+
+**Verification.** Default runs: `coin` 4.8s → 36.0s GIF (audio 36.09s,
+7.52x → 1.00x); `gaussian` 4.8s → 36.0s GIF (audio 35.84s, 7.47x →
+1.01x); `model` 6.0s → 40.5s GIF (audio 39.96s, 6.66x → 1.01x).
+
 ## Project structure
 
 ```

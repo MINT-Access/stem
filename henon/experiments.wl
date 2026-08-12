@@ -69,7 +69,7 @@ RunExperiment[name_String, overrides_Association] :=
         totalDurSec = N[Length[finalLeft]] / sr;
         STEMDescribeWAV[outWAV, totalDurSec];
 
-        ExportAttractorAnimation[attractorModel["trajectory"], outGIF];
+        ExportAttractorAnimation[attractorModel["trajectory"], outGIF, totalDurSec];
         ExportAttractorPNG[attractorModel["trajectory"], outPNG];
         ExportAttractorCSV[BuildAttractorTrajectory[attractorModel], cfg, outCSV],
 
@@ -90,7 +90,7 @@ RunExperiment[name_String, overrides_Association] :=
         totalDurSec = N[Length[finalLeft]] / sr;
         STEMDescribeWAV[outWAV, totalDurSec];
 
-        AnimateSweepBifurcation[sweepModel, landmarks, outGIF];
+        AnimateSweepBifurcation[sweepModel, landmarks, outGIF, totalDurSec];
         ExportSweepPNG[sweepModel, landmarks, outPNG];
         ExportSweepCSV[sweepResult, sweepModel["aValues"], outCSV],
 

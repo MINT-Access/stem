@@ -140,6 +140,47 @@ so `main.wl` can splice a spoken star-name announcement before each one
 — concatenating inside `sonify.wl` would have no way to interleave
 speech built by `speech.wl`/`main.wl`.
 
+### 7. GIF/WAV duration sync (fixed post-v1.5.0)
+
+**The bug.** `AnimateSpectrum` derived its frame rate purely from bin
+count (`Max[2, Round[nBins/6.0]]`, ~10.7fps at the default 64 bins) with
+one frame per bin; `AnimateTemperature` sampled a fixed `nFrames`
+(default 60, `DeleteDuplicates`d) at a fixed 12fps; `AnimateStarTour` used
+a fixed 1fps, one frame per star. None of the three were tied to the
+WAV's actual length (chord + sweep/segments + spoken intro/outro of
+unpredictable TTS duration). Measured before the fix: `spectrum.gif` was
+5.76s against a 42.54s WAV (7.4x); `star.gif` (single-preset "sun") was
+6.0s against 62.18s (10.4x — the worst mismatch found across this whole
+audit batch); `temperature.gif` 4.8s against 32.52s (6.8x);
+`star_tour_animation.gif` (preset="all") 6.0s against 15.0s (2.5x).
+
+**The fix.** All three functions now take `targetDuration` plus `nFrames`
+as a RENDER BUDGET (default 150), with `frameRate =
+Clip[nFrames/targetDuration, {2,30}]` and `actualNFrames` recomputed from
+the clamped rate — same pattern as `lorenz/src/animate.wl`.
+`AnimateSpectrum`/`AnimateTemperature` sample `actualNFrames` indices
+evenly across their bins/T-steps (no `DeleteDuplicates`, so short targets
+don't silently shrink the frame budget). `AnimateStarTour`'s per-star
+reveal is discrete (like `bell/chsh`'s four-term build-up, not a
+continuous quantity), so it splits `actualNFrames` into a reveal phase
+(the `n` stars, evenly resampled) and a `holdFrac` (default 15%) share
+holding the final, fully-revealed frame — the same reveal+hold split
+`asteroids/src/animate.wl`'s `ExportAnimation` uses.
+
+Unlike `bell/`, no pipeline reordering was needed here: `main.wl` already
+synthesises audio (step 3) before rendering the GIF (step 4) in every
+mode, so `wavDuration = N[Length[finalLeft]] / sr` (captured right after
+`ExportAudioBuffer`) was simply threaded into the existing `Animate*`
+call. `experiments.wl`'s six preset calls were updated the same way,
+computing each `N[Length[...Left]] / $sr` from the raw (no-intro) buffer
+they already build for `RunToFile`.
+
+**Verification.** `spectrum`: 5.76s → 42.0s GIF (audio 42.54s, 7.39x →
+0.99x). `temperature`: 4.8s → 33.0s GIF (audio 32.52s, 6.78x → 1.01x).
+`star` (sun preset): 6.0s → 15.1s GIF (audio 15.1s, 10.36x → 1.00x).
+`star` (preset=all, tour): 6.0s → 61.5s GIF (audio 62.18s, ratio was
+2.50x measured on the `star_tour_animation` experiment variant → 0.99x).
+
 ## Project structure
 
 ```

@@ -152,6 +152,62 @@ the conserved `0.5`, nowhere near the 0.1% tolerance). `ScatterModel`
 uses `+1/r^2`; both checks pass cleanly with this correction (see
 `src/model.wl`'s module header for the same note in code).
 
+### 8. GIF/WAV duration sync (fixed post-v1.5.0)
+
+**The bug.** `AnimateScatter`/`AnimateDistribution`/`AnimateDiscovery`
+rendered a hardcoded `$ScatFrames = 40` at `$ScatFrameRate = 15`, giving
+every GIF the same fixed ~2.7s playback length regardless of what the
+matching WAV actually contained. Measured before the fix: `scatter.gif`
+2.8s vs `scatter_audio.wav` 40.7s (14.5x), `distribution.gif` 2.8s vs
+36.1s (12.9x), `discovery.gif` 2.8s vs 41.3s (14.8x) — the GIF finished
+before the spoken intro alone was done playing.
+
+**Root cause.** Same class of bug as `lorenz`/`magnetic`: frame count
+and frame rate were fixed constants, decoupled from anything about the
+actual run. Unlike `lorenz` (no spoken intro, WAV length ties directly
+to trajectory duration), this app's WAV is `BuildIntroBuffer`/outro
+speech + a silence gap + a "main content" stretch (see
+`PrependIntroAndExport` in `src/sonify.wl`) — and the spoken portion's
+real length depends on the platform TTS voice (macOS `say`, espeak-ng,
+...), not on the simulation. Matching the GIF to the *full* WAV
+(intro included) would mean the animation just sits on frozen content
+while narration plays, which is worse, not better.
+
+**The fix.** `src/animate.wl`'s three `Animate*` functions now take a
+`targetDuration` argument and derive frame count/rate from it the same
+way `magnetic/src/animate.wl` does: `$ScatFrameBudget = 150` is a
+render budget, not a literal count — `frameRate = Clip[budget /
+targetDuration, {2, 30}]`, then `nFrames = Round[frameRate *
+targetDuration]` so playback duration equals `targetDuration` exactly
+even at the fps clamp. `src/sonify.wl` gained three small helpers —
+`ScatterMainDuration`, `DistributionMainDuration`,
+`DiscoveryMainDuration` — that compute the same "main content" length
+(excluding intro/outro) each `Sonify*` function already uses to size
+its own buffer, so `main.wl` calls e.g. `AnimateScatter[model, outGIF,
+ScatterMainDuration[model]]` and both the GIF and the WAV's substantive
+content are built from one shared duration value instead of two
+independently-guessed numbers.
+
+**Verification (regenerated all three presets):**
+
+| mode | gif before | wav before | ratio before | gif after | wav after | ratio after |
+|---|---|---|---|---|---|---|
+| scatter | 2.8s / 40 frames | 40.55s | 14.5x | 19.5s / 150 frames @ 7.5fps | 40.55s | 2.08x |
+| distribution | 2.8s / 40 frames | 36.13s | 12.9x | 16.5s / 150 frames @ 9.2fps | 36.13s | 2.19x |
+| discovery | 2.8s / 40 frames | 41.34s | 14.8x | 7.5s / 150 frames @ 18.8fps | 41.34s | 5.51x |
+
+The remaining gap after the fix (2-5.5x, not 1x) is the spoken
+intro/outro itself — expected and unchanged from `magnetic`'s own
+GIF-vs-WAV relationship, since a silent GIF has no way to depict
+narration. What the fix actually closes is the GIF now playing for the
+same length as the audio's substantive content (trajectory / particle
+stream / histogram build-up), not a fixed 2.7s regardless of scale.
+(Minor: measured GIF duration is slightly below the nominal
+`nFrames/frameRate` value in each row — e.g. 20.0s nominal vs 19.5s
+measured for scatter — because GIF frame delays are stored in
+centisecond increments; this is a lossy-container rounding artifact
+present in every app using `ExportGIF`, not something introduced here.)
+
 ## Project structure
 
 ```

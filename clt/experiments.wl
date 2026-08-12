@@ -43,7 +43,7 @@ Print[">>> Experiment: sweep_uniform"];
 sweep1 = BuildSweepAudio["uniform", 0.5, 30, $nSamples, $nBins, $audioFreqMin, $audioFreqMax, $frameDur, 42, $sr];
 RunToFile["sweep_uniform", sweep1["left"], sweep1["right"]];
 AnimateSweep["uniform", 0.5, 30, $nSamples, domainLo1, domainHi1, 42,
-             FileNameJoin[{$outDir, "sweep_uniform_animation.gif"}]];
+             FileNameJoin[{$outDir, "sweep_uniform_animation.gif"}], 30 * $frameDur];
 RenderSweepSmallMultiple["uniform", 0.5, 30, $nSamples, domainLo1, domainHi1, 42,
                          FileNameJoin[{$outDir, "sweep_uniform_plot.png"}]];
 ExportSweepCSV["uniform", 0.5, 30, $nSamples, domainLo1, domainHi1, $nBins, 42,
@@ -56,7 +56,7 @@ Print[">>> Experiment: sweep_exponential"];
 sweep2 = BuildSweepAudio["exponential", 0.5, 30, $nSamples, $nBins, $audioFreqMin, $audioFreqMax, $frameDur, 42, $sr];
 RunToFile["sweep_exponential", sweep2["left"], sweep2["right"]];
 AnimateSweep["exponential", 0.5, 30, $nSamples, domainLo2, domainHi2, 42,
-             FileNameJoin[{$outDir, "sweep_exponential_animation.gif"}]];
+             FileNameJoin[{$outDir, "sweep_exponential_animation.gif"}], 30 * $frameDur];
 RenderSweepSmallMultiple["exponential", 0.5, 30, $nSamples, domainLo2, domainHi2, 42,
                          FileNameJoin[{$outDir, "sweep_exponential_plot.png"}]];
 ExportSweepCSV["exponential", 0.5, 30, $nSamples, domainLo2, domainHi2, $nBins, 42,
@@ -69,7 +69,7 @@ Print[">>> Experiment: sweep_bernoulli"];
 sweep3 = BuildSweepAudio["bernoulli", 0.3, 30, $nSamples, $nBins, $audioFreqMin, $audioFreqMax, $frameDur, 42, $sr];
 RunToFile["sweep_bernoulli", sweep3["left"], sweep3["right"]];
 AnimateSweep["bernoulli", 0.3, 30, $nSamples, domainLo3, domainHi3, 42,
-             FileNameJoin[{$outDir, "sweep_bernoulli_animation.gif"}]];
+             FileNameJoin[{$outDir, "sweep_bernoulli_animation.gif"}], 30 * $frameDur];
 RenderSweepSmallMultiple["bernoulli", 0.3, 30, $nSamples, domainLo3, domainHi3, 42,
                          FileNameJoin[{$outDir, "sweep_bernoulli_plot.png"}]];
 ExportSweepCSV["bernoulli", 0.3, 30, $nSamples, domainLo3, domainHi3, $nBins, 42,
@@ -83,7 +83,7 @@ compare1 = BuildCompareAudio["uniform", 0.5, "exponential", 0.5, 30, $nSamples, 
                              $audioFreqMin, $audioFreqMax, $frameDur, 42, $sr];
 RunToFile["compare_default", compare1["left"], compare1["right"]];
 AnimateCompare["uniform", 0.5, "exponential", 0.5, 30, $nSamples, domainLoC, domainHiC, 42,
-               FileNameJoin[{$outDir, "compare_default_animation.gif"}]];
+               FileNameJoin[{$outDir, "compare_default_animation.gif"}], 30 * $frameDur];
 RenderCompareStaticPNG["uniform", 0.5, "exponential", 0.5, 30, $nSamples, domainLoC, domainHiC, 42,
                        FileNameJoin[{$outDir, "compare_default_plot.png"}]];
 ExportCompareCSV["uniform", 0.5, "exponential", 0.5, 30, $nSamples, 42,
@@ -95,7 +95,8 @@ Print[">>> Experiment: dice_default"];
 {domainLoD, domainHiD} = DiceDisplayDomain[10];
 dice1 = BuildDiceAudio[10, $nSamples, $nBins, $audioFreqMin, $audioFreqMax, $frameDur, 42, $sr];
 RunToFile["dice_default", dice1["left"], dice1["right"]];
-AnimateDice[10, $nSamples, domainLoD, domainHiD, 42, FileNameJoin[{$outDir, "dice_default_animation.gif"}]];
+AnimateDice[10, $nSamples, domainLoD, domainHiD, 42,
+            FileNameJoin[{$outDir, "dice_default_animation.gif"}], 10 * $frameDur];
 RenderDiceSmallMultiple[10, $nSamples, domainLoD, domainHiD, 42, FileNameJoin[{$outDir, "dice_default_plot.png"}]];
 ExportDiceCSV[10, $nSamples, 42, FileNameJoin[{$outDir, "dice_default_stats.csv"}]];
 

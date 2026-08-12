@@ -184,6 +184,34 @@ each `WalkStereoBuffer` call — the same "explicit dedicated duration
 parameter, not the shared app-wide one" pattern `thermo/distribution`
 and `blackbody/star` use for their own per-step frames.
 
+### 9. GIF/WAV duration sync (fixed post-v1.5.0)
+
+**The bug.** `ExportWalkAnimation` (the only GIF this app produces —
+`ensemble` and `temperature` modes are PNG-only, unaffected) sampled a
+fixed `nFrames` (default 100) at a fixed 12fps, entirely decoupled from
+the WAV's actual length, which includes a spoken-TTS intro on top of the
+walk sonification proper. Measured before the fix: `brownian_walk.gif`
+(and both `experiments.wl` presets, `walk_default`/`walk_larger_particle`,
+which share the same default `nSteps`/`sonification.duration`) were all
+8.0s against a 38.07s WAV (4.76x).
+
+**The fix.** `ExportWalkAnimation` now takes `targetDuration` plus
+`nFrames` as a RENDER BUDGET (default 150), with `frameRate =
+Clip[nFrames/targetDuration, {2,30}]` and `actualNFrames` recomputed from
+the clamped rate so playback equals `targetDuration` exactly — same
+pattern as `lorenz/src/animate.wl`. Getting `targetDuration` right
+required reordering `main.wl`'s `walk`-mode pipeline: the WAV's true
+length is only known *after* `Export` writes it (TTS intro length isn't
+predictable from the text), so audio synthesis now runs BEFORE animation
+rendering (was the reverse), and the animation call uses `wavDuration =
+N[Length[finalLeft]] / sr` captured right after export.
+`experiments.wl` already computed `totalDurSec` before its
+`ExportWalkAnimation` call (audio was already synthesised first there),
+so only the call itself needed the new argument.
+
+**Verification.** Default `walk` run: 8.0s → 38.0s GIF (audio 38.07s,
+4.76x → 1.00x).
+
 ## Project structure
 
 ```

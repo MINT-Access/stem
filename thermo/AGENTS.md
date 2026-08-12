@@ -191,13 +191,13 @@ additionally prints check 4:
    Always use `Optional[gamma_?NumericQ, 1.0]` instead (same pitfall
    documented in `dynamical/AGENTS.md`; all optional-argument functions
    here use the explicit `Optional[]` form for this reason).
-2. **`Animate*` functions return their actual rendered frame count**,
-   not the requested `nFrames` — `Min[nFrames, nStepsAvailable]` can
-   cap it lower (e.g. `cooling` mode's default 50 available frames
-   caps a requested 60 down to 50). `main.wl` captures this return
-   value and passes it to `STEMDescribeGIF` — do not hardcode the
-   requested count there, or the printed summary will say "60 frames"
-   for a GIF that actually has 50.
+2. **`Animate*` functions return `{actualNFrames, frameRate}`**, not a
+   bare frame count — both values are export-time-derived (see
+   "GIF/WAV duration sync" below), so `main.wl`/`experiments.wl` always
+   destructure the result (`{nFramesRendered, gifFps} = AnimateXxx[...]`)
+   and pass both to `STEMDescribeGIF[outGIF, nFramesRendered, gifFps]`.
+   Do not hardcode either value there, or the printed summary will lie
+   about what was actually exported.
 3. **`MBSpectrumBins`'s amplitude normalisation is peak-relative, not
    area-relative** — `amps = densities / Max[densities]`, so the
    loudest bin in every frame is always amplitude 1.0 before the
@@ -213,6 +213,97 @@ additionally prints check 4:
    straight to `SampledSoundList`, which wants channel-major (2 x N)
    for stereo. Passing a transposed N x 2 matrix here would silently
    produce a garbled/interleaved-sounding export.
+
+## GIF/WAV duration sync (fixed post-v1.5.0)
+
+**The bug.** Every `Animate*` function in `src/animate.wl` exported its
+GIF at a fixed, mode-specific frame rate (12/10/10/8 fps for
+distribution/ensemble/cooling/equipartition) with a frame count capped
+by a hardcoded render budget (60/60/60/30), both entirely unrelated to
+the WAV's actual playback length. Measured before the fix, across all
+12 GIF/WAV pairs in `output/`: `distribution.gif` 0.15x, `ensemble.gif`
+0.18x, `equipartition.gif` 0.13x, `cooling.gif` 0.31x, and the
+`experiments.wl` presets (no spoken intro, so shorter WAVs) ranging
+0.30x-0.48x — i.e. every GIF finished playing well before its WAV, in
+the worst case (equipartition) 7-8x too fast.
+
+**The one exception, and why it wasn't actually a different code
+path.** `cooling_default_animation.gif` measured at exactly 1.00x. This
+is coincidence, not a separate correct mechanism — `AnimateCooling` used
+the *same* shared logic as the other three modes. Two independent
+numeric accidents lined up for this one preset: (1) `frame_duration`
+(0.1s, the physics-audio frame length) is the exact reciprocal of the
+hardcoded export frame rate (10 fps), so `nSteps` (`duration/frame_duration`
+= 5.0/0.1 = 50) rendered at 10 fps gives a GIF duration
+(50 frames / 10 fps = 5.0s) that equals the *audio's* core duration
+(50 frames x 0.1s = 5.0s) by construction, for any cooling run at these
+defaults; and (2) `experiments.wl`'s `cooling_default` experiment writes
+its WAV via `RunToFile`, which — unlike `main.wl` — never prepends the
+spoken intro, so the WAV has no extra duration this coincidence needs
+to account for. Change either the frame rate/frame-duration reciprocal
+relationship or reintroduce intro speech, and the "1.00x" disappears.
+`distribution_helium_animation.gif` (also `experiments.wl`, also no
+intro) is a clean falsification of the "already correct" hypothesis:
+same no-intro code path, still measured 0.48x, because 12 fps is *not*
+the reciprocal of 0.1s.
+
+**The fix.** `ExportTimedGIF[frames, filePath, targetDuration]`
+(top of `src/animate.wl`) replaces the direct `ExportGIF[frames, path,
+fixedRate]` call in all four `Animate*` functions. It solves
+`frameRate = Length[frames]/targetDuration`, clamped to
+`[$MinAnimationFps, $MaxAnimationFps]` = `[2, 30]` fps so a short sweep
+doesn't demand a strobing rate and a long one doesn't demand a glacial
+one; if the clamp binds, the frame *count* is what flexes (padded by
+repeating the final frame, or trimmed) so playback duration still lands
+on `targetDuration`. Each `Animate*` function gained a required
+`targetDuration` parameter (all four now return `{actualNFrames,
+frameRate}` — see "Common pitfalls" #2) and the render-budget defaults
+were bumped (distribution/equipartition 60/30 -> 150, ensemble 60 ->
+250; cooling's 60 was untouched since its 50-step default was already
+under budget) so, at default config, every mode renders its *entire*
+available data series rather than a subsample — with real thermo
+durations (5-35s) that keeps `frameRate` comfortably inside `[2,30]`
+without the clamp ever binding, so no padding/trimming happens in
+practice. `main.wl` passes `wavDuration = N[Length[finalLeft]]/sr` (the
+exact WAV length, intro speech included) as `targetDuration`; the
+no-intro `experiments.wl` passes `AudioDuration[buffers] =
+N[Length[buffers["left"]]]/$sr` instead, since its WAVs have no intro to
+account for. This mirrors the `lorenz/src/animate.wl` `ExportAnimation`
+pattern (see that file), adapted for thermo's fixed-length precomputed
+data series (TVals/history/times, 50-201 points) rather than a
+continuous ODE trajectory that can be resampled at an arbitrary frame
+count.
+
+**Verification, measured after the fix (Python, PIL + wave stdlib):**
+
+| File | Before (gif/wav) | After (gif/wav) |
+|---|---|---|
+| `cooling.gif` | 0.313x | 1.0017x |
+| `cooling_default_animation.gif` | **1.000x** | **1.0000x** (regression check: still exact) |
+| `distribution.gif` | 0.154x | 0.9929x |
+| `distribution_helium_animation.gif` | 0.480x | 1.0000x |
+| `distribution_hydrogen_animation.gif` | 0.480x | 1.0000x |
+| `distribution_nitrogen_animation.gif` | 0.480x | 1.0000x |
+| `ensemble.gif` | 0.177x | 1.0105x |
+| `ensemble_default_animation.gif` | 0.299x | 1.0000x |
+| `ensemble_large_animation.gif` | 0.299x | 1.0000x |
+| `equipartition.gif` | 0.128x | 1.0162x |
+| `equipartition_diatomic_animation.gif` | 0.390x | 1.0000x |
+| `equipartition_monatomic_animation.gif` | 0.390x | 1.0000x |
+
+The four pairs still off by ~1-2% (`cooling.gif`, `distribution.gif`,
+`ensemble.gif`, `equipartition.gif` — the `main.wl` runs with spoken
+intros, at non-round frame rates like 5.9438 fps) are GIF-format
+quantization, not a logic error: `Export[..., "DisplayDurations" ->
+1/frameRate]` stores each frame's delay in centiseconds, so
+`1/5.9438 = 0.16824s` rounds to `0.17s`, and that per-frame rounding
+error compounds across 201 frames into the observed +0.35s. The
+no-intro `experiments.wl` presets and `cooling_default` all land on
+frame rates that divide evenly into whole centiseconds (10, 12→10 fps
+etc.) or have few enough frames that rounding doesn't accumulate
+visibly, hence their exact 1.0000x. Re-ran `tests/test_model.wl` after
+the change (physics-only, does not touch `animate.wl`): 28/28 still
+pass, as expected.
 
 ## Dependencies
 

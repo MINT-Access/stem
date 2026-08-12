@@ -13,6 +13,16 @@
    ======================================================== *)
 
 
+(* Sane bounds on GIF playback frame rate — see AnimateFieldTraversal /
+   AnimateZoom for how these keep each animation's playback duration in
+   sync with its matching WAV's actual duration (spoken intro + pause +
+   sonification) without forcing an absurdly fast frame rate for a
+   short render or an implausibly slow one for a long one (see
+   AGENTS.md, "GIF/WAV duration sync"). *)
+$MinAnimationFps = 2;
+$MaxAnimationFps = 30;
+
+
 (* IterationToColor — HSB hue sweep for escaping points, black for
    points at maxIter (treated as non-escaping / in the set). *)
 IterationToColor[iter_Integer, maxIter_Integer] :=
@@ -38,16 +48,37 @@ FieldToImage[iterField_List, traversal_List, size_Integer, maxIter_Integer] :=
   ];
 
 (* AnimateFieldTraversal — images/'s AnimateImageTraversal pattern,
-   reused directly: a 32-frame GIF of the Hilbert path growing across
-   the rendered field. *)
+   reused directly: a GIF of the Hilbert path growing across the
+   rendered field.
+
+   targetDuration should be the matching WAV's actual total duration
+   (spoken intro + pause + per-pixel note stream, computed just before
+   this call — see main.wl/experiments.wl). nFrames is a RENDER
+   BUDGET, not a literal frame count: frameRate is solved as
+   nFrames/targetDuration and clamped to [$MinAnimationFps,
+   $MaxAnimationFps] so a short render doesn't demand a strobing frame
+   rate and a long one doesn't demand an implausibly slow one — the
+   frame COUNT is what flexes at the clamp boundary (recomputed as
+   Round[frameRate * targetDuration]) so actual playback duration
+   always equals targetDuration exactly. Returns {actualNFrames,
+   frameRate} so callers can report real numbers via STEMDescribeGIF. *)
 AnimateFieldTraversal[iterField_List, traversal_List, size_Integer, maxIter_Integer,
-                      outGIF_String] :=
-  Module[{nGIFFrames = 32, img, displayData, gCoords, frameUpTo, gifFrames, nPixels},
+                      outGIF_String, targetDuration_?NumericQ, Optional[nFrames_Integer, 150]] :=
+  Module[{img, displayData, gCoords, frameUpTo, gifFrames, nPixels, frameRate, actualNFrames},
     nPixels = Length[traversal];
+
+    frameRate = Clip[nFrames / targetDuration, {$MinAnimationFps, $MaxAnimationFps}];
+    actualNFrames = Max[2, Round[frameRate * targetDuration]];
+
     img = FieldToImage[iterField, traversal, size, maxIter];
     displayData = Reverse @ ImageData[img];
     gCoords = Map[{#[[1]] - 0.5, size - #[[2]] + 0.5} &, traversal];
-    frameUpTo = Table[Max[1, Round[k * nPixels / nGIFFrames]], {k, nGIFFrames}];
+    frameUpTo = Table[Max[1, Round[k * nPixels / actualNFrames]], {k, actualNFrames}];
+
+    Print["  Rendering ", actualNFrames, " traversal frames at ", FmtN[frameRate, 3],
+          " fps (", FmtN[actualNFrames / frameRate, 3],
+          "s, matching audio duration ", FmtN[targetDuration, 3], "s)..."];
+
     gifFrames = Table[
       With[{pathG = gCoords[[1 ;; frameUpTo[[k]]]]},
         Graphics[{
@@ -58,9 +89,10 @@ AnimateFieldTraversal[iterField_List, traversal_List, size_Integer, maxIter_Inte
         PlotRange -> {{0, size}, {0, size}}, ImagePadding -> None,
         AspectRatio -> 1, ImageSize -> 320]
       ],
-      {k, nGIFFrames}
+      {k, actualNFrames}
     ];
-    ExportGIF[gifFrames, outGIF, 10]
+    ExportGIF[gifFrames, outGIF, frameRate];
+    {actualNFrames, frameRate}
   ];
 
 
@@ -68,9 +100,14 @@ AnimateFieldTraversal[iterField_List, traversal_List, size_Integer, maxIter_Inte
    MODE 1/2: mandelbrot, julia — shared renderer
    ======================================================== *)
 
-AnimateAndExportField[model_Association, outGIF_String, outPNG_String] :=
-  Module[{img, size, upscaled},
-    AnimateFieldTraversal[model["iterField"], model["traversal"], model["size"], model["maxIter"], outGIF];
+(* AnimateAndExportField — see AnimateFieldTraversal for the
+   targetDuration/nFrames duration-sync contract. Returns
+   {actualNFrames, frameRate}. *)
+AnimateAndExportField[model_Association, outGIF_String, outPNG_String,
+                      targetDuration_?NumericQ, Optional[nFrames_Integer, 150]] :=
+  Module[{img, size, upscaled, gifStats},
+    gifStats = AnimateFieldTraversal[model["iterField"], model["traversal"], model["size"], model["maxIter"],
+                                      outGIF, targetDuration, nFrames];
     size = model["size"];
     img = FieldToImage[model["iterField"], model["traversal"], size, model["maxIter"]];
     (* Export upscaled via Graphics/Raster (matching the GIF's own
@@ -81,7 +118,8 @@ AnimateAndExportField[model_Association, outGIF_String, outPNG_String] :=
       PlotRange -> {{0, size}, {0, size}}, ImagePadding -> None,
       AspectRatio -> 1, ImageSize -> 512];
     Export[outPNG, upscaled, "PNG"];
-    Print["  PNG: ", outPNG]
+    Print["  PNG: ", outPNG];
+    gifStats
   ];
 
 
@@ -100,9 +138,20 @@ ZoomLevelFrame[images_List, levels_List, k_Integer, size_Integer, imgSize_Intege
     PlotRange -> {{0, size}, {0, size}}, ImagePadding -> None,
     AspectRatio -> 1, ImageSize -> imgSize];
 
-AnimateZoom[model_Association, outGIF_String, outPNG_String] :=
-  Module[{levels, size, maxIter, framesPerLevel = 8, gifFrames, images,
-          nLevels, nCols, nRows, panelSize, combined},
+(* AnimateZoom — GIF cycles through levels, each level held for a
+   share of frames proportional to actualNFrames/nLevels. Same
+   duration-sync contract as AnimateFieldTraversal (see its docstring):
+   targetDuration is the matching WAV's actual total duration, nFrames
+   is a render budget clamped to [$MinAnimationFps, $MaxAnimationFps]
+   fps. framesPerLevel is distributed via cumulative rounding so the
+   per-level counts sum to exactly actualNFrames (every level gets at
+   least one frame) and total playback duration equals targetDuration
+   exactly. Returns {actualNFrames, frameRate}. *)
+AnimateZoom[model_Association, outGIF_String, outPNG_String,
+           targetDuration_?NumericQ, Optional[nFrames_Integer, 150]] :=
+  Module[{levels, size, maxIter, gifFrames, images,
+          nLevels, nCols, nRows, panelSize, combined,
+          frameRate, actualNFrames, cumCounts, framesPerLevelList},
     levels = model["levels"]; size = model["size"]; maxIter = model["maxIter"];
     nLevels = Length[levels];
 
@@ -111,11 +160,20 @@ AnimateZoom[model_Association, outGIF_String, outPNG_String] :=
       levels
     ];
 
+    frameRate = Clip[nFrames / targetDuration, {$MinAnimationFps, $MaxAnimationFps}];
+    actualNFrames = Max[nLevels, Round[frameRate * targetDuration]];
+    cumCounts = Round[Range[0, nLevels] * actualNFrames / nLevels];
+    framesPerLevelList = Differences[cumCounts];
+
+    Print["  Rendering ", actualNFrames, " frames across ", nLevels, " levels at ",
+          FmtN[frameRate, 3], " fps (", FmtN[actualNFrames / frameRate, 3],
+          "s, matching audio duration ", FmtN[targetDuration, 3], "s)..."];
+
     gifFrames = Flatten[Table[
       ZoomLevelFrame[images, levels, k, size, 320],
-      {k, nLevels}, {framesPerLevel}
+      {k, nLevels}, {framesPerLevelList[[k]]}
     ], 1];
-    ExportGIF[gifFrames, outGIF, 6];
+    ExportGIF[gifFrames, outGIF, frameRate];
 
     (* Combined static PNG: all levels side by side in one Graphics
        row (via GraphicsGrid on the same Raster+Text frames the GIF
@@ -129,5 +187,6 @@ AnimateZoom[model_Association, outGIF_String, outPNG_String] :=
       Spacings -> 4, Background -> Black, ImageSize -> panelSize * nLevels
     ];
     Export[outPNG, combined, "PNG"];
-    Print["  PNG: ", outPNG]
+    Print["  PNG: ", outPNG];
+    {actualNFrames, frameRate}
   ];

@@ -162,6 +162,29 @@ ScatteringAccentBurst[freq_?NumericQ, dur_?NumericQ, amp_?NumericQ, sr_Integer] 
   ]
 
 
+(* ── Main-content durations (excludes spoken intro/outro). ─────────
+   Each mode's WAV is BuildIntroBuffer/outro speech + a silence gap +
+   this "main" stretch -- the intro's real length depends on the
+   platform TTS voice (macOS `say`, espeak-ng, ...) and has nothing to
+   do with the simulated trajectory, so it is the wrong basis for GIF
+   sync. These are the SAME expressions each Sonify* function below
+   uses to size its own main buffer; animate.wl's callers (main.wl)
+   use them as the GIF's targetDuration so the animation's playback
+   length matches the part of the audio it is actually depicting,
+   not the platform-dependent narration bolted onto the front. *)
+
+ScatterMainDuration[model_Association] :=
+  Clip[0.6 * model["tActual"], {4.0, 20.0}]
+
+DistributionMainDuration[model_Association, cfg_Association] :=
+  Module[{noteDuration = N @ GetCfg[cfg, {"simulation", "scattering", "note_duration"}, 0.08]},
+    N[model["n"]] * noteDuration + 0.3
+  ]
+
+DiscoveryMainDuration[cfg_Association] :=
+  N @ GetCfg[cfg, {"simulation", "scattering", "n_seconds"}, 8.0]
+
+
 (* ========================================================
    SCATTER MODE
    ======================================================== *)
@@ -183,7 +206,7 @@ SonifyScatter[model_Association, cfg_Association, outWav_String] :=
     traj = N @ Transpose[{tArr, xArr, yPitchCol, ConstantArray[0.0, nPts], speedArr}];
 
     cfgSon = DeepMerge[cfg, <|"sonification" -> <|
-      "duration" -> Clip[0.6 * model["tActual"], {4.0, 20.0}],
+      "duration" -> ScatterMainDuration[model],
       "pitch"    -> <| "min_hz" -> 220.0, "max_hz" -> 1760.0 |>,
       "volume"   -> <| "min_db" -> -24.0, "max_db" -> -3.0 |>
     |>|>];
@@ -324,7 +347,7 @@ SonifyDiscovery[model_Association, cfg_Association, outWav_String] :=
     introBuf, outroBuf, pauseBuf, finalLeft, finalRight
   },
     sr = Round @ GetCfg[cfg, {"sonification", "sample_rate"}, 44100];
-    nSeconds = N @ GetCfg[cfg, {"simulation", "scattering", "n_seconds"}, 8.0];
+    nSeconds = DiscoveryMainDuration[cfg];
 
     {leftMain, rightMain} = BuildDiscoveryAudio[model, nSeconds, sr];
 
