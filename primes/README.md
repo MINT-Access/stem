@@ -105,9 +105,12 @@ primes.
 count by ear. Large gaps become clearly audible pauses; twin primes remain
 perceptually paired.
 
-The animated GIF progressively reveals the gap sequence as a line chart in steps
-of `ceil(count/50)` gaps per frame (≤ 50 frames total). The final frame adds an
-inset frequency histogram showing how often each gap value occurs.
+The animated GIF progressively reveals the gap sequence as a line chart, with
+frame count and frame rate solved so playback duration matches `gaps_audio.wav`
+exactly (a render budget of 50 frames, clamped to 2-30 fps — at the default
+config this resolves to 60 frames at 2 fps, not a fixed 50; see `AGENTS.md`,
+"GIF/WAV duration sync"). The final frame adds an inset frequency histogram
+showing how often each gap value occurs.
 
 ## Outputs
 
@@ -125,7 +128,7 @@ inset frequency histogram showing how often each gap value occurs.
 
 | File | Description |
 |------|-------------|
-| `output/gaps_animation.gif` | Animated gap chart, progressive reveal (≤ 50 frames) |
+| `output/gaps_animation.gif` | Animated gap chart, progressive reveal, playback duration matched to `gaps_audio.wav` |
 | `output/gaps_stats.csv` | n, prime, next_prime, gap, cumulative_gap, is_twin_prime |
 | `output/gaps_audio.wav` | Percussive sonification at base tempo (≈ 30 s) |
 | `output/gaps_slow.wav` | Same sonification at quarter tempo (≈ 120 s) |
@@ -162,13 +165,17 @@ export.
 
     primes/
     ├── main.wl              Entry point
+    ├── experiments.wl       Curated preset runs
     ├── config.json          App-level defaults
     ├── src/
     │   ├── model.wl         UlamModel, GapsModel, UlamCoords
     │   ├── animate.wl       Grid PNG/GIF and gap animation (AnimatePrimes)
     │   └── sonify.wl        Row-scan and percussive WAV export (SonifyPrimes)
+    ├── tests/
+    │   └── test_model.wl    Unit tests
     ├── output/              Output files (not committed)
-    └── README.md
+    ├── README.md
+    └── AGENTS.md
 
 ## Console output
 

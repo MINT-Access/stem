@@ -27,7 +27,7 @@ numbers are actually quoted in atomic physics and astronomy.
 hydrogen/
   main.wl              -- entry point; mode branching; per-mode pipeline
   config.json          -- app defaults (mode, hydrogen sub-config)
-  experiments.wl         -- 10 curated preset invocations
+  experiments.wl         -- 9 curated preset invocations
   LISTENING_GUIDE.md     -- user-facing listening order and physics notes
   AGENTS.md              -- this file
   src/

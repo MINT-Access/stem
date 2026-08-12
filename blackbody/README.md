@@ -198,7 +198,7 @@ four run on every invocation regardless of mode:
 ```
 blackbody/
   main.wl              — Entry point (thin orchestrator)
-  experiments.wl        — 7 curated preset invocations
+  experiments.wl        — 6 curated preset invocations
   config.json            — App defaults
   LISTENING_GUIDE.md      — Recommended listening sequence
   src/

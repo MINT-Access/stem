@@ -35,7 +35,7 @@ wolframscript -file tests/test_model.wl
 |------|-------------|
 | `output/simple_results.csv` | Time, angle, velocity, energy per time step |
 | `output/simple_animation.gif` | Looping animated GIF of the pendulum |
-| `output/simple_audio.wav` | Sonification (A minor pentatonic scale, WAV) |
+| `output/simple_audio.wav` | Sonification (continuous pitch/pan/volume carrier, 220-660 Hz, WAV) |
 
 **Double mode** (`--simulation.mode=double`, default):
 
@@ -86,25 +86,32 @@ own four modes.
 
 ## Sonification
 
-| Parameter | Design |
-|---|---|
-| Pitch | Swing angle → A minor pentatonic, root A3 (220 Hz) |
-| Duration | One half-swing (zero crossing to zero crossing) |
-| Volume | Proportional to angular velocity at each zero crossing |
-| Timbre | Pure sine (`harmonics = {1.0}`), exponential decay (τ = dur/3) |
+**Simple mode** (`ExportSonification`) maps the solved `{t, angle, velocity}`
+trajectory to stem-core's generic `SonifyTrajectory` pipeline — a continuous
+carrier tone for the whole run, not discrete per-swing notes:
 
-The pendulum literally plays itself: wider, faster swings produce louder,
-higher notes, and the rhythm slows naturally as the pendulum loses energy.
+| Trajectory column | Quantity | Audio dimension |
+|---|---|---|
+| x | Bob x-position, `L*Sin[theta]` | Stereo pan |
+| y | Swing angle `theta` | Pitch, linearly mapped to `sonification.pitch.min_hz`/`max_hz` (220-660 Hz by default) |
+| speed | Bob speed, `L*\|omega\|` | Volume |
 
-To change scale, edit the `ScaleLookup` call in `src/sonify.wl` and pass
-any key from `$StemScales`:
+A phase-accumulated sine carrier plays continuously; the motion layer adds
+periodicity-linked tremolo and chaos-linked roughness on top. Two short
+accent bursts mark discrete events: an 880 Hz "apex" burst at each maximum
+swing angle, and a 440 Hz "crossing" burst each time the bob passes centre.
+Because this app's pendulum is undamped (energy is conserved to the tight
+tolerance checked by correctness check 2, not dissipated), the tone neither
+fades nor slows down over the run.
 
-```wolfram
-ScaleLookup[angle, -maxAngle, maxAngle, $StemScales["Major"], 220.0]
-```
+**Double mode** (`SonifyDoublePendulum`) builds the same three-layer
+trajectory sonification independently for each rod, then biases rod 1's pan
+−0.4 (left) and rod 2's pan +0.4 (right) before summing both stereo pairs —
+the binaural effect described above.
 
-Available scales: `MinorPentatonic`, `MajorPentatonic`, `Major`, `Minor`,
-`WholeTone`, `Phrygian`.
+To change the pitch range, edit `sonification.pitch.min_hz`/`max_hz` in
+`config.json`, or override on the CLI, e.g.
+`--sonification.pitch.min_hz=110 --sonification.pitch.max_hz=440`.
 
 ## Animation
 

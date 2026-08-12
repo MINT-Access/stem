@@ -41,8 +41,8 @@ images/
                            TimbreHarmonics, AddQuadrantClicks, OverlayAt
     speech.wl            — BuildIntroText, BuildIntroBuffer (SpeechSynthesize[] ->
                            platform TTS -> text-only fallback), ResampleLinear
-    animate.wl            — AnimateImageTraversal (Hilbert, 32-frame GIF),
-                           AnimateRasterScan (raster sweep line, 32-frame GIF)
+    animate.wl            — AnimateImageTraversal (Hilbert, duration-synced GIF),
+                           AnimateRasterScan (raster sweep line, duration-synced GIF)
     output.wl             — ExportImageData (CSV), ExportImagePNG (PNG)
   tests/
     test_model.wl        — unit tests for model.wl (palette, Lab lookup,

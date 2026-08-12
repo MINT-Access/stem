@@ -187,7 +187,7 @@ they already build for `RunToFile`.
 blackbody/
   main.wl              — thin orchestrator: config, correctness checks, mode dispatch
   config.json          — default simulation parameters
-  experiments.wl        — 7 curated preset invocations (3 x spectrum at different T,
+  experiments.wl        — 6 curated preset invocations (3 x spectrum at different T,
                           2 x temperature range, star tour)
   LISTENING_GUIDE.md     — user-facing recommended listening sequence
   AGENTS.md               — this file

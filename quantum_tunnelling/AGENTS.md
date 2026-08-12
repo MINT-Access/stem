@@ -173,7 +173,7 @@ behaviour is the non-default path, not the default one.
 quantum_tunnelling/
   main.wl              — thin orchestrator: config, correctness checks, mode dispatch
   config.json          — default simulation parameters
-  experiments.wl        — 6 curated preset invocations (3 named presets + manual,
+  experiments.wl        — 7 curated preset invocations (3 named presets + manual,
                           barrier-width sweep, two energy sweeps of different width)
   LISTENING_GUIDE.md     — user-facing recommended listening sequence
   AGENTS.md               — this file

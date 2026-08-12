@@ -182,7 +182,7 @@ as a self-contained announcement. Headings use `STEMHeading`; the asteroid
 count and hazardous count in `PrintSummary` use `STEMPrintN`, as do the
 Min/Max/Mean velocity lines; miss distance lines mix km and LD on one line
 and remain as bare `Print`; export confirmations use `STEMDescribeCSV`
-(1 row per asteroid, 12 columns), `STEMDescribeGIF`, and `STEMDescribeWAV`;
+(1 row per asteroid, 17 columns), `STEMDescribeGIF`, and `STEMDescribeWAV`;
 `STEMSay` announces each pipeline phase ("Fetching asteroid data from NASA",
 "Analysing trajectory data", "Rendering solar system animation", "Synthesising
 audio") and the final completion message with the platform-appropriate play command.

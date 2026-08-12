@@ -90,9 +90,6 @@ wolframscript -file main.wl -- --simulation.mode=rabi
 # Measurement mode: 2000 Born-rule measurements of an equal superposition
 wolframscript -file main.wl -- --simulation.mode=measurement
 
-# A single Hadamard gate, easiest to see clearly on the Bloch sphere
-wolframscript -file main.wl -- --simulation.qubit.gate_sequence='["H"]'
-
 # Inspect merged config
 wolframscript -file main.wl -- --config-dump
 ```

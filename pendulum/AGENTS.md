@@ -4,10 +4,10 @@ This file tells AI coding assistants how to work effectively in this project.
 
 ## Project overview
 
-A simple pendulum simulation written in Wolfram Language, runnable entirely
-from the terminal via `wolframscript`. Designed as a reusable template for
-physics simulation projects. Produces CSV data, an animated GIF, and a
-WAV sonification.
+A pendulum simulation written in Wolfram Language, runnable entirely from
+the terminal via `wolframscript`. Two modes: `simple` (single pendulum) and
+`double` (chaotic double pendulum, the config default). Produces CSV data,
+an animated GIF, and a WAV sonification for whichever mode is active.
 
 ## Project structure
 
@@ -17,7 +17,9 @@ WAV sonification.
                        checks (see "Correctness checks" below).
 - `src/output.wl`    — CSV export (`ExportResults`) and `PrintSummary`, `PrintCorrectnessChecks`.
 - `src/animate.wl`   — Animated GIF export (`ExportAnimation`, `PendulumFrame`).
-- `src/sonify.wl`    — WAV sonification export (`FindZeroCrossings`, `ExportSonification`).
+- `src/sonify.wl`    — WAV sonification export via stem-core's `SonifyTrajectory`
+                       pipeline (`ExportSonification` for simple mode,
+                       `SonifyDoublePendulum` for double mode).
 - `tests/test_model.wl` — Unit tests for the physics and solver.
 - `output/`            — Output directory. Do not commit this directory.
 
@@ -36,11 +38,17 @@ wolframscript -file tests/test_model.wl
 
 ## Outputs
 
-| File                          | Description                            |
-|-------------------------------|----------------------------------------|
-| output/results.csv              | Time, angle, velocity, energy per step |
-| output/pendulum_animation.gif   | Looping animated GIF of the pendulum   |
-| output/pendulum_audio.wav       | Sonification as WAV audio              |
+Filenames are mode-prefixed (`simple_*` / `double_*`); see `README.md`'s
+"Outputs" section for the full per-mode table.
+
+| File                            | Description                             |
+|----------------------------------|-----------------------------------------|
+| output/simple_results.csv        | Time, angle, velocity, energy per step  |
+| output/simple_animation.gif      | Looping animated GIF of the pendulum    |
+| output/simple_audio.wav          | Sonification as WAV audio               |
+| output/double_results.csv        | Time, angles/velocities for both rods   |
+| output/double_animation.gif      | Looping animated GIF, both bobs         |
+| output/double_audio.wav          | Binaural sonification, one rod per channel |
 
 ## Conventions
 
@@ -55,19 +63,40 @@ wolframscript -file tests/test_model.wl
 
 ## Important: WAV synthesis
 
-`sonify.wl` uses stem-core's `StemSynthNote` + `ExportAudioBuffer` for all
-audio synthesis — not `SoundNote`, `Audio[]`, or MIDI. `ExportAudioBuffer`
-wraps samples in `SampledSoundList` (not `Audio[]`), which exports a valid WAV
-in headless `wolframscript` sessions. Do not switch to `Audio[]` or `SoundNote`;
-both fail silently in terminal contexts on macOS.
+`sonify.wl` uses stem-core's `SonifyTrajectory` pipeline (`SpatialLayer` +
+`MotionLayer` + `EventLayer` + `MixLayers` + `RenderAudio`) for all audio
+synthesis — not `SoundNote`, `Audio[]`, or MIDI. `RenderAudio` wraps samples
+in `SampledSoundList` (not `Audio[]`), which exports a valid WAV in headless
+`wolframscript` sessions. Do not switch to `Audio[]` or `SoundNote`; both
+fail silently in terminal contexts on macOS. (This app originally used a
+custom `StemSynthNote`-per-zero-crossing synthesiser; it was replaced by the
+generic `SonifyTrajectory` pipeline early in the project's history — see
+"Sonification design" below for the current design.)
 
 ## Sonification design (src/sonify.wl)
 
-- Pitch: pendulum angle mapped to `$StemScales["MinorPentatonic"]`, root A3 (220 Hz).
-- Duration: each note lasts one half-swing (zero crossing to zero crossing).
-- Volume: proportional to angular velocity at each zero crossing.
-- Timbre: pure sine (`harmonics = {1.0}`) with decay fraction 1/3 via `StemSynthNote`.
-- To change scale: pass a different key from `$StemScales` to `ScaleLookup` in `sonify.wl`.
+Both modes feed a `{t, x, y, z, speed}` trajectory through stem-core's
+three-layer sonification machinery (`SpatialLayer`/`MotionLayer`/
+`EventLayer`/`MixLayers`/`RenderAudio` — simple mode via the `SonifyTrajectory`
+wrapper, double mode calling the same layer functions directly so it can
+bias each rod's pan before mixing) — a continuous carrier tone for the
+whole run, not discrete per-swing notes:
+
+- Pitch: swing angle (`y` column), linearly interpolated to
+  `sonification.pitch.min_hz`/`max_hz` (220-660 Hz by default) — not a
+  discrete musical scale.
+- Pan: bob x-position (`x` column, `L*Sin[theta]`).
+- Volume: bob speed (`speed` column, `L*|omega|`).
+- Event accents: an 880 Hz burst at each apex (maximum swing angle) and a
+  440 Hz burst at each centre-crossing, added by `EventLayer`.
+- `MotionLayer` adds periodicity-linked tremolo and chaos-linked roughness
+  on top of the carrier.
+- Double mode (`SonifyDoublePendulum`) builds this independently for each
+  rod, then biases rod 1's pan −0.4 and rod 2's pan +0.4 before summing —
+  the binaural left/right split.
+- The pendulum is undamped (energy conserved, not dissipated — see
+  correctness checks 2/3), so the tone does not fade or slow down over
+  a run.
 
 ## Animation design (src/animate.wl)
 

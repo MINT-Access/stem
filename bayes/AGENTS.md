@@ -154,7 +154,7 @@ bayes/
   LISTENING_GUIDE.md    — user-facing recommended listening sequence
   AGENTS.md             — this file
   src/
-    model.wl            — BetaPosteriorParams/Mean/Variance/Mode, GaussianPosteriorMean/Variance,
+    model.wl            — BetaPosteriorParams, BetaMean/Variance/Mode, GaussianPosteriorMean/Variance,
                           LogBayesFactor10, EvidenceLevel, CoinPosteriorSequence,
                           GaussianPosteriorSequence, ModelPosteriorSequence,
                           BetaPosteriorCheck, GaussianPosteriorCheck, BayesFactorCheck,

@@ -136,9 +136,10 @@ wolframscript -file main.wl -- --simulation.mode=scan_horizontal
 
 ### colour
 
-Each pixel is mapped to the nearest of 9 colours — 8 spanning the visible
-light spectrum from violet to red, plus black for absent/zero colour —
-using colour distance in the perceptually uniform Lab colour space. Each
+Each pixel is mapped to the nearest of 9 colours — 7 spanning the visible
+light spectrum from violet to red, plus white for broadband/saturated colour
+and black for absent/zero colour — using colour distance in the perceptually
+uniform Lab colour space. Each
 colour has a fixed musical pitch that rises with spectral position (see
 table below). Consecutive pixels with the same colour produce a single
 held note rather than repeated attacks — so a large red region is one long
@@ -190,7 +191,7 @@ wolframscript -file main.wl -- --simulation.mode=hsb
 
 ## Colour-to-pitch mapping (colour and hsb modes' pitch reference)
 
-The 8 spectral colours are ordered by position in the visible light
+The 7 spectral colours are ordered by position in the visible light
 spectrum — violet (shortest wavelength) to red (longest) — plus white
 (broadband/saturated) and black (absent/zero, heard as silence):
 
@@ -279,7 +280,7 @@ wolframscript -file main.wl -- --simulation.images.test_image=quantum
 | File | Description |
 |------|-------------|
 | `output/images_<mode>_audio.wav` | Spoken intro + sonification, single file (16-bit PCM, 44100 Hz) |
-| `output/images_<mode>.gif` | 32-frame traversal animation (Hilbert path, or horizontal sweep line for scan_horizontal) |
+| `output/images_<mode>.gif` | Traversal animation, frame count/rate synced to the WAV's duration (Hilbert path, or horizontal sweep line for scan_horizontal) |
 | `output/images_<mode>_data.csv` | Per-pixel table: index, col, row, brightness, hue, saturation, frequency |
 | `output/images_<mode>.png` | The processed (resized) source image |
 

@@ -60,6 +60,9 @@ Start-Process wmplayer output\rossler_audio.wav
 | output/lorenz_trajectory.csv        | t, x, y, z, speed at each step      |
 | output/lorenz_animation.gif         | Animated butterfly attractor (x-z)   |
 | output/lorenz_audio.wav             | Sonification of x(t)                 |
+| output/rossler_trajectory.csv       | t, x, y, z, speed at each step (`--simulation.mode=rossler`) |
+| output/rossler_animation.gif        | Animated Rössler attractor (x-z)     |
+| output/rossler_audio.wav            | Sonification of x(t) (Rössler)       |
 
 ## Correctness checks
 
@@ -89,27 +92,26 @@ rather than assuming one transfers to the other:
 
 ## Sonification
 
+`ExportSonification` (`src/sonify.wl`) is a thin wrapper around stem-core's
+generic `SonifyTrajectory` pipeline (`SpatialLayer` + `MotionLayer` +
+`EventLayer` + `MixLayers`) — a continuous carrier, not discrete
+per-extremum notes on a fixed musical scale. The `{t,x,y,z}` solution is
+augmented with a finite-difference speed column before being handed off:
+
 | Parameter | Design |
 |---|---|
-| Trigger | Each local extremum of x(t) — one note per peak or trough |
-| Pitch | x-value → minor pentatonic, root middle C (261.63 Hz) |
-| Volume | Proportional to \|x\| at each extremum |
-| Timbre | Additive sine (3 harmonics: 1.0, 0.35, 0.12), exponential decay |
+| Pitch | y-value, mapped to `sonification.pitch.min_hz`/`max_hz` (config default 80-1200 Hz; `pitch.axis` itself defaults to `"y"` in stem-core) |
+| Pan | x-value → stereo pan (`sonification.spatial.pan_axis = "x"`) |
+| Event accents | `"apex"` events — local maxima of \|y\|, correlating with the trajectory crossing between the two wings (Lorenz) or completing a spiral cycle (Rössler) |
+| Volume/texture | stem-core's `MotionLayer` (tremolo/roughness driven by trajectory periodicity and a chaos proxy) — not a fixed per-note envelope |
 
 The two-wing structure of the attractor maps naturally to pitch space: the
-positive wing tends toward higher notes, the negative wing toward lower ones,
-and the chaotic switching between wings produces the characteristic unpredictable
-melody.
-
-To change scale, edit the `"Scale"` option in `main.wl`:
-
-```wolfram
-ExportSonification[solution, outWAV, "Scale" -> "WholeTone"]
-```
-
-Available scales: `MinorPentatonic`, `MajorPentatonic`, `Major`, `Minor`,
-`WholeTone`, `Phrygian`. To transpose, edit the `rootHz` argument to
-`ScaleLookup` in `src/sonify.wl`.
+positive-y wing tends toward higher pitch, the negative-y wing toward lower,
+and the chaotic switching between wings produces the characteristic
+unpredictable melodic contour. There is no scale/root-note option in the
+current implementation (an earlier pentatonic-scale note synthesizer was
+replaced by the shared stem-core `SonifyTrajectory` pipeline); the pitch
+range is tunable via `sonification.pitch.min_hz`/`max_hz` in `config.json`.
 
 ## Animation
 
@@ -118,8 +120,8 @@ Available scales: `MinorPentatonic`, `MajorPentatonic`, `Major`, `Minor`,
 | View | 3D trajectory projected onto the x-z plane (classic butterfly view) |
 | Colour gradient | Blue (early) → cyan → orange → red (recent) |
 | Background | Dark for contrast |
-| Frame count | 150 (default), fourth argument to `ExportAnimation` |
-| Frame rate | 30 fps |
+| Frame count | 150 (render budget, default), fourth argument to `ExportAnimation` |
+| Frame rate | Derived, not fixed: `Clip[frameCount / targetDuration, {2, 30}]` fps, where `targetDuration` is the matching WAV's duration, so GIF playback length tracks audio length |
 
 `ExportDualAnimation` in `src/animate.wl` renders two near-identical
 trajectories side-by-side, used by the `butterfly` experiment preset to
@@ -160,8 +162,9 @@ in `PrintSummary` uses `STEMPrintN`; the x/y/z range lines carry two values
 each and remain as bare `Print`; the four correctness checks print as a
 `Checks: 1[PASS] 2[PASS] 3[PASS] 4[PASS]` line via `PrintCorrectnessChecks`,
 followed by one detail line per check; export confirmations use
-`STEMDescribeCSV` (1 row per step, 5 columns), `STEMDescribeGIF` (150 frames
-at 30 fps), and `STEMDescribeWAV` (duration from `params["TimeEnd"]`).
+`STEMDescribeCSV` (1 row per step, 5 columns), `STEMDescribeGIF` (frame
+count and fps as actually rendered — see "Animation" above), and
+`STEMDescribeWAV` (duration from `params["TimeEnd"]`).
 `STEMSay` is called at each pipeline phase (ODE solve, correctness checks,
 animation, sonification) and as the final completion message with the
 platform-appropriate play command.

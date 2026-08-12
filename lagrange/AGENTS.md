@@ -183,7 +183,7 @@ wolframscript -file main.wl -- [options]
 wolframscript -file lagrange/tests/test_model.wl
 ```
 
-Expected output: `Passed: 34  Failed: 0` (exits 0).
+Expected output: `Passed: 43  Failed: 0` (exits 0).
 
 ---
 

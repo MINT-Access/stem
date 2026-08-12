@@ -65,7 +65,7 @@ trajectory exactly — oscillating back and forth without spreading.
 - Coefficients: cₙ = exp(−|α|²/2) · αⁿ / √(n!)
 - Mean energy: ⟨E⟩ = ω(|α|² + ½)
 
-Default: α = 2, ω = 1, duration = 2π (one full oscillation period).
+Default: α = 2, ω = 1, duration = 4π (two full oscillation periods).
 
 ### `box` — Particle in a box
 

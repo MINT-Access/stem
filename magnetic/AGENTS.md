@@ -235,7 +235,8 @@ magnetic/
     output.wl          — CSV export (one row per sample; multi mode uses
                          long format with a "particle" label column)
   tests/
-    test_model.wl      — 5 unit tests (period, drift, trapping, energy, radius)
+    test_model.wl      — 6 unit-test groups, 18 assertions (period, drift,
+                         trapping, energy, radius, multi frequency-ratio check)
   output/              — generated files (gitignored)
 ```
 

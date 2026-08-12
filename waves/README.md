@@ -33,8 +33,8 @@ the same trajectory pipeline as the pendulum, lorenz, and quantum apps.
 
 A Gaussian impulse at the centre of a circular membrane (like a drum head,
 or a droplet hitting still water) creates an expanding circular wavefront.
-Three to four listening points are placed at increasing distances from the
-source along a radius.
+Several listening points (`simulation.waves.listening_points`, default 6)
+are placed at increasing distances from the source along a radius.
 
 **What you hear:**  The wavefront arrives at the nearest listening point
 first, then at the second, then the third, in strict time order.  Each

@@ -148,7 +148,7 @@ dividing by 2.
     f_qnm = c³ / (2π G M_final) · (1 − 0.63),  M_final = 0.95 M
     τ_rd  = 10 G M_final / c³
 
-### Physical correctness checks (abort on FAIL)
+### Physical correctness checks (checks 2 and 3 abort on FAIL; 1 and 4 are diagnostic-only)
 
 1. f(0) ≈ f_min within 25%
 2. f(t) monotonically non-decreasing to clipping point

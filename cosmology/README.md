@@ -208,7 +208,7 @@ afplay cosmology/output/cmb_spectrum_audio.wav
 | `output/cmb_spectrum.png` | D_ℓ vs log ℓ plot with peak markers |
 | `output/cmb_spectrum_data.csv` | l, C_l, D_l, is_peak per row |
 | `output/cmb_sky_audio.wav` | Sky map sonification (sky mode) |
-| `output/cmb_sky.gif` | 32-frame animated Hilbert traversal of the sky patch |
+| `output/cmb_sky.gif` | Animated Hilbert traversal of the sky patch; frame count/rate solved so playback duration matches the WAV exactly |
 | `output/cmb_sky.png` | Static false-colour temperature map |
 | `output/cmb_sky_data.csv` | Per-pixel temperature and assigned frequency |
 
@@ -234,7 +234,9 @@ cosmology/
 
 ## Console output
 
-Step numbers `[1/4]` through `[4/4]` mark each pipeline stage. Sanity check
+Step numbers mark each pipeline stage — `[1/4]` through `[4/4]` in spectrum
+mode, `[1/5]` through `[5/5]` in sky mode (one extra stage for map generation
+before sonification). Sanity check
 results print `[PASS]` or `[FAIL]` with the measured value. Export confirmations
 use `STEMDescribeWAV`, `STEMDescribeGIF`, and `STEMDescribeCSV`. Set
 `STEM_SPEAK=1` for spoken stage announcements:

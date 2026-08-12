@@ -49,12 +49,24 @@ afplay output/lorenz_audio.wav         # play audio on macOS
 
 ## Sonification design (src/sonify.wl)
 
-- Note events triggered at each local extremum of x(t)
-- Pitch: x-value mapped to chosen scale (default MinorPentatonic)
-- Volume: proportional to |x| at each extremum
-- Timbre: additive sine synthesis (3 harmonics) + exponential decay
-- Available scales: MinorPentatonic, MajorPentatonic, Major, Minor, WholeTone, Phrygian
-- Root note: Middle C (261.63 Hz), hardcoded as the `rootHz` argument to `ScaleLookup` in `BuildWaveform` — edit there to transpose
+`ExportSonification[solution, params, cfg, filePath]` is a thin wrapper
+around stem-core's `SonifyTrajectory[trajectory, cfg, filePath, {"apex"}]`
+(`SpatialLayer`+`MotionLayer`+`EventLayer`+`MixLayers`) — not a bespoke
+per-note synthesizer. The `{t,x,y,z}` solution is augmented with a
+finite-difference speed column (`{t,x,y,z,speed}`) before being passed in.
+
+- Pitch axis: `y` (stem-core's `pitch.axis` default), mapped to
+  `sonification.pitch.min_hz`/`max_hz` (config.json: 80/1200 Hz)
+- Pan axis: `x` (`sonification.spatial.pan_axis = "x"` in config.json)
+- Event type: `"apex"` — local maxima of `|y|`, correlating with wing
+  crossings (Lorenz) or spiral-cycle completion (Rössler)
+- Volume/texture comes from stem-core's `MotionLayer` (tremolo/roughness
+  driven by trajectory periodicity and a chaos proxy), not a fixed
+  per-extremum envelope
+- No scale/root-note option exists in the current implementation — there
+  is no `ScaleLookup`/`BuildWaveform` call anywhere in `src/sonify.wl`;
+  an earlier pentatonic-scale note synthesizer was replaced by the shared
+  stem-core `SonifyTrajectory` pipeline.
 
 ## Animation design (src/animate.wl)
 

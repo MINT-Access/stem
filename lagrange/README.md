@@ -196,7 +196,7 @@ lagrange/
     model.wl        — FindLagrangePoints, GeometryCheck, LibrationModel, EscapeModel
     sonify.wl       — SonifyLibration, SonifyEscape
     animate.wl      — AnimateLibration, AnimateEscape (GIF + PNG)
-    output.wl       — ExportLibrationData, ExportEscapeData
+    output.wl       — ExportLibrationTrajectory, ExportEscapeTrajectory
   tests/
     test_model.wl   — Unit tests (Jacobi constant, L4/L5 geometry, sanity check values)
   output/           — Output files (not committed)
@@ -206,7 +206,7 @@ lagrange/
 
 ## Console output
 
-Step numbers `[1/4]` through `[4/4]` mark each pipeline stage. Sanity check
+Step numbers `[1/5]` through `[5/5]` mark each pipeline stage. Sanity check
 results print `[PASS]` or `[FAIL]` with the measured value. Export confirmations
 use `STEMDescribeWAV`, `STEMDescribeGIF`, and `STEMDescribeCSV`. Set
 `STEM_SPEAK=1` for spoken stage announcements:
