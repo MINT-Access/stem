@@ -305,10 +305,10 @@ CSV export) and `"crossOneIdx"`/`"crossTwoIdx"`.
 
 `speech.wl`'s three-tier fallback (`SpeechSynthesize[]` -> platform TTS
 -> text-only `STEMSay`) duplicates the pattern in `thermo/src/speech.wl`
-and `dynamical/src/speech.wl` — this is now the fourth independent copy
-of this pattern across the codebase; a good candidate for stem-core
-consolidation in a future pass (explicitly out of scope here per this
-app's build spec, which excludes stem-core changes). `model` mode's
+and `dynamical/src/speech.wl` — this is one of many independent copies
+of this pattern scattered across the codebase; a good candidate for
+stem-core consolidation in a future pass (explicitly out of scope here
+per this app's build spec, which excludes stem-core changes). `model` mode's
 `BuildModelIntroText` computes its expected pan direction independently
 from `BuildModelAudio`'s actual computation (see design decision 3) —
 if the two ever disagree for a given config, that is a real bug, not

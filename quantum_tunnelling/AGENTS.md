@@ -373,6 +373,6 @@ would require a different export mechanism entirely, out of scope here.
 
 `speech.wl`'s three-tier fallback (`SpeechSynthesize[]` -> platform TTS
 -> text-only `STEMSay`) duplicates the pattern in `compton/src/speech.wl`,
-`blackbody/src/speech.wl`, and `thermo/src/speech.wl` — now a seventh
-independent copy, still out of scope for stem-core consolidation per
-every prior app's own build spec.
+`blackbody/src/speech.wl`, and `thermo/src/speech.wl` — one of many
+independent copies scattered across the codebase, still out of scope
+for stem-core consolidation per every prior app's own build spec.

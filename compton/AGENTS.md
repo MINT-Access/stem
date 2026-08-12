@@ -296,8 +296,9 @@ design decision 6 for why none of them abort):
 `speech.wl`'s three-tier fallback (`SpeechSynthesize[]` -> platform TTS
 -> text-only `STEMSay`) duplicates the pattern in `blackbody/src/speech.wl`,
 `thermo/src/speech.wl`, and `scattering/src/sonify.wl`'s identical
-pattern — now a sixth independent copy, still out of scope for
-stem-core consolidation per every prior app's own build spec.
+pattern — one of many independent copies scattered across the
+codebase, still out of scope for stem-core consolidation per every
+prior app's own build spec.
 
 ## Animation/audio duration sync (fixed post-v1.5.0)
 

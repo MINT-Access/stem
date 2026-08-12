@@ -359,6 +359,6 @@ All four run unconditionally, every invocation, regardless of mode
 `speech.wl`'s three-tier fallback (`SpeechSynthesize[]` -> platform TTS
 -> text-only `STEMSay`) duplicates the pattern in
 `quantum_tunnelling/src/speech.wl`, `compton/src/speech.wl`, and
-`blackbody/src/speech.wl` — now an eighth independent copy, still out
-of scope for stem-core consolidation per every prior app's own build
-spec.
+`blackbody/src/speech.wl` — one of many independent copies scattered
+across the codebase, still out of scope for stem-core consolidation
+per every prior app's own build spec.

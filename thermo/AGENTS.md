@@ -325,7 +325,7 @@ pass, as expected.
 `speech.wl`'s three-tier fallback (`SpeechSynthesize[]` -> platform TTS
 -> text-only `STEMSay`) duplicates the pattern in `dynamical/src/speech.wl`,
 `images/src/speech.wl`, and `signal/src/sonify.wl`'s `SpeakToBuffer`.
-This is now the fourth independent copy of this pattern across the
-codebase — a strong candidate for stem-core consolidation in a future
-pass (explicitly out of scope here per this app's build spec, which
-excludes stem-core changes).
+This is one of many independent copies of this pattern scattered across
+the codebase — a strong candidate for stem-core consolidation in a
+future pass (explicitly out of scope here per this app's build spec,
+which excludes stem-core changes).

@@ -312,7 +312,9 @@ inherent centisecond duration quantization, not a code error.
 `signal/src/sonify.wl`'s `SpeakToBuffer`. `SpeechSynthesize[]` was
 observed to return `$Failed` in this development environment — the
 platform-native TTS tier (macOS `say`/`afconvert`) is what actually
-produces audio in practice. This is now the third independent copy of
-this pattern across the codebase; a good candidate for stem-core
-consolidation in a future pass (explicitly out of scope here per this
-app's build spec, which excludes stem-core changes).
+produces audio in practice. This is one of many independent copies of
+this pattern scattered across the codebase, each app calling
+`SpeechSynthesize[]` directly rather than through a shared helper; a
+good candidate for stem-core consolidation in a future pass (explicitly
+out of scope here per this app's build spec, which excludes stem-core
+changes).
