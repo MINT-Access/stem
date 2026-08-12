@@ -11,7 +11,6 @@
       "mass2_solar":       29.0,
       "distance_mpc":     410.0,
       "sample_rate":      4096,
-      "time_before_merger": 0.5,
       "ringdown_duration":  0.05,
       "frequency_min_hz":  20.0,
       "frequency_max_hz": 500.0,

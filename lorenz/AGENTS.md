@@ -32,14 +32,21 @@ afplay output/lorenz_audio.wav         # play audio on macOS
 
 ## Parameters (passed as Association)
 
-| Key       | Meaning                        | Classic value |
-|-----------|-------------------------------|---------------|
-| Sigma     | Prandtl number                | 10.0          |
-| Rho       | Rayleigh number               | 28.0          |
-| Beta      | Geometric factor              | 8/3           |
-| InitX/Y/Z | Initial conditions            | 1.0, 1.0, 1.0 |
-| TimeEnd   | Simulation duration (seconds) | 40.0          |
-| TimeStep  | Max ODE step size             | 0.005         |
+| Key       | Meaning                        | Classic value  |
+|-----------|-------------------------------|----------------|
+| Sigma     | Prandtl number                | 10.0           |
+| Rho       | Rayleigh number               | 28.0           |
+| Beta      | Geometric factor              | 8/3            |
+| InitX/Y/Z | Initial conditions            | 1.0, 1.0, 1.0* |
+| TimeEnd   | Simulation duration (seconds) | 40.0           |
+| TimeStep  | Max ODE step size             | 0.005          |
+
+Sigma/Rho/Beta/TimeEnd/TimeStep's classic values are also this app's actual
+shipped `config.json` defaults. *`InitX/Y/Z` is the exception: `(1,1,1)` is
+the commonly-cited textbook starting point (and what `experiment.wl`'s
+presets and `tests/test_model.wl`'s fixture both use), but `config.json`'s
+actual shipped default is `(0.1, 0.0, 0.0)` — a deliberately different,
+near-origin starting point, not a stale table entry.
 
 ## Chaos regimes
 

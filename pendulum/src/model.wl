@@ -71,7 +71,7 @@ DoublePendulumModel[cfg_Association] :=
     m2      = GetCfg[cfg, {"simulation","double","mass2"},      1.0];
     g       = GetCfg[cfg, {"simulation","gravity"},             9.81];
     theta10 = GetCfg[cfg, {"simulation","double","angle1_deg"}, 120.0] * Pi / 180.0;
-    theta20 = GetCfg[cfg, {"simulation","double","angle2_deg"},  90.0] * Pi / 180.0;
+    theta20 = GetCfg[cfg, {"simulation","double","angle2_deg"}, 170.0] * Pi / 180.0;
     tEnd    = GetCfg[cfg, {"simulation","duration"},            20.0];
     dt      = GetCfg[cfg, {"simulation","timestep"},             0.01];
 

@@ -272,8 +272,8 @@ functions return `{actualNFrames, frameRate}` for `STEMDescribeGIF`.
 capture/report the returned pair instead of the old hardcoded `60, 12`.
 
 **Verification.** Re-rendered default sweep and iterate outputs plus
-6 experiment presets and compared GIF vs. WAV duration with a Python
-`PIL`/`wave` script:
+4 experiment presets (of 9 total in `experiments.wl`) and compared GIF
+vs. WAV duration with a Python `PIL`/`wave` script:
 
 | file | before (gif / wav / ratio) | after (gif / wav / ratio) |
 |---|---|---|

@@ -10,9 +10,7 @@
     "gravity": 9.81,
     "simple": {
       "length": 1.0,
-      "mass": 1.0,
-      "angle_deg": 45.0,
-      "damping": 0.0
+      "angle_deg": 45.0
     },
     "double": {
       "length1": 1.0,
@@ -28,16 +26,10 @@
     "pitch": {
       "min_hz": 220,
       "max_hz": 660
-    },
-    "double_pendulum": {
-      "rod1_channel": "left",
-      "rod2_channel": "right"
     }
   },
 
   "animation": {
-    "trail_length": 60,
-    "show_rod": true,
-    "bob_radius": 8
+    "trail_length": 60
   }
 }

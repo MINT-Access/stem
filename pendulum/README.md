@@ -115,15 +115,20 @@ To change the pitch range, edit `sonification.pitch.min_hz`/`max_hz` in
 
 ## Animation
 
-| Parameter | Design |
-|---|---|
-| View | Side-on pendulum, pivot at top centre |
-| Frame rate | 25 fps (default), configurable |
-| Colour | Bob shifts from blue (at centre) to red-violet (at maximum swing) |
-| Trail | Motion trail shows the recent path of the bob (~0.3 s of frames) |
-| Speedup | `speedup` sub-samples the solution; 1.0 = real time, 2.0 = double speed |
+Both modes share the same trajectory-derived plot bounds (see "Animation
+framing" in `AGENTS.md`), but only simple mode exposes frame rate/speedup
+as function parameters — double mode's `AnimateDoublePendulum` hardcodes
+its own frame rate internally.
 
-To render at half speed:
+| Parameter | Simple mode (`ExportAnimation`) | Double mode (`AnimateDoublePendulum`) |
+|---|---|---|
+| View | Side-on pendulum, pivot at top centre | Side-on double pendulum, pivot at top centre |
+| Frame rate | 25 fps (default), configurable via the `frameRate` parameter | 25 fps, fixed (not a parameter) |
+| Colour | Bob shifts from blue (at centre) to red-violet (at maximum swing) | Rod 1 blue, rod 2 orange (colour-blind-safe palette) |
+| Trail | Motion trail shows the recent path of the bob (~0.3 s of frames) | Motion trail via `animation.trail_length` config, converted to frames |
+| Speedup | `speedup` sub-samples the solution; 1.0 = real time, 2.0 = double speed | Not available |
+
+To render simple mode at half speed:
 
 ```wolfram
 ExportAnimation[solution, params, outGIF, 25, 0.5]

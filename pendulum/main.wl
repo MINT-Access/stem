@@ -118,7 +118,7 @@ Which[
     m1    = GetCfg[cfg, {"simulation","double","mass1"},      1.0];
     m2    = GetCfg[cfg, {"simulation","double","mass2"},      1.0];
     a1    = GetCfg[cfg, {"simulation","double","angle1_deg"}, 120.0];
-    a2    = GetCfg[cfg, {"simulation","double","angle2_deg"},  90.0];
+    a2    = GetCfg[cfg, {"simulation","double","angle2_deg"}, 170.0];
     tEnd  = GetCfg[cfg, {"simulation","duration"},            20.0];
 
     Print["  L1=", L1, " m, L2=", L2, " m"];
