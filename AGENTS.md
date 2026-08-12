@@ -261,7 +261,7 @@ All code must run correctly via `wolframscript -file` with no display server.
 
 ## Demo script (demo.wl)
 
-`demo.wl` at the repo root runs all 16 apps with their most compelling presets and
+`demo.wl` at the repo root runs all 32 apps with their most compelling presets and
 collects every output into `demo/<appname>/`. It also writes `demo/demo-report.md`
 (machine-readable run report) and `demo/README.md` (listening guide).
 

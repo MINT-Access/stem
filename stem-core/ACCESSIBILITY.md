@@ -131,7 +131,7 @@ Prints a one-line GIF export confirmation with frame count and frame rate.
 Prints `text` and, if `$STEMSpeakEnabled` is `True`, calls `say text` via the
 macOS speech synthesiser. Used for intermediate phase announcements (e.g.
 "Solving pendulum ODE", "Rendering animation") and for the final completion
-message ("Complete. Play audio: afplay …"). All 8 apps emit both intermediate
+message ("Complete. Play audio: afplay …"). All 32 apps emit both intermediate
 and final `STEMSay` calls.
 
 ### `$STEMSpeakEnabled`
