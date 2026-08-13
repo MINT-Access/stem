@@ -184,6 +184,60 @@ cheap and worth having regardless, the same "removes the failure mode
 entirely rather than trusting every future config to stay safe" reasoning
 as `henon/AGENTS.md`'s own version of this check.
 
+## GIF/WAV duration sync — `rho9996` stress-test preset (post-audit follow-up)
+
+The cross-app duration-sync fix (`ExportAnimation`/`ExportDualAnimation` now
+take `targetDuration = solution[[-1,1]]` instead of a hardcoded `30`) landed
+correctly in `experiment.wl` and was verified against the `butterfly` preset.
+An external review later caught that `output/lorenz_rho9996_animation.gif`
+(`lorenz_rho9996_audio.wav` at its side) still showed the original bug:
+GIF=4.50s vs WAV=119.925s, a ~26.6x mismatch, unchanged from the original bug
+report.
+
+**Root cause: not a code bug at all — a stale, undocumented output artifact.**
+`lorenz_rho9996_*` was never a named preset in `experiment.wl`; grepping the
+full git history of this file for "rho9996" finds nothing. The files' mtimes
+(2026-06-25) predate both the duration-sync fix (2026-08-12, `bfde133`) and
+even the file-naming convention currently in use (`lorenz_<type>_<label>.*`
+vs. the old files' `lorenz_<label>_<type>.*` ordering). They were produced by
+a one-off local edit of the ACTIVE PRESET block — Sigma=10, Rho=99.96,
+Beta=8/3, InitXYZ=(1,1,1), TimeEnd=120, TimeStep=0.005 (recovered from the
+stale CSV's own header/last row, since the params were never committed) —
+run against the *pre-fix* pipeline, then never regenerated after the fix
+landed. Because `output/` is gitignored, `git status` gave no signal that
+this file was out of date relative to the code that (correctly) produced it.
+
+**Fix:** added `rho9996` as a proper, documented preset (block F in
+`experiment.wl`, alongside the others) instead of leaving it as an
+un-reproducible local edit, then ran it through the current (already-correct)
+pipeline. Old `lorenz_rho9996_{animation,audio,trajectory}.*` (old naming
+scheme) deleted; new `lorenz_{animation,audio,trajectory}_rho9996.*` (current
+naming scheme) generated in their place.
+
+Result: GIF=120.000s, WAV=120.000s (240 frames @ 2fps, clamped at
+`$MinAnimationFps`) — exact match.
+
+All six `experiment.wl` presets (`classic`, `butterfly`, `stable`, `wild`,
+`slow`, `rho9996`) plus `main.wl`'s default `lorenz` and `rossler` runs were
+regenerated and measured directly (GIF: frame count x per-frame delay from
+the file's own header; WAV: sample count / sample rate from the file's own
+header) — not assumed:
+
+| Output          | GIF frames | GIF s   | WAV s   | diff  |
+|------------------|-----------:|--------:|--------:|------:|
+| lorenz (default) |        150 |  40.500 |  40.000 | 1.25% |
+| butterfly        |        150 |  30.000 |  30.000 | 0.00% |
+| classic          |        150 |  40.500 |  40.000 | 1.25% |
+| rho9996          |        240 | 120.000 | 120.000 | 0.00% |
+| slow             |        150 |  60.000 |  60.000 | 0.00% |
+| stable           |        150 |  30.000 |  30.000 | 0.00% |
+| wild             |        150 |  19.500 |  20.000 | 2.50% |
+| rossler          |        150 |  40.500 |  40.000 | 1.25% |
+
+All within the ~3% GIF-format centisecond frame-delay quantization floor
+(the same tolerance established across the rest of the 31-app duration-sync
+fix); nothing regressed.
+
 ## Conventions
 
 - Functions scoped with `Module`

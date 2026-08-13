@@ -79,6 +79,20 @@ params    = <| "Sigma"->4.0, "Rho"->28.0, "Beta"->8/3,
 dualAnim  = False;
 *)
 
+(* F: rho=99.96 stress test — long integration window (120s), the
+   extreme case that originally motivated the GIF/WAV duration-sync fix
+   (see AGENTS.md "GIF/WAV duration sync"). Not a different chaos
+   regime from "wild" (D) — same rho — just run much longer, to stress
+   the frame-rate clamp in ExportAnimation ($MaxAnimationFps=30) at a
+   much larger targetDuration. *)
+(*
+label     = "rho9996";
+params    = <| "Sigma"->10.0, "Rho"->99.96, "Beta"->8/3,
+               "InitX"->1.0, "InitY"->1.0, "InitZ"->1.0,
+               "TimeEnd"->120.0, "TimeStep"->0.005 |>;
+dualAnim  = False;
+*)
+
 (* -------------------------------------------------------
    ACTIVE PRESET — change this block to switch experiments
    ------------------------------------------------------- *)

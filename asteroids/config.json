@@ -13,7 +13,13 @@
 
   "sonification": {
     "pitch": { "min_hz": 150, "max_hz": 900 },
-    "events": { "closest_approach_tone": true }
+    "events": { "closest_approach_tone": true },
+    "motion": {
+      "noteDuration": 0.55,
+      "gapDuration": 0.12,
+      "maxTotalDuration": 90.0,
+      "minStepDuration": 0.03
+    }
   },
   "animation": {
     "width": 500,

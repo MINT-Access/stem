@@ -314,22 +314,43 @@ $MaxAnimationFps = 30;
    naturally repeats a given reveal count across several consecutive
    frames rather than skipping any asteroid.
 
+   GIF frame delays are stored in centiseconds (Export[...,"GIF",...]
+   rounds "DisplayDurations"->1/frameRate to the nearest 0.01s), so the
+   NOMINAL frameRate solved above is not what actually plays back. At
+   low fps (long targetDuration) 1/frameRate is tens of centiseconds and
+   +-0.5cs rounding is negligible; at high fps (short targetDuration,
+   small n, unclamped up near 20-30fps) 1/frameRate can be a small
+   single-digit centisecond count where the same +-0.5cs rounding is a
+   large relative error -- e.g. 22.4fps quantizes to a delay of 4cs
+   (=25fps actual, +11.6%), which measured as a 10-11% GIF/WAV duration
+   mismatch on small-n presets (asteroids_hazardous_only, n=10) despite
+   the nominal frameRate/targetDuration arithmetic being exact. Fixed by
+   quantizing frameRate to what Export will actually produce BEFORE
+   solving actualNFrames, so the frame count that flexes at the clamp
+   boundary is solved against the real, post-quantization frame rate --
+   the same "compute against what will actually render" fix, just one
+   quantization step further than the plain fps clamp above.
+
    Returns {actualNFrames, frameRate} so callers can report what was
-   actually rendered (STEMDescribeGIF wants both). *)
+   actually rendered (STEMDescribeGIF wants both); frameRate returned is
+   the quantized (real) rate, not the nominal pre-quantization one. *)
 
 ExportAnimation[asteroids_List, filePath_String,
                 startDate_String, endDate_String,
                 targetDuration_?NumericQ, nFrames_:150, holdFrac_:0.15] :=
   Module[
-    {maxDist, n, dateRange, angles, frameRate, actualNFrames,
-     holdCount, revealCount, revealIndices, frames, holdFrames, allFrames},
+    {maxDist, n, dateRange, angles, nominalFrameRate, quantDelay, frameRate,
+     actualNFrames, holdCount, revealCount, revealIndices, frames,
+     holdFrames, allFrames},
 
     maxDist = Max[#["missDistanceKm"] & /@ asteroids] * 1.05;
     n       = Length[asteroids];
     dateRange = startDate <> " – " <> endDate;
 
-    frameRate = Clip[nFrames / targetDuration,
+    nominalFrameRate = Clip[nFrames / targetDuration,
       {$MinAnimationFps, $MaxAnimationFps}];
+    quantDelay    = Round[100.0 / nominalFrameRate] / 100.0;
+    frameRate     = 1.0 / quantDelay;
     actualNFrames = Max[2, Round[frameRate * targetDuration]];
     holdCount     = Max[1, Round[actualNFrames * holdFrac]];
     revealCount   = Max[1, actualNFrames - holdCount];
