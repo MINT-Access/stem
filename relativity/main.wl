@@ -19,6 +19,7 @@
      --simulation.chirp.distance_mpc
      --simulation.chirp.preset              (gw150914 | gw170817 | stellar)
      --sonification.chirp.time_stretch
+     --sonification.chirp.gw170817_time_stretch
      --sonification.chirp.frequency_shift
 
    CLI flags — geodesic mode:

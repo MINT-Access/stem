@@ -228,12 +228,13 @@ Measured before the fix (default config): `chirp.gif` played 1.83s against a
 fixed in `lorenz/src/animate.wl` (`ExportAnimation`), but the two modes here
 derive their WAV length very differently, so each needed its own diagnosis:
 
-- **chirp** — `SonifyRelativity`/`ChirpToAudio` (`src/sonify.wl`) time-stretch
-  and pitch-shift the raw strain: `chirp.wav` duration = `T_model ×
-  time_stretch / frequency_shift`, where `T_model = (n-1)/sample_rate` is the
-  *un-stretched* model duration. The animation had no notion of this at all —
-  it revealed the waveform over 60 frames regardless of `T_model`, let alone
-  the stretched duration.
+- **chirp** — `SonifyRelativity`/`ChirpToAudio` (`src/sonify.wl`) stretch
+  playback duration to `T_model × time_stretch`, where `T_model =
+  (n-1)/sample_rate` is the *un-stretched* model duration (see "Time-stretch
+  bug" below for how `ChirpToAudio` does this — and originally didn't do it
+  correctly). The animation had no notion of this at all — it revealed the
+  waveform over 60 frames regardless of `T_model`, let alone the stretched
+  duration.
 - **geodesic** — `SonifyGeodesic` doesn't derive audio length from the
   trajectory (`tau`/`n_steps`) at all; it just synthesizes
   `sonification.geodesic.duration_s` (config default 10s) of audio outright,
@@ -242,10 +243,12 @@ derive their WAV length very differently, so each needed its own diagnosis:
 
 **The fix**, in `src/animate.wl` (both `AnimateRelativity`'s chirp branch and
 `AnimateGeodesic`, following `lorenz`'s pattern): each function now computes
-a `targetDuration` — for chirp, the same `T_model × time_stretch /
-frequency_shift` formula `ChirpToAudio` uses (read from `model` + the same
-`sonification.chirp.*` config keys, so it lands on chirp.wav's real length
-without needing the WAV to already exist); for geodesic, `duration_s` read
+a `targetDuration` — for chirp, the same `T_model × time_stretch` formula
+`ChirpToAudio` uses (read from `model` + the same `sonification.chirp.*`
+config keys, so it lands on chirp.wav's real length without needing the WAV
+to already exist; see "Time-stretch bug" below — `frequency_shift` dropped
+out of this formula when that fix decoupled pitch from duration); for
+geodesic, `duration_s` read
 straight from `sonification.geodesic.duration_s` (the same key
 `SonifyGeodesic` uses). `nFramesBudget` (60, unchanged) is now a *render
 budget*, not a literal count: `fps = Clip[nFramesBudget/targetDuration,
@@ -280,6 +283,108 @@ something this fix introduces.
 intentionally audio-only with no GIF counterpart and were left untouched —
 they're direct-comparison sonifications of named real events, not simulation
 trajectories with a natural visual pairing.
+
+## Time-stretch bug: pitch-shift conflated with duration-stretch
+
+**The bug.** `ChirpToAudio` (`src/sonify.wl`) used to build `h(t) =
+A(t)·Cos[2π φ(t)]` once from the model's real strain array, then *resample*
+that finished waveform onto a stretched time grid to make the clip longer.
+Resampling a waveform by a factor k divides every frequency component in it
+by k — that's what resampling *is*. So `sonification.chirp.time_stretch`
+(default 4.0×), meant only to make the clip longer, also silently divided
+every real frequency in the signal by ~4.2× (chirp mass rounding). GW150914's
+real 19.99–412 Hz inspiral sweep became roughly 5–97 Hz in the actual
+rendered WAV — below or barely at the edge of what typical laptop/phone
+speakers reproduce well, for most of the clip's duration, defeating the
+entire purpose of a file whose own `STEMSay` message claims "time-stretched
+to make it clearly audible." Caught by spectrogram/instantaneous-frequency
+analysis of the actual WAV — not by reading the code, and not visible from
+the animation, since `model.wl`'s frequency array itself was never wrong.
+
+**The fix.** `ChirpToAudio` no longer touches the waveform at all. It takes
+the model's real, physically-correct frequency and amplitude arrays
+(`model["frequency"]`, `model["amplitude"]`) together with the real time
+array, and:
+
+1. Computes a playback time axis of length `(real duration spanned) ×
+   timeStretch`.
+2. Maps each playback-time sample back to the physical time it represents —
+   a **linear remap of the time axis**, not a resample of the signal.
+3. Interpolates the real f(t) and A(t) arrays at those physical times — the
+   frequency *values* are untouched.
+4. Re-integrates phase from the (unaltered) frequency values over
+   **playback** time, and resynthesizes `h_audio = A_audio · Cos[2π·phase]`.
+
+Because the frequency axis is never divided by the stretch factor — only the
+time each value is *played back at* changes — real frequency content
+survives any amount of stretching or compression. `frequency_shift` (pitch
+multiplier, default 1.0, unused by any preset) is now applied directly to
+the frequency values as a genuinely independent control with zero effect on
+duration; previously it was mathematically coupled to duration through the
+same resample (the "raises pitch and shortens duration" comment it used to
+carry was itself a symptom of this bug pattern).
+
+**Verified** (`wolframscript -file main.wl`, then Hilbert-transform
+instantaneous-frequency analysis of the real rendered WAVs — a plain
+spectrogram/STFT isn't enough here, since a fixed analysis window smears a
+chirp's very fast late-inspiral sweep):
+
+| Preset | Real f range (model) | tc (real) | time_stretch | Playback duration | Measured f at clip start | Measured f approaching merger |
+|---|---|---|---|---|---|---|
+| chirp.wav / gw150914.wav (36+29 M☉) | 20–412 Hz | 0.845 s | 4.0× (shared default) | 3.58 s | 19.9 Hz | ramps to ~410 Hz right at the predicted merger time (3.38 s), settles near the reported QNM 193.6 Hz just after |
+| gw170817.wav (1.17+1.36 M☉, last 10 s of inspiral) | 60–500 Hz (clipped) | 187.94 s full inspiral (truncated to final 10 s for the clip) | 1.5× (dedicated — see below) | 15.08 s | 60.3 Hz | ramps to ~500 Hz right at the predicted merger time (15.0 s) |
+| stellar.wav (10+8 M☉) | 20–500 Hz (clipped) | 7.19 s | 4.0× (shared default) | 28.96 s | 20.1 Hz | ramps to ~700 Hz at merger (28.76 s), settles near the reported QNM 699 Hz |
+
+All three now start at their real physical starting frequency (~20 Hz, or
+~60 Hz for GW170817's truncated window) rather than the pre-fix ~5 Hz
+GW150914 exhibited, and all three show the correct trajectory shape: a slow
+rise for most of the clip, then a sharp ramp to peak frequency in the last
+~1% of playback time — an artifact of the underlying `(t_c − t)^(−3/8)`
+physics, which concentrates almost the entire frequency sweep into the last
+few milliseconds of *real* time no matter how much the clip is stretched —
+followed by a brief ringdown near the model's reported QNM frequency before
+decaying to silence.
+
+**GW170817 needed its own stretch factor, not GW150914's.** Independently
+re-derived from `f_min = 20 Hz`: GW150914's real coalescence time is ~0.845 s
+(too short to be audible — needs *stretching*), but GW170817's is ~188 s (its
+two neutron stars are far lower mass, so the same 20–500 Hz sweep takes far
+longer) — already far too long for a practical clip, so if anything it needs
+*compressing*, not stretching. The existing design (predating this fix)
+already truncates GW170817 to just the final 10 s of real inspiral, where
+the sweep through the audio band is most dramatic. Reusing the shared 4.0×
+`time_stretch` on that already-short 10 s window would still produce a ~40 s
+clip — disproportionate for a demo file. Added a dedicated
+`sonification.chirp.gw170817_time_stretch` config key (default 1.5×)
+instead, landing on ~15 s: still ~4× longer than GW150914's clip
+(deliberately conveying "long, gradual inspiral" rather than "short,
+dramatic merger" — the two events' distinct character), without being
+impractically long. The same remap technique in `ChirpToAudio` handles this
+correctly regardless of direction (stretch or compression) — it never speeds
+up or slows down a waveform, so no special-casing was needed for "this
+preset needs less stretch," only a different `timeStretch` input.
+
+**Not affected / not changed:**
+
+- `model.wl`'s own `frequency`/`amplitude` arrays were never wrong — they're
+  the physically correct PN sweep the whole time. Only the *audio* derived
+  from them was broken. `AnimateRelativity`'s frequency/waveform plots read
+  directly from these arrays and always displayed correct real values,
+  before and after this fix — no visualization or axis-label changes were
+  needed; the time axis there was always real physical time, not playback
+  time, and was already labeled accordingly.
+- `SonifyGeodesic` (the `geodesic` mode) is architecturally different: it was
+  designed from the start as a deliberate pitch *mapping* (angular velocity
+  or gravitational blueshift normalized to `pitch_base_hz`), not a "speed up
+  the real signal" sonification, so it never had a notion of "real frequency"
+  to preserve or corrupt. Left untouched.
+- `AnimateRelativity`'s `targetDuration` formula (kept in sync with
+  `ChirpToAudio`'s duration so `chirp.gif` and `chirp.wav` play for the same
+  length) needed one small change: it dropped the `/freqShift` term, since
+  `freqShift` no longer affects duration at all post-fix. GIF/WAV sync
+  verified unaffected: 3.60 s GIF vs 3.58 s `chirp.wav` (same ~1-2% residual
+  from `ExportGIF`'s centisecond-quantized frame delay documented above, not
+  something this fix changed).
 
 ## Common pitfalls
 
@@ -319,7 +424,7 @@ trajectories with a natural visual pairing.
 |------|-------------|
 | `chirp.gif` | 60-frame animation, waveform revealed + frequency dot |
 | `chirp.png` | Static two-panel: full strain waveform + frequency sweep |
-| `chirp.wav` | Main audio: time-stretched + normalised h(t) |
+| `chirp.wav` | Main audio: re-synthesized from the real f(t)/A(t) remapped onto a stretched playback duration, normalised (see "Time-stretch bug" below) |
 | `chirp_timeseries.csv` | Every 10th sample: time_s, strain_h, frequency_hz, amplitude |
 | `gw150914.wav` | GW150914 preset |
 | `gw170817.wav` | GW170817 preset, last 10 s of inspiral |

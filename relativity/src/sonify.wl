@@ -4,9 +4,9 @@
    Public API:
      SonifyRelativity[model, cfg, outDir]
 
-   The gravitational wave strain h(t) IS an audio waveform.
-   Time-stretching and optional frequency-shifting make the
-   millisecond-scale chirp audible.
+   The gravitational wave strain h(t) IS the physical signal, but it
+   is re-synthesized (not resampled) for playback — see ChirpToAudio
+   below and the "Time-stretch bug" entry in AGENTS.md for why.
 
    Primary output:
      chirp.wav     — main event with configured parameters
@@ -19,54 +19,82 @@
 
 
 (* ── ChirpToAudio ─────────────────────────────────────────
-   Convert a strain array to a normalised audio buffer.
+   Re-synthesize an audio buffer from the REAL, physically-accurate
+   frequency and amplitude arrays, remapped onto a playback time axis.
 
-   strain      — raw h(t) array at sr_model samples/s
-   sr_model    — model sample rate (Hz)
-   sr_out      — output audio sample rate (Hz)
-   timeStretch — factor > 1 slows the signal down (audible duration longer)
-   freqShift   — multiplicative pitch shift (1.0 = no shift)
+   tPhys, fPhys, aPhys — physical time (s) / frequency (Hz, unaltered
+                         real GW frequency) / amplitude arrays, all
+                         from model.wl (ChirpModel), optionally
+                         pre-truncated by the caller (e.g. maxInspiral)
+   srOutRaw    — output audio sample rate (Hz)
+   timeStretch — playback duration = (physical time span of tPhys) ×
+                 timeStretch. Values > 1 slow real time down (longer,
+                 more audible clip); < 1 would compress it.
+   freqShift   — independent pitch multiplier (1.0 = no shift),
+                 applied directly to the real frequency values with
+                 NO effect on playback duration.
 
-   Time stretching: output duration = T_original × timeStretch / freqShift.
-   The strain is time-expanded by timeStretch and pitch-shifted by freqShift
-   via resampling.  freqShift > 1 raises pitch and shortens duration.
+   IMPORTANT — do not resample the waveform. The previous
+   implementation built h(t) once (via ChirpModel's Cos[2π φ(t)]) and
+   then resampled THAT waveform onto a stretched time grid. Resampling
+   a waveform divides every frequency component by the resample
+   factor — so a 4.2× "time stretch" silently divided the real
+   20–412 Hz sweep down to ~5–97 Hz, well below what typical speakers
+   render audibly. See AGENTS.md § "Time-stretch bug: pitch-shift
+   conflated with duration-stretch" for the full story.
+
+   This version never touches the waveform. It interpolates fPhys and
+   aPhys — real values — onto the *playback* time axis, then
+   re-integrates phase over playback time. The real frequency values
+   are therefore preserved exactly, regardless of how much the
+   duration is stretched or compressed, because the frequency axis is
+   never divided by the stretch factor.
 
    Normalises the output to peak 0.9.
    ─────────────────────────────────────────────────────────── *)
 
-ChirpToAudio[strain_List, srModelRaw_?NumericQ,
-             srOutRaw_?NumericQ, timeStretch_?NumericQ,
-             freqShift_?NumericQ] :=
-  Module[{srModel, srOut, n, T, Tout, nOut, tSrc, hInterp, tDest, hOut, peak},
+ChirpToAudio[tPhys_List, fPhys_List, aPhys_List, srOutRaw_?NumericQ,
+             timeStretch_?NumericQ, freqShift_?NumericQ] :=
+  Module[{srOut, t0, tRealSpan, Tplayback, nOut, dtOut,
+          tPlaybackArr, tPhysQuery, fInterp, aInterp,
+          fAudio, aAudio, phaseArr, hAudio, peak},
 
-    srModel = Round[srModelRaw];
-    srOut   = Round[srOutRaw];
-    n = Length[strain];
-    T = N[(n - 1) / srModel];     (* original duration, seconds *)
+    srOut     = Round[srOutRaw];
+    t0        = First[tPhys];
+    tRealSpan = Last[tPhys] - t0;     (* real physical duration spanned *)
 
-    (* Output duration and sample count.
-       freqShift > 1 compresses (higher pitch, shorter).
-       timeStretch > 1 expands (lower pitch, longer). *)
-    Tout = T * N[timeStretch / freqShift];
-    nOut = Max[1, Round[Tout * srOut]];
+    Tplayback = tRealSpan * N[timeStretch];
+    nOut      = Max[1, Round[Tplayback * srOut]];
+    dtOut     = 1.0 / srOut;
 
-    (* Build interpolation over physical time t ∈ [0, T] *)
-    tSrc    = N @ Range[0, n - 1] / srModel;
-    hInterp = Interpolation[Transpose[{tSrc, N @ strain}],
-                            InterpolationOrder -> 1];
+    (* Playback-time axis, mapped back to the physical time each
+       playback sample corresponds to. Linear remap: t_phys advances
+       (tRealSpan/Tplayback) = 1/timeStretch physical seconds per
+       playback second. This is a re-timing of the time AXIS, not a
+       resample of the waveform. *)
+    tPlaybackArr = N @ Range[0, nOut - 1] * dtOut;
+    tPhysQuery   = Clip[t0 + tPlaybackArr * (tRealSpan / Tplayback),
+                        {t0, Last[tPhys]}];
 
-    (* For output sample k (0-indexed), the corresponding physical time is:
-         t_phys = (k / srOut) × freqShift / timeStretch
-       This maps the output time grid back to the original signal. *)
-    tDest = Clip[
-      N @ Range[0, nOut - 1] / srOut * (freqShift / timeStretch),
-      {0.0, T}];
+    fInterp = Interpolation[Transpose[{tPhys, N @ fPhys}], InterpolationOrder -> 1];
+    aInterp = Interpolation[Transpose[{tPhys, N @ aPhys}], InterpolationOrder -> 1];
 
-    hOut = hInterp /@ tDest;
+    (* freqShift multiplies the real frequency values directly — a
+       genuine, independent pitch control with no effect on nOut/
+       Tplayback (unlike the old resample-based implementation, where
+       pitch and duration were mathematically coupled). *)
+    fAudio = N[freqShift] * (fInterp /@ tPhysQuery);
+    aAudio = aInterp /@ tPhysQuery;
+
+    (* Reconstruct phase by integrating the REAL (optionally
+       pitch-shifted) frequency values over PLAYBACK time. This is
+       what preserves true frequency content regardless of stretch. *)
+    phaseArr = N[2.0 Pi * Accumulate[fAudio] * dtOut];
+    hAudio   = aAudio * Cos[phaseArr];
 
     (* Normalise to peak amplitude 0.9 *)
-    peak = Max[Abs[hOut]];
-    If[peak > 0.0, hOut * (0.9 / peak), hOut]
+    peak = Max[Abs[hAudio]];
+    If[peak > 0.0, hAudio * (0.9 / peak), hAudio]
   ]
 
 
@@ -74,18 +102,29 @@ ChirpToAudio[strain_List, srModelRaw_?NumericQ,
    Compute ChirpModel for given masses and distance, apply
    audio processing, and export to wavPath.
 
-   maxInspiral — if > 0, truncate to the last maxInspiral
-                 seconds of the inspiral before merger.
+   maxInspiral         — if > 0, truncate to the last maxInspiral
+                         seconds of the inspiral before merger.
+   timeStretchOverride — Automatic to use the shared
+                         sonification.chirp.time_stretch config value,
+                         or an explicit numeric override for presets
+                         whose real duration is different enough in
+                         character to deserve their own stretch factor
+                         (see GW170817 in SonifyRelativity).
    ─────────────────────────────────────────────────────────── *)
 
 SonifyPreset[pm1_?NumericQ, pm2_?NumericQ, pDistMpc_?NumericQ,
              cfg_Association, wavPath_String] :=
-  SonifyPreset[pm1, pm2, pDistMpc, cfg, wavPath, 0.0]
+  SonifyPreset[pm1, pm2, pDistMpc, cfg, wavPath, 0.0, Automatic]
 
 SonifyPreset[pm1_?NumericQ, pm2_?NumericQ, pDistMpc_?NumericQ,
              cfg_Association, wavPath_String,
              maxInspiral_?NumericQ] :=
-  Module[{presetCfg, model, strain, mergerIdx, srModel,
+  SonifyPreset[pm1, pm2, pDistMpc, cfg, wavPath, maxInspiral, Automatic]
+
+SonifyPreset[pm1_?NumericQ, pm2_?NumericQ, pDistMpc_?NumericQ,
+             cfg_Association, wavPath_String,
+             maxInspiral_?NumericQ, timeStretchOverride_] :=
+  Module[{presetCfg, model, tArr, fArr, aArr, mergerIdx, srModel,
           srOut, timeStretch, freqShift, audio, startIdx},
 
     (* Merge preset masses/distance into a local config *)
@@ -98,22 +137,29 @@ SonifyPreset[pm1_?NumericQ, pm2_?NumericQ, pDistMpc_?NumericQ,
 
     model = ChirpModel[presetCfg];
 
-    strain    = model["strain"];
+    tArr      = model["time"];
+    fArr      = model["frequency"];
+    aArr      = model["amplitude"];
     mergerIdx = model["merger_index"];
     srModel   = Round @ model["sample_rate"];
 
-    srOut       = Round @ GetCfg[cfg, {"sonification","sample_rate"},          44100];
-    timeStretch = N @ GetCfg[cfg, {"sonification","chirp","time_stretch"}, 4.0];
+    srOut       = Round @ GetCfg[cfg, {"sonification","sample_rate"}, 44100];
+    timeStretch = If[timeStretchOverride === Automatic,
+      N @ GetCfg[cfg, {"sonification","chirp","time_stretch"}, 4.0],
+      N @ timeStretchOverride];
     freqShift   = N @ GetCfg[cfg, {"sonification","chirp","frequency_shift"}, 1.0];
 
-    (* Optional truncation to final maxInspiral seconds of inspiral *)
+    (* Optional truncation to final maxInspiral seconds of inspiral.
+       Slices the real time/frequency/amplitude arrays in lockstep —
+       ChirpToAudio only ever sees real, unaltered values. *)
     If[maxInspiral > 0.0,
       startIdx = Max[1, mergerIdx - Round[maxInspiral * srModel]];
-      strain   = Join[strain[[startIdx ;; mergerIdx]],
-                      strain[[mergerIdx + 1 ;; -1]]]
+      tArr = Join[tArr[[startIdx ;; mergerIdx]], tArr[[mergerIdx + 1 ;; -1]]];
+      fArr = Join[fArr[[startIdx ;; mergerIdx]], fArr[[mergerIdx + 1 ;; -1]]];
+      aArr = Join[aArr[[startIdx ;; mergerIdx]], aArr[[mergerIdx + 1 ;; -1]]]
     ];
 
-    audio = ChirpToAudio[strain, srModel, srOut, timeStretch, freqShift];
+    audio = ChirpToAudio[tArr, fArr, aArr, srOut, timeStretch, freqShift];
 
     EnsureDir[wavPath];
     ExportAudioBuffer[audio, wavPath, srOut];
@@ -125,8 +171,8 @@ SonifyPreset[pm1_?NumericQ, pm2_?NumericQ, pDistMpc_?NumericQ,
 
 SonifyRelativity[model_Association, cfg_Association, outDir_String] :=
   Module[{
-    mode, strain, mergerIdx, srModel,
-    srOut, timeStretch, freqShift,
+    mode, tArr, fArr, aArr, mergerIdx,
+    srOut, timeStretch, freqShift, gw170817Stretch,
     chirpMass, fSweepMin, fSweepMax, tc, audioDur,
     mainPath, audio
   },
@@ -134,9 +180,10 @@ SonifyRelativity[model_Association, cfg_Association, outDir_String] :=
   mode = model["mode"];
   If[mode === "geodesic", Return @ SonifyGeodesic[model, cfg, outDir]];
 
-  strain    = model["strain"];
+  tArr      = model["time"];
+  fArr      = model["frequency"];
+  aArr      = model["amplitude"];
   mergerIdx = model["merger_index"];
-  srModel   = Round @ model["sample_rate"];
   chirpMass = model["chirp_mass_solar"];
   fSweepMin = N @ First[model["frequency"]];
   fSweepMax = model["peak_frequency"];
@@ -149,7 +196,7 @@ SonifyRelativity[model_Association, cfg_Association, outDir_String] :=
   (* ── Primary chirp WAV (current model parameters) ── *)
   mainPath = FileNameJoin[{outDir, "chirp.wav"}];
   Print["  Processing main chirp..."];
-  audio    = ChirpToAudio[strain, srModel, srOut, timeStretch, freqShift];
+  audio    = ChirpToAudio[tArr, fArr, aArr, srOut, timeStretch, freqShift];
   EnsureDir[mainPath];
   ExportAudioBuffer[audio, mainPath, srOut];
   audioDur = N[Length[audio] / srOut];
@@ -159,18 +206,31 @@ SonifyRelativity[model_Association, cfg_Association, outDir_String] :=
   Print[""];
   Print["  Computing preset comparison WAVs..."];
 
-  (* GW150914: 36+29 solar mass binary black hole, 410 Mpc *)
+  (* GW150914: 36+29 solar mass binary black hole, 410 Mpc.
+     Real coalescence time ~0.85 s from f_min=20 Hz — the shared
+     time_stretch (default 4×) makes this a short, dramatic ~3.6 s clip. *)
   Print["  GW150914 (36+29 M☉ binary black hole, 410 Mpc)..."];
   SonifyPreset[36.0, 29.0, 410.0, cfg,
     FileNameJoin[{outDir, "gw150914.wav"}]];
 
   (* GW170817: 1.17+1.36 solar mass neutron star merger, 40 Mpc.
-     Inspiral is ~172 s long; truncate to the final 10 s where
-     the sweep through the audio band is most dramatic. *)
+     Real inspiral from f_min=20 Hz is ~188 s long — far too long to
+     stretch further, so this preset already needs *compressing*, not
+     stretching, to become a practical clip. We truncate to the final
+     10 s of real inspiral (where the sweep through the audio band is
+     most dramatic) and then apply a DEDICATED, smaller stretch factor
+     (sonification.chirp.gw170817_time_stretch, default 1.5×) rather
+     than reusing the shared 4× tuned for GW150914's much shorter
+     merger: reusing 4× here would produce a ~40 s clip, disproportionate
+     for a demo; 1.5× gives ~15 s — still ~4× longer than GW150914's
+     clip (deliberately conveying "long, gradual inspiral" rather than
+     "short, dramatic merger"), without being impractically long. *)
+  gw170817Stretch = N @ GetCfg[cfg, {"sonification","chirp","gw170817_time_stretch"}, 1.5];
   Print["  GW170817 (1.17+1.36 M☉ neutron star merger, 40 Mpc, last 10 s)..."];
   SonifyPreset[1.17, 1.36, 40.0, cfg,
     FileNameJoin[{outDir, "gw170817.wav"}],
-    10.0];   (* truncate to last 10 s of inspiral *)
+    10.0,             (* truncate to last 10 s of inspiral *)
+    gw170817Stretch]; (* dedicated stretch — see comment above *)
 
   (* Stellar mass binary: 10+8 solar masses, 100 Mpc *)
   Print["  Stellar (10+8 M☉, 100 Mpc)..."];

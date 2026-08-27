@@ -46,7 +46,7 @@ AnimateRelativity[model_Association, cfg_Association, outDir_String] :=
     mode, tFull, hFull, fFull, mergerIdx, tc,
     tInspiral, hInspiral, fInspiral,
     n, nInspiral,
-    srModel, timeStretch, freqShift, targetDuration,
+    srModel, timeStretch, targetDuration,
     fps, width, height,
     hMax, fPeak, fQnm, tTotal,
     nFramesBudget, nFrames, frameIndices, frames,
@@ -83,15 +83,18 @@ AnimateRelativity[model_Association, cfg_Association, outDir_String] :=
   mergerT = tc;
 
   (* Target GIF playback duration = chirp.wav's actual duration, not the raw
-     model time tTotal. ChirpToAudio (src/sonify.wl) time-stretches/shifts the
-     raw signal by timeStretch/freqShift, so the audible WAV is a different
-     length than the model's own time array. Recomputing the same formula
-     here (rather than reading it back from the WAV) keeps animate/sonify
-     independent while landing on an identical duration. *)
+     model time tTotal. ChirpToAudio (src/sonify.wl) re-synthesizes the real
+     frequency/amplitude arrays onto a playback time axis of length
+     (real duration) × timeStretch, so the audible WAV is a different length
+     than the model's own time array. Recomputing the same formula here
+     (rather than reading it back from the WAV) keeps animate/sonify
+     independent while landing on an identical duration.
+     NOTE: freqShift does NOT enter this formula — post time-stretch-bug-fix,
+     freqShift is a pure pitch multiplier applied to frequency values with no
+     effect on playback duration (see AGENTS.md § "Time-stretch bug"). *)
   srModel        = Round @ model["sample_rate"];
   timeStretch    = N @ GetCfg[cfg, {"sonification","chirp","time_stretch"},    4.0];
-  freqShift      = N @ GetCfg[cfg, {"sonification","chirp","frequency_shift"}, 1.0];
-  targetDuration = N[(n - 1) / srModel] * timeStretch / freqShift;
+  targetDuration = N[(n - 1) / srModel] * timeStretch;
 
   (* ── Animated GIF ──────────────────────────────────────
      nFramesBudget is a RENDER BUDGET, not a literal frame count: fps is
