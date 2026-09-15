@@ -1,0 +1,283 @@
+# tools/
+
+Standalone utilities that operate *on* this repo's apps from the
+outside, rather than living inside any one app's own pipeline. Nothing
+here runs as part of an app's `main.wl`, and nothing here changes an
+app's own output. Every app's primary, default output stays
+sonification-first — WAV, GIF, CSV — exactly as documented in each
+app's own README.
+
+## make_presentation_video.wl
+
+Generates a single presentation-ready MP4 (video + audio, muxed and
+synced) from an app's **already-rendered** GIF and WAV output. Built
+for two real, recurring needs: LinkedIn posts, and live talks to
+mostly-sighted audiences (workshops, conference presentations) where a
+combined video is the practical format, even though sonification —
+audio as the primary channel — remains this project's actual point and
+every app's actual default output.
+
+This tool exists because producing these videos by hand, repeatedly,
+surfaced and fixed several real bugs this project now has fixes for: a
+GIF-clipping bug that clipped 76% of `pendulum/`'s double-pendulum
+animation frames, a systemic GIF/WAV duration-desync bug across all 32
+apps, and a pitch-shift bug in `relativity/`'s chirp audio. Rather than
+re-discovering (or re-introducing) those bugs by hand each time, this
+tool bakes the fixes in as defaults: it will not produce a video whose
+audio and video durations don't match, and it verifies its own output
+frame-by-frame before calling the job done.
+
+### Usage
+
+```sh
+wolframscript -file tools/make_presentation_video.wl -- \
+  --gif=pendulum/output/double_animation.gif \
+  --wav=pendulum/output/double_audio.wav \
+  --title="Double Pendulum" \
+  --profile=workshop \
+  --out=pendulum/output/double_workshop.mp4
+```
+
+Required flags: `--gif`, `--wav`, `--title`, `--profile`
+(`linkedin` or `workshop`), `--out`.
+
+Optional flags:
+- `--stretch=N` — time-stretch factor applied to the source audio (and
+  a matching video slowdown), for the narrow case of a raw chirp-style
+  sonification that's too short to be followed as a presentation clip.
+  See "Stretch factor" below — most invocations should omit this.
+- `--tolerance=N` — GIF/WAV duration-match tolerance as a fraction
+  (default `0.03`).
+
+One MP4 per invocation, deliberately — the tool does not generate both
+profiles from one call. Run it twice for both.
+
+### Profiles
+
+| Profile | Dimensions | Aspect | Use |
+|---|---|---|---|
+| `linkedin` | 1080×1080 | 1:1 | Feed posts |
+| `workshop` | 1920×1080 | 16:9 | Talk/slide decks |
+
+### Design priority: sync over everything else
+
+**Correct video/audio synchronization matters more than anything
+else** — more than hitting any particular target duration, more than
+visual polish. Concretely:
+
+- The tool verifies the source GIF and WAV are already duration-matched
+  (within tolerance, default 3% — the same residual the v1.5.1 GIF/WAV
+  sync fix documented, coming from GIF's whole-centisecond frame-delay
+  quantization) **before doing anything else**, and refuses to produce
+  a video if they aren't, rather than silently producing a desynced
+  one.
+- In the common case — true for all 32 apps as of the v1.5.1 fix — the
+  GIF and WAV are already duration-matched, so the tool's job is
+  comparatively simple: take what already exists, frame it well, add a
+  title, mux, done. It does **not** implement general-purpose automatic
+  duration stretching or trimming; that was explicitly descoped. If an
+  app's outputs drift out of sync in the future, the fix belongs in
+  that app's own `animate.wl`/`sonify.wl` (as it did in the v1.5.1 fix),
+  not papered over here.
+- After muxing, the tool re-verifies the final MP4's duration against
+  the source WAV.
+
+### What the tool actually does
+
+1. **Verify duration match** (GIF vs. WAV, see above).
+2. **Crop to the real, verified content boundary.** Every frame of the
+   GIF is classified pixel-by-pixel against a per-video inferred
+   background color (sampled from the frame's four corners — every app
+   in this codebase centers its physics content, so corners are
+   reliably background). The content bounding box is the union across
+   **every frame**, not a sample — the double-pendulum clipping bug
+   this pipeline exists to avoid repeating was invisible on the frames
+   a human would have spot-checked. A symmetric margin (both sides of
+   both dimensions — the two mistakes explicitly being guarded against
+   are cropping with zero margin, and margin on only one side) is added
+   and clamped to the source image bounds.
+3. **Scale to fill, pad to fit.** The cropped content is scaled to fill
+   the profile's content area (below the title band) as large as the
+   aspect ratio allows, then padded — never stretched — to the exact
+   target dimensions. Content is deliberately scaled to 94% of the
+   available area rather than exactly 100%: some source GIFs turned out
+   to already be very tightly framed natively (`lorenz_animation.gif`
+   has only ~5px of native headroom above/below its trajectory at full
+   resolution), which left only a few pixels of margin in the output
+   even after the crop step's own margin logic — reserving a fixed
+   fraction of breathing room in the *output* guarantees comfortable
+   clearance regardless of how tightly the source app happened to frame
+   its own animation.
+4. **Add the title,** structurally rather than just visually separated
+   from the content: the canvas is split into a dark title band at the
+   top and a content area below it, and the animation is scaled+padded
+   to fit entirely within the content area — never the title band — so
+   the two regions cannot overlap by construction. (Verified anyway;
+   see below.)
+5. **Mux + verify.** Frames are muxed with the WAV and the final
+   duration is checked against the source audio.
+
+### Verification
+
+Every video this tool produces is checked, on **every frame** (not a
+sample), directly in Wolfram Language — reusing the same discipline as
+`pendulum/tests/verify_animation_frames.py` (classify content vs.
+background, find the bounding box, check clearance from every edge) —
+against the actual composed frames used to build the video, before
+muxing. `tools/src/video_pipeline.wl`'s `VerifyComposedFrames` reports
+worst-case margins on all four canvas edges plus the title-to-content
+clearance, and the CLI exits non-zero if any frame violates the
+minimum margin.
+
+Measured results from testing against three apps with different
+animation characteristics (all full-video, every-frame checks — see
+the sections below for the numbers): a large-amplitude chaotic
+double-pendulum swing, a continuous-trajectory strange attractor, and a
+narrated audio track with spoken introduction baked into the WAV. All
+three passed with zero clipping violations.
+
+### Stretch factor
+
+For the narrow case of a raw chirp-style sonification that's too short
+to be followed as a presentation clip (some of `relativity/`'s
+un-stretched outputs), `--stretch=N` re-synthesizes the source WAV at N
+times its original duration.
+
+This tool operates on **already-rendered** GIF/WAV files, not the raw
+physics model arrays `relativity/src/model.wl` produces — so it can't
+call `ChirpToAudio` directly, the way `relativity/src/sonify.wl` does.
+Instead it recovers an instantaneous frequency/amplitude description of
+the *finished* WAV via a Hilbert transform (the same analysis technique
+already used this session to verify the chirp pitch-shift fix's
+rendered WAVs — see commit `e73161e`), interpolates that description
+onto a longer playback time axis, and re-synthesizes by integrating
+phase over the new time axis — mirroring `ChirpToAudio`'s math exactly.
+It never resamples the raw waveform, which would divide every frequency
+component by the stretch factor (the exact bug `e73161e` fixed).
+
+This only makes sense for close-to-monophonic, single dominant-tone or
+sweep audio. It has **not** been exercised against multi-voice or
+narrated audio, and isn't intended for it — that's out of scope for
+this feature. None of the three apps used for this tool's required
+verification needed stretching (their GIF/WAV pairs are already
+duration-matched), so `StretchAudioBuffer` was sanity-checked
+separately: on a synthetic 100→400 Hz, 1s linear chirp, stretched 3×,
+measuring the actual instantaneous frequency (via a discrete FFT-based
+analytic signal — see the note below) of both the original and
+stretched buffers. Both measured the same ~130–370 Hz range; a naive
+waveform resample would instead have produced ~43–123 Hz (divided by
+the 3× stretch factor), which is exactly the bug this technique exists
+to avoid. `relativity/output/gw150914.wav` was used to size a
+realistic buffer length for a separate timing check, not for the
+frequency-preservation measurement itself.
+
+One implementation note worth recording: WL's built-in
+`HilbertTransform` turned out to be a **symbolic** integral-transform
+function (`HilbertTransform[f[t], t, s]`), not a discrete-signal
+function operable on a plain numeric list — calling it on a PCM buffer
+fails immediately (`HilbertTransform::argmu`) rather than computing
+anything. `StretchAudioBuffer` instead builds the discrete analytic
+signal itself via a standard FFT method (`AnalyticSignalFFT` in
+`tools/src/video_pipeline.wl`: zero the negative-frequency bins, double
+the positive ones), and unwraps phase manually (`UnwrapPhase`) since
+this WL version also has no built-in `Unwrap`.
+
+---
+
+## Step 1 finding: native WL video export vs. an ffmpeg dependency
+
+**This tool is built entirely in native Wolfram Language. It does not
+call an external `ffmpeg` binary, and introduces no dependency beyond
+what the rest of this repo already requires (the free Wolfram
+Engine).**
+
+WL's `Video`/`Audio` framework (`FrameListVideo`, `VideoCombine`,
+`Export[...,"MP4"]`) turned out to be backed by Wolfram's own bundled
+FFmpeg-derived library — not a system `ffmpeg` install. This was
+confirmed two ways during investigation:
+- `$VideoEncoders`/`$VideoDecoders` list real, working codecs
+  (`H264-AVF`, `MPEG4VIDEO`, `LIBVPX-VP9`, etc.) without any `ffmpeg`
+  binary present on the test machine (`which ffmpeg` → not found).
+- Extracting frames from a muxed MP4 via `VideoFrameList` printed an
+  `objc` duplicate-class warning naming
+  `FFmpegTools-8.1.0/LibraryResources/.../libavdevice.62.dylib`
+  directly — the underlying library is a Wolfram-distributed paclet
+  (`FFmpegTools`), shipped and versioned independently of any
+  system-level ffmpeg.
+
+That satisfies the same "just needs the free Wolfram Engine" promise
+the rest of this repo already relies on for every platform it
+supports.
+
+### Real gaps found along the way (and how this tool works around them)
+
+Native support turned out to be genuinely usable, but not
+frictionless — three real issues surfaced during verification, each
+confirmed by isolating the exact variable that caused it against a
+synthetic reproduction before fixing it in the pipeline:
+
+1. **Stereo audio silently breaks `VideoCombine`'s default encoding.**
+   Muxing any of this codebase's WAVs (all stereo — most use spatial
+   L/R panning as part of their sonification design) with the default
+   `AudioEncoding -> Inherited` threw an opaque
+   `VideoCombine::interr: An internal error occurred: cannot create
+   output video`. A synthetic mono WAV of otherwise-identical content
+   and duration succeeded every time; a synthetic *stereo* WAV
+   reproduced the failure. Explicitly passing
+   `AudioEncoding -> "AAC"` fixes it while preserving both channels
+   (verified via `AudioTrackCount`/`AudioChannels` on the muxed
+   output) — the alternative workaround, downmixing to mono, was
+   rejected because it would silently discard the spatial panning
+   several apps' sonifications rely on.
+2. **Floating-point frame-rate noise can break muxing entirely.**
+   Summing a GIF's per-frame display durations to derive its frame
+   rate can land a hair off a clean value (`24.999999999999993`
+   instead of `25`) from ordinary floating-point summation — small
+   enough to be invisible in any printed report, but `VideoCombine`
+   treated it inconsistently and it was one of several factors
+   reproduced during isolation testing. `GIFFrameRate` rounds to the
+   nearest `0.01` fps specifically to avoid feeding a non-clean rate
+   into the muxer.
+3. **A source GIF can already be framed too tightly to add margin to.**
+   Not a WL limitation exactly, but a real gap in a naive
+   crop-then-scale implementation: if the source app's own animation
+   leaves only a few native pixels of background around its content
+   (measured on `lorenz_animation.gif`: ~5px), the crop step's margin
+   logic has nowhere to add margin *to* — it gets clamped away at the
+   image edge, and the output ends up with almost no breathing room
+   even though the crop code "worked." See "Scale to fill, pad to fit"
+   above for the fix (`ContentFillFrac`).
+
+None of these required falling back to ffmpeg — all three were fixed
+inside the native WL pipeline once isolated. They're documented here,
+plainly, because they weren't obvious from the function names or
+documentation alone, and a future maintainer hitting the same opaque
+`VideoCombine::interr` should not have to re-derive the stereo-audio
+cause from scratch.
+
+### Cross-platform caveat (stated honestly, not verified firsthand)
+
+Verification for this tool ran on macOS only, where the MP4 encoder WL
+selected automatically was `H264-AVF` (Apple's AVFoundation hardware
+encoder — one of several MP4-capable encoders WL lists, alongside
+FFmpeg-derived options like `MPEG4VIDEO`, `LIBVPX-VP9`, and others that
+don't depend on any OS-specific framework). `VideoEncoding` is left at
+its default (`Automatic`) throughout this pipeline specifically so it
+picks whatever's available on each platform's own WL installation
+rather than hardcoding a macOS-specific choice. Windows and Linux were
+not available to test against directly in this session; if a codec
+substitution on another platform ever produces a non-playable or
+oddly-encoded file, the fix is to pin `VideoEncoding` explicitly in
+`MuxVideo` (`tools/src/video_pipeline.wl`) rather than relying on
+`Automatic`, but that hasn't been observed to be necessary.
+
+## Files
+
+- `make_presentation_video.wl` — CLI entry point (argument parsing,
+  usage, reporting).
+- `src/video_pipeline.wl` — the actual pipeline, factored out as
+  reusable functions (duration checks, background inference, content
+  bbox, frame composition, muxing, verification, the stretch feature)
+  so it can be exercised directly without going through the CLI —
+  mirrors the `main.wl` + `src/*.wl` split every app in this repo
+  already uses.
