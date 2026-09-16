@@ -22,6 +22,47 @@
 IterationToFreq[ratio_?NumericQ, freqMin_?NumericQ, freqMax_?NumericQ] :=
   freqMin * (freqMax / freqMin)^ratio;
 
+(* $DefaultMaxSonificationDurationSec / CapNoteDuration — the audio-side
+   counterpart to animate.wl's maxDurationSec/Min[targetDuration,
+   maxDurationSec] pacing (AGENTS.md design decision 9), fixing the same
+   class of bug: total sonification length is nPixels * noteDurationBase
+   (nLevels * nPixels for zoom), so it scaled directly and unboundedly
+   with grid_size with nothing capping it — confirmed directly by
+   measurement: grid_size=256 (nPixels=65536) at the mandelbrot/julia
+   base of 0.015s/note produced a genuine 1002.5s / 88MB WAV, not a
+   video-export artifact.
+
+   Unlike animate.wl's cap, this one is NOT opt-in behind an
+   Infinity-by-default sentinel: the sonification WAV (not the GIF) is
+   the actual deliverable main.wl produces on every run, so the fix has
+   to apply to the default call path itself, not just an opt-in
+   presentation-video knob. 100.0s was chosen, not derived, as the
+   smallest round number that leaves every currently-shipped default
+   preset's natural (uncapped) duration completely untouched:
+   mandelbrot/julia default (grid_size=64): 4096*0.015 = 61.44s; zoom
+   default (grid_size=64, zoom_levels=4): 4*4096*0.006 = 98.304s — both
+   already under 100s, so CapNoteDuration's Min just picks
+   noteDurationBase unchanged for every preset that exists today
+   (verified directly, see AGENTS.md). Only grid_size values large
+   enough to exceed 100s of raw sonification (e.g. grid_size=128/256,
+   or zoom's nLevels*nPixels total) actually get a shrunk per-note
+   duration.
+
+   No separate minimum-duration floor is needed here the way animate.wl
+   needs $MinAnimationFps: StemSynthNote's own envelope already clamps
+   its time constant to Max[dur*decayFrac, 0.05] regardless of how small
+   dur is (stem-core/src/synth.wl), so an arbitrarily short note never
+   produces a clipped/discontinuous click, just a briefer tone -- adding
+   a floor here would only fight the cap instead of protecting anything
+   (confirmed directly: an earlier 0.001s floor let zoom's 4x-larger
+   nLevels*nPixels total silently escape the cap, producing a 278s WAV
+   at grid_size=256 instead of the intended ~118s -- caught by actually
+   running zoom mode at grid_size=256, not just mandelbrot/julia). *)
+$DefaultMaxSonificationDurationSec = 100.0;
+
+CapNoteDuration[totalPixels_Integer, noteDurationBase_?NumericQ, maxDurationSec_?NumericQ] :=
+  Min[noteDurationBase, maxDurationSec / totalPixels];
+
 (* AddQuadrantClicks — images/sonify.wl's own orientation-click
    pattern, duplicated: three brief 880 Hz clicks at 25%/50%/75% of the
    traversal, so a listener can track spatial progress. *)
@@ -76,10 +117,12 @@ BuildFieldAudio[iterField_List, maxIter_Integer, freqMin_?NumericQ, freqMax_?Num
 (* ── Mode 1: mandelbrot ───────────────────────────────────────────── *)
 
 BuildMandelbrotAudio[model_Association, freqMin_?NumericQ, freqMax_?NumericQ,
-                     noteDurationBase_?NumericQ, sr_Integer] :=
-  Module[{buffer, freqs},
-    {buffer, freqs} = BuildFieldAudio[model["iterField"], model["maxIter"], freqMin, freqMax, noteDurationBase, sr];
-    buffer = AddQuadrantClicks[buffer, sr, model["nPixels"], noteDurationBase];
+                     noteDurationBase_?NumericQ, sr_Integer,
+                     Optional[maxDurationSec_?NumericQ, $DefaultMaxSonificationDurationSec]] :=
+  Module[{buffer, freqs, noteDuration},
+    noteDuration = CapNoteDuration[model["nPixels"], noteDurationBase, maxDurationSec];
+    {buffer, freqs} = BuildFieldAudio[model["iterField"], model["maxIter"], freqMin, freqMax, noteDuration, sr];
+    buffer = AddQuadrantClicks[buffer, sr, model["nPixels"], noteDuration];
     {buffer, freqs}
   ];
 
@@ -87,10 +130,12 @@ BuildMandelbrotAudio[model_Association, freqMin_?NumericQ, freqMax_?NumericQ,
 (* ── Mode 2: julia ────────────────────────────────────────────────── *)
 
 BuildJuliaAudio[model_Association, freqMin_?NumericQ, freqMax_?NumericQ,
-               noteDurationBase_?NumericQ, sr_Integer] :=
-  Module[{buffer, freqs},
-    {buffer, freqs} = BuildFieldAudio[model["iterField"], model["maxIter"], freqMin, freqMax, noteDurationBase, sr];
-    buffer = AddQuadrantClicks[buffer, sr, model["nPixels"], noteDurationBase];
+               noteDurationBase_?NumericQ, sr_Integer,
+               Optional[maxDurationSec_?NumericQ, $DefaultMaxSonificationDurationSec]] :=
+  Module[{buffer, freqs, noteDuration},
+    noteDuration = CapNoteDuration[model["nPixels"], noteDurationBase, maxDurationSec];
+    {buffer, freqs} = BuildFieldAudio[model["iterField"], model["maxIter"], freqMin, freqMax, noteDuration, sr];
+    buffer = AddQuadrantClicks[buffer, sr, model["nPixels"], noteDuration];
     {buffer, freqs}
   ];
 
@@ -101,14 +146,20 @@ ZoomLevelChime[level_Integer, sr_Integer] :=
   StemSynthNote[220.0 * 1.5^level, 0.25, 0.6, {1.0, 0.3, 0.15}, 0.4, sr];
 
 BuildZoomAudio[model_Association, freqMin_?NumericQ, freqMax_?NumericQ,
-              noteDurationBase_?NumericQ, sr_Integer] :=
-  Module[{levels, pieces, allFreqs, gap},
+              noteDurationBase_?NumericQ, sr_Integer,
+              Optional[maxDurationSec_?NumericQ, $DefaultMaxSonificationDurationSec]] :=
+  Module[{levels, pieces, allFreqs, gap, noteDuration},
     levels = model["levels"];
+    (* Cap against the COMBINED pixel count across all levels -- a
+       single noteDuration shared by every level, same as before this
+       fix, just solved against nLevels*nPixels so the cap reflects the
+       WAV's actual total sonification length, not one level's. *)
+    noteDuration = CapNoteDuration[Length[levels] * model["nPixels"], noteDurationBase, maxDurationSec];
     gap = ConstantArray[0.0, Round[0.2 * sr]];
     allFreqs = {};
     pieces = Table[
       Module[{buffer, freqs, chime},
-        {buffer, freqs} = BuildFieldAudio[levels[[k]]["iterField"], model["maxIter"], freqMin, freqMax, noteDurationBase, sr];
+        {buffer, freqs} = BuildFieldAudio[levels[[k]]["iterField"], model["maxIter"], freqMin, freqMax, noteDuration, sr];
         AppendTo[allFreqs, freqs];
         chime = ZoomLevelChime[k, sr];
         Join[chime, gap, buffer, gap]

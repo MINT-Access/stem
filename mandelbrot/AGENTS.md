@@ -365,6 +365,84 @@ output" discipline, extended here to "run the actual pipeline, not just
 the pattern-match logic in your head." Fixed by using a large finite
 sentinel (`10^9`) instead of `Infinity`.
 
+### 10. Sonification pacing: capping audio duration independently of grid_size
+
+Design decision 9 fixed the GIF side of resolution/duration coupling
+and explicitly left `sonify.wl` "unchanged, out of scope," on the
+reasoning that `nPixels * noteDurationBase` at the standard
+`grid_size=64`/`0.015`s-per-note gave a perfectly reasonable `80.23`s
+WAV. That reasoning didn't hold once `grid_size` itself grew: a real
+`--simulation.mandelbrot.grid_size=256` run produced a genuine
+`1002.5`s (16.7-minute), 88MB `mandelbrot_mandelbrot.wav` — confirmed
+by direct measurement of the raw file, not a video-export artifact.
+`nPixels = grid_size^2` (the Hilbert traversal covers every grid cell),
+so at a fixed per-note duration, total sonification length scales with
+the *square* of `grid_size`, unboundedly, exactly the same class of bug
+design decision 9 fixed for the animation.
+
+**The fix.** `sonify.wl` gained `$DefaultMaxSonificationDurationSec`
+(`100.0`) and `CapNoteDuration[totalPixels, noteDurationBase,
+maxDurationSec] := Min[noteDurationBase, maxDurationSec / totalPixels]`
+— the audio-side mirror of `animate.wl`'s `Min[targetDuration,
+maxDurationSec]` pacing, just solving for note length instead of frame
+rate. `BuildMandelbrotAudio`/`BuildJuliaAudio`/`BuildZoomAudio` each
+gained a trailing `Optional[maxDurationSec_?NumericQ,
+$DefaultMaxSonificationDurationSec]` parameter and now compute the
+actual per-note duration via `CapNoteDuration` before building the note
+stream, instead of using `noteDurationBase` directly. For zoom, the cap
+is solved against the COMBINED pixel count across all levels
+(`nLevels * nPixels`, one shared note duration for every level), since
+that's what actually drives the WAV's total length.
+
+**Unlike design decision 9's cap, this one is NOT opt-in behind an
+`Infinity`-by-default sentinel.** The sonification WAV (not the GIF) is
+the actual deliverable `main.wl` produces on every run — there is no
+"opt-in presentation-only" path here to hide the cap behind — so it had
+to apply to the default call itself. `100.0`s was chosen, not derived,
+as the smallest round number that leaves every currently-shipped
+default preset's natural (uncapped) duration completely untouched:
+mandelbrot/julia default (`grid_size=64`): `4096*0.015=61.44`s; zoom
+default (`grid_size=64`, `zoom_levels=4`): `4*4096*0.006=98.304`s —
+both already under `100`s, so `CapNoteDuration`'s `Min` just picks
+`noteDurationBase` unchanged for every preset shipped today.
+
+**No separate minimum-duration floor is needed**, unlike `animate.wl`'s
+`$MinAnimationFps`/`$MaxAnimationFps`: `StemSynthNote` (stem-core) 
+already clamps its own envelope time constant to
+`Max[dur*decayFrac, 0.05]` regardless of how small `dur` is, so an
+arbitrarily short note never produces a clipped/discontinuous click,
+just a briefer tone. A `$MinNoteDurationSec=0.001` floor was tried
+first and then removed — it let zoom's `nLevels`-multiplied pixel
+count silently escape the cap (a `grid_size=256` zoom run still
+produced a `278`s WAV with the floor in place, since `100/(4*65536)
+=0.00038` was below the floor and the floor won), caught by actually
+running zoom mode at `grid_size=256`, not just mandelbrot/julia.
+
+**Verification** (`wolframscript -file main.wl -- --simulation.mode=<mode>
+--simulation.mandelbrot.grid_size=<n>`, measuring the real exported WAV/GIF):
+
+| mode | grid_size | WAV before this fix | WAV after | GIF (frames @ fps) | GIF/WAV match |
+|---|---|---|---|---|---|
+| mandelbrot | 64 (default) | 80.23s | 80.23s (unchanged) | 160 @ 2fps = 80.2s | 0.04% |
+| mandelbrot | 128 | (would have been ~245s) | 118.7s | 237 @ 2fps = 118.5s | 0.17% |
+| mandelbrot | 256 | 1002.5s (confirmed, the reported bug) | 118.3s | 237 @ 2fps = 118.5s | 0.17% |
+| julia | 64 (default) | 76.89s | 76.9s (unchanged) | 154 @ 2fps = 77.0s | 0.13% |
+| julia | 128 | (would have scaled similarly) | ~115s | 231 @ 2fps = 115.5s | ~0.4% |
+| julia | 256 | (would have scaled similarly) | ~116s | 233 @ 2fps = 116.5s | ~0.4% |
+| zoom | 64 (default) | 115.31s | 115.3s (unchanged) | 231 @ 2fps = 115.5s | 0.17% |
+| zoom | 128 | (would have scaled similarly) | 116.4s | 233 @ 2fps = 116.5s | 0.09% |
+| zoom | 256 | (would have scaled far worse — 4x the pixels of mandelbrot/julia per WAV) | 117.9s | 236 @ 2fps = 118.0s | 0.08% |
+
+Every default preset's WAV is unchanged (verified by direct
+re-measurement, matching design decision 9's own baseline table
+above); every tested larger `grid_size` now lands in the same
+~118-second range regardless of resolution, instead of scaling
+unboundedly; GIF/WAV sync holds throughout (all well within the
+project's established 1-3% tolerance) because `animate.wl` always
+reads the WAV's *actual* measured duration as `targetDuration` — capping
+the audio automatically re-syncs the GIF with no `animate.wl` changes
+needed.
+
 ## Animation framing: the GIF/WAV duration-sync bug (fixed post-v1.5.0)
 
 **The bug.** All three GIFs played back at a small, fixed duration
