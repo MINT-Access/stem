@@ -542,19 +542,18 @@ MakePresentationVideo[gifPath_String, wavPath_String, title_String,
     (* ── Step 5: mux + verify ── *)
     muxedPath = MuxVideo[composed, frameRate, wavPathForMux, outPath];
 
-    (* TODO(known bug, filed not fixed -- cosmetic, does not affect the
-       actual video output): for a duration >= 1 minute, Import[...,
-       "Duration"] returns a Quantity with a MixedUnit (e.g. "4 min
-       24.666 s"), and QuantityMagnitude of THAT returns an unevaluated
-       MixedMagnitude[{4, 24.666}] list, not a plain number. FmtN then
-       can't format it, so the CLI's "Muxed duration: ...s" line prints
+    (* For a duration >= 1 minute, Import[..., "Duration"] returns a
+       Quantity with a MixedUnit (e.g. "4 min 24.666 s"), and
+       QuantityMagnitude of THAT returns an unevaluated
+       MixedMagnitude[{4, 24.666}] list, not a plain number -- FmtN then
+       can't format it, so the CLI's "Muxed duration: ...s" line printed
        literal unevaluated FmtN[MixedMagnitude[...]] junk instead of a
-       number (confirmed on a real 264.666s render). The video/audio
-       muxing itself is correct and unaffected -- only this diagnostic
-       print line is wrong. Fix: convert to a single unit first,
-       QuantityMagnitude[UnitConvert[Import[muxedPath, "Duration"],
-       "Seconds"]]. *)
-    finalDuration = QuantityMagnitude[Import[muxedPath, "Duration"]];
+       number (confirmed on a real 264.666s render, and again on a
+       118.3s grid_size=256 mandelbrot render). The video/audio muxing
+       itself was always correct and unaffected -- only this diagnostic
+       print line was wrong. Fixed by converting to a single unit
+       (seconds) before extracting the magnitude. *)
+    finalDuration = QuantityMagnitude[UnitConvert[Import[muxedPath, "Duration"], "Seconds"]];
     finalDurCheck = <|
       "muxedDuration" -> finalDuration,
       "sourceWavDuration" -> WAVDurationSeconds[wavPathForMux],
