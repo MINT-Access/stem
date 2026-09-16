@@ -184,9 +184,71 @@ always at fixed canonical parameters (diagnostic-only: print
 | `simulation.mode` | `"mandelbrot"` | all |
 | `simulation.mandelbrot.max_iterations` | `300` | all |
 | `simulation.mandelbrot.grid_size` | `64` (must be a power of 2) | all |
+| `simulation.mandelbrot.color_scheme` | `"high_contrast"` (or `"escape_gradient"`) | all — see below |
 | `simulation.mandelbrot.julia_c_real` / `julia_c_imag` | `-0.123` / `0.745` | julia |
 | `simulation.mandelbrot.zoom_center_real` / `zoom_center_imag` | `-0.743643887037151` / `0.131825904205330` | zoom |
 | `simulation.mandelbrot.zoom_levels` | `4` | zoom |
+
+### Higher resolution for video/presentation use
+
+`grid_size` also controls visual sharpness: the default `64` shows
+visible blockiness once a rendered PNG/GIF is scaled up for video (e.g.
+1080x1080 for a LinkedIn clip). Raising it to `128`
+(`--simulation.mandelbrot.grid_size=128`) is meaningfully sharper at
+that scale, with compute time still trivial (a few seconds for the
+field/PNG). **Caveat**: `grid_size` also sets `nPixels`, which directly
+drives the sonification's total note count — so it makes the matching
+WAV proportionally longer too (`64`→80s, `128`→~4.4min, `256`→~16.7min
+audio). `512` is not recommended: besides a ~66-minute WAV, the
+GIF-rendering step crashed in testing. Use `grid_size=128` as a
+per-render override (see `experiments.wl` for the pattern) for
+presentation-focused renders, not as a change to the global default.
+
+### Color scheme: `high_contrast` (default) vs `escape_gradient`
+
+`color_scheme="high_contrast"` is the original, accessibility-focused
+default described above (solid black interior, flat light-blue
+exterior) and is unchanged by the option below — it remains the
+default for every mode.
+
+`color_scheme="escape_gradient"` is an opt-in alternative for visual
+presentations (LinkedIn, workshops) that want the rich, continuous
+color gradient most people associate with Mandelbrot renders. Using
+the raw integer escape-iteration count for color produces visible
+banding — every pixel that escapes at the same iteration gets an
+identical color, showing up as hard-edged rings. Instead this mode uses
+the standard **smooth (renormalized) iteration count**: for a point
+that escapes at iteration `n` with final magnitude `|z_n|` (at the same
+bailout radius, 2, used everywhere else in this app),
+
+```
+nu = n + 1 - Log[Log[Abs[z_n]]] / Log[2]
+```
+
+`nu` varies continuously with how far past the bailout radius the point
+actually landed, instead of jumping in whole-iteration steps. `nu` is
+then mapped to color via a continuous cosine palette (a per-RGB-channel
+`a + b*Cos[2 Pi (c*t + d)]` formula), chosen after rendering and
+visually comparing it against a cyclic HSV rainbow sweep (looked flat
+outside the boundary fringe) and a discrete color LUT (background
+stayed a near-solid single color) — the cosine palette gave a genuinely
+smooth blue → gold/orange → yellow-green → blue sweep across both the
+open exterior and the boundary detail, confirmed banding-free by
+rendering a zoomed crop directly on a boundary spiral. Interior
+(non-escaping) points stay solid black in both color schemes.
+
+`escape_gradient` applies to every iteration-count-based mode —
+`mandelbrot`, `julia`, and `zoom`. It is purely a rendering choice: the
+underlying `iterField` (and therefore the CSV export and the
+sonification/WAV output) is byte-for-byte identical regardless of which
+`color_scheme` is selected — verified directly via `sha256` on the WAV
+and CSV outputs of all three modes, not merely assumed from the code
+structure.
+
+```sh
+wolframscript -file main.wl -- --simulation.mandelbrot.color_scheme=escape_gradient
+wolframscript -file main.wl -- --simulation.mode=julia --simulation.mandelbrot.color_scheme=escape_gradient
+```
 
 ## Project structure
 

@@ -7,6 +7,7 @@
     "mandelbrot": {
       "max_iterations": 300,
       "grid_size": 64,
+      "color_scheme": "high_contrast",
       "julia_c_real": -0.123,
       "julia_c_imag": 0.745,
       "zoom_center_real": -0.743643887037151,

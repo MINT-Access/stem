@@ -157,6 +157,214 @@ or unit tests alone — both are exactly the kind of thing this
 project's "actually view the rendered PNGs/GIFs, don't just trust the
 code" discipline exists to catch.
 
+### 7. Native grid resolution, not just export ImageSize, drives visible pixelation at presentation scale — measured, not assumed
+
+For LinkedIn/workshop use, `mandelbrot`/`julia` PNGs (native `size x
+size`, e.g. 64x64 by default) are exported via `Graphics`/`Raster` at a
+FIXED `ImageSize->512` (`AnimateAndExportField`) regardless of native
+grid resolution, then often scaled further (e.g. to 1080x1080) for
+video. Both upscaling steps are nearest-neighbour on the native grid's
+cells, so blockiness at final display size is a function of native
+`grid_size`, not of `ImageSize`. Measured directly (rendering the same
+window at `grid_size in {64,128,256,512}`, exported to a 1080x1080
+canvas): 64 shows clearly blocky cell edges at that scale; 128 is
+meaningfully smoother; 256 is smooth with only fine-boundary blockiness
+remaining; the *compute+export* cost for the field/PNG alone is trivial
+at every size tested (2-5 seconds, even at 256).
+
+The real cost that scales with `grid_size` is NOT rendering — it's
+`sonify.wl`'s one-note-per-pixel audio, since `nPixels = grid_size^2`
+drives `BuildFieldAudio`'s total note count directly. Measured via the
+full `main.wl` pipeline (audio+GIF+PNG together): `grid_size=64`
+(default) gives an 80s WAV; `128` gives ~265s (4.4 min); `256` gives
+~1003s (16.7 min); `512` gives ~3954s (65.9 min) AND the GIF-rendering
+step (a 7900+-frame animation with a 262144-point growing traversal
+line) crashed the Wolfram kernel outright during testing ("The product
+exited for an unknown reason").
+
+**Conclusion, not a code change**: `grid_size` is a genuine visual/
+audio-length trade-off, not a "just raise the default" fix, because one
+field drives both outputs. Recommended: `grid_size=128` as a per-render
+override (via CLI flag or an `experiments.wl`-style preset, as
+`julia_fine_grid` already does) for presentation-focused renders —
+meaningfully sharper, audio still a reasonable ~4.4 minutes, compute
+trivial. `256` is viable specifically when only the PNG matters (the
+audio/GIF from that same run would be impractically long to actually
+use). `512` should be avoided outright — both the audio length and the
+GIF-rendering crash make it impractical with the current per-pixel
+audio/GIF-traversal-line approach. The global default of `64` is left
+unchanged, since it is tuned for a reasonable *default* listening
+experience, not presentation video specifically.
+
+### 8. Escape-gradient color mode: smooth iteration count, picked by rendering candidates and viewing them, not by assertion
+
+`color_scheme="escape_gradient"` (config key
+`simulation.mandelbrot.color_scheme`, alongside the default
+`"high_contrast"`) is a second, purely additive rendering option for
+`mandelbrot`, `julia`, and `zoom` — the flat black-interior/light-blue-
+exterior default described in `README.md` stays pixel-identical
+(directly verified: `ImageData[img1] === ImageData[img2]` after
+regenerating the default `mandelbrot_mandelbrot.png` before and after
+this feature was added — checksums differed only because Wolfram's PNG
+`Export` embeds a timestamp chunk; actual pixel data was `True` for
+equality, max abs diff `0`).
+
+**Why smooth iteration count, not raw integer count.** A naive
+integer-`n`-to-color mapping produces hard bands — every pixel that
+escapes at the same integer iteration gets the exact same color,
+visible as concentric rings with sharp edges. The standard fix,
+implemented here (`model.wl`'s `SmoothIterationCount`), renormalizes
+using how far *past* the bailout radius the point actually landed at
+escape:
+
+```
+nu = n + 1 - Log[Log[Abs[z_n]]] / Log[2]
+```
+
+This requires the iteration loop to return the escape magnitude
+`Abs[z_n]`, which the sonification-only `MandelbrotEscapeIterations`/
+`JuliaEscapeIterations` discard. Rather than modify those two
+functions (and risk the sonification pipeline, which depends only on
+the integer count), two SEPARATE functions were added —
+`MandelbrotEscapeSmooth`/`JuliaEscapeSmooth`, returning `{n, absZ}` —
+duplicating the same iteration loop verbatim. The original two
+functions are untouched, byte-for-byte, so the sonification/CSV output
+is provably unaffected (also verified directly, not just by
+construction: `sha256` of `mandelbrot_mandelbrot.wav`/`.csv`,
+`mandelbrot_julia.wav`/`.csv`, and `mandelbrot_zoom.wav`/`.csv` are
+identical whether `color_scheme` is `"high_contrast"` or
+`"escape_gradient"`, for all three modes).
+
+**Palette choice — three candidates rendered and compared, not picked
+arbitrarily.** All three were rendered at the SAME test window before
+choosing:
+1. A cyclic HSV rainbow hue sweep (`Hue[Mod[nu,cyc]/cyc, 0.8, 0.95]`) —
+   rejected: at this field's actual nu distribution (most exterior
+   pixels escape within a handful of iterations, so most of the canvas
+   sits in a narrow nu range), the result looked almost as flat as the
+   high_contrast default, with only a thin multicolor fringe right at
+   the boundary — none of the "rich, continuous" look the feature
+   exists to add.
+2. A discrete color LUT (6 anchor colors, linearly interpolated) —
+   visually fine at the boundary but the background stayed dominated by
+   a single LUT segment (mostly navy blue) across most of the open
+   exterior, since low-nu pixels never reach the LUT's later anchors.
+3. **Chosen**: a continuous cosine palette (Inigo Quilez's
+   `color(t) = a + b*Cos[2 Pi (c t + d)]` technique, per-RGB-channel),
+   evaluated on `nu` with a 18-iteration cycle length
+   (`$EscapeGradientCycleLength` in `animate.wl`) — gives a genuinely
+   smooth blue -> deep-orange/gold -> yellow -> green -> blue sweep
+   across BOTH the open exterior (where it evokes the classic warm
+   Mandelbrot-render backdrop) and the boundary fringe (fine multicolor
+   detail directly on the fractal edge). Verified banding-free by
+   rendering a zoomed crop directly on a boundary spiral (`-0.85` to
+   `-0.65` real, `0.05` to `0.25` imag, `grid_size=256`) and confirming
+   the color transition is fully continuous — no hard edges — by
+   direct visual inspection of the actual exported PNG, consistent with
+   this project's "view the rendered file, don't just trust the
+   formula" discipline (see design decision 6).
+
+Interior (non-escaping) points are always solid black under
+`escape_gradient` too — there is no escape magnitude for them to
+renormalize from, and black stays visually distinct from every
+gradient color (the palette's darkest tone is a deep blue, never
+black).
+
+**Where it's wired in.** `MandelbrotModel`/`JuliaModel`/`ZoomModel`
+(`model.wl`) read `color_scheme` from config and populate a
+`"smoothField"` key (via `MandelbrotSmoothField`/`JuliaSmoothField`)
+ONLY when `color_scheme="escape_gradient"` — the default path never
+computes it, so it costs nothing when unused. `animate.wl`'s
+`FieldToImage` takes `colorScheme`/`smoothField` as trailing `Optional`
+arguments defaulting to `"high_contrast"`/`{}`, so every pre-existing
+call site with the original 4-argument signature is unaffected;
+`AnimateFieldTraversal`/`AnimateAndExportField`/`AnimateZoom` thread
+the same two values through from the model association. `main.wl`/
+`experiments.wl` needed NO changes at all — they already just pass the
+model association through to these functions.
+
+### 9. Animation pacing: an explicit, independent duration cap (decoupling resolution from playback duration)
+
+A real problem surfaced producing a LinkedIn video from a `grid_size=128`
+escape-gradient render (`max_iterations=1000`, the `high_iter` preset):
+`nPixels=16384` at the standard `0.015`s/note (`sonify.wl`, unchanged,
+out of scope) gives a `264.7`s WAV — and since `AnimateFieldTraversal`'s
+whole *purpose* (see "GIF/WAV duration sync" below) is pacing the GIF to
+match `targetDuration` EXACTLY, the resulting GIF was also `264.5`s
+(529 frames), a 500MB+ GIF and a video far outside the 20s-2min range
+these clips are supposed to land in. Resolution (`grid_size`, hence
+`nPixels`) and playback duration were coupled through the WAV, with no
+way to raise one without the other.
+
+**Why this couldn't be "just fix the formula" inside the existing
+duration-sync contract.** `AnimateFieldTraversal`'s duration = exactly
+`targetDuration` design is not a bug — it's the actual point of the
+post-v1.5.0 fix below (a listener watching the GIF while playing the
+WAV needs them to finish together). Simply capping `targetDuration`
+unconditionally for every caller would SILENTLY BREAK that sync for
+every already-shipped preset whose natural duration exceeds the cap —
+`zoom_default` alone sits at `115.5`s, already close to a "keep it
+under 2 minutes" ceiling; capping there would reintroduce the exact
+class of bug the sync fix eliminated. The fix therefore could not be a
+new unconditional default.
+
+**The fix.** `AnimateFieldTraversal`/`AnimateAndExportField`/
+`AnimateZoom` (`animate.wl`) gained a new trailing `Optional`
+parameter, `maxDurationSec` (default `$DefaultMaxAnimationDurationSec`,
+a large FINITE sentinel — see the pitfall below for why not
+`Infinity`). Internally, pacing is computed against
+`Min[targetDuration, maxDurationSec]`, not `targetDuration` directly.
+With the default, `Min[...]` is always `targetDuration` — EVERY
+existing caller (`main.wl`, `experiments.wl`) is completely unaffected,
+verified directly: regenerated the default `mandelbrot`/`julia`/`zoom`
+presets after this change and confirmed `sha256`-identical WAV and
+pixel-identical PNG output versus pre-change baselines. A caller that
+DOES want a capped, presentation-length GIF (independent of how large
+`grid_size` made the matching WAV) passes an explicit `maxDurationSec`,
+e.g. `AnimateAndExportField[model, outGIF, outPNG, trueWavDuration,
+150, 80.0]` — the traversal still reveals EVERY pixel (no resolution
+lost, `frameUpTo` still spans the full `nPixels`), just within a
+shorter window at a correspondingly higher frame rate. This is a
+genuinely independent, reusable knob — usable by ANY future preset at
+ANY `grid_size`, not a one-off tweak for this render.
+
+**A capped GIF then needs a matching-duration audio track for
+`tools/make_presentation_video.wl`'s own mux (which hard-refuses a
+GIF/WAV mismatch beyond tolerance — see that tool's own docs).**
+Rather than time-stretch the canonical WAV (`tools/`'s existing
+`--stretch` mechanism is explicitly documented as "NOT... verified
+against... narrated audio," and this app's WAVs always open with a
+spoken TTS intro), the video-specific audio is a FRESH synthesis via
+the same unmodified `BuildMandelbrotAudio` — same pitches, same
+traversal order, same formula — just a shorter per-note duration
+solved to land near the capped GIF's duration, keeping the intro
+buffer itself untouched. This is exported to a clearly-separate file
+(`..._video_audio.wav`, never overwriting the canonical `..._audio.wav`
+deliverable), so "sonification is unaffected by this change" remains
+literally, checksum-verifiably true for the real deliverable WAV.
+
+**Result for the `mandelbrot_high_iter_gradient` preset specifically**:
+capped GIF at `maxDurationSec=80.0` → 160 frames @ 2fps, exactly 80.0s
+(vs. 529 frames/264.5s uncapped) — GIF file size dropped from 93.4MB to
+28.3MB; final muxed video: 80.021s, 1080x1080, **8.46MB** (vs. an
+earlier >500MB result), GIF/WAV duration match 0.027% (well within the
+tool's 3% tolerance).
+
+**Pitfall discovered while implementing this**: `NumericQ[Infinity]` is
+`False` in this WL version. An `Optional[maxDurationSec_?NumericQ,
+Infinity]` default works fine when the argument is OMITTED, but the
+moment one function explicitly threads its own (defaulted) value
+onward to another (e.g. `AnimateAndExportField` passing `maxDurationSec`
+to `AnimateFieldTraversal`), `Infinity` is no longer "omitted" — it's
+an explicitly-passed argument that must itself satisfy `?NumericQ`, and
+fails, silently leaving the whole call unevaluated (`Set::shape` at the
+`{$gifFrames,$gifFps} = ...` call site, not an obviously-related error
+at the actual failure point). Caught by actually running the pipeline,
+not just reading the code — see design decision 6's "view the actual
+output" discipline, extended here to "run the actual pipeline, not just
+the pattern-match logic in your head." Fixed by using a large finite
+sentinel (`10^9`) instead of `Infinity`.
+
 ## Animation framing: the GIF/WAV duration-sync bug (fixed post-v1.5.0)
 
 **The bug.** All three GIFs played back at a small, fixed duration
@@ -276,6 +484,7 @@ wolframscript -file main.wl                                     # mandelbrot, st
 wolframscript -file main.wl -- --simulation.mode=julia            # fixed c, sweep z0
 wolframscript -file main.wl -- --simulation.mode=zoom              # 4 levels, seahorse valley
 wolframscript -file main.wl -- --simulation.mandelbrot.grid_size=128
+wolframscript -file main.wl -- --simulation.mandelbrot.color_scheme=escape_gradient  # opt-in smooth color gradient
 wolframscript -file main.wl -- --config-dump
 
 wolframscript -file tests/test_model.wl
@@ -327,6 +536,32 @@ mode's own configured c/centre/window):
    `Optional[tolerance_?NumericQ, 0.05]`. Same pitfall documented in
    every prior v1.5.0 app's `AGENTS.md`; avoided throughout via
    explicit `Optional[x_?NumericQ, default]`.
+7. **`grid_size` drives BOTH visual resolution and audio duration** —
+   see design decision 7. Raising it for a sharper presentation PNG
+   silently makes the matching WAV proportionally longer (and, at 512,
+   crashes the GIF-rendering step outright). There is no way to get a
+   higher-resolution PNG from this pipeline without also affecting the
+   other outputs, since all three share one `iterField`.
+8. **A naive integer-iteration-count color mapping bands visibly** —
+   see design decision 8. Always renormalize via the smooth-iteration-
+   count formula (`SmoothIterationCount`) before mapping to color, and
+   verify by rendering a zoomed crop directly on the boundary, not by
+   inspecting the full-window render alone (banding can be subtle at
+   full-window scale and only obvious zoomed in).
+9. **`NumericQ[Infinity]` is `False`** in this WL version — see design
+   decision 9. An `Optional[x_?NumericQ, Infinity]` default only works
+   while `x` is omitted; the moment a caller explicitly threads that
+   same defaulted value on to another function, it must itself satisfy
+   `?NumericQ` and fails, leaving the call silently unevaluated. Use a
+   large finite sentinel instead of `Infinity` for any "effectively
+   unbounded" numeric default that might get re-passed explicitly.
+10. **GIF playback duration is deliberately forced to equal its
+   matching WAV's duration, always** (see "GIF/WAV duration sync"
+   below) — capping it for presentation purposes needs an explicit,
+   opt-in parameter (`maxDurationSec`, design decision 9), never a
+   silent unconditional change to the default pacing formula, or every
+   already-shipped preset whose natural duration exceeds the cap
+   (e.g. `zoom_default` at 115.5s) would silently desync too.
 
 ## Dependencies
 
@@ -335,7 +570,9 @@ mode's own configured c/centre/window):
   `STEMSection`, `STEMSay`, `STEMPrintN`, `STEMDescribeWAV`,
   `STEMDescribeGIF`, `STEMDescribeCSV`, `FmtN`, `STEMPlayCmd`,
   `NormalizeBuffer`, `ExportGIF`, `ExportCSV`, `EnsureDir`.
-- **Mathematica/WL**: `Hue` (field-to-colour rendering), `Graphics`,
+- **Mathematica/WL**: `Hue` (high_contrast field-to-colour rendering;
+  `Cos`-based palette formula, no extra WL functions, for
+  escape_gradient), `Graphics`,
   `Raster`, `GraphicsGrid` (rendering and export), `Sound`,
   `SampledSoundList`, `Export`, `SpeechSynthesize`, `AudioQ`,
   `AudioData`, `AudioSampleRate`, `RunProcess` (platform TTS

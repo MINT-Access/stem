@@ -26,8 +26,14 @@
    Public API:
      MandelbrotEscapeIterations[c, maxIter]
      JuliaEscapeIterations[z0, c, maxIter]
+     MandelbrotEscapeSmooth[c, maxIter], JuliaEscapeSmooth[z0, c, maxIter],
+     SmoothIterationCount[n, maxIter, absZ] — smooth/renormalized escape
+       count for color_scheme="escape_gradient" (see AGENTS.md); separate
+       from the two functions above, which stay byte-for-byte unchanged
+       so sonification is provably unaffected
      MainCardioidBoundary[theta]
      GridToComplex[col, row, gridSize, reMin, reMax, imMin, imMax]
+     MandelbrotSmoothField[...], JuliaSmoothField[...]
      EscapeRadiusCheck[], MembershipFactsCheck[],
      MainCardioidBoundaryCheck[], BoundaryComplexityCheck[]
      MandelbrotModel[cfg], JuliaModel[cfg], ZoomModel[cfg]
@@ -52,6 +58,40 @@ JuliaEscapeIterations[z0_?NumericQ, c_?NumericQ, maxIter_Integer] :=
     While[n < maxIter && Abs[z] <= 2.0, z = z^2 + c; n++];
     n
   ];
+
+(* ── Smooth (renormalized) escape iteration — for color_scheme=
+   "escape_gradient" only (see AGENTS.md, "Escape-gradient color mode").
+   Separate functions, not a modification of MandelbrotEscapeIterations/
+   JuliaEscapeIterations above: those two remain byte-for-byte unchanged
+   so the sonification pipeline (which depends only on the integer
+   iteration count) is provably unaffected by this addition. Each
+   returns {n, absZFinal} — the same integer count as the plain
+   functions above, plus the escape magnitude |z_n| the raw functions
+   discard, needed for the smooth-iteration-count formula. *)
+MandelbrotEscapeSmooth[c_?NumericQ, maxIter_Integer] :=
+  Module[{z = 0.0 + 0.0*I, n = 0},
+    While[n < maxIter && Abs[z] <= 2.0, z = z^2 + c; n++];
+    {n, Abs[z]}
+  ];
+
+JuliaEscapeSmooth[z0_?NumericQ, c_?NumericQ, maxIter_Integer] :=
+  Module[{z = z0, n = 0},
+    While[n < maxIter && Abs[z] <= 2.0, z = z^2 + c; n++];
+    {n, Abs[z]}
+  ];
+
+(* SmoothIterationCount — the standard renormalized/smooth escape count:
+   nu = n + 1 - Log[Log[Abs[z_n]]]/Log[2], which interpolates fractionally
+   BETWEEN integer iteration counts (using how far past the bailout
+   radius the point actually landed) instead of the raw integer n,
+   eliminating the hard-edged banding a naive integer-count-to-color
+   mapping produces. Domain note: Log[Log[absZ]] is real-valued whenever
+   absZ>1, which always holds here since escape is only detected once
+   Abs[z]>2 (>1). Non-escaping points (n>=maxIter) have no escape
+   magnitude to renormalize from, so they just return maxIter unchanged
+   (callers render them as the solid interior color regardless). *)
+SmoothIterationCount[n_Integer, maxIter_Integer, absZ_?NumericQ] :=
+  If[n >= maxIter, N[maxIter], n + 1.0 - Log[Log[absZ]] / Log[2.0]];
 
 (* MainCardioidBoundary — DERIVED (see AGENTS.md design decision 3):
    fixed points of z->z^2+c satisfy z=z^2+c, i.e. c=z-z^2; stability
@@ -202,6 +242,34 @@ BoundaryComplexityCheck[Optional[gridN_Integer, 6], Optional[maxIter_Integer, 30
   ];
 
 
+(* MandelbrotSmoothField / JuliaSmoothField — per-pixel smooth iteration
+   count (SmoothIterationCount above), traversal-ordered the same way as
+   the plain iterField, computed only when color_scheme="escape_gradient"
+   requests it (see per-mode model builders below) — the default
+   "high_contrast" path never calls these, so it pays no extra cost. *)
+MandelbrotSmoothField[traversal_List, size_Integer, reMin_?NumericQ, reMax_?NumericQ,
+                      imMin_?NumericQ, imMax_?NumericQ, maxIter_Integer] :=
+  Table[
+    Module[{c, n, absZ},
+      c = GridToComplex[traversal[[i, 1]], traversal[[i, 2]], size, reMin, reMax, imMin, imMax];
+      {n, absZ} = MandelbrotEscapeSmooth[c, maxIter];
+      SmoothIterationCount[n, maxIter, absZ]
+    ],
+    {i, Length[traversal]}
+  ];
+
+JuliaSmoothField[traversal_List, size_Integer, reMin_?NumericQ, reMax_?NumericQ,
+                 imMin_?NumericQ, imMax_?NumericQ, c_?NumericQ, maxIter_Integer] :=
+  Table[
+    Module[{z0, n, absZ},
+      z0 = GridToComplex[traversal[[i, 1]], traversal[[i, 2]], size, reMin, reMax, imMin, imMax];
+      {n, absZ} = JuliaEscapeSmooth[z0, c, maxIter];
+      SmoothIterationCount[n, maxIter, absZ]
+    ],
+    {i, Length[traversal]}
+  ];
+
+
 (* ========================================================
    Per-mode model builders
    ======================================================== *)
@@ -218,9 +286,10 @@ $mandelReMin = -2.0; $mandelReMax = 0.5;
 $mandelImMin = -1.25; $mandelImMax = 1.25;
 
 MandelbrotModel[cfg_Association] :=
-  Module[{maxIter, gridN, size, traversal, nPixels, iterField},
+  Module[{maxIter, gridN, size, traversal, nPixels, iterField, colorScheme, smoothField},
     maxIter = GetCfg[cfg, {"simulation", "mandelbrot", "max_iterations"}, 300];
     gridN   = Log2[GetCfg[cfg, {"simulation", "mandelbrot", "grid_size"}, 64]];
+    colorScheme = GetCfg[cfg, {"simulation", "mandelbrot", "color_scheme"}, "high_contrast"];
     size = 2^gridN;
     traversal = HilbertTraversalOrder[gridN];
     nPixels = Length[traversal];
@@ -231,10 +300,15 @@ MandelbrotModel[cfg_Association] :=
         maxIter],
       {i, nPixels}
     ];
+    smoothField = If[colorScheme === "escape_gradient",
+      MandelbrotSmoothField[traversal, size, $mandelReMin, $mandelReMax, $mandelImMin, $mandelImMax, maxIter],
+      {}
+    ];
     <|
       "mode" -> "mandelbrot", "maxIter" -> maxIter, "gridN" -> gridN, "size" -> size,
       "reMin" -> $mandelReMin, "reMax" -> $mandelReMax, "imMin" -> $mandelImMin, "imMax" -> $mandelImMax,
-      "traversal" -> traversal, "nPixels" -> nPixels, "iterField" -> iterField
+      "traversal" -> traversal, "nPixels" -> nPixels, "iterField" -> iterField,
+      "colorScheme" -> colorScheme, "smoothField" -> smoothField
     |>
   ];
 
@@ -256,9 +330,11 @@ MandelbrotModel[cfg_Association] :=
 $juliaDefaultCRe = -0.123; $juliaDefaultCIm = 0.745;
 
 JuliaModel[cfg_Association] :=
-  Module[{maxIter, gridN, size, cRe, cIm, c, traversal, nPixels, iterField, cIsInterior},
+  Module[{maxIter, gridN, size, cRe, cIm, c, traversal, nPixels, iterField, cIsInterior,
+          colorScheme, smoothField},
     maxIter = GetCfg[cfg, {"simulation", "mandelbrot", "max_iterations"}, 300];
     gridN   = Log2[GetCfg[cfg, {"simulation", "mandelbrot", "grid_size"}, 64]];
+    colorScheme = GetCfg[cfg, {"simulation", "mandelbrot", "color_scheme"}, "high_contrast"];
     cRe = N @ GetCfg[cfg, {"simulation", "mandelbrot", "julia_c_real"}, $juliaDefaultCRe];
     cIm = N @ GetCfg[cfg, {"simulation", "mandelbrot", "julia_c_imag"}, $juliaDefaultCIm];
     c = cRe + I * cIm;
@@ -274,12 +350,17 @@ JuliaModel[cfg_Association] :=
         c, maxIter],
       {i, nPixels}
     ];
+    smoothField = If[colorScheme === "escape_gradient",
+      JuliaSmoothField[traversal, size, -1.5, 1.5, -1.5, 1.5, c, maxIter],
+      {}
+    ];
     cIsInterior = MandelbrotEscapeIterations[c, 100000] === 100000;
     <|
       "mode" -> "julia", "maxIter" -> maxIter, "gridN" -> gridN, "size" -> size,
       "c" -> c, "cRe" -> cRe, "cIm" -> cIm, "cIsInterior" -> cIsInterior,
       "reMin" -> -1.5, "reMax" -> 1.5, "imMin" -> -1.5, "imMax" -> 1.5,
-      "traversal" -> traversal, "nPixels" -> nPixels, "iterField" -> iterField
+      "traversal" -> traversal, "nPixels" -> nPixels, "iterField" -> iterField,
+      "colorScheme" -> colorScheme, "smoothField" -> smoothField
     |>
   ];
 
@@ -297,9 +378,10 @@ $zoomDefaultCRe = -0.743643887037151; $zoomDefaultCIm = 0.131825904205330;
 $zoomBaseHalfWidth = 1.5;
 
 ZoomModel[cfg_Association] :=
-  Module[{maxIter, gridN, size, cRe, cIm, nLevels, traversal, nPixels, levels},
+  Module[{maxIter, gridN, size, cRe, cIm, nLevels, traversal, nPixels, levels, colorScheme},
     maxIter = GetCfg[cfg, {"simulation", "mandelbrot", "max_iterations"}, 300];
     gridN   = Log2[GetCfg[cfg, {"simulation", "mandelbrot", "grid_size"}, 64]];
+    colorScheme = GetCfg[cfg, {"simulation", "mandelbrot", "color_scheme"}, "high_contrast"];
     cRe     = N @ GetCfg[cfg, {"simulation", "mandelbrot", "zoom_center_real"}, $zoomDefaultCRe];
     cIm     = N @ GetCfg[cfg, {"simulation", "mandelbrot", "zoom_center_imag"}, $zoomDefaultCIm];
     nLevels =     GetCfg[cfg, {"simulation", "mandelbrot", "zoom_levels"}, 4];
@@ -308,7 +390,7 @@ ZoomModel[cfg_Association] :=
     nPixels = Length[traversal];
 
     levels = Table[
-      Module[{halfWidth, reMin, reMax, imMin, imMax, iterField},
+      Module[{halfWidth, reMin, reMax, imMin, imMax, iterField, smoothField},
         halfWidth = $zoomBaseHalfWidth / 4.0^(lvl - 1);
         reMin = cRe - halfWidth; reMax = cRe + halfWidth;
         imMin = cIm - halfWidth; imMax = cIm + halfWidth;
@@ -318,16 +400,20 @@ ZoomModel[cfg_Association] :=
             maxIter],
           {i, nPixels}
         ];
+        smoothField = If[colorScheme === "escape_gradient",
+          MandelbrotSmoothField[traversal, size, reMin, reMax, imMin, imMax, maxIter],
+          {}
+        ];
         <| "level" -> lvl, "halfWidth" -> halfWidth, "magnification" -> $zoomBaseHalfWidth / halfWidth,
            "reMin" -> reMin, "reMax" -> reMax, "imMin" -> imMin, "imMax" -> imMax,
-           "iterField" -> iterField |>
+           "iterField" -> iterField, "smoothField" -> smoothField |>
       ],
       {lvl, nLevels}
     ];
 
     <|
       "mode" -> "zoom", "maxIter" -> maxIter, "gridN" -> gridN, "size" -> size,
-      "cRe" -> cRe, "cIm" -> cIm, "nLevels" -> nLevels,
+      "cRe" -> cRe, "cIm" -> cIm, "nLevels" -> nLevels, "colorScheme" -> colorScheme,
       "traversal" -> traversal, "nPixels" -> nPixels, "levels" -> levels
     |>
   ];
