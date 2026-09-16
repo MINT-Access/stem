@@ -105,6 +105,7 @@ Which[
     pauseBuffer = If[Length[introBuffer] > 0, ConstantArray[0.0, Round[sr * 0.4]], {}];
     finalBuffer = Join[introBuffer, pauseBuffer, rawBuffer];
     EnsureDir[outWAV];
+    finalBuffer = NormalizeToLoudness[finalBuffer, -17.0, 0.97, sr];
     Export[outWAV, Sound[SampledSoundList[finalBuffer, sr]], "WAV"];
     $wavDurationSec = N[Length[finalBuffer]] / sr;
     STEMDescribeWAV[outWAV, $wavDurationSec];
@@ -146,6 +147,7 @@ Which[
     pauseBuffer = If[Length[introBuffer] > 0, ConstantArray[0.0, Round[sr * 0.4]], {}];
     finalBuffer = Join[introBuffer, pauseBuffer, rawBuffer];
     EnsureDir[outWAV];
+    finalBuffer = NormalizeToLoudness[finalBuffer, -17.0, 0.97, sr];
     Export[outWAV, Sound[SampledSoundList[finalBuffer, sr]], "WAV"];
     $wavDurationSec = N[Length[finalBuffer]] / sr;
     STEMDescribeWAV[outWAV, $wavDurationSec];
@@ -187,6 +189,7 @@ Which[
     pauseBuffer = If[Length[introBuffer] > 0, ConstantArray[0.0, Round[sr * 0.4]], {}];
     finalBuffer = Join[introBuffer, pauseBuffer, rawBuffer];
     EnsureDir[outWAV];
+    finalBuffer = NormalizeToLoudness[finalBuffer, -17.0, 0.97, sr];
     Export[outWAV, Sound[SampledSoundList[finalBuffer, sr]], "WAV"];
     $wavDurationSec = N[Length[finalBuffer]] / sr;
     STEMDescribeWAV[outWAV, $wavDurationSec];

@@ -39,7 +39,7 @@ SonifySpectrum[lArr_List, dlArr_List, peakData_Association,
       {i, nL}
     ];
 
-    ExportAudioBuffer[NormalizeBuffer[audioBuffer, 0.92], outWAV, sr];
+    ExportAudioBuffer[NormalizeToLoudness[audioBuffer, -17.0, 0.97, sr], outWAV, sr];
     STEMDescribeWAV[outWAV, N[nL * noteDur]];
     Print["  Pitch: D_l min -> ", FmtN[freqLo, 4], " Hz  |  ",
           "D_l max -> ", FmtN[freqHi, 5], " Hz  (log-mapped)"];
@@ -75,7 +75,7 @@ SonifySkyMap[skyModel_Association, cfg_Association, outWAV_String] :=
       {i, nPix}
     ];
 
-    ExportAudioBuffer[NormalizeBuffer[audioBuffer, 0.92], outWAV, sr];
+    ExportAudioBuffer[NormalizeToLoudness[audioBuffer, -17.0, 0.97, sr], outWAV, sr];
     STEMDescribeWAV[outWAV, N[nPix * noteDur]];
     Print["  Pitch: cold pixels -> ", FmtN[freqLo, 4], " Hz  |  ",
           "hot pixels -> ", FmtN[freqHi, 5], " Hz"]

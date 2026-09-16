@@ -162,7 +162,7 @@ SonifyPreset[pm1_?NumericQ, pm2_?NumericQ, pDistMpc_?NumericQ,
     audio = ChirpToAudio[tArr, fArr, aArr, srOut, timeStretch, freqShift];
 
     EnsureDir[wavPath];
-    ExportAudioBuffer[audio, wavPath, srOut];
+    ExportAudioBuffer[NormalizeToLoudness[audio, -17.0, 0.97, srOut], wavPath, srOut];
     STEMDescribeWAV[wavPath, N[Length[audio] / srOut]]
   ]
 
@@ -198,7 +198,7 @@ SonifyRelativity[model_Association, cfg_Association, outDir_String] :=
   Print["  Processing main chirp..."];
   audio    = ChirpToAudio[tArr, fArr, aArr, srOut, timeStretch, freqShift];
   EnsureDir[mainPath];
-  ExportAudioBuffer[audio, mainPath, srOut];
+  ExportAudioBuffer[NormalizeToLoudness[audio, -17.0, 0.97, srOut], mainPath, srOut];
   audioDur = N[Length[audio] / srOut];
   STEMDescribeWAV[mainPath, audioDur];
 
@@ -335,7 +335,7 @@ SonifyGeodesic[model_Association, cfg_Association, outDir_String] :=
 
   wavPath = FileNameJoin[{outDir, "geodesic.wav"}];
   EnsureDir[wavPath];
-  ExportAudioBuffer[hAudio, wavPath, srOut];
+  ExportAudioBuffer[NormalizeToLoudness[hAudio, -17.0, 0.97, srOut], wavPath, srOut];
   STEMDescribeWAV[wavPath, durS];
 
   Print[""];

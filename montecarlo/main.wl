@@ -105,7 +105,7 @@ ExportWithIntro[sonifyResult_Association, introText_String, outPath_String] :=
     finalLeft   = Join[introBuffer, pauseBuffer, sonifyResult["left"]];
     finalRight  = Join[introBuffer, pauseBuffer, sonifyResult["right"]];
     EnsureDir[outPath];
-    ExportAudioBuffer[NormalizeBuffer[{finalLeft, finalRight}, 0.92], outPath, sr];
+    ExportAudioBuffer[NormalizeToLoudness[{finalLeft, finalRight}, -17.0, 0.97, sr], outPath, sr];
     totalDur = N[Length[finalLeft]] / sr;
     STEMDescribeWAV[outPath, totalDur];
     totalDur

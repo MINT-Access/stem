@@ -228,7 +228,7 @@ FluidPrependIntroAndExport[introText_String, leftMain_List, rightMain_List,
     finalLeft   = Join[introBuffer, pauseBuffer, leftMain];
     finalRight  = Join[introBuffer, pauseBuffer, rightMain];
     EnsureDir[outWav];
-    ExportAudioBuffer[NormalizeBuffer[{finalLeft, finalRight}, 0.92], outWav, sr];
+    ExportAudioBuffer[NormalizeToLoudness[{finalLeft, finalRight}, -17.0, 0.97, sr], outWav, sr];
     totalDur = N[Length[finalLeft]] / sr;
     STEMDescribeWAV[outWav, totalDur];
     totalDur

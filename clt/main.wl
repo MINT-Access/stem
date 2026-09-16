@@ -136,7 +136,7 @@ Which[
     finalRight = Join[introBuffer, pauseBuf, sweepAudio["right"]];
     outWAV = FileNameJoin[{$outDir, "sweep_audio.wav"}];
     EnsureDir[outWAV];
-    ExportAudioBuffer[NormalizeBuffer[{finalLeft, finalRight}, 0.92], outWAV, sr];
+    ExportAudioBuffer[NormalizeToLoudness[{finalLeft, finalRight}, -17.0, 0.97, sr], outWAV, sr];
     STEMDescribeWAV[outWAV, N[Length[finalLeft]] / sr];
     Print[""],
 
@@ -189,7 +189,7 @@ Which[
     finalRight = Join[introBuffer, pauseBuf, compareAudio["right"]];
     outWAV = FileNameJoin[{$outDir, "compare_audio.wav"}];
     EnsureDir[outWAV];
-    ExportAudioBuffer[NormalizeBuffer[{finalLeft, finalRight}, 0.92], outWAV, sr];
+    ExportAudioBuffer[NormalizeToLoudness[{finalLeft, finalRight}, -17.0, 0.97, sr], outWAV, sr];
     STEMDescribeWAV[outWAV, N[Length[finalLeft]] / sr];
     Print[""],
 
@@ -246,7 +246,7 @@ Which[
     finalRight = Join[introBuffer, pauseBuf, diceAudio["right"]];
     outWAV = FileNameJoin[{$outDir, "dice_audio.wav"}];
     EnsureDir[outWAV];
-    ExportAudioBuffer[NormalizeBuffer[{finalLeft, finalRight}, 0.92], outWAV, sr];
+    ExportAudioBuffer[NormalizeToLoudness[{finalLeft, finalRight}, -17.0, 0.97, sr], outWAV, sr];
     STEMDescribeWAV[outWAV, N[Length[finalLeft]] / sr];
     Print[""],
 

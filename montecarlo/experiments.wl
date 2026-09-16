@@ -30,7 +30,7 @@ RunToFile[name_String, cfg_Association, sonifyResult_Association] :=
     outWAV = FileNameJoin[{$outDir, name <> "_audio.wav"}];
     EnsureDir[outWAV];
     ExportAudioBuffer[
-      NormalizeBuffer[{sonifyResult["left"], sonifyResult["right"]}, 0.92],
+      NormalizeToLoudness[{sonifyResult["left"], sonifyResult["right"]}, -17.0, 0.97, $sr],
       outWAV, $sr];
     Print["    WAV -> ", outWAV];
     outWAV

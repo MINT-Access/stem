@@ -50,7 +50,7 @@ RunExperiment[name_String, overrides_Association] :=
         finalLeft   = Join[introBuffer, pauseBuffer, rawLeft];
         finalRight  = Join[introBuffer, pauseBuffer, rawRight];
         EnsureDir[outWAV];
-        Export[outWAV, Sound[SampledSoundList[{finalLeft, finalRight}, sr]], "WAV"];
+        Export[outWAV, Sound[SampledSoundList[NormalizeToLoudness[{finalLeft, finalRight}, -17.0, 0.97, sr], sr]], "WAV"];
         totalDurSec = N[Length[finalLeft]] / sr;
         STEMDescribeWAV[outWAV, totalDurSec];
 
@@ -69,7 +69,7 @@ RunExperiment[name_String, overrides_Association] :=
         finalLeft   = Join[introBuffer, pauseBuffer, rawLeft];
         finalRight  = Join[introBuffer, pauseBuffer, rawRight];
         EnsureDir[outWAV];
-        Export[outWAV, Sound[SampledSoundList[{finalLeft, finalRight}, sr]], "WAV"];
+        Export[outWAV, Sound[SampledSoundList[NormalizeToLoudness[{finalLeft, finalRight}, -17.0, 0.97, sr], sr]], "WAV"];
         totalDurSec = N[Length[finalLeft]] / sr;
         STEMDescribeWAV[outWAV, totalDurSec];
 
@@ -88,7 +88,7 @@ RunExperiment[name_String, overrides_Association] :=
         finalLeft   = Join[introBuffer, pauseBuffer, rawLeft];
         finalRight  = Join[introBuffer, pauseBuffer, rawRight];
         EnsureDir[outWAV];
-        Export[outWAV, Sound[SampledSoundList[{finalLeft, finalRight}, sr]], "WAV"];
+        Export[outWAV, Sound[SampledSoundList[NormalizeToLoudness[{finalLeft, finalRight}, -17.0, 0.97, sr], sr]], "WAV"];
         totalDurSec = N[Length[finalLeft]] / sr;
         STEMDescribeWAV[outWAV, totalDurSec];
 

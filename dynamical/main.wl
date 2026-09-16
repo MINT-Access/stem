@@ -142,7 +142,7 @@ Which[
     finalLeft  = Join[introBuffer, pauseBuffer, sweepResult["leftBuf"]];
     finalRight = Join[introBuffer, pauseBuffer, sweepResult["rightBuf"]];
     EnsureDir[outWAV];
-    Export[outWAV, Sound[SampledSoundList[{finalLeft, finalRight}, sr]], "WAV"];
+    Export[outWAV, Sound[SampledSoundList[NormalizeToLoudness[{finalLeft, finalRight}, -17.0, 0.97, sr], sr]], "WAV"];
     totalDurSec = N[Length[finalLeft]] / sr;
     STEMDescribeWAV[outWAV, totalDurSec];
     PrintSweepSummary[sweepModel, sweepResult["eventRs"]];
@@ -201,7 +201,7 @@ Which[
     finalLeft  = Join[introBuffer, pauseBuffer, iterateResult["leftBuf"]];
     finalRight = Join[introBuffer, pauseBuffer, iterateResult["rightBuf"]];
     EnsureDir[outWAV];
-    Export[outWAV, Sound[SampledSoundList[{finalLeft, finalRight}, sr]], "WAV"];
+    Export[outWAV, Sound[SampledSoundList[NormalizeToLoudness[{finalLeft, finalRight}, -17.0, 0.97, sr], sr]], "WAV"];
     totalDurSec = N[Length[finalLeft]] / sr;
     STEMDescribeWAV[outWAV, totalDurSec];
     PrintIterateSummary[iterateModel];

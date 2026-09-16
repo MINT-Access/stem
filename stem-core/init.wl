@@ -11,7 +11,8 @@
    Modules loaded (in dependency order):
      utils.wl         — EnsureDir, LogError, FmtN
      scales.wl        — $StemSampleRate, $StemScales, SemitoneToHz, ScaleLookup
-     synth.wl         — StemSynthNote, NormalizeBuffer, ExportAudioBuffer
+     synth.wl         — StemSynthNote, NormalizeBuffer, NormalizeToLoudness,
+                        MeasureIntegratedLoudness, ExportAudioBuffer
      export.wl        — ExportCSV, ExportGIF
      accessibility.wl — STEMHeading, STEMSection, STEMBullet, STEMPrintN,
                         STEMDescribeCSV, STEMDescribeWAV, STEMDescribeGIF,

@@ -84,6 +84,20 @@ IterationToColor[iter_Integer, maxIter_Integer] :=
    black). *)
 $EscapeGradientCycleLength = 18.0;
 
+(* TraceStyle — the Hilbert-traversal path's line style. escape_gradient
+   gets a dark halo stroke under the original white line, so the trace
+   stays visible crossing the gradient's bright orange/yellow exterior;
+   high_contrast is untouched (pixel-identical to before this addition),
+   since its dark exterior was never a legibility problem. *)
+TraceStyle[pathG_List, colorScheme_String] :=
+  If[colorScheme === "escape_gradient",
+    {
+      {Opacity[0.55], Black, AbsoluteThickness[3.5], Line[pathG]},
+      {Opacity[0.9], White, AbsoluteThickness[1.4], Line[pathG]}
+    },
+    {Opacity[0.8], RGBColor[1.0, 1.0, 1.0], Thin, Line[pathG]}
+  ];
+
 SmoothIterationToColor[nu_?NumericQ, maxIter_Integer] :=
   If[nu >= maxIter,
     {0.0, 0.0, 0.0},
@@ -154,7 +168,7 @@ AnimateFieldTraversal[iterField_List, traversal_List, size_Integer, maxIter_Inte
                       outGIF_String, targetDuration_?NumericQ, Optional[nFrames_Integer, 150],
                       Optional[colorScheme_String, "high_contrast"], Optional[smoothField_List, {}],
                       Optional[maxDurationSec_?NumericQ, $DefaultMaxAnimationDurationSec]] :=
-  Module[{img, displayData, gCoords, frameUpTo, gifFrames, nPixels, frameRate, actualNFrames, pacingDuration},
+  Module[{img, displayData, gCoords, frameUpTo, gifFrames, nPixels, frameRate, actualNFrames, pacingDuration, markerRadius},
     nPixels = Length[traversal];
     pacingDuration = Min[targetDuration, maxDurationSec];
 
@@ -176,12 +190,25 @@ AnimateFieldTraversal[iterField_List, traversal_List, size_Integer, maxIter_Inte
             "s, matching audio duration ", FmtN[targetDuration, 3], "s)..."]
     ];
 
+    (* Marker/label sized relative to the grid resolution so they scale
+       sensibly if grid_size ever changes -- 0.017*size matches roughly
+       double the marker's old fixed radius of 0.65 at the default
+       size=64, per the "hard to see, make it larger" feedback. The
+       marker's black outline (not just a bigger flat fill) is what
+       keeps it visible against BOTH the escape_gradient scheme's
+       bright yellow/gold regions and the high_contrast scheme's dark
+       background -- a flat color alone can't do that for any single
+       hue, since the gradient spans from dark blue to bright yellow. *)
+    markerRadius = size * 0.017;
     gifFrames = Table[
       With[{pathG = gCoords[[1 ;; frameUpTo[[k]]]]},
         Graphics[{
           Raster[displayData, {{0, 0}, {size, size}}],
-          {Opacity[0.8], RGBColor[1.0, 1.0, 1.0], Thin, Line[pathG]},
-          {Yellow, Disk[Last[pathG], 0.65]}
+          TraceStyle[pathG, colorScheme],
+          {EdgeForm[{Black, AbsoluteThickness[1.5]}], Yellow, Disk[Last[pathG], markerRadius]},
+          Text[Style["Hilbert-curve scan", 9, White, Bold],
+               {size * 0.5, size * 0.045},
+               Background -> Directive[Opacity[0.55], Black]]
         },
         PlotRange -> {{0, size}, {0, size}}, ImagePadding -> None,
         AspectRatio -> 1, ImageSize -> 320]

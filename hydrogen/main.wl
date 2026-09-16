@@ -132,7 +132,7 @@ Which[
     pauseBuffer = If[Length[introBuffer] > 0, ConstantArray[0.0, Round[sr * 0.4]], {}];
     finalBuffer = Join[introBuffer, pauseBuffer, sonifyResult["buffer"]];
     EnsureDir[outWAV];
-    ExportAudioBuffer[finalBuffer, outWAV, sr];
+    ExportAudioBuffer[NormalizeToLoudness[finalBuffer, -17.0, 0.97, sr], outWAV, sr];
     $audioDur = N[Length[finalBuffer]] / sr;
     STEMDescribeWAV[outWAV, $audioDur];
     Print[""];
@@ -178,8 +178,8 @@ Which[
     STEMSay["Sonifying the hydrogen emission spectrum"];
     chordPath = FileNameJoin[{$outDir, "spectrum_chord.wav"}];
     sweepPath = FileNameJoin[{$outDir, "spectrum_sweep.wav"}];
-    ExportAudioBuffer[spectrumResult["chordBuf"], chordPath, sr];
-    ExportAudioBuffer[spectrumResult["sweepBuf"], sweepPath, sr];
+    ExportAudioBuffer[NormalizeToLoudness[spectrumResult["chordBuf"], -17.0, 0.97, sr], chordPath, sr];
+    ExportAudioBuffer[NormalizeToLoudness[spectrumResult["sweepBuf"], -17.0, 0.97, sr], sweepPath, sr];
     STEMDescribeWAV[chordPath, N[Length[spectrumResult["chordBuf"]]] / sr];
     STEMDescribeWAV[sweepPath, N[Length[spectrumResult["sweepBuf"]]] / sr];
     Print[""];
@@ -201,7 +201,7 @@ Which[
     ];
     outWAV = FileNameJoin[{$outDir, "spectrum_audio.wav"}];
     EnsureDir[outWAV];
-    ExportAudioBuffer[fullBuffer, outWAV, sr];
+    ExportAudioBuffer[NormalizeToLoudness[fullBuffer, -17.0, 0.97, sr], outWAV, sr];
     $audioDur = N[Length[fullBuffer]] / sr;
     STEMDescribeWAV[outWAV, $audioDur];
     Print[""];
@@ -260,7 +260,7 @@ Which[
     finalRight  = Join[introBuffer, pauseBuffer, sonifyResult["right"]];
     outWAV = FileNameJoin[{$outDir, "transitions_audio.wav"}];
     EnsureDir[outWAV];
-    Export[outWAV, Sound[SampledSoundList[{finalLeft, finalRight}, sr]], "WAV"];
+    Export[outWAV, Sound[SampledSoundList[NormalizeToLoudness[{finalLeft, finalRight}, -17.0, 0.97, sr], sr]], "WAV"];
     $audioDur = N[Length[finalLeft]] / sr;
     STEMDescribeWAV[outWAV, $audioDur];
     Print[""];

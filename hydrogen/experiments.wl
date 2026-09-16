@@ -41,7 +41,7 @@ RunOrbitalExperiment[name_String, label_String, orbitalKey_String, gridSize_Inte
 
     sonifyResult = SonifyOrbitals[orbitalModel, freqMin, freqMax, 0.02, sr];
     outWAV = FileNameJoin[{$outDir, name <> "_audio.wav"}];
-    ExportAudioBuffer[sonifyResult["buffer"], outWAV, sr];
+    ExportAudioBuffer[NormalizeToLoudness[sonifyResult["buffer"], -17.0, 0.97, sr], outWAV, sr];
     audioDur = N[Length[sonifyResult["buffer"]]] / sr;
     STEMDescribeWAV[outWAV, audioDur];
 
@@ -67,7 +67,7 @@ RunTransitionsExperiment[name_String, label_String, nStart_Integer, lStart_Integ
 
     sonifyResult = SonifyCascades[cascadesList, freqMin, freqMax, sr];
     outWAV = FileNameJoin[{$outDir, name <> "_audio.wav"}];
-    Export[outWAV, Sound[SampledSoundList[{sonifyResult["left"], sonifyResult["right"]}, sr]], "WAV"];
+    Export[outWAV, Sound[SampledSoundList[NormalizeToLoudness[{sonifyResult["left"], sonifyResult["right"]}, -17.0, 0.97, sr], sr]], "WAV"];
     audioDur = N[Length[sonifyResult["left"]]] / sr;
     STEMDescribeWAV[outWAV, audioDur];
 
@@ -102,8 +102,8 @@ RunOrbitalExperiment["orbital_3d_clover", "3d (m=+-1) -- four-lobe clover patter
 Print[""];
 Print[">>> Experiment: spectrum_full  -- full emission spectrum, n_max=8"];
 spectrumResult = BuildSpectrumAudio[8, freqMin, freqMax, 3.0, 0.3, sr];
-ExportAudioBuffer[spectrumResult["chordBuf"], FileNameJoin[{$outDir, "spectrum_full_chord.wav"}], sr];
-ExportAudioBuffer[spectrumResult["sweepBuf"], FileNameJoin[{$outDir, "spectrum_full_sweep.wav"}], sr];
+ExportAudioBuffer[NormalizeToLoudness[spectrumResult["chordBuf"], -17.0, 0.97, sr], FileNameJoin[{$outDir, "spectrum_full_chord.wav"}], sr];
+ExportAudioBuffer[NormalizeToLoudness[spectrumResult["sweepBuf"], -17.0, 0.97, sr], FileNameJoin[{$outDir, "spectrum_full_sweep.wav"}], sr];
 (* No narrated "full" file here (unlike main.wl's spectrum_audio.wav) --
    target the GIF at chord+sweep duration back-to-back, the actual
    listening length of this experiment's two WAVs. *)
@@ -115,8 +115,8 @@ ExportSpectrumCSV[spectrumResult, FileNameJoin[{$outDir, "spectrum_full_data.csv
 Print[""];
 Print[">>> Experiment: spectrum_lyman_only  -- n_max=4, still spans Lyman+Balmer+Paschen alpha"];
 spectrumSmall = BuildSpectrumAudio[4, freqMin, freqMax, 2.0, 0.3, sr];
-ExportAudioBuffer[spectrumSmall["chordBuf"], FileNameJoin[{$outDir, "spectrum_small_chord.wav"}], sr];
-ExportAudioBuffer[spectrumSmall["sweepBuf"], FileNameJoin[{$outDir, "spectrum_small_sweep.wav"}], sr];
+ExportAudioBuffer[NormalizeToLoudness[spectrumSmall["chordBuf"], -17.0, 0.97, sr], FileNameJoin[{$outDir, "spectrum_small_chord.wav"}], sr];
+ExportAudioBuffer[NormalizeToLoudness[spectrumSmall["sweepBuf"], -17.0, 0.97, sr], FileNameJoin[{$outDir, "spectrum_small_sweep.wav"}], sr];
 
 
 (* --- cascade_default: n=5,l=2 start, 20 realisations (main.wl default) --- *)

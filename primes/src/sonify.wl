@@ -145,7 +145,7 @@ SonifyGaps[model_Association, cfg_Association, outDir_String] :=
 
     audioPath = FileNameJoin[{outDir, "gaps_audio.wav"}];
     EnsureDir[audioPath];
-    ExportAudioBuffer[NormalizeBuffer[baseAudio, 0.95], audioPath, sr];
+    ExportAudioBuffer[NormalizeToLoudness[baseAudio, -17.0, 0.97, sr], audioPath, sr];
     STEMDescribeWAV[audioPath, baseDuration];
 
     (* ── Slow audio (quarter tempo = 4× duration) ── *)
@@ -169,7 +169,7 @@ SonifyGaps[model_Association, cfg_Association, outDir_String] :=
     ];
 
     slowPath = FileNameJoin[{outDir, "gaps_slow.wav"}];
-    ExportAudioBuffer[NormalizeBuffer[slowAudio, 0.95], slowPath, sr];
+    ExportAudioBuffer[NormalizeToLoudness[slowAudio, -17.0, 0.97, sr], slowPath, sr];
     STEMDescribeWAV[slowPath, slowDuration]
   ]
 

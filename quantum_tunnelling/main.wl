@@ -114,7 +114,7 @@ Which[
                       If[Length[outroBuffer] > 0, pauseBuf, {}], outroBuffer];
     outWAV = FileNameJoin[{$outDir, "barrier_audio.wav"}];
     EnsureDir[outWAV];
-    ExportAudioBuffer[NormalizeBuffer[{finalLeft, finalRight}, 0.92], outWAV, sr];
+    ExportAudioBuffer[NormalizeToLoudness[{finalLeft, finalRight}, -17.0, 0.97, sr], outWAV, sr];
     STEMDescribeWAV[outWAV, N[Length[finalLeft]] / sr];
     Print[""];
 
@@ -172,7 +172,7 @@ Which[
     finalRight = Join[introBuffer, pauseBuf, mainR];
     outWAV = FileNameJoin[{$outDir, "sweep_audio.wav"}];
     EnsureDir[outWAV];
-    ExportAudioBuffer[NormalizeBuffer[{finalLeft, finalRight}, 0.92], outWAV, sr];
+    ExportAudioBuffer[NormalizeToLoudness[{finalLeft, finalRight}, -17.0, 0.97, sr], outWAV, sr];
     STEMDescribeWAV[outWAV, N[Length[finalLeft]] / sr];
     Print[""];
 
@@ -217,7 +217,7 @@ Which[
     finalRight = Join[introBuffer, pauseBuf, mainR];
     outWAV = FileNameJoin[{$outDir, "energy_audio.wav"}];
     EnsureDir[outWAV];
-    ExportAudioBuffer[NormalizeBuffer[{finalLeft, finalRight}, 0.92], outWAV, sr];
+    ExportAudioBuffer[NormalizeToLoudness[{finalLeft, finalRight}, -17.0, 0.97, sr], outWAV, sr];
     STEMDescribeWAV[outWAV, N[Length[finalLeft]] / sr];
     Print[""];
 

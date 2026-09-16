@@ -56,7 +56,7 @@ RunExperiment[name_String, overrides_Association] :=
       finalLeft   = Join[introBuffer, pauseBuffer, sweepResult["leftBuf"]];
       finalRight  = Join[introBuffer, pauseBuffer, sweepResult["rightBuf"]];
       EnsureDir[outWAV];
-      Export[outWAV, Sound[SampledSoundList[{finalLeft, finalRight}, sr]], "WAV"];
+      Export[outWAV, Sound[SampledSoundList[NormalizeToLoudness[{finalLeft, finalRight}, -17.0, 0.97, sr], sr]], "WAV"];
       totalDurSec = N[Length[finalLeft]] / sr;
       STEMDescribeWAV[outWAV, totalDurSec];
       {gifFrames, gifFps} = AnimateSweepBifurcation[sweepModel, sweepResult["eventRs"], outGIF, totalDurSec];
@@ -74,7 +74,7 @@ RunExperiment[name_String, overrides_Association] :=
       finalLeft   = Join[introBuffer, pauseBuffer, iterateResult["leftBuf"]];
       finalRight  = Join[introBuffer, pauseBuffer, iterateResult["rightBuf"]];
       EnsureDir[outWAV];
-      Export[outWAV, Sound[SampledSoundList[{finalLeft, finalRight}, sr]], "WAV"];
+      Export[outWAV, Sound[SampledSoundList[NormalizeToLoudness[{finalLeft, finalRight}, -17.0, 0.97, sr], sr]], "WAV"];
       totalDurSec = N[Length[finalLeft]] / sr;
       STEMDescribeWAV[outWAV, totalDurSec];
       {gifFrames, gifFps} = AnimateIterateTimeSeries[iterateModel, outGIF, totalDurSec];

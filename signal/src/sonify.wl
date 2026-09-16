@@ -249,13 +249,13 @@ SonifySignal[analysis_Association, cfg_Association, outDir_String] :=
     narrativePath = FileNameJoin[{outDir, mode <> "_narrative_full.wav"}];
 
     (* ── Primary outputs: the three signal stages ── *)
-    ExportAudioBuffer[NormalizeBuffer[clean,     0.95], cleanPath,  sr];
+    ExportAudioBuffer[NormalizeToLoudness[clean, -17.0, 0.97, sr], cleanPath, sr];
     STEMDescribeWAV[cleanPath, dur];
 
-    ExportAudioBuffer[NormalizeBuffer[noisy,     0.95], noisyPath,  sr];
+    ExportAudioBuffer[NormalizeToLoudness[noisy, -17.0, 0.97, sr], noisyPath, sr];
     STEMDescribeWAV[noisyPath, dur];
 
-    ExportAudioBuffer[NormalizeBuffer[recovered, 0.95], recovPath,  sr];
+    ExportAudioBuffer[NormalizeToLoudness[recovered, -17.0, 0.97, sr], recovPath, sr];
     STEMDescribeWAV[recovPath, dur];
 
     (* ── Narrative WAV: speech + signals concatenated ── *)
@@ -286,6 +286,6 @@ SonifySignal[analysis_Association, cfg_Association, outDir_String] :=
       spSummary
     ];
 
-    ExportAudioBuffer[NormalizeBuffer[fullNarrative, 0.95], narrativePath, sr];
+    ExportAudioBuffer[NormalizeToLoudness[fullNarrative, -17.0, 0.97, sr], narrativePath, sr];
     STEMDescribeWAV[narrativePath, N[Length[fullNarrative]] / sr]
   ]

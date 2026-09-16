@@ -161,7 +161,7 @@ pauseBuffer = If[Length[introBuffer] > 0, ConstantArray[0.0, Round[sr * 0.4]], {
 
 If[Length[channels] === 1,
   finalBuffer = Join[introBuffer, pauseBuffer, channels[[1]]];
-  ExportAudioBuffer[finalBuffer, outWAV, sr];
+  ExportAudioBuffer[NormalizeToLoudness[finalBuffer, -17.0, 0.97, sr], outWAV, sr];
   totalDurSec = N[Length[finalBuffer]] / sr,
 
   (* stereo (hsb): duplicate the same intro into both channels so the
@@ -169,7 +169,7 @@ If[Length[channels] === 1,
   finalLeft  = Join[introBuffer, pauseBuffer, channels[[1]]];
   finalRight = Join[introBuffer, pauseBuffer, channels[[2]]];
   EnsureDir[outWAV];
-  Export[outWAV, Sound[SampledSoundList[{finalLeft, finalRight}, sr]], "WAV"];
+  Export[outWAV, Sound[SampledSoundList[NormalizeToLoudness[{finalLeft, finalRight}, -17.0, 0.97, sr], sr]], "WAV"];
   totalDurSec = N[Length[finalLeft]] / sr
 ];
 STEMDescribeWAV[outWAV, totalDurSec];

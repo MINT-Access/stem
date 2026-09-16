@@ -133,7 +133,7 @@ Which[
     finalLeft   = Join[introBuffer, pauseBuffer, coinAudio["left"]];
     finalRight  = Join[introBuffer, pauseBuffer, coinAudio["right"]];
     EnsureDir[outWAV];
-    ExportAudioBuffer[NormalizeBuffer[{finalLeft, finalRight}, 0.92], outWAV, sr];
+    ExportAudioBuffer[NormalizeToLoudness[{finalLeft, finalRight}, -17.0, 0.97, sr], outWAV, sr];
     wavDuration = N[Length[finalLeft]] / sr;
     STEMDescribeWAV[outWAV, wavDuration];
     PrintCoinSummary[coinSeq, thetaTrue, coinAudio["convergenceFlipIdx"]];
@@ -181,7 +181,7 @@ Which[
     finalLeft   = Join[introBuffer, pauseBuffer, gaussAudio["left"]];
     finalRight  = Join[introBuffer, pauseBuffer, gaussAudio["right"]];
     EnsureDir[outWAV];
-    ExportAudioBuffer[NormalizeBuffer[{finalLeft, finalRight}, 0.92], outWAV, sr];
+    ExportAudioBuffer[NormalizeToLoudness[{finalLeft, finalRight}, -17.0, 0.97, sr], outWAV, sr];
     wavDuration = N[Length[finalLeft]] / sr;
     STEMDescribeWAV[outWAV, wavDuration];
     PrintGaussianSummary[gaussSeq, muTrue, mu0, gaussAudio["convergenceObsIdx"]];
@@ -224,7 +224,7 @@ Which[
     finalLeft   = Join[introBuffer, pauseBuffer, modelAudio["left"]];
     finalRight  = Join[introBuffer, pauseBuffer, modelAudio["right"]];
     EnsureDir[outWAV];
-    ExportAudioBuffer[NormalizeBuffer[{finalLeft, finalRight}, 0.92], outWAV, sr];
+    ExportAudioBuffer[NormalizeToLoudness[{finalLeft, finalRight}, -17.0, 0.97, sr], outWAV, sr];
     wavDuration = N[Length[finalLeft]] / sr;
     STEMDescribeWAV[outWAV, wavDuration];
     PrintModelSummary[modelSeq, thetaAlt, thetaTrue, modelAudio["crossOneIdx"], modelAudio["crossTwoIdx"]];

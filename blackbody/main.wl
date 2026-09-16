@@ -136,7 +136,7 @@ Which[
     ];
     outWAV = FileNameJoin[{$outDir, "spectrum_audio.wav"}];
     EnsureDir[outWAV];
-    ExportAudioBuffer[NormalizeBuffer[{finalLeft, finalRight}, 0.92], outWAV, sr];
+    ExportAudioBuffer[NormalizeToLoudness[{finalLeft, finalRight}, -17.0, 0.97, sr], outWAV, sr];
     wavDuration = N[Length[finalLeft]] / sr;
     STEMDescribeWAV[outWAV, wavDuration];
     Print[""];
@@ -189,7 +189,7 @@ Which[
     finalRight  = Join[introBuffer, pauseBuffer, tempResult["right"]];
     outWAV = FileNameJoin[{$outDir, "temperature_audio.wav"}];
     EnsureDir[outWAV];
-    ExportAudioBuffer[NormalizeBuffer[{finalLeft, finalRight}, 0.92], outWAV, sr];
+    ExportAudioBuffer[NormalizeToLoudness[{finalLeft, finalRight}, -17.0, 0.97, sr], outWAV, sr];
     wavDuration = N[Length[finalLeft]] / sr;
     STEMDescribeWAV[outWAV, wavDuration];
     Print[""];
@@ -261,7 +261,7 @@ Which[
                         Sequence @@ Map[#["right"] &, segmentBuffers]];
       outWAV = FileNameJoin[{$outDir, "star_audio.wav"}];
       EnsureDir[outWAV];
-      ExportAudioBuffer[NormalizeBuffer[{finalLeft, finalRight}, 0.92], outWAV, sr];
+      ExportAudioBuffer[NormalizeToLoudness[{finalLeft, finalRight}, -17.0, 0.97, sr], outWAV, sr];
       wavDuration = N[Length[finalLeft]] / sr;
       STEMDescribeWAV[outWAV, wavDuration];
       Print[""];
@@ -308,7 +308,7 @@ Which[
       finalRight  = Join[introBuffer, pauseBuffer, spectrumResult["chordR"], pauseBuffer, spectrumResult["sweepR"]];
       outWAV = FileNameJoin[{$outDir, "star_audio.wav"}];
       EnsureDir[outWAV];
-      ExportAudioBuffer[NormalizeBuffer[{finalLeft, finalRight}, 0.92], outWAV, sr];
+      ExportAudioBuffer[NormalizeToLoudness[{finalLeft, finalRight}, -17.0, 0.97, sr], outWAV, sr];
       wavDuration = N[Length[finalLeft]] / sr;
       STEMDescribeWAV[outWAV, wavDuration];
       Print[""];

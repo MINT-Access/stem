@@ -287,10 +287,35 @@ MixLayers[spatial_Association, motion_Association,
    ------------------------------------------------------------ *)
 
 RenderAudio[stereoData_?MatrixQ, cfg_Association, outPath_String] :=
-  Module[{sr, normalized, sound},
+  Module[{sr, chanPair, normalized, sound},
     sr         = CfgAt[cfg, {"sonification","sample_rate"}, 44100];
-    normalized = stereoData / (Max[Abs[stereoData]] + $MachineEpsilon);
-    sound      = Sound[SampledSoundList[Transpose[normalized], sr]];
+    (* Was: peak-normalize straight to 1.0 (0 dBFS, no headroom at
+       all) -- see stem-core/src/synth.wl's NormalizeToLoudness for
+       why target-peak normalization doesn't control perceived
+       loudness, and why this codebase now targets integrated
+       loudness (LUFS) with a peak ceiling as a safety backstop
+       instead. Explicit Global` qualification is required here:
+       BeginPackage removes Global` from $ContextPath for the
+       duration of this package's body, so a bare reference to a
+       Global-context symbol (NormalizeToLoudness, loaded from
+       synth.wl as a plain script, not a package) would silently
+       resolve to a brand-new, permanently-undefined symbol in this
+       package's own Private` context instead -- caught by a real
+       run: the bare-symbol version left the WAV unwritten
+       (Export::nodta) with no visible error at the call site itself. *)
+    chanPair   = Transpose[stereoData];   (* {left, right}, channel-major *)
+    normalized = Global`NormalizeToLoudness[chanPair, -17.0, 0.97, sr];
+    (* Export channel-major {left, right} directly -- NOT Transpose'd back
+       to the interleaved {nSamples, 2} shape stereoData arrived in.
+       Verified directly: SampledSoundList given the interleaved shape
+       fails silently (Export::sndprm, no file written) for any real-
+       length buffer (>~1s at 44100 Hz) in this environment, while the
+       channel-major shape exports correctly at any length -- and it's
+       the same shape ExportAudioBuffer already uses everywhere else in
+       this codebase for stereo output, via NormalizeBuffer[{left,right}].
+       This is a pre-existing SampledSoundList behavior, not introduced
+       by the loudness-normalization change above. *)
+    sound      = Sound[SampledSoundList[normalized, sr]];
     Export[outPath, sound, "WAV"];
     outPath
   ]

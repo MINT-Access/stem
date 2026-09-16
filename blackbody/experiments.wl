@@ -31,7 +31,7 @@ RunToFile[name_String, left_List, right_List] :=
   Module[{outWAV},
     outWAV = FileNameJoin[{$outDir, name <> "_audio.wav"}];
     EnsureDir[outWAV];
-    ExportAudioBuffer[NormalizeBuffer[{left, right}, 0.92], outWAV, $sr];
+    ExportAudioBuffer[NormalizeToLoudness[{left, right}, -17.0, 0.97, $sr], outWAV, $sr];
     Print["    WAV -> ", outWAV];
     outWAV
   ];

@@ -116,7 +116,7 @@ Which[
     finalLeft  = Join[introBuffer, pauseBuffer, rawLeft];
     finalRight = Join[introBuffer, pauseBuffer, rawRight];
     EnsureDir[outWAV];
-    Export[outWAV, Sound[SampledSoundList[{finalLeft, finalRight}, sr]], "WAV"];
+    Export[outWAV, Sound[SampledSoundList[NormalizeToLoudness[{finalLeft, finalRight}, -17.0, 0.97, sr], sr]], "WAV"];
     $audioDur = N[Length[finalLeft]] / sr;
     STEMDescribeWAV[outWAV, $audioDur];
     Print[""];
@@ -169,7 +169,7 @@ Which[
     finalRight  = Join[introBuffer, pauseBuffer, sweepResult["rightBuf"]];
     outWAV = FileNameJoin[{$projectRoot, "output", "henon_sweep.wav"}];
     EnsureDir[outWAV];
-    Export[outWAV, Sound[SampledSoundList[{finalLeft, finalRight}, sr]], "WAV"];
+    Export[outWAV, Sound[SampledSoundList[NormalizeToLoudness[{finalLeft, finalRight}, -17.0, 0.97, sr], sr]], "WAV"];
     $audioDur = N[Length[finalLeft]] / sr;
     STEMDescribeWAV[outWAV, $audioDur];
     Print[""];
@@ -228,7 +228,7 @@ Which[
     finalRight    = Join[introBuffer, pauseBuffer, reverseResult["rightBuf"]];
     outWAV = FileNameJoin[{$projectRoot, "output", "henon_reverse.wav"}];
     EnsureDir[outWAV];
-    Export[outWAV, Sound[SampledSoundList[{finalLeft, finalRight}, sr]], "WAV"];
+    Export[outWAV, Sound[SampledSoundList[NormalizeToLoudness[{finalLeft, finalRight}, -17.0, 0.97, sr], sr]], "WAV"];
     STEMDescribeWAV[outWAV, N[Length[finalLeft]] / sr];
     Print[""];
 

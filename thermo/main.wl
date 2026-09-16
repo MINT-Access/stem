@@ -137,7 +137,7 @@ Which[
     finalLeft   = Join[introBuffer, pauseBuffer, distResult["left"]];
     finalRight  = Join[introBuffer, pauseBuffer, distResult["right"]];
     EnsureDir[outWAV];
-    ExportAudioBuffer[NormalizeBuffer[{finalLeft, finalRight}, 0.92], outWAV, sr];
+    ExportAudioBuffer[NormalizeToLoudness[{finalLeft, finalRight}, -17.0, 0.97, sr], outWAV, sr];
     wavDuration = N[Length[finalLeft]] / sr;
     STEMDescribeWAV[outWAV, wavDuration];
     Print[""];
@@ -186,7 +186,7 @@ Which[
     finalLeft   = Join[introBuffer, pauseBuffer, ensResult["left"]];
     finalRight  = Join[introBuffer, pauseBuffer, ensResult["right"]];
     EnsureDir[outWAV];
-    ExportAudioBuffer[NormalizeBuffer[{finalLeft, finalRight}, 0.92], outWAV, sr];
+    ExportAudioBuffer[NormalizeToLoudness[{finalLeft, finalRight}, -17.0, 0.97, sr], outWAV, sr];
     wavDuration = N[Length[finalLeft]] / sr;
     STEMDescribeWAV[outWAV, wavDuration];
     Print[""];
@@ -234,7 +234,7 @@ Which[
     finalLeft   = Join[introBuffer, pauseBuffer, coolResult["left"]];
     finalRight  = Join[introBuffer, pauseBuffer, coolResult["right"]];
     EnsureDir[outWAV];
-    ExportAudioBuffer[NormalizeBuffer[{finalLeft, finalRight}, 0.92], outWAV, sr];
+    ExportAudioBuffer[NormalizeToLoudness[{finalLeft, finalRight}, -17.0, 0.97, sr], outWAV, sr];
     wavDuration = N[Length[finalLeft]] / sr;
     STEMDescribeWAV[outWAV, wavDuration];
     Print[""];
@@ -293,7 +293,7 @@ Which[
     finalLeft   = Join[introBuffer, pauseBuffer, eqResult["left"]];
     finalRight  = Join[introBuffer, pauseBuffer, eqResult["right"]];
     EnsureDir[outWAV];
-    ExportAudioBuffer[NormalizeBuffer[{finalLeft, finalRight}, 0.92], outWAV, sr];
+    ExportAudioBuffer[NormalizeToLoudness[{finalLeft, finalRight}, -17.0, 0.97, sr], outWAV, sr];
     wavDuration = N[Length[finalLeft]] / sr;
     STEMDescribeWAV[outWAV, wavDuration];
     Print[""];
