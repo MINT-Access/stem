@@ -48,6 +48,17 @@ Optional flags:
   See "Stretch factor" below — most invocations should omit this.
 - `--tolerance=N` — GIF/WAV duration-match tolerance as a fraction
   (default `0.03`).
+- `--hold-seconds=N` — hold the first frame still for `N` seconds at
+  the start **and** the last frame still for `N` seconds at the end,
+  with the audio padded with matching silence at each end so picture
+  and sound stay aligned (default `0`, i.e. no hold). See "Opening/
+  closing hold" below.
+- `--hold-start-seconds=N` / `--hold-end-seconds=N` — set the start
+  and end hold independently, each overriding `--hold-seconds` for
+  that end. All three reject negative values with a clear error.
+- `--max-duration-seconds=N` / `--max-file-mb=N` — thresholds for the
+  post-mux output sanity check (defaults `600` and `200`). See
+  "Output sanity check" below.
 
 One MP4 per invocation, deliberately — the tool does not generate both
 profiles from one call. Run it twice for both.
@@ -181,6 +192,51 @@ signal itself via a standard FFT method (`AnalyticSignalFFT` in
 `tools/src/video_pipeline.wl`: zero the negative-frequency bins, double
 the positive ones), and unwraps phase manually (`UnwrapPhase`) since
 this WL version also has no built-in `Unwrap`.
+
+### Opening/closing hold
+
+`--hold-seconds=N` (or `--hold-start-seconds=N`/`--hold-end-seconds=N`
+independently) holds the first composed frame still for `N` seconds
+before the animation starts, and the last composed frame still for
+`N` seconds after it ends, with the audio padded with `N` seconds of
+digital silence at the matching end — so a viewer gets a beat to read
+the title before motion starts, and a beat at the end before the clip
+cuts, without picture and sound drifting apart. This is implemented
+inside the composition pipeline itself (`HoldFrames`/`PadAudioSilence`
+in `tools/src/video_pipeline.wl`), applied to the already-composed
+frame sequence and the (possibly already `--stretch`-processed) audio
+before muxing — not a post-processing pass over the finished MP4.
+Default is `0` (no hold), so omitting the flag leaves existing
+behavior unchanged. Each requested hold is rounded to the nearest
+whole video frame at the source's frame rate, and the audio is padded
+with silence to that same rounded duration (not the raw requested
+value) so picture and sound always match exactly; the CLI prints the
+requested and effective (rounded) hold for both ends whenever a hold
+is set.
+
+`PadAudioSilence` reads and writes raw sample data directly
+(`AudioData`/`AudioChannels`/`AudioSampleRate` + the same
+`ExportAudioBuffer` helper the `--stretch` path uses) rather than
+using `AudioPad`/`AudioDuration`: both of those returned unevaluated
+in a real headless `wolframscript` run during development, the same
+"`Audio[]` requires a display context" gap noted below for `Audio[]`
+apparently extending to those two functions as well in this WL
+version.
+
+### Output sanity check
+
+After muxing, the tool checks the finished output's video duration,
+audio duration, and file size against configurable thresholds
+(`--max-duration-seconds`, default `600`; `--max-file-mb`, default
+`200`) and prints a line starting with `WARNING` for each threshold
+exceeded. This is a second, coarser, louder check layered on top of
+the detailed per-frame sync verification above — it exists so a case
+like an unexpectedly long or oversized render gets flagged immediately
+in the tool's own output instead of being found by hand later. It is
+a warning only: the file is written either way, and the tool's exit
+code is unaffected by it (only the frame-clearance check can make the
+tool exit non-zero). At the defaults, nothing is printed beyond the
+normal "Output size check passed" line.
 
 ---
 

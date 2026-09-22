@@ -54,6 +54,29 @@
      --tolerance=N GIF/WAV duration-match tolerance as a fraction
                    (default 0.03, matching the v1.5.1 GIF/WAV sync
                    fix's documented residual)
+     --hold-seconds=N        hold the first frame still for N
+                   seconds at the start AND the last frame still
+                   for N seconds at the end, with the audio padded
+                   with matching silence at each end so picture and
+                   sound stay aligned (default 0, i.e. no hold).
+                   Implemented inside the composition pipeline
+                   itself (HoldFrames/PadAudioSilence in
+                   tools/src/video_pipeline.wl), not as a
+                   post-processing pass over the finished file.
+     --hold-start-seconds=N  hold amount for the start only,
+                   overriding --hold-seconds for that end.
+     --hold-end-seconds=N    hold amount for the end only,
+                   overriding --hold-seconds for that end.
+                   All three reject negative values.
+     --max-duration-seconds=N  threshold for the post-mux output
+                   sanity check's duration warning (default 600).
+     --max-file-mb=N           threshold for the post-mux output
+                   sanity check's file-size warning (default 200).
+                   Both thresholds are warn-only — see
+                   CheckOutputSanity in
+                   tools/src/video_pipeline.wl: the output file is
+                   written either way, this only makes an
+                   unexpectedly large result loud instead of silent.
 
    Priority, explicitly: correct video/audio sync matters more than
    anything else here. If the GIF and WAV are not duration-matched
@@ -93,9 +116,26 @@ profile   = GetArg["profile"];
 outPath   = GetArg["out"];
 stretchArg    = GetArg["stretch"];
 toleranceArg  = GetArg["tolerance"];
+holdArg          = GetArg["hold-seconds"];
+holdStartArg     = GetArg["hold-start-seconds"];
+holdEndArg       = GetArg["hold-end-seconds"];
+maxDurationArg   = GetArg["max-duration-seconds"];
+maxFileMBArg     = GetArg["max-file-mb"];
 
 stretchFactor   = If[stretchArg === None, Automatic, ToExpression[stretchArg]];
 durationTolerance = If[toleranceArg === None, 0.03, ToExpression[toleranceArg]];
+
+holdSeconds      = If[holdArg === None, 0, ToExpression[holdArg]];
+holdStartSeconds = If[holdStartArg === None, holdSeconds, ToExpression[holdStartArg]];
+holdEndSeconds   = If[holdEndArg === None, holdSeconds, ToExpression[holdEndArg]];
+maxDurationSeconds = If[maxDurationArg === None, 600, ToExpression[maxDurationArg]];
+maxFileMB           = If[maxFileMBArg === None, 200, ToExpression[maxFileMBArg]];
+
+If[holdStartSeconds < 0 || holdEndSeconds < 0,
+  Print["--hold-seconds/--hold-start-seconds/--hold-end-seconds must not be negative ",
+        "(got hold-start-seconds=", holdStartSeconds, ", hold-end-seconds=", holdEndSeconds, ")."];
+  Quit[1]
+];
 
 $missing = Select[
   {"gif" -> gifPath, "wav" -> wavPath, "title" -> title,
@@ -108,7 +148,9 @@ If[Length[$missing] > 0,
   Print[""];
   Print["Usage: wolframscript -file tools/make_presentation_video.wl -- \\"];
   Print["  --gif=<path.gif> --wav=<path.wav> --title=\"<text>\" \\"];
-  Print["  --profile=linkedin|workshop --out=<path.mp4> [--stretch=N] [--tolerance=N]"];
+  Print["  --profile=linkedin|workshop --out=<path.mp4> [--stretch=N] [--tolerance=N] \\"];
+  Print["  [--hold-seconds=N] [--hold-start-seconds=N] [--hold-end-seconds=N] \\"];
+  Print["  [--max-duration-seconds=N] [--max-file-mb=N]"];
   Quit[1]
 ];
 
@@ -122,11 +164,16 @@ If[!MemberQ[{"linkedin", "workshop"}, profile],
 
 Print["make_presentation_video: ", gifPath, " + ", wavPath, " -> ", outPath];
 Print["  profile: ", profile, "   title: \"", title, "\"",
-      If[stretchFactor =!= Automatic, "   stretch: " <> ToString[stretchFactor], ""]];
+      If[stretchFactor =!= Automatic, "   stretch: " <> ToString[stretchFactor], ""],
+      If[holdStartSeconds > 0 || holdEndSeconds > 0,
+         "   hold-start: " <> ToString[holdStartSeconds] <>
+         "s   hold-end: " <> ToString[holdEndSeconds] <> "s", ""]];
 Print[""];
 
 report = MakePresentationVideo[gifPath, wavPath, title, profile, outPath,
-                                stretchFactor, durationTolerance];
+                                stretchFactor, durationTolerance,
+                                holdStartSeconds, holdEndSeconds,
+                                maxDurationSeconds, maxFileMB];
 
 If[report["aborted"],
   Print["ABORTED: ", report["reason"]];
@@ -142,6 +189,18 @@ Print["GIF/WAV duration check: GIF=", FmtN[dc["gifDuration"], 4], "s  WAV=",
       "%  (", If[dc["ok"], "within", "OUTSIDE"], " ", FmtN[100*dc["tolerance"],3], "% tolerance)"];
 Print["Final video: ", report["nFrames"], " frames @ ", FmtN[report["frameRate"], 4],
       " fps, ", report["targetSize"][[1]], "x", report["targetSize"][[2]]];
+
+If[holdStartSeconds > 0 || holdEndSeconds > 0,
+  Print["Requested opening hold ", FmtN[report["holdStartSeconds"], 6],
+        " seconds; effective hold ", FmtN[report["effectiveHoldStartSeconds"], 6],
+        " seconds, which is ", report["holdStartFrames"], " frames at ",
+        FmtN[report["frameRate"], 6], " frames per second."];
+  Print["Requested closing hold ", FmtN[report["holdEndSeconds"], 6],
+        " seconds; effective hold ", FmtN[report["effectiveHoldEndSeconds"], 6],
+        " seconds, which is ", report["holdEndFrames"], " frames at ",
+        FmtN[report["frameRate"], 6], " frames per second."];
+];
+
 Print["Muxed duration: ", FmtN[fdc["muxedDuration"], 4], "s vs source WAV ",
       FmtN[fdc["sourceWavDuration"], 4], "s  (diff=", FmtN[100*fdc["relativeDiff"], 3], "%)"];
 Print["Frame clearance check: ", If[fv["ok"], "PASS", "FAIL"], "  (", fv["nFrames"],
@@ -149,6 +208,17 @@ Print["Frame clearance check: ", If[fv["ok"], "PASS", "FAIL"], "  (", fv["nFrame
 Print["  worst-case margins (px): top/title-clearance=", fv["worstTitleClearance"],
       "  bottom=", fv["worstBottomMargin"], "  left=", fv["worstLeftMargin"],
       "  right=", fv["worstRightMargin"]];
+
+sc = report["sanityCheck"];
+If[sc["ok"],
+  Print["Output size check passed: video duration ", FmtN[sc["videoDurationSeconds"], 6],
+        " seconds, audio duration ", FmtN[sc["audioDurationSeconds"], 6],
+        " seconds, file size ", FmtN[sc["fileMB"], 6],
+        " MB, all within the ", FmtN[sc["maxDurationSeconds"], 6],
+        " seconds and ", FmtN[sc["maxFileMB"], 6], " MB thresholds."]
+];
+Do[Print[w], {w, sc["warnings"]}];
+
 Print[""];
 Print["Wrote ", report["outPath"]];
 

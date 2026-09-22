@@ -414,6 +414,118 @@ StretchAudioBuffer[buffer_List, srIn_Integer, stretchFactor_?NumericQ] :=
   ]
 
 
+(* ── Opening/closing hold ─────────────────────────────────
+
+   Extends the composed reel by repeating the first composed frame
+   holdStartSeconds and the last composed frame holdEndSeconds, and
+   pads the audio with matching digital silence at each end, so
+   picture and sound both grow by the same amount and stay in sync.
+   Frame rate is unchanged -- this lengthens the reel, it does not
+   slow it down (unlike --stretch above).
+
+   HoldFrameCount quantizes a requested hold length to whole video
+   frames (Round[seconds*frameRate]) -- the caller feeds that SAME
+   frame-quantized duration (nFrames/frameRate), not the raw
+   requested seconds, into PadAudioSilence below. Audio padding is
+   otherwise sample-accurate (Round[seconds*sampleRate], far finer
+   than one video frame period), so if the two sides were each
+   independently rounded from the raw requested seconds -- frames
+   for video, samples for audio -- they could quantize to different
+   actual durations at a low or non-clean frame rate (most visibly
+   after --stretch, which can produce a frame rate like 2.5 fps),
+   desyncing picture and sound by up to half a frame period at each
+   end -- the exact failure this feature exists to prevent. Deriving
+   the audio target from the already-quantized video duration instead
+   guarantees the two match to within a single audio sample. *)
+
+HoldFrameCount[seconds_?NumericQ, frameRate_?NumericQ] := Round[seconds * frameRate]
+
+HoldFrames[composedFrames_List, nStart_Integer, nEnd_Integer] :=
+  Join[
+    ConstantArray[First[composedFrames], nStart],
+    composedFrames,
+    ConstantArray[Last[composedFrames], nEnd]
+  ]
+
+(* PadAudioSilence
+   Reads wavPath's raw sample data and writes a new WAV with
+   holdStartSeconds/holdEndSeconds of silence joined at each end,
+   preserving channel count (mono or stereo) exactly. Built on
+   AudioData/AudioChannels/AudioSampleRate + ExportAudioBuffer
+   (the same headless-safe pattern StretchAudioBuffer's caller
+   already uses above) rather than AudioPad/AudioDuration: those
+   two returned unevaluated in a real headless wolframscript run
+   tried while building this feature (AudioPad[...] and
+   AudioDuration[...] both stayed as literal unevaluated
+   expressions instead of computing anything) -- the same
+   "Audio[] requires a display context" gap ExportAudioBuffer's
+   own header comment already documents for Audio[], evidently
+   extending to these two functions as well in this WL version. *)
+
+PadAudioSilence[wavPath_String, holdStartSeconds_?NumericQ,
+                 holdEndSeconds_?NumericQ, outPath_String] :=
+  Module[{audioObj, sr, data, nCh, nStart, nEnd, padded},
+    audioObj = Import[wavPath];
+    sr = Round[QuantityMagnitude[AudioSampleRate[audioObj]]];
+    data = AudioData[audioObj];
+    nCh = Length[data];
+    nStart = Round[holdStartSeconds * sr];
+    nEnd   = Round[holdEndSeconds * sr];
+    padded = Join[
+      ConstantArray[0., {nCh, nStart}],
+      data,
+      ConstantArray[0., {nCh, nEnd}],
+      2
+    ];
+    ExportAudioBuffer[padded, outPath, sr];
+    outPath
+  ]
+
+
+(* ── Coarse output-size sanity check ───────────────────────
+
+   A second, louder check layered on top of VerifyComposedFrames'
+   detailed per-frame clearance check above: flags an output whose
+   audio duration, video duration, or file size is unexpectedly
+   large. This is a warning, not an abort -- the output file has
+   already been written by the time this runs, and stays written
+   either way. The point is that a case like an accidental
+   1002-second, 88 MB WAV would have been flagged immediately by
+   this check instead of being found by hand later. *)
+
+CheckOutputSanity[outPath_String, videoDurationSeconds_?NumericQ,
+                   audioDurationSeconds_?NumericQ,
+                   maxDurationSeconds_?NumericQ, maxFileMB_?NumericQ] :=
+  Module[{fileMB, warnings},
+    fileMB = N[FileByteCount[outPath]] / (1024.0*1024.0);
+    warnings = {};
+    If[videoDurationSeconds > maxDurationSeconds,
+      AppendTo[warnings,
+        "WARNING: the video duration is " <> FmtN[videoDurationSeconds, 6] <>
+        " seconds, which exceeds the configured threshold of " <>
+        FmtN[maxDurationSeconds, 6] <> " seconds."]];
+    If[audioDurationSeconds > maxDurationSeconds,
+      AppendTo[warnings,
+        "WARNING: the audio duration is " <> FmtN[audioDurationSeconds, 6] <>
+        " seconds, which exceeds the configured threshold of " <>
+        FmtN[maxDurationSeconds, 6] <> " seconds."]];
+    If[fileMB > maxFileMB,
+      AppendTo[warnings,
+        "WARNING: the output file size is " <> FmtN[fileMB, 6] <>
+        " MB, which exceeds the configured threshold of " <>
+        FmtN[maxFileMB, 6] <> " MB."]];
+    <|
+      "videoDurationSeconds" -> videoDurationSeconds,
+      "audioDurationSeconds" -> audioDurationSeconds,
+      "fileMB" -> fileMB,
+      "maxDurationSeconds" -> maxDurationSeconds,
+      "maxFileMB" -> maxFileMB,
+      "warnings" -> warnings,
+      "ok" -> (Length[warnings] == 0)
+    |>
+  ]
+
+
 (* ── Video muxing ─────────────────────────────────────────
 
    Native WL: FrameListVideo turns the composed frame sequence
@@ -469,6 +581,18 @@ MuxVideo[composedFrames_List, frameRate_?NumericQ, wavPath_String, outPath_Strin
    video and audio stay in lockstep, by holding each existing frame
    for longer rather than fabricating new frames.
 
+   holdStartSeconds/holdEndSeconds (both default 0, so existing
+   callers are unaffected) repeat the first/last composed frame and
+   pad the audio with matching silence at each end — see HoldFrames
+   and PadAudioSilence above. This is applied AFTER composition, so
+   it extends the finished reel rather than being a separate
+   post-processing pass over the finished file.
+
+   maxDurationSeconds/maxFileMB (default 600s / 200MB) feed
+   CheckOutputSanity, a coarse warn-only check run after muxing —
+   see that function's header. It never aborts; "aborted" -> True
+   only ever comes from the duration-mismatch check in step 1.
+
    Returns an Association report. Does not throw on a duration
    mismatch — it returns "aborted" -> True with the reason, so the
    CLI driver controls how loudly to fail. *)
@@ -480,11 +604,14 @@ $Profiles = <|
 
 MakePresentationVideo[gifPath_String, wavPath_String, title_String,
                       profile_String, outPath_String,
-                      stretchFactor_:Automatic, durationTolerance_:0.03] :=
+                      stretchFactor_:Automatic, durationTolerance_:0.03,
+                      holdStartSeconds_:0, holdEndSeconds_:0,
+                      maxDurationSeconds_:600, maxFileMB_:200] :=
   Module[{targetW, targetH, durCheck, frames, bg, imgDims, marginPx,
           ubbox, cropBBox, frameRate, titleBandH, titleImg, composed,
-          wavPathForMux, tmpWav, stretchedAudio, srIn, muxedPath,
-          finalDuration, finalDurCheck, verifyResult, report},
+          wavPathForMux, tmpWav, tmpHoldWav, nHoldStartFrames, nHoldEndFrames,
+          stretchedAudio, srIn, muxedPath,
+          finalDuration, finalDurCheck, verifyResult, sanityCheck, report},
 
     If[!KeyExistsQ[$Profiles, profile],
       Return[<|"aborted" -> True,
@@ -539,6 +666,25 @@ MakePresentationVideo[gifPath_String, wavPath_String, title_String,
     titleImg = BuildTitleBandImage[title, targetW, titleBandH];
     composed = ComposeFrame[#, cropBBox, bg, targetW, targetH, titleBandH, titleImg] & /@ frames;
 
+    (* ── Optional opening/closing hold ── *)
+    tmpHoldWav = None;
+    nHoldStartFrames = 0;
+    nHoldEndFrames = 0;
+    If[holdStartSeconds > 0 || holdEndSeconds > 0,
+      nHoldStartFrames = HoldFrameCount[holdStartSeconds, frameRate];
+      nHoldEndFrames   = HoldFrameCount[holdEndSeconds, frameRate];
+      composed = HoldFrames[composed, nHoldStartFrames, nHoldEndFrames];
+      tmpHoldWav = FileNameJoin[{$TemporaryDirectory,
+        "stem_hold_" <> ToString[RandomInteger[10^9]] <> ".wav"}];
+      (* Pad the audio to the frame-quantized duration (nFrames/frameRate),
+         not the raw requested holdStartSeconds/holdEndSeconds -- see
+         HoldFrameCount's header for why using the raw seconds on this
+         side too could desync video and audio at a non-clean frame rate. *)
+      PadAudioSilence[wavPathForMux, nHoldStartFrames/frameRate,
+        nHoldEndFrames/frameRate, tmpHoldWav];
+      wavPathForMux = tmpHoldWav;
+    ];
+
     (* ── Step 5: mux + verify ── *)
     muxedPath = MuxVideo[composed, frameRate, wavPathForMux, outPath];
 
@@ -562,6 +708,13 @@ MakePresentationVideo[gifPath_String, wavPath_String, title_String,
 
     verifyResult = VerifyComposedFrames[composed, titleBandH, bg];
 
+    (* finalDuration (above) is the actual measured duration of the
+       muxed output file, not a theoretical frame-count/frameRate
+       value -- this coarse check should flag the real thing that got
+       written, including any muxing-stage rounding. *)
+    sanityCheck = CheckOutputSanity[muxedPath, finalDuration,
+      WAVDurationSeconds[wavPathForMux], maxDurationSeconds, maxFileMB];
+
     report = <|
       "aborted" -> False,
       "outPath" -> muxedPath,
@@ -570,12 +723,20 @@ MakePresentationVideo[gifPath_String, wavPath_String, title_String,
       "nFrames" -> Length[frames],
       "frameRate" -> frameRate,
       "cropBBox" -> cropBBox,
+      "holdStartSeconds" -> holdStartSeconds,
+      "holdEndSeconds" -> holdEndSeconds,
+      "holdStartFrames" -> nHoldStartFrames,
+      "holdEndFrames" -> nHoldEndFrames,
+      "effectiveHoldStartSeconds" -> nHoldStartFrames / frameRate,
+      "effectiveHoldEndSeconds" -> nHoldEndFrames / frameRate,
       "durationCheck" -> durCheck,
       "finalDurationCheck" -> finalDurCheck,
-      "frameVerification" -> verifyResult
+      "frameVerification" -> verifyResult,
+      "sanityCheck" -> sanityCheck
     |>;
 
     If[stretchFactor =!= Automatic && FileExistsQ[tmpWav], DeleteFile[tmpWav]];
+    If[tmpHoldWav =!= None && FileExistsQ[tmpHoldWav], DeleteFile[tmpHoldWav]];
 
     report
   ]
