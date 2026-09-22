@@ -87,16 +87,63 @@ $EscapeGradientCycleLength = 18.0;
 (* TraceStyle — the Hilbert-traversal path's line style. escape_gradient
    gets a dark halo stroke under the original white line, so the trace
    stays visible crossing the gradient's bright orange/yellow exterior;
-   high_contrast is untouched (pixel-identical to before this addition),
-   since its dark exterior was never a legibility problem. *)
-TraceStyle[pathG_List, colorScheme_String] :=
+   high_contrast is a single white line.
+
+   traceOpacity is now a REQUIRED, caller-supplied value (see
+   $DefaultTraceOpacity below for why 0.8/0.9 -- the values hardcoded
+   here until this fix -- are wrong): because a Hilbert traversal
+   visits literally every pixel of the grid by construction, by the
+   final frame pathG spans the ENTIRE grid, so this "trace" functions
+   as a visited-region overlay covering the whole canvas, not a small
+   decorative line. At the old opacities this was confirmed (by
+   rendering and measuring real output, not assumed) to bury the
+   fractal under a dense line maze: escape_gradient's black-halo+white
+   two-layer stroke over a full-canvas Hilbert path renders as a near-
+   opaque black/white grid with the colorful fractal beneath barely
+   visible (mean luminance ratio final/first frame up to ~3x on a
+   dense grid), and high_contrast's single white line washes the same
+   way without the halo. The halo/line ratio (0.55/0.9) is preserved
+   at any traceOpacity so escape_gradient's relative contrast doesn't
+   shift as the overlay fades. *)
+TraceStyle[pathG_List, colorScheme_String, traceOpacity_?NumericQ] :=
   If[colorScheme === "escape_gradient",
     {
-      {Opacity[0.55], Black, AbsoluteThickness[3.5], Line[pathG]},
-      {Opacity[0.9], White, AbsoluteThickness[1.4], Line[pathG]}
+      {Opacity[traceOpacity * (0.55/0.9)], Black, AbsoluteThickness[3.5], Line[pathG]},
+      {Opacity[traceOpacity], White, AbsoluteThickness[1.4], Line[pathG]}
     },
-    {Opacity[0.8], RGBColor[1.0, 1.0, 1.0], Thin, Line[pathG]}
+    {Opacity[traceOpacity], RGBColor[1.0, 1.0, 1.0], Thin, Line[pathG]}
   ];
+
+(* $DefaultTraceOpacity — chosen by measurement, not guesswork (see
+   mandelbrot/VERIFICATION_overlay_fix.md for the actual numbers): at
+   the real escape-gradient LinkedIn-video configuration (grid_size=128,
+   color_scheme="escape_gradient"), rendering the completed-scan final
+   frame at candidate opacities {0.8 (old), 0.4, 0.25, 0.15} and
+   comparing each against the unscanned first frame directly (viewed,
+   not just measured) showed 0.8 still degrades to a dense line maze
+   that hides the fractal, while 0.15 leaves the fractal's shape and
+   color gradient clearly legible with the traversal visible as a
+   light texture rather than an occlusion -- std-dev-of-luminance
+   ("contrast") ratio final/first = 0.838 at 0.15, comfortably above
+   the >=60% target. This is also used as the config default (see
+   simulation.mandelbrot.trace_opacity, model.wl), so every caller
+   that doesn't explicitly override it gets the fix automatically. *)
+$DefaultTraceOpacity = 0.15;
+
+(* $TraceFadeFloorOpacity — the opacity the end-of-scan fade (see
+   AnimateFieldTraversal's fadeSeconds below) settles at: low enough to
+   read as "the overlay has faded," non-zero so the completed Hilbert
+   curve stays faintly visible through the closing hold, per the
+   overlay-fix review item. *)
+$TraceFadeFloorOpacity = 0.05;
+
+(* $HilbertScanLabelFontSize — up from the original 9pt (see
+   mandelbrot/VERIFICATION_overlay_fix.md for the measured pixel
+   height before/after in the actual exported GIF frame): 9pt was hard
+   to read on a phone-sized rendering of the LinkedIn profile export;
+   16pt is comfortably larger while still fitting within the frame
+   width without colliding with the canvas edge. *)
+$HilbertScanLabelFontSize = 16;
 
 SmoothIterationToColor[nu_?NumericQ, maxIter_Integer] :=
   If[nu >= maxIter,
@@ -163,22 +210,56 @@ FieldToImage[iterField_List, traversal_List, size_Integer, maxIter_Integer,
    equal targetDuration — that's the intended trade-off for this
    opt-in path; the matching audio for a video export must then be
    produced separately at the same (shorter) duration (see
-   tools/make_presentation_video.wl usage in AGENTS.md). *)
+   tools/make_presentation_video.wl usage in AGENTS.md).
+
+   traceOpacity — see $DefaultTraceOpacity above for what this fixes
+   and how the default was chosen; a config-driven per-model value is
+   threaded in by AnimateAndExportField below.
+
+   fadeSeconds (default 0, i.e. exact prior behavior) reserves the
+   LAST fadeSeconds of pacingDuration, in frames at this same frame
+   rate, as an end-of-scan reveal: the traversal path stops growing
+   once it reaches the full grid at the end of the SCAN portion
+   (pacingDuration-fadeSeconds), and the remaining fadeFrames hold
+   that completed path while its opacity ramps from traceOpacity down
+   to $TraceFadeFloorOpacity, so the overlay visibly clears while the
+   completed Hilbert curve stays faintly visible. This is a content
+   fade, not a frozen-last-frame hold -- the closing hold itself is
+   tools/make_presentation_video.wl's --hold-seconds, applied to the
+   already-rendered GIF+WAV; duplicating a hold here would double up
+   with that flag, so this only ever adds a genuinely changing
+   (fading) tail, never a static one. Total frame count is unchanged
+   by fadeSeconds (still Round[frameRate*pacingDuration]) -- frames
+   are reallocated from scan to fade, not added on top -- so THIS
+   function's own GIF-duration-equals-targetDuration contract is
+   unaffected; callers that want the GIF to actually grow by
+   fadeSeconds (so the fade is additional time, not a bite out of the
+   scan) must pass a correspondingly longer targetDuration -- see
+   main.wl's mandelbrot/julia blocks, which pad the exported WAV with
+   fadeSeconds of trailing silence for exactly this reason, keeping
+   GIF and WAV duration-matched. *)
 AnimateFieldTraversal[iterField_List, traversal_List, size_Integer, maxIter_Integer,
                       outGIF_String, targetDuration_?NumericQ, Optional[nFrames_Integer, 150],
                       Optional[colorScheme_String, "high_contrast"], Optional[smoothField_List, {}],
-                      Optional[maxDurationSec_?NumericQ, $DefaultMaxAnimationDurationSec]] :=
-  Module[{img, displayData, gCoords, frameUpTo, gifFrames, nPixels, frameRate, actualNFrames, pacingDuration, markerRadius},
+                      Optional[maxDurationSec_?NumericQ, $DefaultMaxAnimationDurationSec],
+                      Optional[traceOpacity_?NumericQ, $DefaultTraceOpacity],
+                      Optional[fadeSeconds_?NumericQ, 0.0]] :=
+  Module[{img, displayData, gCoords, gifFrames, nPixels, frameRate, actualNFrames, pacingDuration,
+          markerRadius, fadeFrameCount, scanFrameCount, scanFrameUpTo, scanFrames, fadeFrames, fullPathG},
     nPixels = Length[traversal];
     pacingDuration = Min[targetDuration, maxDurationSec];
 
     frameRate = Clip[nFrames / pacingDuration, {$MinAnimationFps, $MaxAnimationFps}];
     actualNFrames = Max[2, Round[frameRate * pacingDuration]];
 
+    fadeFrameCount = Min[actualNFrames - 1, Max[0, Round[frameRate * fadeSeconds]]];
+    scanFrameCount = actualNFrames - fadeFrameCount;
+
     img = FieldToImage[iterField, traversal, size, maxIter, colorScheme, smoothField];
     displayData = Reverse @ ImageData[img];
     gCoords = Map[{#[[1]] - 0.5, size - #[[2]] + 0.5} &, traversal];
-    frameUpTo = Table[Max[1, Round[k * nPixels / actualNFrames]], {k, actualNFrames}];
+    scanFrameUpTo = Table[Max[1, Round[k * nPixels / scanFrameCount]], {k, scanFrameCount}];
+    fullPathG = gCoords;
 
     If[pacingDuration < targetDuration,
       Print["  Rendering ", actualNFrames, " traversal frames at ", FmtN[frameRate, 3],
@@ -188,6 +269,11 @@ AnimateFieldTraversal[iterField_List, traversal_List, size_Integer, maxIter_Inte
       Print["  Rendering ", actualNFrames, " traversal frames at ", FmtN[frameRate, 3],
             " fps (", FmtN[actualNFrames / frameRate, 3],
             "s, matching audio duration ", FmtN[targetDuration, 3], "s)..."]
+    ];
+    If[fadeFrameCount > 0,
+      Print["  ", scanFrameCount, " scan frames + ", fadeFrameCount,
+            " end-of-scan fade frames (", FmtN[fadeFrameCount / frameRate, 3],
+            "s, overlay opacity ", FmtN[traceOpacity, 3], " -> ", FmtN[$TraceFadeFloorOpacity, 3], ")..."]
     ];
 
     (* Marker/label sized relative to the grid resolution so they scale
@@ -200,21 +286,45 @@ AnimateFieldTraversal[iterField_List, traversal_List, size_Integer, maxIter_Inte
        background -- a flat color alone can't do that for any single
        hue, since the gradient spans from dark blue to bright yellow. *)
     markerRadius = size * 0.017;
-    gifFrames = Table[
-      With[{pathG = gCoords[[1 ;; frameUpTo[[k]]]]},
+
+    scanFrames = Table[
+      With[{pathG = gCoords[[1 ;; scanFrameUpTo[[k]]]]},
         Graphics[{
           Raster[displayData, {{0, 0}, {size, size}}],
-          TraceStyle[pathG, colorScheme],
-          {EdgeForm[{Black, AbsoluteThickness[1.5]}], Yellow, Disk[Last[pathG], markerRadius]},
-          Text[Style["Hilbert-curve scan", 9, White, Bold],
+          TraceStyle[pathG, colorScheme, traceOpacity],
+          Text[Style["Hilbert-curve scan", $HilbertScanLabelFontSize, White, Bold],
                {size * 0.5, size * 0.045},
-               Background -> Directive[Opacity[0.55], Black]]
+               Background -> Directive[Opacity[0.55], Black]],
+          (* Marker drawn LAST (on top of the label) so it is never
+             hidden -- the label's dark background patch sits in a
+             fixed bottom band the traversal legitimately passes
+             through, and previously covered the marker for the few
+             frames its position fell inside that band. *)
+          {EdgeForm[{Black, AbsoluteThickness[1.5]}], Yellow, Disk[Last[pathG], markerRadius]}
         },
         PlotRange -> {{0, size}, {0, size}}, ImagePadding -> None,
         AspectRatio -> 1, ImageSize -> 320]
       ],
-      {k, actualNFrames}
+      {k, scanFrameCount}
     ];
+
+    fadeFrames = Table[
+      With[{curOpacity = traceOpacity + ($TraceFadeFloorOpacity - traceOpacity) * (k / fadeFrameCount)},
+        Graphics[{
+          Raster[displayData, {{0, 0}, {size, size}}],
+          TraceStyle[fullPathG, colorScheme, curOpacity],
+          Text[Style["Hilbert-curve scan", $HilbertScanLabelFontSize, White, Bold],
+               {size * 0.5, size * 0.045},
+               Background -> Directive[Opacity[0.55], Black]],
+          {EdgeForm[{Black, AbsoluteThickness[1.5]}], Yellow, Disk[Last[fullPathG], markerRadius]}
+        },
+        PlotRange -> {{0, size}, {0, size}}, ImagePadding -> None,
+        AspectRatio -> 1, ImageSize -> 320]
+      ],
+      {k, fadeFrameCount}
+    ];
+
+    gifFrames = Join[scanFrames, fadeFrames];
     ExportGIF[gifFrames, outGIF, frameRate];
     {actualNFrames, frameRate}
   ];
@@ -225,17 +335,27 @@ AnimateFieldTraversal[iterField_List, traversal_List, size_Integer, maxIter_Inte
    ======================================================== *)
 
 (* AnimateAndExportField — see AnimateFieldTraversal for the
-   targetDuration/nFrames/maxDurationSec duration-sync contract (the
-   last is a new, OPT-IN, default-Infinity cap -- see AGENTS.md).
-   Returns {actualNFrames, frameRate}. *)
+   targetDuration/nFrames/maxDurationSec/traceOpacity/fadeSeconds
+   duration-sync and overlay-fix contract (maxDurationSec and
+   fadeSeconds are both OPT-IN, default no-cap/no-fade -- see AGENTS.md
+   for the former and TraceStyle/$DefaultTraceOpacity above for the
+   latter). traceOpacity is read from model["traceOpacity"] (populated
+   from config by MandelbrotModel/JuliaModel), the same Lookup pattern
+   colorScheme/smoothField already use, falling back to
+   $DefaultTraceOpacity if absent so any caller building a model
+   association by hand still gets the fix. Returns {actualNFrames,
+   frameRate}. *)
 AnimateAndExportField[model_Association, outGIF_String, outPNG_String,
                       targetDuration_?NumericQ, Optional[nFrames_Integer, 150],
-                      Optional[maxDurationSec_?NumericQ, $DefaultMaxAnimationDurationSec]] :=
-  Module[{img, size, upscaled, gifStats, colorScheme, smoothField},
+                      Optional[maxDurationSec_?NumericQ, $DefaultMaxAnimationDurationSec],
+                      Optional[fadeSeconds_?NumericQ, 0.0]] :=
+  Module[{img, size, upscaled, gifStats, colorScheme, smoothField, traceOpacity},
     colorScheme = Lookup[model, "colorScheme", "high_contrast"];
     smoothField = Lookup[model, "smoothField", {}];
+    traceOpacity = Lookup[model, "traceOpacity", $DefaultTraceOpacity];
     gifStats = AnimateFieldTraversal[model["iterField"], model["traversal"], model["size"], model["maxIter"],
-                                      outGIF, targetDuration, nFrames, colorScheme, smoothField, maxDurationSec];
+                                      outGIF, targetDuration, nFrames, colorScheme, smoothField, maxDurationSec,
+                                      traceOpacity, fadeSeconds];
     size = model["size"];
     img = FieldToImage[model["iterField"], model["traversal"], size, model["maxIter"], colorScheme, smoothField];
     (* Export upscaled via Graphics/Raster (matching the GIF's own

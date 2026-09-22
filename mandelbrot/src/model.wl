@@ -286,10 +286,11 @@ $mandelReMin = -2.0; $mandelReMax = 0.5;
 $mandelImMin = -1.25; $mandelImMax = 1.25;
 
 MandelbrotModel[cfg_Association] :=
-  Module[{maxIter, gridN, size, traversal, nPixels, iterField, colorScheme, smoothField},
+  Module[{maxIter, gridN, size, traversal, nPixels, iterField, colorScheme, smoothField, traceOpacity},
     maxIter = GetCfg[cfg, {"simulation", "mandelbrot", "max_iterations"}, 300];
     gridN   = Log2[GetCfg[cfg, {"simulation", "mandelbrot", "grid_size"}, 64]];
     colorScheme = GetCfg[cfg, {"simulation", "mandelbrot", "color_scheme"}, "high_contrast"];
+    traceOpacity = GetCfg[cfg, {"simulation", "mandelbrot", "trace_opacity"}, $DefaultTraceOpacity];
     size = 2^gridN;
     traversal = HilbertTraversalOrder[gridN];
     nPixels = Length[traversal];
@@ -308,7 +309,7 @@ MandelbrotModel[cfg_Association] :=
       "mode" -> "mandelbrot", "maxIter" -> maxIter, "gridN" -> gridN, "size" -> size,
       "reMin" -> $mandelReMin, "reMax" -> $mandelReMax, "imMin" -> $mandelImMin, "imMax" -> $mandelImMax,
       "traversal" -> traversal, "nPixels" -> nPixels, "iterField" -> iterField,
-      "colorScheme" -> colorScheme, "smoothField" -> smoothField
+      "colorScheme" -> colorScheme, "smoothField" -> smoothField, "traceOpacity" -> traceOpacity
     |>
   ];
 
@@ -331,10 +332,11 @@ $juliaDefaultCRe = -0.123; $juliaDefaultCIm = 0.745;
 
 JuliaModel[cfg_Association] :=
   Module[{maxIter, gridN, size, cRe, cIm, c, traversal, nPixels, iterField, cIsInterior,
-          colorScheme, smoothField},
+          colorScheme, smoothField, traceOpacity},
     maxIter = GetCfg[cfg, {"simulation", "mandelbrot", "max_iterations"}, 300];
     gridN   = Log2[GetCfg[cfg, {"simulation", "mandelbrot", "grid_size"}, 64]];
     colorScheme = GetCfg[cfg, {"simulation", "mandelbrot", "color_scheme"}, "high_contrast"];
+    traceOpacity = GetCfg[cfg, {"simulation", "mandelbrot", "trace_opacity"}, $DefaultTraceOpacity];
     cRe = N @ GetCfg[cfg, {"simulation", "mandelbrot", "julia_c_real"}, $juliaDefaultCRe];
     cIm = N @ GetCfg[cfg, {"simulation", "mandelbrot", "julia_c_imag"}, $juliaDefaultCIm];
     c = cRe + I * cIm;
@@ -360,7 +362,7 @@ JuliaModel[cfg_Association] :=
       "c" -> c, "cRe" -> cRe, "cIm" -> cIm, "cIsInterior" -> cIsInterior,
       "reMin" -> -1.5, "reMax" -> 1.5, "imMin" -> -1.5, "imMax" -> 1.5,
       "traversal" -> traversal, "nPixels" -> nPixels, "iterField" -> iterField,
-      "colorScheme" -> colorScheme, "smoothField" -> smoothField
+      "colorScheme" -> colorScheme, "smoothField" -> smoothField, "traceOpacity" -> traceOpacity
     |>
   ];
 

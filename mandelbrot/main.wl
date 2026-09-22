@@ -42,6 +42,15 @@ cfg  = LoadConfig["mandelbrot", $cliArgs];
 mode = GetCfg[cfg, {"simulation", "mode"}, "mandelbrot"];
 sr   = GetCfg[cfg, {"sonification", "sample_rate"}, 44100];
 
+(* End-of-scan overlay fade duration (mandelbrot/julia modes only --
+   zoom has no Hilbert-traversal overlay to fade, see animate.wl). The
+   WAV gets this much trailing silence appended so its exported
+   duration already includes the fade, keeping GIF and WAV duration-
+   matched -- see AnimateFieldTraversal's fadeSeconds contract in
+   animate.wl for why the padding has to happen on the audio side
+   rather than shrinking the scan to fit inside the unpadded duration. *)
+$overlayFadeSeconds = GetCfg[cfg, {"simulation", "mandelbrot", "overlay_fade_seconds"}, 1.0];
+
 STEMHeading["Mandelbrot"];
 Print["  mode: ", mode];
 Print[""];
@@ -103,7 +112,8 @@ Which[
     introBuffer = BuildIntroBuffer[introText, sr];
     introBuffer = If[Length[introBuffer] > 0, NormalizeBuffer[introBuffer, 0.95], introBuffer];
     pauseBuffer = If[Length[introBuffer] > 0, ConstantArray[0.0, Round[sr * 0.4]], {}];
-    finalBuffer = Join[introBuffer, pauseBuffer, rawBuffer];
+    fadeSilence = ConstantArray[0.0, Round[sr * $overlayFadeSeconds]];
+    finalBuffer = Join[introBuffer, pauseBuffer, rawBuffer, fadeSilence];
     EnsureDir[outWAV];
     finalBuffer = NormalizeToLoudness[finalBuffer, -17.0, 0.97, sr];
     Export[outWAV, Sound[SampledSoundList[finalBuffer, sr]], "WAV"];
@@ -115,7 +125,8 @@ Which[
     STEMSay["Rendering visualisation"];
     outGIF = FileNameJoin[{$projectRoot, "output", "mandelbrot_mandelbrot.gif"}];
     outPNG = FileNameJoin[{$projectRoot, "output", "mandelbrot_mandelbrot.png"}];
-    {$gifFrames, $gifFps} = AnimateAndExportField[mandelbrotModel, outGIF, outPNG, $wavDurationSec];
+    {$gifFrames, $gifFps} = AnimateAndExportField[mandelbrotModel, outGIF, outPNG, $wavDurationSec,
+                                                   150, $DefaultMaxAnimationDurationSec, $overlayFadeSeconds];
     STEMDescribeGIF[outGIF, $gifFrames, $gifFps];
     Print[""],
 
@@ -145,7 +156,8 @@ Which[
     introBuffer = BuildIntroBuffer[introText, sr];
     introBuffer = If[Length[introBuffer] > 0, NormalizeBuffer[introBuffer, 0.95], introBuffer];
     pauseBuffer = If[Length[introBuffer] > 0, ConstantArray[0.0, Round[sr * 0.4]], {}];
-    finalBuffer = Join[introBuffer, pauseBuffer, rawBuffer];
+    fadeSilence = ConstantArray[0.0, Round[sr * $overlayFadeSeconds]];
+    finalBuffer = Join[introBuffer, pauseBuffer, rawBuffer, fadeSilence];
     EnsureDir[outWAV];
     finalBuffer = NormalizeToLoudness[finalBuffer, -17.0, 0.97, sr];
     Export[outWAV, Sound[SampledSoundList[finalBuffer, sr]], "WAV"];
@@ -157,7 +169,8 @@ Which[
     STEMSay["Rendering visualisation"];
     outGIF = FileNameJoin[{$projectRoot, "output", "mandelbrot_julia.gif"}];
     outPNG = FileNameJoin[{$projectRoot, "output", "mandelbrot_julia.png"}];
-    {$gifFrames, $gifFps} = AnimateAndExportField[juliaModel, outGIF, outPNG, $wavDurationSec];
+    {$gifFrames, $gifFps} = AnimateAndExportField[juliaModel, outGIF, outPNG, $wavDurationSec,
+                                                   150, $DefaultMaxAnimationDurationSec, $overlayFadeSeconds];
     STEMDescribeGIF[outGIF, $gifFrames, $gifFps];
     Print[""],
 
