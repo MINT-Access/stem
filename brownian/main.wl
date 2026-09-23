@@ -131,6 +131,7 @@ Which[
     {$gifFrames, $gifFps} = ExportWalkAnimation[walkTable, outGIF, wavDuration];
     ExportWalkPNG[walkTable, outPNG];
     STEMDescribeGIF[outGIF, $gifFrames, $gifFps];
+    SyncWAVToGIF[outGIF, outWAV];
     Print["  PNG written: ", outPNG];
     Print[""],
 

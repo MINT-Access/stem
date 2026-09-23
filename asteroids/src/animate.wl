@@ -285,11 +285,11 @@ BuildFrame[asteroids_List, angles_List, k_Integer,
   ]
 
 
-(* Sane bounds on GIF playback frame rate — see ExportAnimation for how
-   these get used to keep animation/audio duration in sync without
-   forcing an absurdly fast or glacial frame rate at the extremes. *)
-$MinAnimationFps = 2;
-$MaxAnimationFps = 30;
+(* GIF timing: frame delay and frame count come from stem-core's
+   GIFFramePlan, which clamps the requested rate to 2-30 fps, rounds the
+   frame delay to whole centiseconds (what the GIF format stores) and
+   derives the frame count from that delay; main.wl then measures both
+   files with SyncWAVToGIF. *)
 
 
 (* ExportAnimation
@@ -301,11 +301,11 @@ $MaxAnimationFps = 30;
 
    nFrames is a RENDER BUDGET (total frames, reveal + final hold), not a
    literal frame count: frameRate is solved as nFrames/targetDuration and
-   clamped to [$MinAnimationFps, $MaxAnimationFps] (2-30 fps) so a short
+   clamped to [2, 30] fps (stem-core GIFFramePlan) (2-30 fps) so a short
    sonification doesn't demand a strobing frame rate and a long one
    doesn't demand an implausibly slow one — actualNFrames (recomputed as
    Round[frameRate*targetDuration]) is what flexes at the clamp boundary,
-   so playback duration always equals targetDuration exactly.
+   so playback duration equals targetDuration to within half a frame delay.
 
    Of actualNFrames, a holdFrac share (default 15%) is spent holding the
    fully-revealed picture at the end; the rest is spent revealing
@@ -314,32 +314,20 @@ $MaxAnimationFps = 30;
    naturally repeats a given reveal count across several consecutive
    frames rather than skipping any asteroid.
 
-   GIF frame delays are stored in centiseconds (Export[...,"GIF",...]
-   rounds "DisplayDurations"->1/frameRate to the nearest 0.01s), so the
-   NOMINAL frameRate solved above is not what actually plays back. At
-   low fps (long targetDuration) 1/frameRate is tens of centiseconds and
-   +-0.5cs rounding is negligible; at high fps (short targetDuration,
-   small n, unclamped up near 20-30fps) 1/frameRate can be a small
-   single-digit centisecond count where the same +-0.5cs rounding is a
-   large relative error -- e.g. 22.4fps quantizes to a delay of 4cs
-   (=25fps actual, +11.6%), which measured as a 10-11% GIF/WAV duration
-   mismatch on small-n presets (asteroids_hazardous_only, n=10) despite
-   the nominal frameRate/targetDuration arithmetic being exact. Fixed by
-   quantizing frameRate to what Export will actually produce BEFORE
-   solving actualNFrames, so the frame count that flexes at the clamp
-   boundary is solved against the real, post-quantization frame rate --
-   the same "compute against what will actually render" fix, just one
-   quantization step further than the plain fps clamp above.
+   GIF frame delays are stored in whole centiseconds, so the frame
+   delay and count come from stem-core's GIFFramePlan, which rounds the
+   delay first and derives the count from it (this app's earlier local
+   fix for the same problem -- asteroids_hazardous_only measured 10-11%
+   off at 22.4 fps -> 4 cs -- is now the shared behaviour of every app).
 
-   Returns {actualNFrames, frameRate} so callers can report what was
-   actually rendered (STEMDescribeGIF wants both); frameRate returned is
-   the quantized (real) rate, not the nominal pre-quantization one. *)
+   Returns {actualNFrames, frameRate}; frameRate is the rate the GIF
+   actually plays at (100 / delay in centiseconds). *)
 
 ExportAnimation[asteroids_List, filePath_String,
                 startDate_String, endDate_String,
                 targetDuration_?NumericQ, nFrames_:150, holdFrac_:0.15] :=
   Module[
-    {maxDist, n, dateRange, angles, nominalFrameRate, quantDelay, frameRate,
+    {plan, maxDist, n, dateRange, angles, frameRate,
      actualNFrames, holdCount, revealCount, revealIndices, frames,
      holdFrames, allFrames},
 
@@ -347,11 +335,9 @@ ExportAnimation[asteroids_List, filePath_String,
     n       = Length[asteroids];
     dateRange = startDate <> " – " <> endDate;
 
-    nominalFrameRate = Clip[nFrames / targetDuration,
-      {$MinAnimationFps, $MaxAnimationFps}];
-    quantDelay    = Round[100.0 / nominalFrameRate] / 100.0;
-    frameRate     = 1.0 / quantDelay;
-    actualNFrames = Max[2, Round[frameRate * targetDuration]];
+    plan          = GIFFramePlan[targetDuration, nFrames / targetDuration];
+    frameRate     = plan["FrameRate"];
+    actualNFrames = plan["FrameCount"];
     holdCount     = Max[1, Round[actualNFrames * holdFrac]];
     revealCount   = Max[1, actualNFrames - holdCount];
 
@@ -364,10 +350,9 @@ ExportAnimation[asteroids_List, filePath_String,
     ];
 
     Print["  Rendering ", actualNFrames, " frames (", revealCount,
-          " reveal + ", holdCount, " hold) at ", FmtN[frameRate, 3],
-          " fps (", FmtN[actualNFrames / frameRate, 3],
-          "s, matching audio duration ", FmtN[targetDuration, 3],
-          "s) for ", n, " asteroids..."];
+          " reveal + ", holdCount, " hold) at ", FmtDec[frameRate],
+          " fps (", FmtDec[plan["FrameDelay"]], " s per frame, ",
+          FmtDec[plan["GIFDuration"]], " s in total) for ", n, " asteroids."];
 
     (* Reveal count k for each frame, evenly sampled across 1..n so every
        asteroid gets shown even when revealCount < n, and small n holds
@@ -385,6 +370,6 @@ ExportAnimation[asteroids_List, filePath_String,
     holdFrames = ConstantArray[Last[frames], holdCount];
     allFrames  = Join[frames, holdFrames];
 
-    ExportGIF[allFrames, filePath, frameRate];
+    ExportGIF[allFrames, filePath, plan];
     {actualNFrames, frameRate}
   ]

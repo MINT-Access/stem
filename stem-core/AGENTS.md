@@ -27,7 +27,7 @@ utils.wl  →  scales.wl  →  synth.wl  →  export.wl  →  accessibility.wl
 ```
 
 `synth.wl` and `export.wl` both call `EnsureDir` from `utils.wl`;
-`accessibility.wl` calls `FmtN` from `utils.wl`. `config.wl` calls `DeepMerge`
+`accessibility.wl` calls `FmtN`/`FmtDec` from `utils.wl`. `config.wl` calls `DeepMerge`
 internally. Nothing requires a later module, so the order is fixed and must not
 be changed.
 
@@ -60,6 +60,11 @@ Print["Period: ", FmtN[2.0060666, 4], " s"]    (* → "Period: 2.006 s" *)
 Print["Drift:  ", FmtN[3.498*^-7, 4], " J"]    (* → "Drift:  3.498*^-7 J" *)
 Print["Dist:   ", FmtN[1.234567, {5,2}], " LD"] (* → "Dist:   1.23 LD" *)
 ```
+
+#### `FmtDec[x_?NumericQ, maxDecimals_Integer:3]`
+Formats `x` with at most `maxDecimals` decimal places and no trailing zeros
+(`4.6078` → `"4.608"`, `0.22` → `"0.22"`, `2.` → `"2"`). Used for frame
+rates, frame delays and durations in console lines.
 
 #### `LogError[message_String, logPath_String]`
 Appends a timestamped `[ERROR] YYYY-MM-DD HH:MM:SS <message>` line to `logPath`.
@@ -156,11 +161,12 @@ STEMDescribeWAV["output/audio.wav", 10.0]   (* →  "  Audio: 10.0 s — output/
 
 ##### `STEMDescribeGIF[filePath_String]`
 ##### `STEMDescribeGIF[filePath_String, nFrames_Integer, fps_?NumericQ]`
-Prints a single line confirming a GIF export.
+Prints a single line confirming a GIF export. `fps` is printed with at most
+three decimals (`FmtDec`).
 
 ```wolfram
-STEMDescribeGIF["output/anim.gif", 150, 30]
-(* →  "  Animation: 150 frames at 30 fps — output/anim.gif" *)
+STEMDescribeGIF["output/anim.gif", 148, 4.5454545]
+(* →  "  Animation: 148 frames at 4.545 fps — output/anim.gif" *)
 ```
 
 #### Speech integration
@@ -291,17 +297,72 @@ ExportCSV[
 ]
 ```
 
-#### `ExportGIF[frames_List, filePath_String, frameRate_:25]`
-Exports a list of `Graphics` (or `GraphicsGrid`) objects as a looping animated
-GIF. Creates the output directory if needed. Returns `filePath`.
+#### GIF/WAV timing — why there is a plan
 
-`AnimationRepetitions -> Infinity` is always set. `DisplayDurations` is derived
-as `1.0 / frameRate`.
+GIF frame delays are stored as **whole centiseconds**. A requested rate such as
+4.6078 fps (0.217 s) is written as 0.22 s, so a frame count derived from the
+requested rate plays for longer or shorter than the audio: before this helper
+existed the drift was 0.4–1.4 % (dynamical iterate: GIF 33.000 s vs WAV
+32.553 s; lorenz: GIF 40.5 s vs WAV 40.0 s). Every app therefore chooses its
+frame delay and frame count through `GIFFramePlan` and exports with
+`ExportGIF[frames, path, plan]`, and its `main.wl` calls `SyncWAVToGIF` once
+both files exist.
+
+#### `GIFFramePlan[audioDuration, desiredFps, opts]`
+Clamps `desiredFps` (`"MinFps"`/`"MaxFps"`, default 2–30), rounds the frame
+delay to whole centiseconds, then derives the frame count as
+`Round[audioDuration / delay]`, so the GIF plays within half a frame delay of
+the audio. `"MinFrames"`/`"MaxFrames"` (default 2 / ∞) bound the count; when a
+bound applies the delay is recomputed from the bounded count instead.
+`"FrameCount" -> n` fixes the count (for frames set by the data at a fixed rate,
+e.g. pendulum's 25 fps sampling). Returns
+`<|"FrameCount", "DelayCentiseconds", "FrameDelay", "FrameRate", "GIFDuration",
+"AudioDuration", "Difference"|>`. Round rates (2 fps, 10 fps, 25 fps) give the
+same count and delay as `Round[fps * duration]` always did.
 
 ```wolfram
-ExportGIF[frames, "output/animation.gif", 30]   (* 30 fps *)
-ExportGIF[frames, "output/animation.gif"]        (* default 25 fps *)
+plan = GIFFramePlan[32.5533, 150 / 32.5533];
+(* <|"FrameCount" -> 148, "DelayCentiseconds" -> 22, "GIFDuration" -> 32.56, ...|> *)
 ```
+
+#### `ExportGIF[frames_List, filePath_String, plan_Association]`
+#### `ExportGIF[frames_List, filePath_String, frameRate_:25]`
+Exports a list of `Graphics` (or `GraphicsGrid`, or `Image`) objects as a
+looping animated GIF. Creates the output directory if needed. Returns
+`filePath`. `AnimationRepetitions -> Infinity` is always set.
+
+The plan form writes every frame with the plan's whole-centisecond delay and
+prints a warning line if the frame list's length differs from the plan's count.
+The legacy numeric form rounds `1/frameRate` to whole centiseconds explicitly;
+no app uses it any more.
+
+#### `GIFFrameDelays[gifPath_String]`
+The frame delays (seconds) stored in a GIF file, read from its Graphic Control
+Extension blocks. Same values as `Import[gifPath, "DisplayDurations"]`, in
+milliseconds rather than seconds for long GIFs.
+
+#### `WAVDuration[wavPath_String]`
+Duration of a PCM WAV file in seconds, read from its header.
+
+#### `PadWAVWithSilence[wavPath_String, targetSeconds_?NumericQ]`
+Appends silence so the file lasts `targetSeconds`; never trims. Returns the
+seconds added.
+
+#### `SyncWAVToGIF[gifPath, wavPath, opts]`
+Call once both files are written. Measures both files; if the GIF plays longer
+than the audio by more than one frame delay, pads the WAV with silence to the
+GIF's duration (this project pads audio, never trims it); then prints one
+sentence with the values actually written:
+
+```
+  GIF/WAV sync: the GIF has 148 frames of 0.22 s each and plays for 32.56 s, the WAV plays for 32.553 s, and the GIF is 0.007 s longer than the WAV.
+```
+
+`"IntroSeconds"`/`"OutroSeconds"` (default 0) are for the apps whose GIF is
+deliberately timed to the sonified section between a spoken intro and outro
+(`clt`, `quantum_tunnelling`, `resonance`, `scattering`); the comparison then
+uses that section, and padding is skipped (with a warning line) when there is an
+outro. Returns an Association of the measured values.
 
 ---
 

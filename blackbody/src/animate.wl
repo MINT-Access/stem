@@ -18,15 +18,12 @@
    finalLeft]]/sr from main.wl), not a fixed frame count/rate — so the
    animation and its sonification stay in sync. nFrames is a RENDER
    BUDGET, not a literal frame count: frameRate is solved as
-   nFrames/targetDuration and clamped to [$MinAnimationFps,
-   $MaxAnimationFps] (2-30 fps), then the actual frame count is
-   recomputed from the clamped rate so playback duration always equals
-   targetDuration exactly. See lorenz/src/animate.wl's ExportAnimation
+   nFrames/targetDuration and clamped to [2, 30] fps (stem-core GIFFramePlan) (2-30 fps), then the actual frame count is
+   recomputed from the clamped rate so playback duration equals
+   targetDuration to within half a frame delay. See lorenz/src/animate.wl's ExportAnimation
    for the reference version of this pattern.
    ======================================================== *)
 
-$MinAnimationFps = 2;
-$MaxAnimationFps = 30;
 
 
 (* ── Shared curve helpers ─────────────────────────────────────────── *)
@@ -117,16 +114,17 @@ RenderSpectrumSweepFrame[T_?NumericQ, nuMin_?NumericQ, nuMax_?NumericQ,
 AnimateSpectrum[T_?NumericQ, spec_Association, nuMin_?NumericQ, nuMax_?NumericQ,
                outGIF_String, outPNG_String, targetDuration_?NumericQ,
                Optional[nFrames_Integer, 150]] :=
-  Module[{nBins, frameRate, actualNFrames, indices, frames},
+  Module[{plan, nBins, frameRate, actualNFrames, indices, frames},
     nBins         = spec["nBins"];
-    frameRate     = Clip[nFrames / targetDuration, {$MinAnimationFps, $MaxAnimationFps}];
-    actualNFrames = Max[2, Round[frameRate * targetDuration]];
+    plan          = GIFFramePlan[targetDuration, nFrames / targetDuration];
+    frameRate     = plan["FrameRate"];
+    actualNFrames = plan["FrameCount"];
     indices       = Clip[Round[Subdivide[1, nBins, actualNFrames - 1]], {1, nBins}];
-    Print["  Rendering ", Length[indices], " spectrum sweep frames at ", FmtN[frameRate, 3],
-          " fps (", FmtN[Length[indices] / frameRate, 3],
-          "s, matching audio duration ", FmtN[targetDuration, 3], "s)..."];
+    Print["  Rendering ", Length[indices], " spectrum sweep frames at ", FmtDec[frameRate],
+          " fps (", FmtDec[plan["FrameDelay"]], " s per frame, ",
+        FmtDec[plan["GIFDuration"]], " s in total)."];
     frames = RenderSpectrumSweepFrame[T, nuMin, nuMax, spec, #] & /@ indices;
-    ExportGIF[frames, outGIF, frameRate];
+    ExportGIF[frames, outGIF, plan];
     RenderSpectrumStaticPNG[T, nuMin, nuMax, outPNG];
     {Length[frames], frameRate}
   ];
@@ -158,19 +156,20 @@ RenderTemperatureFrame[T_?NumericQ, Tmin_?NumericQ, Tmax_?NumericQ,
 
 AnimateTemperature[tempResult_Association, nuMin_?NumericQ, nuMax_?NumericQ,
                    outGIF_String, targetDuration_?NumericQ, Optional[nFrames_Integer, 150]] :=
-  Module[{TVals, Tmin, Tmax, nSteps, frameRate, actualNFrames, indices, frames},
+  Module[{plan, TVals, Tmin, Tmax, nSteps, frameRate, actualNFrames, indices, frames},
     TVals         = tempResult["TVals"];
     Tmin          = First[TVals]; Tmax = Last[TVals];
     nSteps        = Length[TVals];
-    frameRate     = Clip[nFrames / targetDuration, {$MinAnimationFps, $MaxAnimationFps}];
-    actualNFrames = Max[2, Round[frameRate * targetDuration]];
+    plan          = GIFFramePlan[targetDuration, nFrames / targetDuration];
+    frameRate     = plan["FrameRate"];
+    actualNFrames = plan["FrameCount"];
     indices       = Clip[Round[Subdivide[1, nSteps, actualNFrames - 1]], {1, nSteps}];
 
-    Print["  Rendering ", Length[indices], " temperature-sweep frames at ", FmtN[frameRate, 3],
-          " fps (", FmtN[Length[indices] / frameRate, 3],
-          "s, matching audio duration ", FmtN[targetDuration, 3], "s)..."];
+    Print["  Rendering ", Length[indices], " temperature-sweep frames at ", FmtDec[frameRate],
+          " fps (", FmtDec[plan["FrameDelay"]], " s per frame, ",
+        FmtDec[plan["GIFDuration"]], " s in total)."];
     frames = RenderTemperatureFrame[TVals[[#]], Tmin, Tmax, nuMin, nuMax] & /@ indices;
-    ExportGIF[frames, outGIF, frameRate];
+    ExportGIF[frames, outGIF, plan];
     {Length[frames], frameRate}
   ];
 
@@ -265,24 +264,25 @@ RenderStarTourFrame[order_List, presets_Association, upTo_Integer,
 AnimateStarTour[order_List, presets_Association, nuMin_?NumericQ, nuMax_?NumericQ,
                 outGIF_String, targetDuration_?NumericQ, Optional[nFrames_Integer, 150],
                 Optional[holdFrac_?NumericQ, 0.15]] :=
-  Module[{n, frameRate, actualNFrames, holdCount, revealCount, revealIndices, frames},
+  Module[{plan, n, frameRate, actualNFrames, holdCount, revealCount, revealIndices, frames},
     n = Length[order];
 
-    frameRate     = Clip[nFrames / targetDuration, {$MinAnimationFps, $MaxAnimationFps}];
-    actualNFrames = Max[2, Round[frameRate * targetDuration]];
+    plan          = GIFFramePlan[targetDuration, nFrames / targetDuration];
+    frameRate     = plan["FrameRate"];
+    actualNFrames = plan["FrameCount"];
     holdCount     = Max[1, Round[actualNFrames * holdFrac]];
     revealCount   = Max[1, actualNFrames - holdCount];
     revealIndices = If[revealCount <= 1, {n},
       Clip[Round[Subdivide[1, n, revealCount - 1]], {1, n}]];
 
     Print["  Rendering ", actualNFrames, " star-tour frames (", Length[revealIndices],
-          " reveal + ", holdCount, " hold) at ", FmtN[frameRate, 3],
-          " fps (", FmtN[actualNFrames / frameRate, 3],
-          "s, matching audio duration ", FmtN[targetDuration, 3], "s)..."];
+          " reveal + ", holdCount, " hold) at ", FmtDec[frameRate],
+          " fps (", FmtDec[plan["FrameDelay"]], " s per frame, ",
+        FmtDec[plan["GIFDuration"]], " s in total)."];
 
     frames = RenderStarTourFrame[order, presets, #, nuMin, nuMax] & /@ revealIndices;
     frames = Join[frames, ConstantArray[Last[frames], holdCount]];
-    ExportGIF[frames, outGIF, frameRate];
+    ExportGIF[frames, outGIF, plan];
     {Length[frames], frameRate}
   ];
 

@@ -111,6 +111,7 @@ Which[
     outPNG = FileNameJoin[{$projectRoot, "output", "grover_search.png"}];
     {$gifFrames, $gifFps} = AnimateSearch[searchModel, outGIF, outPNG, $audioDur];
     STEMDescribeGIF[outGIF, $gifFrames, $gifFps];
+    SyncWAVToGIF[outGIF, outWAV];
     Print[""],
 
   (* ===== compare ===== *)
@@ -151,6 +152,7 @@ Which[
     outPNG = FileNameJoin[{$projectRoot, "output", "grover_compare.png"}];
     {$gifFrames, $gifFps} = AnimateCompare[compareModel, outGIF, outPNG, $audioDur];
     STEMDescribeGIF[outGIF, $gifFrames, $gifFps];
+    SyncWAVToGIF[outGIF, outWAV];
     Print[""],
 
   (* ===== geometry ===== *)
@@ -193,6 +195,7 @@ Which[
     outPNG = FileNameJoin[{$projectRoot, "output", "grover_geometry.png"}];
     {$gifFrames, $gifFps} = AnimateGeometry[geometryModel, outGIF, outPNG, $audioDur];
     STEMDescribeGIF[outGIF, $gifFrames, $gifFps];
+    SyncWAVToGIF[outGIF, outWAV];
     Print[""],
 
   (* ===== unknown mode ===== *)

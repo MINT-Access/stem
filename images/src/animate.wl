@@ -10,20 +10,20 @@
    a RENDER BUDGET: frameRate is solved as nFrames/targetDuration then
    clamped to [$ImagesMinGifFps, $ImagesMaxGifFps] so the frame COUNT
    flexes at the clamp boundary, keeping actual playback duration
-   exactly targetDuration -- same pattern as lorenz/src/animate.wl's
+   within half a frame delay of targetDuration -- same pattern as lorenz/src/animate.wl's
    ExportAnimation (hydrogen/AnimateOrbital is the same adaptation of
    this same traversal-sweep idiom). *)
 $ImagesMinGifFps = 2;
 $ImagesMaxGifFps = 30;
 $ImagesGifFrameBudget = 150;
 
-ImagesGifRate[targetDuration_?NumericQ, nFrames_:$ImagesGifFrameBudget] :=
-  Clip[nFrames / targetDuration, {$ImagesMinGifFps, $ImagesMaxGifFps}];
+ImagesGifPlan[targetDuration_?NumericQ, nFrames_:$ImagesGifFrameBudget] :=
+  GIFFramePlan[targetDuration, nFrames / targetDuration, "MinFps" -> $ImagesMinGifFps, "MaxFps" -> $ImagesMaxGifFps];
 
 (* Render a GIF of the Hilbert curve sweeping through the image.
    Each frame shows the path grown to that fraction of the traversal. *)
 AnimateImageTraversal[model_Association, outGIF_String, targetDuration_?NumericQ] :=
-  Module[{processedImg, imgSize, traversal, nPixels, frameRate, nGIFFrames,
+  Module[{plan, processedImg, imgSize, traversal, nPixels, frameRate, nGIFFrames,
           displayData, gCoords, frameUpTo, gifFrames},
     processedImg = model["img"];
     imgSize      = model["imgSize"];
@@ -37,8 +37,9 @@ AnimateImageTraversal[model_Association, outGIF_String, targetDuration_?NumericQ
     (* Map {col, row} (1-based, row 1 = top) to Graphics coordinates
        where the bottom-left corner is the origin. *)
     gCoords    = Map[{#[[1]] - 0.5, imgSize - #[[2]] + 0.5} &, traversal];
-    frameRate  = ImagesGifRate[targetDuration];
-    nGIFFrames = Max[2, Round[frameRate * targetDuration]];
+    plan       = ImagesGifPlan[targetDuration];
+    frameRate  = plan["FrameRate"];
+    nGIFFrames = plan["FrameCount"];
     frameUpTo  = Table[Max[1, Round[k * nPixels / nGIFFrames]], {k, nGIFFrames}];
 
     gifFrames = Table[
@@ -56,7 +57,7 @@ AnimateImageTraversal[model_Association, outGIF_String, targetDuration_?NumericQ
       {k, nGIFFrames}
     ];
 
-    ExportGIF[gifFrames, outGIF, frameRate];
+    ExportGIF[gifFrames, outGIF, plan];
     {nGIFFrames, frameRate}
   ];
 
@@ -65,14 +66,15 @@ AnimateImageTraversal[model_Association, outGIF_String, targetDuration_?NumericQ
    AnimateImageTraversal's Hilbert path, so the visual matches the
    simpler raster traversal this mode sonifies. *)
 AnimateRasterScan[model_Association, outGIF_String, targetDuration_?NumericQ] :=
-  Module[{processedImg, imgSize, frameRate, nGIFFrames,
+  Module[{plan, processedImg, imgSize, frameRate, nGIFFrames,
           displayData, rowsAt, gifFrames},
     processedImg = model["img"];
     imgSize      = model["imgSize"];
 
     displayData = Reverse @ ImageData[ColorConvert[processedImg, "RGB"]];
-    frameRate  = ImagesGifRate[targetDuration];
-    nGIFFrames = Max[2, Round[frameRate * targetDuration]];
+    plan       = ImagesGifPlan[targetDuration];
+    frameRate  = plan["FrameRate"];
+    nGIFFrames = plan["FrameCount"];
     rowsAt = Table[Max[1, Round[k * imgSize / nGIFFrames]], {k, nGIFFrames}];
 
     gifFrames = Table[
@@ -93,6 +95,6 @@ AnimateRasterScan[model_Association, outGIF_String, targetDuration_?NumericQ] :=
       {k, nGIFFrames}
     ];
 
-    ExportGIF[gifFrames, outGIF, frameRate];
+    ExportGIF[gifFrames, outGIF, plan];
     {nGIFFrames, frameRate}
   ];

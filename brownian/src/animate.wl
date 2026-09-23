@@ -23,16 +23,13 @@
    finalLeft]]/sr from main.wl), not a fixed frame count/rate — so the
    animation and its sonification stay in sync. nFrames is a RENDER
    BUDGET, not a literal frame count: frameRate is solved as
-   nFrames/targetDuration and clamped to [$MinAnimationFps,
-   $MaxAnimationFps] (2-30 fps), then the actual frame count is
-   recomputed from the clamped rate so playback duration always equals
-   targetDuration exactly. See lorenz/src/animate.wl's ExportAnimation
+   nFrames/targetDuration and clamped to [2, 30] fps (stem-core GIFFramePlan) (2-30 fps), then the actual frame count is
+   recomputed from the clamped rate so playback duration equals
+   targetDuration to within half a frame delay. See lorenz/src/animate.wl's ExportAnimation
    for the reference version of this pattern. (`ensemble`/`temperature`
    modes are PNG-only, no GIF, so unaffected.)
    ======================================================== *)
 
-$MinAnimationFps = 2;
-$MaxAnimationFps = 30;
 
 
 (* ── walk mode ─────────────────────────────────────────────────── *)
@@ -76,19 +73,20 @@ RenderWalkFrame[walkTable_List, k_Integer, plotRange_, title_String:""] :=
 
 ExportWalkAnimation[walkTable_List, filePath_String, targetDuration_?NumericQ,
                     nFrames_:150, title_String:"Brownian Walk"] :=
-  Module[{plotRange, frameRate, actualNFrames, indices, frames},
+  Module[{plan, plotRange, frameRate, actualNFrames, indices, frames},
     plotRange = ComputeWalkPlotRange[walkTable];
 
-    frameRate     = Clip[nFrames / targetDuration, {$MinAnimationFps, $MaxAnimationFps}];
-    actualNFrames = Max[2, Round[frameRate * targetDuration]];
+    plan          = GIFFramePlan[targetDuration, nFrames / targetDuration];
+    frameRate     = plan["FrameRate"];
+    actualNFrames = plan["FrameCount"];
     indices = Round[Subdivide[1, Length[walkTable], actualNFrames - 1]];
     indices = Max[2, #] & /@ indices;
 
-    Print["  Rendering ", Length[indices], " frames at ", FmtN[frameRate, 3],
-          " fps (", FmtN[Length[indices] / frameRate, 3],
-          "s, matching audio duration ", FmtN[targetDuration, 3], "s)..."];
+    Print["  Rendering ", Length[indices], " frames at ", FmtDec[frameRate],
+          " fps (", FmtDec[plan["FrameDelay"]], " s per frame, ",
+        FmtDec[plan["GIFDuration"]], " s in total)."];
     frames = RenderWalkFrame[walkTable, #, plotRange, title] & /@ indices;
-    ExportGIF[frames, filePath, frameRate];
+    ExportGIF[frames, filePath, plan];
     {Length[frames], frameRate}
   ];
 

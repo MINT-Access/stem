@@ -26,6 +26,25 @@ FmtN[x_?NumericQ, spec_:4] :=
     OutputForm]
 
 
+(* FmtDec
+   Formats x with at most maxDecimals decimal places, dropping trailing
+   zeros (4.6078 -> "4.608", 0.22 -> "0.22", 2. -> "2"). Used for frame
+   rates, frame delays and durations in console lines, where FmtN's
+   significant-figure spec either truncates long durations ("344.")
+   or prints noise digits for short ones. *)
+
+FmtDec[x_?NumericQ, maxDecimals_Integer:3] :=
+  Module[{scaled, intPart, fracPart, fracStr},
+    scaled   = Round[Abs[x] * 10^maxDecimals];
+    intPart  = Quotient[scaled, 10^maxDecimals];
+    fracPart = Mod[scaled, 10^maxDecimals];
+    fracStr  = If[fracPart == 0, "",
+      "." <> StringReplace[IntegerString[fracPart, 10, maxDecimals],
+                           "0" .. ~~ EndOfString -> ""]];
+    If[x < 0 && scaled != 0, "-", ""] <> IntegerString[intPart] <> fracStr
+  ]
+
+
 (* LogError
    Appends a timestamped error line to a log file.
      message — human-readable description of the error

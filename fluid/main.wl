@@ -143,6 +143,7 @@ Which[
     Print["[4/4] Rendering vortex street animation..."];
     STEMSay["Rendering the vortex street animation"];
     AnimateKarman[model, $outDir, $audioDur];
+    SyncWAVToGIF[FileNameJoin[{$outDir, mode <> ".gif"}], outWAV];
     Print[""];
 
     STEMHeading["Done"];
@@ -181,6 +182,7 @@ Which[
     Print["[4/4] Rendering flow + Strouhal-curve animation..."];
     STEMSay["Rendering the flow and Strouhal curve animation"];
     AnimateStrouhal[model, $outDir, $audioDur];
+    SyncWAVToGIF[FileNameJoin[{$outDir, mode <> ".gif"}], outWAV];
     Print[""];
 
     STEMHeading["Done"];
@@ -220,6 +222,7 @@ Which[
     Print["[4/4] Rendering flag animation..."];
     STEMSay["Rendering the flag animation"];
     AnimateFlag[model, $outDir, $audioDur];
+    SyncWAVToGIF[FileNameJoin[{$outDir, mode <> ".gif"}], outWAV];
     Print[""];
 
     STEMHeading["Done"];

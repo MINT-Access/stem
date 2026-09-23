@@ -111,6 +111,7 @@ Which[
     outPNG = FileNameJoin[{$projectRoot, "output", "quantum_statistics_spectrum.png"}];
     {$gifFrames, $gifFps} = AnimateSpectrum[spectrumModel, outGIF, outPNG, wavDuration];
     STEMDescribeGIF[outGIF, $gifFrames, $gifFps];
+    SyncWAVToGIF[outGIF, outWAV];
     Print[""],
 
   (* ===== temperature ===== *)
@@ -153,6 +154,7 @@ Which[
     outPNG = FileNameJoin[{$projectRoot, "output", "quantum_statistics_temperature.png"}];
     {$gifFrames, $gifFps} = AnimateTemperature[temperatureModel, outGIF, outPNG, wavDuration];
     STEMDescribeGIF[outGIF, $gifFrames, $gifFps];
+    SyncWAVToGIF[outGIF, outWAV];
     Print[""],
 
   (* ===== fermi_sea ===== *)
@@ -193,6 +195,7 @@ Which[
     outPNG = FileNameJoin[{$projectRoot, "output", "quantum_statistics_fermi_sea.png"}];
     {$gifFrames, $gifFps} = AnimateFermiSea[fermiSeaModel, outGIF, outPNG, wavDuration];
     STEMDescribeGIF[outGIF, $gifFrames, $gifFps];
+    SyncWAVToGIF[outGIF, outWAV];
     Print[""],
 
   (* ===== unknown mode ===== *)

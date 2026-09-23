@@ -184,6 +184,7 @@ STEMSay["Rendering traversal animation"];
   AnimateImageTraversal[model, outGIF, totalDurSec]
 ];
 STEMDescribeGIF[outGIF, $gifFrames, $gifFps];
+SyncWAVToGIF[outGIF, outWAV];
 Print[""];
 
 Print["[5/5] Exporting data table and source image..."];

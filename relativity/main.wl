@@ -147,6 +147,7 @@ Which[
     Print["[4/4] Sonifying..."];
     STEMSay["Sonifying gravitational wave"];
     SonifyRelativity[model, cfg, $outDir];
+    SyncWAVToGIF[FileNameJoin[{$outDir, mode <> ".gif"}], FileNameJoin[{$outDir, mode <> ".wav"}]];
     Print[""],
 
 
@@ -200,6 +201,7 @@ Which[
     Print["[4/4] Sonifying..."];
     STEMSay["Sonifying geodesic"];
     SonifyRelativity[model, cfg, $outDir];
+    SyncWAVToGIF[FileNameJoin[{$outDir, mode <> ".gif"}], FileNameJoin[{$outDir, mode <> ".wav"}]];
     Print[""]
     ],
 

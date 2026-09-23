@@ -82,6 +82,7 @@ Which[
     Print["[3/4] Exporting ripple animation..."];
     STEMSay["Rendering ripple animation"];
     AnimateRipple[model, $outDir, audioDur];
+    SyncWAVToGIF[FileNameJoin[{$outDir, mode <> ".gif"}], outWAV];
     Print[""];
 
     Print["[4/4] Exporting data table (CSV)..."];
@@ -110,6 +111,7 @@ Which[
     Print["[3/4] Exporting interference animation..."];
     STEMSay["Rendering interference pattern animation"];
     AnimateInterference[model, $outDir, audioDur];
+    SyncWAVToGIF[FileNameJoin[{$outDir, mode <> ".gif"}], outWAV];
     Print[""];
 
     Print["[4/4] Exporting data table (CSV)..."];

@@ -248,7 +248,7 @@ DoublePendulumFrame[theta1_?NumericQ, theta2_?NumericQ,
    Parameters are pulled from cfg via GetCfg. *)
 
 AnimateDoublePendulum[solution_List, cfg_Association, outPath_String] :=
-  Module[{L1, L2, dt, frameRate, stride, sampledSol, trailLen, frames,
+  Module[{plan, L1, L2, dt, frameRate, stride, sampledSol, trailLen, frames,
           maxReach, allTh1, allTh2, x1s, y1s, x2s, y2s, plotRange, imageSize},
 
     L1        = GetCfg[cfg, {"simulation","double","length1"}, 1.0];
@@ -298,8 +298,13 @@ AnimateDoublePendulum[solution_List, cfg_Association, outPath_String] :=
       {k, 1, Length[sampledSol]}
     ];
 
-    EnsureDir[outPath];
-    ExportGIF[frames, outPath, frameRate];
+    (* Frames are fixed by the 25 fps sampling of the solution, so the
+       plan keeps that count and the 25 fps (4 cs) delay; it exists so
+       every GIF export goes through GIFFramePlan's whole-centisecond
+       delay. *)
+    plan = GIFFramePlan[solution[[-1, 1]], frameRate, "MinFps" -> 0, "MaxFps" -> 50,
+                        "FrameCount" -> Length[frames]];
+    ExportGIF[frames, outPath, plan];
     Length[frames]
   ]
 
@@ -317,7 +322,7 @@ AnimateDoublePendulum[solution_List, cfg_Association, outPath_String] :=
 ExportAnimation[solution_List, params_Association, filePath_String,
                 frameRate_:25, speedup_:1.0] :=
   Module[
-    {dt, stride, sampledSol, trailLen, frames,
+    {plan, dt, stride, sampledSol, trailLen, frames,
      L, maxReach, allAngles, allX, allY, plotRange, imageSize},
 
     dt = params["TimeStep"];
@@ -357,6 +362,10 @@ ExportAnimation[solution_List, params_Association, filePath_String,
       {k, 1, Length[sampledSol]}
     ];
 
-    ExportGIF[frames, filePath, frameRate];
+    (* Frame count is fixed by the sampling above; see
+       AnimateDoublePendulum for why this still goes through a plan. *)
+    plan = GIFFramePlan[solution[[-1, 1]] / speedup, frameRate, "MinFps" -> 0, "MaxFps" -> 50,
+                        "FrameCount" -> Length[frames]];
+    ExportGIF[frames, filePath, plan];
     Length[frames]
   ]

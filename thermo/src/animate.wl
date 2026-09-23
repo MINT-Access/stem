@@ -3,22 +3,22 @@
    ======================================================== *)
 
 
-(* Sane bounds on GIF playback frame rate — see ExportTimedGIF for how
-   these keep animation/audio duration in sync without forcing an
-   absurdly fast or glacial frame rate at the extremes. *)
-$MinAnimationFps = 2;
-$MaxAnimationFps = 30;
+(* GIF timing: frame delay and frame count come from stem-core's
+   GIFFramePlan, which clamps the requested rate to 2-30 fps, rounds the
+   frame delay to whole centiseconds (what the GIF format stores) and
+   derives the frame count from that delay; main.wl then measures both
+   files with SyncWAVToGIF. *)
 
 (* ExportTimedGIF
    Exports frames as a GIF whose PLAYBACK DURATION matches
-   targetDuration exactly — normally the same duration used to size the
+   targetDuration to within half a frame delay — normally the same duration used to size the
    accompanying WAV (see main.wl/experiments.wl call sites), so the GIF
    and its sonification stay in sync instead of the GIF racing through
    at a fixed, duration-unrelated frame rate while the audio plays for
    however long the sonification actually takes (intro speech included).
 
    frameRate is solved as Length[frames]/targetDuration and clamped to
-   [$MinAnimationFps, $MaxAnimationFps] so a short sweep doesn't demand
+   [2, 30] fps (stem-core GIFFramePlan) so a short sweep doesn't demand
    a strobing frame rate and a long one doesn't demand an implausibly
    slow one. If the clamp binds, the frame COUNT is what flexes
    (recomputed as Round[frameRate*targetDuration], padding by repeating
@@ -28,15 +28,16 @@ $MaxAnimationFps = 30;
    Returns {actualNFrames, frameRate} so callers can report what was
    actually rendered/played back (STEMDescribeGIF wants both). *)
 ExportTimedGIF[frames_List, filePath_String, targetDuration_?NumericQ] :=
-  Module[{n = Length[frames], frameRate, desiredN, finalFrames},
-    frameRate = Clip[n / targetDuration, {$MinAnimationFps, $MaxAnimationFps}];
-    desiredN  = Max[2, Round[frameRate * targetDuration]];
+  Module[{plan, n = Length[frames], frameRate, desiredN, finalFrames},
+    plan      = GIFFramePlan[targetDuration, n / targetDuration];
+    frameRate = plan["FrameRate"];
+    desiredN  = plan["FrameCount"];
     finalFrames = Which[
       desiredN === n, frames,
       desiredN < n,   frames[[1 ;; desiredN]],
       True,           Join[frames, ConstantArray[Last[frames], desiredN - n]]
     ];
-    ExportGIF[finalFrames, filePath, frameRate];
+    ExportGIF[finalFrames, filePath, plan];
     {desiredN, frameRate}
   ];
 

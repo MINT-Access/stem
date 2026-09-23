@@ -1,15 +1,12 @@
 (* waves/src/animate.wl — GIF and PNG rendering for wave propagation *)
 
-(* Sane bounds on GIF playback frame rate. AnimateRipple/AnimateInterference
-   take a targetDuration (the same audio duration sonify.wl used to size the
-   WAV) and a frame-count RENDER BUDGET (not a literal frame count):
-   frameRate = Clip[nFrames/targetDuration, {$MinAnimationFps, $MaxAnimationFps}],
-   then the actual frame count is recomputed as Round[frameRate*targetDuration]
-   so playback duration equals targetDuration exactly, and a very short
-   simulation doesn't demand a strobing frame rate (nor a very long one an
-   implausibly slow one). *)
-$MinAnimationFps = 2;
-$MaxAnimationFps = 30;
+(* GIF timing. AnimateRipple/AnimateInterference take a targetDuration (the
+   same audio duration sonify.wl used to size the WAV) and a frame-count
+   RENDER BUDGET (not a literal frame count). stem-core's GIFFramePlan clamps
+   nFrames/targetDuration to 2-30 fps, rounds the frame delay to whole
+   centiseconds (what the GIF format stores) and derives the frame count
+   from that delay, so playback duration matches targetDuration to within
+   half a frame delay. *)
 
 (* Map scalar u in [-1,1] to RGB: negative -> blue, zero -> white, positive -> red *)
 DispColor[u_?NumericQ] :=
@@ -24,10 +21,10 @@ DispColor[u_?NumericQ] :=
    targetDuration seconds (matching the sonification's WAV duration).
    PNG: Plot3D surface at final time.
    nFrames is a render budget, not a literal frame count -- see the
-   $MinAnimationFps/$MaxAnimationFps note above. *)
+   GIF timing note above. *)
 AnimateRipple[model_Association, outDir_String, targetDuration_?NumericQ,
               nFrames_:150] :=
-  Module[{solR, lpX, r, tEnd, maxR,
+  Module[{plan, solR, lpX, r, tEnd, maxR,
           frameRateR, nFramesR, frameTimesR, nPxR, maxAmpR,
           lpDotPx, framesR, raster, outGIFR, outPNGR},
     solR  = model["solR"];
@@ -36,9 +33,9 @@ AnimateRipple[model_Association, outDir_String, targetDuration_?NumericQ,
     tEnd  = model["tEnd"];
     maxR  = model["maxR"];
 
-    frameRateR  = Clip[nFrames / targetDuration,
-      {$MinAnimationFps, $MaxAnimationFps}];
-    nFramesR    = Max[2, Round[frameRateR * targetDuration]];
+    plan        = GIFFramePlan[targetDuration, nFrames / targetDuration];
+    frameRateR  = plan["FrameRate"];
+    nFramesR    = plan["FrameCount"];
     frameTimesR = N @ Rescale[Range[nFramesR], {1, nFramesR}, {0.1, tEnd}];
     nPxR        = 60;
     maxAmpR     = Max[0.01, 0.8 * Max[Abs @ Table[
@@ -73,9 +70,7 @@ AnimateRipple[model_Association, outDir_String, targetDuration_?NumericQ,
       {t, frameTimesR}];
 
     outGIFR = FileNameJoin[{outDir, "ripple.gif"}];
-    Export[outGIFR, framesR, "GIF",
-      "DisplayDurations" -> ConstantArray[1.0 / frameRateR, nFramesR],
-      "AnimationRepetitions" -> Infinity];
+    ExportGIF[framesR, outGIFR, plan];
     STEMDescribeGIF[outGIFR, nFramesR, frameRateR];
 
     outPNGR = FileNameJoin[{outDir, "ripple.png"}];
@@ -99,10 +94,10 @@ AnimateRipple[model_Association, outDir_String, targetDuration_?NumericQ,
    over targetDuration seconds (matching the sonification's WAV duration).
    PNG: final frame showing the settled fringe pattern.
    nFrames is a render budget, not a literal frame count -- see the
-   $MinAnimationFps/$MaxAnimationFps note above. *)
+   GIF timing note above. *)
 AnimateInterference[model_Association, outDir_String, targetDuration_?NumericQ,
                     nFrames_:150] :=
-  Module[{solI, tankW, tankH, tEnd, xLPMin, xLPMax, yLP, x1s, x2s, maxI,
+  Module[{plan, solI, tankW, tankH, tEnd, xLPMin, xLPMax, yLP, x1s, x2s, maxI,
           frameRateI, nFramesI, frameTimesI, nPxW, nPxH, maxAmpI, framesI, outGIFI, outPNGI},
     solI   = model["solI"];
     tankW  = model["tankW"];
@@ -115,9 +110,9 @@ AnimateInterference[model_Association, outDir_String, targetDuration_?NumericQ,
     x2s    = model["x2s"];
     maxI   = model["maxI"];
 
-    frameRateI  = Clip[nFrames / targetDuration,
-      {$MinAnimationFps, $MaxAnimationFps}];
-    nFramesI    = Max[2, Round[frameRateI * targetDuration]];
+    plan        = GIFFramePlan[targetDuration, nFrames / targetDuration];
+    frameRateI  = plan["FrameRate"];
+    nFramesI    = plan["FrameCount"];
     frameTimesI = N @ Rescale[Range[nFramesI], {1, nFramesI}, {0.1, tEnd}];
     nPxW        = 80;
     nPxH        = 40;
@@ -152,9 +147,7 @@ AnimateInterference[model_Association, outDir_String, targetDuration_?NumericQ,
       {t, frameTimesI}];
 
     outGIFI = FileNameJoin[{outDir, "interference.gif"}];
-    Export[outGIFI, framesI, "GIF",
-      "DisplayDurations" -> ConstantArray[1.0 / frameRateI, nFramesI],
-      "AnimationRepetitions" -> Infinity];
+    ExportGIF[framesI, outGIFI, plan];
     STEMDescribeGIF[outGIFI, nFramesI, frameRateI];
 
     outPNGI = FileNameJoin[{outDir, "interference.png"}];

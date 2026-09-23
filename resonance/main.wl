@@ -108,14 +108,16 @@ Which[
 
     Print["[3/4] Rendering orbital animation..."];
     STEMSay["Rendering the Galilean moon orbital animation"];
-    {nFrames, gifFps} = AnimateGalilean[model, outGIF, GalileanMainDurationSec[model]];
+    {nFrames, gifFps} = AnimateGalilean[model, outGIF, GalileanBodyDurationSec[model]];
     STEMDescribeGIF[outGIF, nFrames, gifFps];
     Print[""];
 
     Print["[4/4] Sonifying: event canon (C3/C4/C5, 4:2:1 ratio) + trajectory drone..."];
     STEMSay["Sonifying: Ganymede plays C3, Europa plays C4, Io plays C5 -- " <>
       "a two-octave chord locked in place by gravity"];
-    SonifyGalilean[model, cfg, outWAV];
+    spoken = SonifyGalilean[model, cfg, outWAV];
+    SyncWAVToGIF[outGIF, outWAV, "IntroSeconds" -> spoken["IntroSeconds"],
+                 "OutroSeconds" -> spoken["OutroSeconds"]];
     Print[""];
 
     STEMHeading["Done"];
@@ -153,7 +155,9 @@ Which[
 
     Print["[4/4] Sonifying: chord, then sweep with gap silences..."];
     STEMSay["Sonifying the asteroid belt: chord, then a sweep with the Kirkwood gaps audible as silences"];
-    SonifyKirkwood[model, cfg, outWAV];
+    spoken = SonifyKirkwood[model, cfg, outWAV];
+    SyncWAVToGIF[outGIF, outWAV, "IntroSeconds" -> spoken["IntroSeconds"],
+                 "OutroSeconds" -> spoken["OutroSeconds"]];
     Print[""];
 
     STEMHeading["Done"];
@@ -188,7 +192,9 @@ Which[
 
     Print["[4/4] Sonifying: chord, then sweep with the Cassini Division as a gap..."];
     STEMSay["Sonifying Saturn's rings: chord, then a sweep with the Cassini Division audible as a gap"];
-    SonifySaturn[model, cfg, outWAV];
+    spoken = SonifySaturn[model, cfg, outWAV];
+    SyncWAVToGIF[outGIF, outWAV, "IntroSeconds" -> spoken["IntroSeconds"],
+                 "OutroSeconds" -> spoken["OutroSeconds"]];
     Print[""];
 
     STEMHeading["Done"];

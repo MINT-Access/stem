@@ -32,6 +32,10 @@
      speed — |density change from previous row|  (volume)
    ──────────────────────────────────────────────────────── *)
 
+(* Length of the row scan in seconds; AnimateUlam holds its single-frame
+   GIF for the same duration. *)
+$UlamScanDuration = 10.0;
+
 SonifyUlam[model_Association, cfg_Association, outPath_String] :=
   Module[{grid, n, halfCols, scanDuration,
           rowDensity, leftDensity, rightDensity,
@@ -53,7 +57,7 @@ SonifyUlam[model_Association, cfg_Association, outPath_String] :=
     speed = Prepend[Abs[Differences[rowDensity]], 0.0];
 
     (* Map row indices to a 10-second scan *)
-    scanDuration = 10.0;
+    scanDuration = $UlamScanDuration;
     tVals        = N[Rescale[Range[n], {1, n}, {0.0, scanDuration}]];
 
     traj = N[Transpose[{

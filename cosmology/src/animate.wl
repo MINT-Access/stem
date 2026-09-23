@@ -1,11 +1,10 @@
 (* cosmology/src/animate.wl — CMB plots and animations *)
 
-(* Sane bounds on GIF playback frame rate — see AnimateSky for how these
-   keep the sky-traversal animation's playback duration in sync with the
-   accompanying WAV without forcing an absurdly fast or glacial frame
-   rate at the sky_resolution extremes. *)
-$MinAnimationFps = 2;
-$MaxAnimationFps = 30;
+(* GIF timing: frame delay and frame count come from stem-core's
+   GIFFramePlan, which clamps the requested rate to 2-30 fps, rounds the
+   frame delay to whole centiseconds (what the GIF format stores) and
+   derives the frame count from that delay; main.wl then measures both
+   files with SyncWAVToGIF. *)
 
 (* Export a PNG of the CMB power spectrum with acoustic peaks marked. *)
 AnimateSpectrum[lArr_List, dlArr_List, peakData_Association,
@@ -53,16 +52,16 @@ AnimateSpectrum[lArr_List, dlArr_List, peakData_Association,
 
    frameBudget is a RENDER BUDGET, not a literal frame count: frameRate
    is solved as frameBudget/targetDuration and then clamped to
-   [$MinAnimationFps, $MaxAnimationFps] (2-30 fps) so a small sky_resolution
+   [2, 30] fps (stem-core GIFFramePlan) (2-30 fps) so a small sky_resolution
    (short WAV) doesn't demand a strobing frame rate and a large one (long
    WAV) doesn't demand an implausibly slow one — the frame COUNT is what
    flexes at the clamp boundary (recomputed as Round[frameRate *
-   targetDuration]) so actual playback duration always equals
-   targetDuration exactly.
+   targetDuration]) so actual playback duration equals
+   targetDuration to within half a frame delay.
 
    False-colour: cold=blue, mean=white, hot=red. *)
 AnimateSky[skyModel_Association, outGIF_String, frameBudget_Integer:32] :=
-  Module[{mapT, traversal, nPix, actualN, noteDur, targetDuration,
+  Module[{plan, mapT, traversal, nPix, actualN, noteDur, targetDuration,
           frameRate, nGIFFrames,
           dispDataRGB, gCoords, frameUpTo, gifFrames},
     mapT      = skyModel["mapT"];
@@ -72,13 +71,13 @@ AnimateSky[skyModel_Association, outGIF_String, frameBudget_Integer:32] :=
     noteDur   = skyModel["noteDur"];
 
     targetDuration = N[nPix * noteDur];
-    frameRate  = Clip[frameBudget / targetDuration,
-      {$MinAnimationFps, $MaxAnimationFps}];
-    nGIFFrames = Max[2, Round[frameRate * targetDuration]];
+    plan       = GIFFramePlan[targetDuration, frameBudget / targetDuration];
+    frameRate  = plan["FrameRate"];
+    nGIFFrames = plan["FrameCount"];
 
-    Print["  Rendering ", nGIFFrames, " frames at ", FmtN[frameRate, 3],
-          " fps (", FmtN[nGIFFrames / frameRate, 3],
-          "s, matching audio duration ", FmtN[targetDuration, 3], "s)..."];
+    Print["  Rendering ", nGIFFrames, " frames at ", FmtDec[frameRate],
+          " fps (", FmtDec[plan["FrameDelay"]], " s per frame, ",
+        FmtDec[plan["GIFDuration"]], " s in total)."];
 
     dispDataRGB = Map[
       Function[row,
@@ -113,6 +112,6 @@ AnimateSky[skyModel_Association, outGIF_String, frameBudget_Integer:32] :=
       {k, nGIFFrames}
     ];
 
-    ExportGIF[gifFrames, outGIF, frameRate];
+    ExportGIF[gifFrames, outGIF, plan];
     STEMDescribeGIF[outGIF, nGIFFrames, frameRate]
   ];

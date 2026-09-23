@@ -11,12 +11,11 @@
    ======================================================== *)
 
 
-(* Sane bounds on GIF playback frame rate — see the targetDuration/fps
-   solve in AnimateRelativity and AnimateGeodesic for how these keep
-   animation/audio duration in sync without forcing an absurdly fast
-   or glacial frame rate at the extremes. *)
-$MinAnimationFps = 2;
-$MaxAnimationFps = 30;
+(* GIF timing: frame delay and frame count come from stem-core's
+   GIFFramePlan, which clamps the requested rate to 2-30 fps, rounds the
+   frame delay to whole centiseconds (what the GIF format stores) and
+   derives the frame count from that delay; main.wl then measures both
+   files with SyncWAVToGIF. *)
 
 
 (* DecimateForPlot
@@ -42,7 +41,7 @@ DecimateForPlotPairs[pairs_List, maxPts_Integer : 3000] :=
 (* ── AnimateRelativity ────────────────────────────────── *)
 
 AnimateRelativity[model_Association, cfg_Association, outDir_String] :=
-  Module[{
+  Module[{plan,
     mode, tFull, hFull, fFull, mergerIdx, tc,
     tInspiral, hInspiral, fInspiral,
     n, nInspiral,
@@ -99,21 +98,22 @@ AnimateRelativity[model_Association, cfg_Association, outDir_String] :=
   (* ── Animated GIF ──────────────────────────────────────
      nFramesBudget is a RENDER BUDGET, not a literal frame count: fps is
      solved as nFramesBudget/targetDuration and clamped to
-     [$MinAnimationFps, $MaxAnimationFps] so a very short or very long
+     [2, 30] fps (stem-core GIFFramePlan) so a very short or very long
      chirp.wav doesn't demand a strobing or glacial frame rate. The frame
      COUNT is what flexes at the clamp boundary, so playback duration
-     always equals targetDuration exactly, matching chirp.wav. *)
+     equals targetDuration to within half a frame delay, matching chirp.wav. *)
   nFramesBudget = 60;
-  fps     = Clip[nFramesBudget / targetDuration, {$MinAnimationFps, $MaxAnimationFps}];
-  nFrames = Max[2, Round[fps * targetDuration]];
+  plan    = GIFFramePlan[targetDuration, nFramesBudget / targetDuration];
+  fps     = plan["FrameRate"];
+  nFrames = plan["FrameCount"];
 
   (* Distribute frames over the full signal (inspiral + ringdown) *)
   frameIndices = Round @ Subdivide[1, n, nFrames - 1];
   frameIndices = Clip[frameIndices, {1, n}];
 
-  Print["  Rendering ", Length[frameIndices], " frames at ", FmtN[fps, 3],
-        " fps (", FmtN[Length[frameIndices] / fps, 3],
-        "s, matching chirp.wav duration ", FmtN[targetDuration, 3], "s)..."];
+  Print["  Rendering ", Length[frameIndices], " frames at ", FmtDec[fps],
+        " fps (", FmtDec[plan["FrameDelay"]], " s per frame, ",
+        FmtDec[plan["GIFDuration"]], " s in total)."];
 
   frames = Map[
     Function[fi,
@@ -187,7 +187,7 @@ AnimateRelativity[model_Association, cfg_Association, outDir_String] :=
   ];
 
   gifPath = FileNameJoin[{outDir, "chirp.gif"}];
-  ExportGIF[frames, gifPath, fps];
+  ExportGIF[frames, gifPath, plan];
   STEMDescribeGIF[gifPath, Length[frameIndices], fps];
 
   (* ── Static PNG: full waveform + frequency evolution ── *)
@@ -255,7 +255,7 @@ AnimateRelativity[model_Association, cfg_Association, outDir_String] :=
 (* ── AnimateGeodesic ──────────────────────────────────── *)
 
 AnimateGeodesic[model_Association, cfg_Association, outDir_String] :=
-  Module[{
+  Module[{plan,
     orbitType, tauArr, rArr, phiArr, n, tauEnd,
     xRs, yRs, rMaxRs, plotRange,
     targetDuration, fps, width,
@@ -311,17 +311,18 @@ AnimateGeodesic[model_Association, cfg_Association, outDir_String] :=
   (* ── Animated GIF: playback duration matches geodesic.wav ──
      nFramesBudget is a RENDER BUDGET, not a literal frame count: fps is
      solved as nFramesBudget/targetDuration and clamped to
-     [$MinAnimationFps, $MaxAnimationFps] so playback duration always
-     equals targetDuration exactly (frame COUNT flexes at the clamp),
+     [2, 30] fps (stem-core GIFFramePlan) so playback duration always
+     equals targetDuration to within half a frame delay (frame COUNT flexes at the clamp),
      regardless of duration_s or the trajectory's own proper time span. *)
   nFramesBudget = 60;
-  fps           = Clip[nFramesBudget / targetDuration, {$MinAnimationFps, $MaxAnimationFps}];
-  nFrames       = Max[2, Round[fps * targetDuration]];
+  plan          = GIFFramePlan[targetDuration, nFramesBudget / targetDuration];
+  fps           = plan["FrameRate"];
+  nFrames       = plan["FrameCount"];
   frameIndices  = Clip[Round @ Subdivide[1, n, nFrames - 1], {1, n}];
 
-  Print["  Rendering ", Length[frameIndices], " frames at ", FmtN[fps, 3],
-        " fps (", FmtN[Length[frameIndices] / fps, 3],
-        "s, matching geodesic.wav duration ", FmtN[targetDuration, 3], "s)..."];
+  Print["  Rendering ", Length[frameIndices], " frames at ", FmtDec[fps],
+        " fps (", FmtDec[plan["FrameDelay"]], " s per frame, ",
+        FmtDec[plan["GIFDuration"]], " s in total)."];
 
   frames = Map[
     Function[fi,
@@ -354,7 +355,7 @@ AnimateGeodesic[model_Association, cfg_Association, outDir_String] :=
   ];
 
   gifPath = FileNameJoin[{outDir, "geodesic.gif"}];
-  ExportGIF[frames, gifPath, fps];
+  ExportGIF[frames, gifPath, plan];
   STEMDescribeGIF[gifPath, Length[frameIndices], fps];
 
   (* ── Static PNG: full trajectory ── *)

@@ -116,7 +116,9 @@ Which[
     Print["[4/4] Sonifying..."];
     STEMSay["Sonifying: pitch is one over r, volume is speed, " <>
       "accent tone marks closest approach"];
-    SonifyScatter[model, cfg, outWAV];
+    spoken = SonifyScatter[model, cfg, outWAV];
+    SyncWAVToGIF[outGIF, outWAV, "IntroSeconds" -> spoken["IntroSeconds"],
+                 "OutroSeconds" -> spoken["OutroSeconds"]];
     Print[""];
 
     STEMHeading["Done"];
@@ -151,7 +153,9 @@ Which[
     Print["[4/4] Sonifying..."];
     STEMSay["Sonifying the beam: a dense quiet stream of small-angle events, " <>
       "punctuated by rare loud backscatter accents"];
-    SonifyDistribution[model, cfg, outWAV];
+    spoken = SonifyDistribution[model, cfg, outWAV];
+    SyncWAVToGIF[outGIF, outWAV, "IntroSeconds" -> spoken["IntroSeconds"],
+                 "OutroSeconds" -> spoken["OutroSeconds"]];
     Print[""];
 
     STEMHeading["Done"];
@@ -184,7 +188,9 @@ Which[
 
     Print["[4/4] Sonifying (binaural: Thomson left, Rutherford right)..."];
     STEMSay["Sonifying: Thomson model left channel, Rutherford model right channel"];
-    SonifyDiscovery[model, cfg, outWAV];
+    spoken = SonifyDiscovery[model, cfg, outWAV];
+    SyncWAVToGIF[outGIF, outWAV, "IntroSeconds" -> spoken["IntroSeconds"],
+                 "OutroSeconds" -> spoken["OutroSeconds"]];
     Print[""];
 
     STEMHeading["Done"];

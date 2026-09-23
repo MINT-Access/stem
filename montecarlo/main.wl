@@ -156,6 +156,7 @@ Which[
     STEMSay["Rendering the spin-grid animation"];
     {$gifFrames, $gifFps} = AnimateSweep[sweepResult, Tc, outGIF, totalDur];
     STEMDescribeGIF[outGIF, $gifFrames, $gifFps];
+    SyncWAVToGIF[outGIF, outWAV];
     Print[""];
 
     Print["[4/", $nSteps5, "] Exporting data table..."];
@@ -200,6 +201,7 @@ Which[
     STEMSay["Rendering the spin-grid animation"];
     {$gifFrames, $gifFps} = AnimateCritical[critResult, TFixed, outGIF, totalDur];
     STEMDescribeGIF[outGIF, $gifFrames, $gifFps];
+    SyncWAVToGIF[outGIF, outWAV];
     Print[""];
 
     Print["[4/", $nSteps5, "] Exporting data table..."];
@@ -247,6 +249,7 @@ Which[
     STEMSay["Rendering the domain-coarsening animation"];
     {$gifFrames, $gifFps} = AnimateQuench[quenchResult, TCold, outGIF, totalDur];
     STEMDescribeGIF[outGIF, $gifFrames, $gifFps];
+    SyncWAVToGIF[outGIF, outWAV];
     Print[""];
 
     Print["[4/", $nSteps5, "] Exporting data table..."];

@@ -114,6 +114,7 @@ Which[
     outWAV = FileNameJoin[{$projectRoot, "output", "lorenz_audio.wav"}];
     ExportSonification[solution, params, cfg, outWAV];
     STEMDescribeWAV[outWAV, solution[[-1, 1]]];
+    SyncWAVToGIF[outGIF, outWAV];
     Print[""],
 
   (* ===== Rossler attractor ===== *)
@@ -185,6 +186,7 @@ Which[
     outWAV = FileNameJoin[{$projectRoot, "output", "rossler_audio.wav"}];
     ExportSonification[solution, params, cfg, outWAV];
     STEMDescribeWAV[outWAV, solution[[-1, 1]]];
+    SyncWAVToGIF[outGIF, outWAV];
     Print[""],
 
   (* ===== Unknown mode ===== *)

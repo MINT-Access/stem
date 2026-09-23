@@ -27,19 +27,24 @@
    intro has no visual counterpart and its length is TTS-engine
    dependent, so it is deliberately excluded from the sync target, see
    AGENTS.md's "Animation/audio duration sync" section), clamped to
-   [$MinAnimationFps,$MaxAnimationFps] so neither a tiny nMax nor a
+   [2, 30] fps (stem-core GIFFramePlan) so neither a tiny nMax nor a
    long frameDuration forces a strobing/molasses playback rate. Inside
-   that clamp range GIF duration matches targetDuration exactly
+   that clamp range GIF duration matches targetDuration to within half a frame delay
    (nMax/frameRate = nMax/(nMax/targetDuration) = targetDuration); only
    at the clamp's own boundary does it deviate, same tradeoff
    lorenz/AGENTS.md accepts for its own fps clamp. *)
 
-$MinAnimationFps = 2;
-$MaxAnimationFps = 30;
+(* CltFramePlan — shared by all three Animate* functions below. One
+   frame per N is the budget; GIFFramePlan (stem-core) rounds the frame
+   delay to whole centiseconds and derives the frame count from it, and
+   CltFrameSteps samples N = 1..nMax at that count (exactly 1..nMax
+   whenever targetDuration/nMax is already a whole number of
+   centiseconds, e.g. the default 0.2 s frame_duration). *)
+CltFramePlan[nMax_Integer, targetDuration_?NumericQ] :=
+  GIFFramePlan[targetDuration, N[nMax] / targetDuration];
 
-(* AnimationFrameRate — shared by all three Animate* functions below. *)
-AnimationFrameRate[nMax_Integer, targetDuration_?NumericQ] :=
-  Clip[N[nMax] / targetDuration, {$MinAnimationFps, $MaxAnimationFps}];
+CltFrameSteps[nMax_Integer, plan_Association] :=
+  Clip[Round[Subdivide[1, nMax, plan["FrameCount"] - 1]], {1, nMax}];
 
 
 (* ClampToDomain — Histogram[data,{lo,hi,dx}] bins are half-open even
@@ -81,14 +86,15 @@ RenderSweepFrame[sourceName_String, p_?NumericQ, nStep_Integer, nSamples_Integer
 AnimateSweep[sourceName_String, p_?NumericQ, nMax_Integer, nSamples_Integer,
             domainLo_?NumericQ, domainHi_?NumericQ, seed_Integer, outGif_String,
             targetDuration_?NumericQ] :=
-  Module[{frames, frameRate},
-    frameRate = AnimationFrameRate[nMax, targetDuration];
-    Print["  Rendering ", nMax, " sweep frames at ", ToString[NumberForm[frameRate, {3, 1}]],
-          " fps (", ToString[NumberForm[targetDuration, {4, 2}]], "s target)..."];
+  Module[{plan, frames},
+    plan = CltFramePlan[nMax, targetDuration];
+    Print["  Rendering ", plan["FrameCount"], " sweep frames at ", FmtDec[plan["FrameRate"]],
+          " fps (", FmtDec[plan["FrameDelay"]], " s per frame, ",
+          FmtDec[plan["GIFDuration"]], " s in total)."];
     frames = Table[RenderSweepFrame[sourceName, p, k, nSamples, domainLo, domainHi, nMax, seed],
-                   {k, nMax}];
-    ExportGIF[frames, outGif, frameRate];
-    {nMax, frameRate}
+                   {k, CltFrameSteps[nMax, plan]}];
+    ExportGIF[frames, outGif, plan];
+    {Length[frames], plan["FrameRate"]}
   ];
 
 (* RenderSweepSmallMultiple — a few representative N values side by
@@ -164,16 +170,17 @@ RenderCompareFrame[sourceLeft_String, pLeft_?NumericQ, sourceRight_String, pRigh
 AnimateCompare[sourceLeft_String, pLeft_?NumericQ, sourceRight_String, pRight_?NumericQ,
               nMax_Integer, nSamples_Integer, domainLo_?NumericQ, domainHi_?NumericQ,
               seed_Integer, outGif_String, targetDuration_?NumericQ] :=
-  Module[{frames, frameRate},
-    frameRate = AnimationFrameRate[nMax, targetDuration];
-    Print["  Rendering ", nMax, " compare frames at ", ToString[NumberForm[frameRate, {3, 1}]],
-          " fps (", ToString[NumberForm[targetDuration, {4, 2}]], "s target)..."];
+  Module[{plan, frames},
+    plan = CltFramePlan[nMax, targetDuration];
+    Print["  Rendering ", plan["FrameCount"], " compare frames at ", FmtDec[plan["FrameRate"]],
+          " fps (", FmtDec[plan["FrameDelay"]], " s per frame, ",
+          FmtDec[plan["GIFDuration"]], " s in total)."];
     frames = Table[
       RenderCompareFrame[sourceLeft, pLeft, sourceRight, pRight, k, nSamples, domainLo, domainHi, seed],
-      {k, nMax}
+      {k, CltFrameSteps[nMax, plan]}
     ];
-    ExportGIF[frames, outGif, frameRate];
-    {nMax, frameRate}
+    ExportGIF[frames, outGif, plan];
+    {Length[frames], plan["FrameRate"]}
   ];
 
 (* Built directly with White/Black swapped throughout, not via a
@@ -249,13 +256,15 @@ RenderDiceFrame[nStep_Integer, nSamples_Integer, domainLo_?NumericQ, domainHi_?N
 
 AnimateDice[nMax_Integer, nSamples_Integer, domainLo_?NumericQ, domainHi_?NumericQ,
            seed_Integer, outGif_String, targetDuration_?NumericQ] :=
-  Module[{frames, frameRate},
-    frameRate = AnimationFrameRate[nMax, targetDuration];
-    Print["  Rendering ", nMax, " dice frames at ", ToString[NumberForm[frameRate, {3, 1}]],
-          " fps (", ToString[NumberForm[targetDuration, {4, 2}]], "s target)..."];
-    frames = Table[RenderDiceFrame[k, nSamples, domainLo, domainHi, nMax, seed], {k, nMax}];
-    ExportGIF[frames, outGif, frameRate];
-    {nMax, frameRate}
+  Module[{plan, frames},
+    plan = CltFramePlan[nMax, targetDuration];
+    Print["  Rendering ", plan["FrameCount"], " dice frames at ", FmtDec[plan["FrameRate"]],
+          " fps (", FmtDec[plan["FrameDelay"]], " s per frame, ",
+          FmtDec[plan["GIFDuration"]], " s in total)."];
+    frames = Table[RenderDiceFrame[k, nSamples, domainLo, domainHi, nMax, seed],
+                   {k, CltFrameSteps[nMax, plan]}];
+    ExportGIF[frames, outGif, plan];
+    {Length[frames], plan["FrameRate"]}
   ];
 
 RenderDiceSmallMultiple[nMax_Integer, nSamples_Integer, domainLo_?NumericQ, domainHi_?NumericQ,

@@ -165,6 +165,7 @@ Which[
         Print["[4/5] Rendering Hilbert traversal animation..."];
         STEMSay["Rendering sky traversal animation"];
         AnimateSky[skyModel, outGIF];
+        SyncWAVToGIF[outGIF, outWAV];
         Print[""];
 
         Print["[5/5] Exporting map image and data table..."];

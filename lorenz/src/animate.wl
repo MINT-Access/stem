@@ -12,11 +12,11 @@
    ======================================================== *)
 
 
-(* Sane bounds on GIF playback frame rate — see ExportAnimation for how
-   these get used to keep animation/audio duration in sync without
-   forcing an absurdly fast or glacial frame rate at the extremes. *)
-$MinAnimationFps = 2;
-$MaxAnimationFps = 30;
+(* GIF timing: frame delay and frame count come from stem-core's
+   GIFFramePlan, which clamps the requested rate to 2-30 fps, rounds the
+   frame delay to whole centiseconds (what the GIF format stores) and
+   derives the frame count from that delay; main.wl then measures both
+   files with SyncWAVToGIF. *)
 
 
 (* ProjectXZ
@@ -103,12 +103,12 @@ ComputePlotRange[solution_List] :=
 
    nFrames is a RENDER BUDGET, not a literal frame count: frameRate is
    solved as nFrames/targetDuration and then clamped to
-   [$MinAnimationFps, $MaxAnimationFps] (2-30 fps) so a very short
+   [2, 30] fps (stem-core GIFFramePlan) (2-30 fps) so a very short
    trajectory doesn't demand a strobing frame rate and a very long one
    doesn't demand an implausibly slow one — the frame COUNT is what
    flexes at the clamp boundary (recomputed as Round[frameRate *
-   targetDuration]) so the actual playback duration always equals
-   targetDuration exactly, not just approximately.
+   targetDuration]) so the actual playback duration equals
+   targetDuration to within half a frame delay,.
 
    solution      — output of SolveLorenz
    filePath      — destination, e.g. "output/lorenz_animation.gif"
@@ -122,11 +122,11 @@ ComputePlotRange[solution_List] :=
 ExportAnimation[solution_List, filePath_String, targetDuration_?NumericQ,
                 nFrames_:150, title_String:"Lorenz Attractor"] :=
   Module[
-    {plotRange, indices, frames, frameRate, actualNFrames},
+    {plan, plotRange, indices, frames, frameRate, actualNFrames},
 
-    frameRate = Clip[nFrames / targetDuration,
-      {$MinAnimationFps, $MaxAnimationFps}];
-    actualNFrames = Max[2, Round[frameRate * targetDuration]];
+    plan      = GIFFramePlan[targetDuration, nFrames / targetDuration];
+    frameRate = plan["FrameRate"];
+    actualNFrames = plan["FrameCount"];
 
     plotRange = ComputePlotRange[solution];
 
@@ -134,13 +134,13 @@ ExportAnimation[solution_List, filePath_String, targetDuration_?NumericQ,
     indices = Round[Subdivide[1, Length[solution], actualNFrames - 1]];
     indices = Max[2, #] & /@ indices;   (* at least 2 points to draw *)
 
-    Print["  Rendering ", Length[indices], " frames at ", FmtN[frameRate, 3],
-          " fps (", FmtN[Length[indices] / frameRate, 3],
-          "s, matching audio duration ", FmtN[targetDuration, 3], "s)..."];
+    Print["  Rendering ", Length[indices], " frames at ", FmtDec[frameRate],
+          " fps (", FmtDec[plan["FrameDelay"]], " s per frame, ",
+        FmtDec[plan["GIFDuration"]], " s in total)."];
 
     frames = RenderFrame[solution, #, plotRange, title] & /@ indices;
 
-    ExportGIF[frames, filePath, frameRate];
+    ExportGIF[frames, filePath, plan];
     {actualNFrames, frameRate}
   ]
 
@@ -155,11 +155,11 @@ ExportAnimation[solution_List, filePath_String, targetDuration_?NumericQ,
 ExportDualAnimation[sol1_List, sol2_List, filePath_String,
                     targetDuration_?NumericQ, nFrames_:150] :=
   Module[
-    {allPts, plotRange, indices, frames, frameRate, actualNFrames},
+    {plan, allPts, plotRange, indices, frames, frameRate, actualNFrames},
 
-    frameRate = Clip[nFrames / targetDuration,
-      {$MinAnimationFps, $MaxAnimationFps}];
-    actualNFrames = Max[2, Round[frameRate * targetDuration]];
+    plan      = GIFFramePlan[targetDuration, nFrames / targetDuration];
+    frameRate = plan["FrameRate"];
+    actualNFrames = plan["FrameCount"];
 
     (* Compute a shared plot range covering both trajectories *)
     allPts   = Join[sol1, sol2];
@@ -168,9 +168,9 @@ ExportDualAnimation[sol1_List, sol2_List, filePath_String,
     indices = Round[Subdivide[1, Length[sol1], actualNFrames - 1]];
     indices = Max[2, #] & /@ indices;
 
-    Print["  Rendering ", Length[indices], " dual frames at ", FmtN[frameRate, 3],
-          " fps (", FmtN[Length[indices] / frameRate, 3],
-          "s, matching audio duration ", FmtN[targetDuration, 3], "s)..."];
+    Print["  Rendering ", Length[indices], " dual frames at ", FmtDec[frameRate],
+          " fps (", FmtDec[plan["FrameDelay"]], " s per frame, ",
+        FmtDec[plan["GIFDuration"]], " s in total)."];
 
     frames = Map[
       Function[k,
@@ -189,6 +189,6 @@ ExportDualAnimation[sol1_List, sol2_List, filePath_String,
       indices
     ];
 
-    ExportGIF[frames, filePath, frameRate];
+    ExportGIF[frames, filePath, plan];
     {actualNFrames, frameRate}
   ]

@@ -83,7 +83,7 @@ dualAnim  = False;
    extreme case that originally motivated the GIF/WAV duration-sync fix
    (see AGENTS.md "GIF/WAV duration sync"). Not a different chaos
    regime from "wild" (D) — same rho — just run much longer, to stress
-   the frame-rate clamp in ExportAnimation ($MaxAnimationFps=30) at a
+   the frame-rate clamp in ExportAnimation (GIFFramePlan's 30 fps max) at a
    much larger targetDuration. *)
 (*
 label     = "rho9996";

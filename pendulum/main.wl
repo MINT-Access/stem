@@ -105,6 +105,7 @@ Which[
     outWAV = FileNameJoin[{$projectRoot, "output", "simple_audio.wav"}];
     ExportSonification[solution, params, cfg, outWAV];
     STEMDescribeWAV[outWAV, solution[[-1, 1]]];
+    SyncWAVToGIF[outGIF, outWAV];
     Print[""],
 
 
@@ -171,6 +172,7 @@ Which[
     outWAV = FileNameJoin[{$projectRoot, "output", "double_audio.wav"}];
     SonifyDoublePendulum[solution, cfg, outWAV];
     STEMDescribeWAV[outWAV, solution[[-1, 1]]];
+    SyncWAVToGIF[outGIF, outWAV];
     Print[""],
 
 

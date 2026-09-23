@@ -3,14 +3,11 @@
    ======================================================== *)
 
 
-(* Sane bounds on GIF playback frame rate — see AnimateSweep /
-   AnimateCritical / AnimateQuench for how these keep the animation's
-   playback duration in sync with its matching WAV's actual duration
-   without forcing an absurdly fast frame rate for a short run or an
-   implausibly slow one for a long run (see AGENTS.md, "GIF/WAV
-   duration sync"). *)
-$MinAnimationFps = 2;
-$MaxAnimationFps = 30;
+(* GIF timing: frame delay and frame count come from stem-core's
+   GIFFramePlan, which clamps the requested rate to 2-30 fps, rounds the
+   frame delay to whole centiseconds (what the GIF format stores) and
+   derives the frame count from that delay; main.wl then measures both
+   files with SyncWAVToGIF. *)
 
 
 (* RenderGridFrame — spin +1 = white, spin -1 = black. (grid+1)/2 maps
@@ -52,31 +49,31 @@ RenderMCurveFrame[TVals_List, MVals_List, upToIdx_Integer, Tc_?NumericQ] :=
    experiments.wl's sonifyResult["totalDuration"]) computed just before
    this call. nFrames is a RENDER BUDGET, not a literal frame count:
    frameRate is solved as nFrames/targetDuration and clamped to
-   [$MinAnimationFps, $MaxAnimationFps] so a short run doesn't demand a
+   [2, 30] fps (stem-core GIFFramePlan) so a short run doesn't demand a
    strobing frame rate and a long one doesn't demand an implausibly
    slow one — the frame COUNT is what flexes at the clamp boundary
    (recomputed as Round[frameRate * targetDuration]) so actual playback
-   duration always equals targetDuration exactly. Returns
+   duration equals targetDuration to within half a frame delay. Returns
    {actualNFrames, frameRate} so callers can report real numbers via
    STEMDescribeGIF. *)
 AnimateSweep[sweepResult_Association, Tc_?NumericQ, outGIF_String,
             targetDuration_?NumericQ, Optional[nFrames_Integer, 150]] :=
-  Module[{grids, TVals, MVals, nRows, indices, frames, frameRate, actualNFrames},
+  Module[{plan, grids, TVals, MVals, nRows, indices, frames, frameRate, actualNFrames},
     grids  = sweepResult["grids"];
     TVals  = sweepResult["T"];
     MVals  = sweepResult["M"];
     nRows  = Length[grids];
 
-    frameRate = Clip[nFrames / targetDuration,
-      {$MinAnimationFps, $MaxAnimationFps}];
-    actualNFrames = Max[2, Round[frameRate * targetDuration]];
+    plan      = GIFFramePlan[targetDuration, nFrames / targetDuration];
+    frameRate = plan["FrameRate"];
+    actualNFrames = plan["FrameCount"];
 
     indices = Round[Subdivide[1, nRows, actualNFrames - 1]];
     indices = Max[1, #] & /@ indices;
 
-    Print["  Rendering ", Length[indices], " sweep frames at ", FmtN[frameRate, 3],
-          " fps (", FmtN[Length[indices] / frameRate, 3],
-          "s, matching audio duration ", FmtN[targetDuration, 3], "s)..."];
+    Print["  Rendering ", Length[indices], " sweep frames at ", FmtDec[frameRate],
+          " fps (", FmtDec[plan["FrameDelay"]], " s per frame, ",
+        FmtDec[plan["GIFDuration"]], " s in total)."];
     frames = Table[
       Module[{idx = indices[[k]], title, gridPlot, curvePlot},
         title = "T = " <> ToString[NumberForm[TVals[[idx]], {4, 3}]] <>
@@ -87,7 +84,7 @@ AnimateSweep[sweepResult_Association, Tc_?NumericQ, outGIF_String,
       ],
       {k, Length[indices]}
     ];
-    ExportGIF[frames, outGIF, frameRate];
+    ExportGIF[frames, outGIF, plan];
     {Length[frames], frameRate}
   ];
 
@@ -96,26 +93,26 @@ AnimateSweep[sweepResult_Association, Tc_?NumericQ, outGIF_String,
    Returns {actualNFrames, frameRate}. *)
 AnimateCritical[critResult_Association, Tc_?NumericQ, outGIF_String,
                 targetDuration_?NumericQ, Optional[nFrames_Integer, 150]] :=
-  Module[{grids, nRows, indices, frames, frameRate, actualNFrames},
+  Module[{plan, grids, nRows, indices, frames, frameRate, actualNFrames},
     grids = critResult["grids"];
     nRows = Length[grids];
 
-    frameRate = Clip[nFrames / targetDuration,
-      {$MinAnimationFps, $MaxAnimationFps}];
-    actualNFrames = Max[2, Round[frameRate * targetDuration]];
+    plan      = GIFFramePlan[targetDuration, nFrames / targetDuration];
+    frameRate = plan["FrameRate"];
+    actualNFrames = plan["FrameCount"];
 
     indices = Round[Subdivide[1, nRows, actualNFrames - 1]];
     indices = Max[1, #] & /@ indices;
 
-    Print["  Rendering ", Length[indices], " critical frames at ", FmtN[frameRate, 3],
-          " fps (", FmtN[Length[indices] / frameRate, 3],
-          "s, matching audio duration ", FmtN[targetDuration, 3], "s)..."];
+    Print["  Rendering ", Length[indices], " critical frames at ", FmtDec[frameRate],
+          " fps (", FmtDec[plan["FrameDelay"]], " s per frame, ",
+        FmtDec[plan["GIFDuration"]], " s in total)."];
     frames = Table[
       RenderGridFrame[grids[[indices[[k]]]],
         "T = T_c = " <> ToString[NumberForm[Tc, {4, 3}]] <> "   sweep " <> ToString[indices[[k]]]],
       {k, Length[indices]}
     ];
-    ExportGIF[frames, outGIF, frameRate];
+    ExportGIF[frames, outGIF, plan];
     {Length[frames], frameRate}
   ];
 
@@ -124,25 +121,25 @@ AnimateCritical[critResult_Association, Tc_?NumericQ, outGIF_String,
    (see its docstring). Returns {actualNFrames, frameRate}. *)
 AnimateQuench[quenchResult_Association, TCold_?NumericQ, outGIF_String,
              targetDuration_?NumericQ, Optional[nFrames_Integer, 150]] :=
-  Module[{grids, nRows, indices, frames, frameRate, actualNFrames},
+  Module[{plan, grids, nRows, indices, frames, frameRate, actualNFrames},
     grids = quenchResult["grids"];
     nRows = Length[grids];
 
-    frameRate = Clip[nFrames / targetDuration,
-      {$MinAnimationFps, $MaxAnimationFps}];
-    actualNFrames = Max[2, Round[frameRate * targetDuration]];
+    plan      = GIFFramePlan[targetDuration, nFrames / targetDuration];
+    frameRate = plan["FrameRate"];
+    actualNFrames = plan["FrameCount"];
 
     indices = Round[Subdivide[1, nRows, actualNFrames - 1]];
     indices = Max[1, #] & /@ indices;
 
-    Print["  Rendering ", Length[indices], " quench frames at ", FmtN[frameRate, 3],
-          " fps (", FmtN[Length[indices] / frameRate, 3],
-          "s, matching audio duration ", FmtN[targetDuration, 3], "s)..."];
+    Print["  Rendering ", Length[indices], " quench frames at ", FmtDec[frameRate],
+          " fps (", FmtDec[plan["FrameDelay"]], " s per frame, ",
+        FmtDec[plan["GIFDuration"]], " s in total)."];
     frames = Table[
       RenderGridFrame[grids[[indices[[k]]]],
         "T_cold = " <> ToString[NumberForm[TCold, {3, 2}]] <> "   sweep " <> ToString[indices[[k]]]],
       {k, Length[indices]}
     ];
-    ExportGIF[frames, outGIF, frameRate];
+    ExportGIF[frames, outGIF, plan];
     {Length[frames], frameRate}
   ];

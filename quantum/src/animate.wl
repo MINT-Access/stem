@@ -14,18 +14,15 @@
    ======================================================== *)
 
 
-(* Sane bounds on GIF playback frame rate — mirrors lorenz's
-   src/animate.wl. Keeps a short-duration run (few timesteps over a
-   short Last[t]) from demanding a strobing frame rate, and a long one
-   from demanding an implausibly slow one. Frame COUNT is what flexes
-   at the clamp boundary (see AnimateQuantum) so playback duration
-   still lands on targetDuration exactly. *)
-$MinAnimationFps = 2;
-$MaxAnimationFps = 30;
+(* GIF timing: frame delay and frame count come from stem-core's
+   GIFFramePlan, which clamps the requested rate to 2-30 fps, rounds the
+   frame delay to whole centiseconds (what the GIF format stores) and
+   derives the frame count from that delay; main.wl then measures both
+   files with SyncWAVToGIF. *)
 
 
 AnimateQuantum[solution_Association, cfg_Association, outDir_String] :=
-  Module[{density, xVals, tVals, nt, mode,
+  Module[{plan, density, xVals, tVals, nt, mode,
           imgW, imgH, targetDuration, frameRate,
           yMax, xMin, xMax,
           frameIndices, nFrames, frames,
@@ -52,19 +49,19 @@ AnimateQuantum[solution_Association, cfg_Association, outDir_String] :=
 
     (* ── Animated GIF: nt (the number of simulated timesteps) is a
        render budget, not a literal frame count. frameRate is solved
-       as nt/targetDuration and clamped to [$MinAnimationFps,
-       $MaxAnimationFps]; actualNFrames (nFrames below) is then
+       as nt/targetDuration and clamped to [2, 30] fps (stem-core GIFFramePlan); actualNFrames (nFrames below) is then
        recomputed from the clamped rate so playback duration lands on
-       targetDuration exactly, even when the clamp bites. animation.
+       targetDuration to within half a frame delay, even when the clamp bites. animation.
        frameRate from config is no longer used — see AGENTS.md
        "Animation framing" for why. ── *)
-    frameRate    = Clip[nt / targetDuration, {$MinAnimationFps, $MaxAnimationFps}];
-    nFrames      = Max[2, Round[frameRate * targetDuration]];
+    plan         = GIFFramePlan[targetDuration, nt / targetDuration];
+    frameRate    = plan["FrameRate"];
+    nFrames      = plan["FrameCount"];
     frameIndices = Round[Subdivide[1, nt, nFrames - 1]];
 
-    Print["  Rendering ", nFrames, " frames at ", FmtN[frameRate, 3],
-          " fps (", FmtN[nFrames / frameRate, 3],
-          "s, matching audio duration ", FmtN[targetDuration, 3], "s)..."];
+    Print["  Rendering ", nFrames, " frames at ", FmtDec[frameRate],
+          " fps (", FmtDec[plan["FrameDelay"]], " s per frame, ",
+        FmtDec[plan["GIFDuration"]], " s in total)."];
 
     frames = Map[
       Function[it,
@@ -89,7 +86,7 @@ AnimateQuantum[solution_Association, cfg_Association, outDir_String] :=
     ];
 
     gifPath = FileNameJoin[{outDir, mode <> "_density.gif"}];
-    ExportGIF[frames, gifPath, frameRate];
+    ExportGIF[frames, gifPath, plan];
     STEMDescribeGIF[gifPath, nFrames, frameRate];
 
     (* ── Static 3x3 PNG: 9 frames at equal time intervals ── *)

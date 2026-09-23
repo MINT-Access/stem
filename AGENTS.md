@@ -176,6 +176,7 @@ wolframscript -file bayes/tests/test_model.wl
 wolframscript -file scattering/tests/test_model.wl
 wolframscript -file resonance/tests/test_model.wl
 wolframscript -file fluid/tests/test_model.wl
+wolframscript -file stem-core/tests/test_gifsync.wl
 ```
 
 `cellular`, `signal`, `quantum`, `primes`, and `relativity` do not have test files. All existing test files exit 0 on success, 1 on failure.
@@ -196,10 +197,13 @@ After `Get[".../stem-core/init.wl"]` all of the following are available:
 | `NormalizeBuffer[buffer, ceiling]` | synth | Scale buffer peak to ≤ ceiling |
 | `ExportAudioBuffer[buffer, filePath, sr]` | synth | Write WAV (headless-safe) |
 | `ExportCSV[rows, filePath]` | export | Write CSV, create directory if needed |
-| `ExportGIF[frames, filePath, frameRate]` | export | Write looping animated GIF |
+| `GIFFramePlan[audioDur, desiredFps, opts]` | export | Whole-centisecond frame delay + frame count for a GIF timed to audio |
+| `ExportGIF[frames, filePath, plan]` | export | Write looping animated GIF with the plan's delay |
+| `SyncWAVToGIF[gifPath, wavPath, opts]` | export | Measure both files, pad WAV if GIF is longer by > 1 frame delay, print the sync line |
 | `EnsureDir[filePath]` | utils | Create parent directory if absent |
 | `LogError[message, logPath]` | utils | Append timestamped error to log file |
 | `FmtN[x, spec]` | utils | Format number (sig figs or {total,decimals}), single-line (use in Print) |
+| `FmtDec[x, maxDecimals]` | utils | Format with at most 3 (default) decimals, no trailing zeros |
 | `STEMHeading[text]` | accessibility | Print `=== text ===` — major section title |
 | `STEMSection[title]` | accessibility | Print `-- title --` — sub-section marker |
 | `STEMBullet[text]` | accessibility | Print `  * text` — list item |
@@ -255,6 +259,11 @@ All code must run correctly via `wolframscript -file` with no display server.
   and consistent `  label: value unit` formatting for VoiceOver. Keep bare `Print`
   only for lines that carry two values (e.g. `[min, max]` ranges) or that use
   `IntegerString` formatting.
+- **GIF timing**: choose the frame delay and count with `GIFFramePlan[audioDur,
+  desiredFps]`, export with `ExportGIF[frames, path, plan]`, and call
+  `SyncWAVToGIF[gifPath, wavPath]` in `main.wl` once both files exist. GIF
+  delays are whole centiseconds, so a count computed from a non-round fps
+  drifts from the audio; the plan derives the count from the rounded delay.
 - **Tests**: `Exit[1]` on any failure so CI tools detect broken runs.
 
 ---

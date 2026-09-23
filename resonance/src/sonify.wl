@@ -140,7 +140,11 @@ PrependIntroAndExport[introText_String, leftMain_List, rightMain_List,
     finalRight  = Join[introBuffer, pauseBuffer, rightMain];
     EnsureDir[outWav];
     ExportAudioBuffer[NormalizeToLoudness[{finalLeft, finalRight}, -17.0, 0.97, sr], outWav, sr];
-    STEMDescribeWAV[outWav, N[Length[finalLeft]] / sr]
+    STEMDescribeWAV[outWav, N[Length[finalLeft]] / sr];
+    (* Spoken-part lengths, so main.wl's SyncWAVToGIF can compare the
+       GIF with the sonified section it is timed to. *)
+    <|"IntroSeconds" -> N[Length[introBuffer] + Length[pauseBuffer]] / sr,
+      "OutroSeconds" -> 0.0|>
   ]
 
 
@@ -216,6 +220,17 @@ $ResonanceIoPeriodSeconds = 1.0;
    solution[[-1,1]]. *)
 GalileanMainDurationSec[model_Association] := model["tEnd"] * $ResonanceIoPeriodSeconds;
 
+(* Silence-padded release tail BuildGalileanAudio appends after the
+   main body so the last notes can ring out. *)
+$GalileanReleaseTailSec = 1.0;
+
+(* Everything after the spoken intro: main body + release tail. This is
+   what the galilean GIF is timed to (it holds its last frame through
+   the tail); timing it to the main body alone left the GIF 1.08 s
+   shorter than the audio. *)
+GalileanBodyDurationSec[model_Association] :=
+  GalileanMainDurationSec[model] + $GalileanReleaseTailSec;
+
 (* Continuous drone: constant frequency, one octave below each moon's
    event pitch -- preserves the exact 4:2:1 ratio (see model.wl's
    $Pitch*Hz) while remaining audibly distinct from the event layer. *)
@@ -233,7 +248,7 @@ BuildGalileanAudio[model_Association, cfg_Association, sr_Integer] :=
     tEnd = model["tEnd"];
     mainDurSec = tEnd * $ResonanceIoPeriodSeconds;
     nSamplesMain  = Round[mainDurSec * sr];
-    nSamplesTotal = nSamplesMain + Round[1.0 * sr];  (* padding for release tails *)
+    nSamplesTotal = nSamplesMain + Round[$GalileanReleaseTailSec * sr];  (* padding for release tails *)
 
     droneGain = 10.0^(N @ GetCfg[cfg, {"sonification", "resonance", "trajectory_layer_gain"}, -12] / 20.0);
 

@@ -27,10 +27,11 @@ wolframscript -version
 stem-core/
   init.wl          ← single entry point; load this from your project
   src/
-    utils.wl       ← EnsureDir, LogError, FmtN
+    utils.wl       ← EnsureDir, LogError, FmtN, FmtDec
     scales.wl      ← $StemSampleRate, $StemScales, SemitoneToHz, ScaleLookup
     synth.wl       ← StemSynthNote, NormalizeBuffer, ExportAudioBuffer
-    export.wl      ← ExportCSV, ExportGIF
+    export.wl      ← ExportCSV, GIFFramePlan, ExportGIF, GIFFrameDelays,
+                     WAVDuration, PadWAVWithSilence, SyncWAVToGIF
     accessibility.wl ← STEMHeading, STEMSection, STEMBullet, STEMPrintN,
                        STEMDescribeCSV, STEMDescribeWAV, STEMDescribeGIF,
                        $STEMSpeakEnabled, STEMSay,
@@ -139,19 +140,23 @@ outCSV = "output/results.csv";
 ExportCSV[Prepend[data, {"t", "y"}], outCSV];
 STEMDescribeCSV[outCSV, Length[data], 2];
 
-frames = (* list of Graphics objects, one per frame *);
-outGIF = "output/animation.gif";
-ExportGIF[frames, outGIF, 25];
-STEMDescribeGIF[outGIF, Length[frames], 25];
-
 notes = StemSynthNote[
   ScaleLookup[#[[2]], -1, 1, $StemScales["Minor"], 220.0],
   0.3, 0.7
 ] & /@ data;
 
 outWAV = "output/audio.wav";
-ExportAudioBuffer[NormalizeBuffer[Total[notes]], outWAV];
+audio = NormalizeBuffer[Total[notes]];
+ExportAudioBuffer[audio, outWAV];
 STEMDescribeWAV[outWAV];
+
+(* GIF timed to the WAV: whole-centisecond delay, count derived from it *)
+plan   = GIFFramePlan[N[Length[audio]] / $StemSampleRate, 25];
+frames = (* plan["FrameCount"] Graphics objects *);
+outGIF = "output/animation.gif";
+ExportGIF[frames, outGIF, plan];
+STEMDescribeGIF[outGIF, Length[frames], plan["FrameRate"]];
+SyncWAVToGIF[outGIF, outWAV];   (* measures both files, prints one sync line *)
 
 STEMSay["Done"]
 ```
@@ -177,7 +182,8 @@ Key functions:
 | `STEMBullet["text"]` | `  • text` |
 | `STEMPrintN["label", x, "unit", spec]` | `  label: value unit` |
 | `STEMDescribeCSV["path", nRows, nCols]` | `  CSV: nRows rows, nCols columns — path` |
-| `STEMDescribeGIF["path", nFrames, fps]` | `  Animation: nFrames frames at fps fps — path` |
+| `STEMDescribeGIF["path", nFrames, fps]` | `  Animation: nFrames frames at fps fps — path` (fps with at most three decimals) |
+| `SyncWAVToGIF["gif", "wav"]` | `  GIF/WAV sync: the GIF has N frames of D s each and plays for G s, the WAV plays for W s, and the GIF is X s longer than the WAV.` |
 | `STEMDescribeWAV["path", dur]` | `  Audio: D.D s — path` |
 | `STEMSay["text"]` | prints text; speaks it when `$STEMSpeakEnabled` is `True` |
 

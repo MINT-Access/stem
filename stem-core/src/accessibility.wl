@@ -5,7 +5,7 @@
    line to stdout so VoiceOver / Orca / Narrator reads each
    chunk as one unit.
 
-   Requires: utils.wl (for FmtN)
+   Requires: utils.wl (for FmtN, FmtDec)
 
    Sections:
      1. Numeric formatting     — STEMPrintN
@@ -88,13 +88,14 @@ STEMDescribeWAV[filePath_String, durationSec_?NumericQ] :=
 
 (* STEMDescribeGIF
    Prints a single line summarising a completed animated GIF export.
-   nFrames is the total frame count; fps is the playback rate. *)
+   nFrames is the total frame count; fps is the playback rate, printed
+   with at most three decimals (FmtDec). *)
 
 STEMDescribeGIF[filePath_String] :=
   Print["  Animation: ", filePath]
 
 STEMDescribeGIF[filePath_String, nFrames_Integer, fps_?NumericQ] :=
-  Print["  Animation: ", nFrames, " frames at ", fps, " fps — ", filePath]
+  Print["  Animation: ", nFrames, " frames at ", FmtDec[fps], " fps — ", filePath]
 
 
 (* ── 4. Speech integration (optional) ───────────────────── *)

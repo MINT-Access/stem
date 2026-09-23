@@ -132,6 +132,7 @@ Which[
     {$gifFrames, $gifFps} = ExportGatesAnimation[gatesResult["rPath"], outGIF, totalDurSec];
     ExportGatesPNG[gatesResult["rPath"], outPNG];
     STEMDescribeGIF[outGIF, $gifFrames, $gifFps];
+    SyncWAVToGIF[outGIF, outWAV];
     Print["  PNG written: ", outPNG];
     Print[""],
 

@@ -147,6 +147,7 @@ Which[
     outPNG = FileNameJoin[{$outDir, "spectrum.png"}];
     {$gifFrames, $gifFps} = AnimateSpectrum[T, spectrumResult["spec"], freqMin, freqMax, outGIF, outPNG, wavDuration];
     STEMDescribeGIF[outGIF, $gifFrames, $gifFps];
+    SyncWAVToGIF[outGIF, outWAV];
     Print[""];
 
     Print["[5/5] Exporting data table..."];
@@ -200,6 +201,7 @@ Which[
     outPNG = FileNameJoin[{$outDir, "temperature.png"}];
     {$gifFrames, $gifFps} = AnimateTemperature[tempResult, freqMin, freqMax, outGIF, wavDuration];
     STEMDescribeGIF[outGIF, $gifFrames, $gifFps];
+    SyncWAVToGIF[outGIF, outWAV];
     RenderTemperatureStaticPNG[Tmin, Tmax, freqMin, freqMax, outPNG];
     Print[""];
 
@@ -272,6 +274,7 @@ Which[
       outPNG = FileNameJoin[{$outDir, "star.png"}];
       {$gifFrames, $gifFps} = AnimateStarTour[order, $StarPresets, freqMin, freqMax, outGIF, wavDuration];
       STEMDescribeGIF[outGIF, $gifFrames, $gifFps];
+      SyncWAVToGIF[outGIF, outWAV];
       RenderStarTourStaticPNG[order, $StarPresets, freqMin, freqMax, outPNG];
       Print[""];
 
@@ -319,6 +322,7 @@ Which[
       outPNG = FileNameJoin[{$outDir, "star.png"}];
       {$gifFrames, $gifFps} = AnimateSpectrum[T, spectrumResult["spec"], freqMin, freqMax, outGIF, outPNG, wavDuration];
       STEMDescribeGIF[outGIF, $gifFrames, $gifFps];
+      SyncWAVToGIF[outGIF, outWAV];
       Print[""];
 
       Print["[5/5] Exporting data table..."];

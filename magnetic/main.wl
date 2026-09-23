@@ -114,6 +114,7 @@ Which[
     STEMSay["Rendering cyclotron orbit animation"];
     {nFrames, gifFps} = AnimateCyclotron[model, outGIF, wavDuration];
     STEMDescribeGIF[outGIF, nFrames, gifFps];
+    SyncWAVToGIF[outGIF, outWAV];
     Print[""];
 
     STEMHeading["Done"];
@@ -150,6 +151,7 @@ Which[
     STEMSay["Rendering E cross B drift animation"];
     {nFrames, gifFps} = AnimateDrift[model, outGIF, wavDuration];
     STEMDescribeGIF[outGIF, nFrames, gifFps];
+    SyncWAVToGIF[outGIF, outWAV];
     Print[""];
 
     STEMHeading["Done"];
@@ -186,6 +188,7 @@ Which[
     STEMSay["Rendering magnetic mirror animation"];
     {nFrames, gifFps} = AnimateMirror[model, outGIF, wavDuration];
     STEMDescribeGIF[outGIF, nFrames, gifFps];
+    SyncWAVToGIF[outGIF, outWAV];
     Print[""];
 
     STEMHeading["Done"];
@@ -222,6 +225,7 @@ Which[
     STEMSay["Rendering multi-particle animation"];
     {nFrames, gifFps} = AnimateMulti[model, outGIF, wavDuration];
     STEMDescribeGIF[outGIF, nFrames, gifFps];
+    SyncWAVToGIF[outGIF, outWAV];
     Print[""];
 
     STEMHeading["Done"];

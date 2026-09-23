@@ -146,6 +146,7 @@ Which[
     STEMSay["Rendering the distribution animation"];
     {nFramesRendered, gifFps} = AnimateDistribution[distResult, massAmu, TEnd, outGIF, wavDuration];
     STEMDescribeGIF[outGIF, nFramesRendered, gifFps];
+    SyncWAVToGIF[outGIF, outWAV];
     Print[""];
 
     Print["[5/", $nSteps5, "] Exporting data table..."];
@@ -195,6 +196,7 @@ Which[
     STEMSay["Rendering the ensemble histogram animation"];
     {nFramesRendered, gifFps} = AnimateEnsemble[ensembleModel, outGIF, wavDuration];
     STEMDescribeGIF[outGIF, nFramesRendered, gifFps];
+    SyncWAVToGIF[outGIF, outWAV];
     Print[""];
 
     Print["[5/", $nSteps5, "] Exporting data table..."];
@@ -243,6 +245,7 @@ Which[
     STEMSay["Rendering the cooling animation"];
     {nFramesRendered, gifFps} = AnimateCooling[coolResult, massAmu, outGIF, wavDuration];
     STEMDescribeGIF[outGIF, nFramesRendered, gifFps];
+    SyncWAVToGIF[outGIF, outWAV];
     Print[""];
 
     Print["[5/", $nSteps5, "] Exporting data table..."];
@@ -302,6 +305,7 @@ Which[
     STEMSay["Rendering the equipartition animation"];
     {nFramesRendered, gifFps} = AnimateEquipartition[eqResult, outGIF, wavDuration];
     STEMDescribeGIF[outGIF, nFramesRendered, gifFps];
+    SyncWAVToGIF[outGIF, outWAV];
     Print[""];
 
     Print["[5/", $nSteps5, "] Exporting data table..."];

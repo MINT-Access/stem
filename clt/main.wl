@@ -138,6 +138,8 @@ Which[
     EnsureDir[outWAV];
     ExportAudioBuffer[NormalizeToLoudness[{finalLeft, finalRight}, -17.0, 0.97, sr], outWAV, sr];
     STEMDescribeWAV[outWAV, N[Length[finalLeft]] / sr];
+    SyncWAVToGIF[FileNameJoin[{$outDir, "sweep.gif"}], outWAV,
+                 "IntroSeconds" -> N[Length[introBuffer] + Length[pauseBuf]] / sr];
     Print[""],
 
 
@@ -191,6 +193,8 @@ Which[
     EnsureDir[outWAV];
     ExportAudioBuffer[NormalizeToLoudness[{finalLeft, finalRight}, -17.0, 0.97, sr], outWAV, sr];
     STEMDescribeWAV[outWAV, N[Length[finalLeft]] / sr];
+    SyncWAVToGIF[FileNameJoin[{$outDir, "compare.gif"}], outWAV,
+                 "IntroSeconds" -> N[Length[introBuffer] + Length[pauseBuf]] / sr];
     Print[""],
 
 
@@ -248,6 +252,8 @@ Which[
     EnsureDir[outWAV];
     ExportAudioBuffer[NormalizeToLoudness[{finalLeft, finalRight}, -17.0, 0.97, sr], outWAV, sr];
     STEMDescribeWAV[outWAV, N[Length[finalLeft]] / sr];
+    SyncWAVToGIF[FileNameJoin[{$outDir, "dice.gif"}], outWAV,
+                 "IntroSeconds" -> N[Length[introBuffer] + Length[pauseBuf]] / sr];
     Print[""],
 
 

@@ -4,12 +4,11 @@
    ======================================================== *)
 
 
-(* Sane bounds on GIF playback frame rate — see AnimateSweepBifurcation /
-   AnimateIterateTimeSeries for how these keep animation/audio duration
-   in sync without forcing an absurdly fast or glacial frame rate at
-   the extremes (a short iterate run vs. a long sweep). *)
-$MinAnimationFps = 2;
-$MaxAnimationFps = 30;
+(* GIF timing: frame delay and frame count come from stem-core's
+   GIFFramePlan, which clamps the requested rate to 2-30 fps, rounds the
+   frame delay to whole centiseconds (what the GIF format stores) and
+   derives the frame count from that delay; main.wl then measures both
+   files with SyncWAVToGIF. *)
 
 
 (* ── Sweep mode: progressive bifurcation diagram ─────────────────────
@@ -54,37 +53,37 @@ RenderSweepFrame[rValues_List, attractors_List, upToStep_Integer, eventRVals_Lis
 
    nFrames is a RENDER BUDGET, not a literal frame count: frameRate is
    solved as nFrames/targetDuration and then clamped to
-   [$MinAnimationFps, $MaxAnimationFps] so a short run doesn't demand a
+   [2, 30] fps (stem-core GIFFramePlan) so a short run doesn't demand a
    strobing frame rate and a long one doesn't demand an implausibly slow
    one — the frame COUNT is what flexes at the clamp boundary (recomputed
    as Round[frameRate * targetDuration]) so actual playback duration
-   always equals targetDuration exactly.
+   equals targetDuration to within half a frame delay.
 
    Returns {actualNFrames, frameRate} so callers can report what was
    actually rendered via STEMDescribeGIF. *)
 AnimateSweepBifurcation[sweepModel_Association, eventRs_Association,
                         outGIF_String, targetDuration_?NumericQ,
                         Optional[nFrames_Integer, 150]] :=
-  Module[{rValues, attractors, nSteps, indices, frames, eventRVals,
+  Module[{plan, rValues, attractors, nSteps, indices, frames, eventRVals,
           frameRate, actualNFrames},
     rValues    = sweepModel["rValues"];
     attractors = sweepModel["attractors"];
     nSteps     = Length[rValues];
     eventRVals = Values[eventRs];
 
-    frameRate = Clip[nFrames / targetDuration,
-      {$MinAnimationFps, $MaxAnimationFps}];
-    actualNFrames = Max[2, Round[frameRate * targetDuration]];
+    plan      = GIFFramePlan[targetDuration, nFrames / targetDuration];
+    frameRate = plan["FrameRate"];
+    actualNFrames = plan["FrameCount"];
 
     indices = Round[Subdivide[1, nSteps, actualNFrames - 1]];
     indices = Max[1, #] & /@ indices;
 
     Print["  Rendering ", Length[indices], " bifurcation-diagram frames at ",
-          FmtN[frameRate, 3], " fps (", FmtN[Length[indices] / frameRate, 3],
-          "s, matching audio duration ", FmtN[targetDuration, 3], "s)..."];
+          FmtDec[frameRate], " fps (", FmtDec[plan["FrameDelay"]], " s per frame, ",
+          FmtDec[plan["GIFDuration"]], " s in total)."];
     frames = RenderSweepFrame[rValues, attractors, #, eventRVals] & /@ indices;
 
-    ExportGIF[frames, outGIF, frameRate];
+    ExportGIF[frames, outGIF, plan];
     {actualNFrames, frameRate}
   ];
 
@@ -118,28 +117,28 @@ RenderIterateFrame[trajectory_List, upToN_Integer, r_?NumericQ, preset_String] :
    docstring): targetDuration should be the total WAV duration (spoken
    intro + pause + sonified iteration) computed just before this call,
    nFrames is a render budget, and frameRate is solved and clamped to
-   [$MinAnimationFps, $MaxAnimationFps] so playback duration always
-   equals targetDuration exactly. Returns {actualNFrames, frameRate}. *)
+   [2, 30] fps (stem-core GIFFramePlan) so playback duration always
+   equals targetDuration to within half a frame delay. Returns {actualNFrames, frameRate}. *)
 AnimateIterateTimeSeries[iterateModel_Association, outGIF_String,
                          targetDuration_?NumericQ, Optional[nFrames_Integer, 150]] :=
-  Module[{trajectory, n, r, preset, indices, frames, frameRate, actualNFrames},
+  Module[{plan, trajectory, n, r, preset, indices, frames, frameRate, actualNFrames},
     trajectory = iterateModel["trajectory"];
     n       = Length[trajectory];
     r       = iterateModel["r"];
     preset  = iterateModel["preset"];
 
-    frameRate = Clip[nFrames / targetDuration,
-      {$MinAnimationFps, $MaxAnimationFps}];
-    actualNFrames = Max[2, Round[frameRate * targetDuration]];
+    plan      = GIFFramePlan[targetDuration, nFrames / targetDuration];
+    frameRate = plan["FrameRate"];
+    actualNFrames = plan["FrameCount"];
 
     indices = Round[Subdivide[2, n, actualNFrames - 1]];
     indices = Max[2, #] & /@ indices;
 
     Print["  Rendering ", Length[indices], " time-series frames at ",
-          FmtN[frameRate, 3], " fps (", FmtN[Length[indices] / frameRate, 3],
-          "s, matching audio duration ", FmtN[targetDuration, 3], "s)..."];
+          FmtDec[frameRate], " fps (", FmtDec[plan["FrameDelay"]], " s per frame, ",
+          FmtDec[plan["GIFDuration"]], " s in total)."];
     frames = RenderIterateFrame[trajectory, #, r, preset] & /@ indices;
 
-    ExportGIF[frames, outGIF, frameRate];
+    ExportGIF[frames, outGIF, plan];
     {actualNFrames, frameRate}
   ];

@@ -129,6 +129,7 @@ Which[
     Print["[5/5] Sonifying trajectory..."];
     STEMSay["Sonifying " <> lLabel <> " libration: pitch from angular velocity, pan from x-position"];
     SonifyLibration[model, mode, cfg, FileNameJoin[{$outDir, mode <> "_audio.wav"}]];
+    SyncWAVToGIF[FileNameJoin[{$outDir, mode <> ".gif"}], FileNameJoin[{$outDir, mode <> "_audio.wav"}]];
     Print[""];
 
     STEMHeading["Done"];
@@ -182,6 +183,7 @@ Which[
     Print["[5/5] Sonifying escape trajectory..."];
     STEMSay["Sonifying L1 escape: rising pitch and fading volume as particle departs"];
     SonifyEscape[model, cfg, FileNameJoin[{$outDir, "l1_audio.wav"}]];
+    SyncWAVToGIF[FileNameJoin[{$outDir, "l1.gif"}], FileNameJoin[{$outDir, "l1_audio.wav"}]];
     Print[""];
 
     STEMHeading["Done"];

@@ -9,14 +9,6 @@
    ======================================================== *)
 
 
-(* Sane bounds on GIF playback frame rate for AnimateGaps — see that
-   function for how these keep gaps_animation.gif's playback duration
-   matched to gaps_audio.wav's duration without forcing an absurdly
-   fast or glacial frame rate at the extremes (mirrors lorenz's
-   $MinAnimationFps/$MaxAnimationFps in lorenz/src/animate.wl). *)
-$MinAnimationFps = 2;
-$MaxAnimationFps = 30;
-
 (* Render budget: target number of progressive-reveal frames before the
    fps/duration solve below adjusts the actual count. Not a hard cap —
    see AnimateGaps. *)
@@ -26,8 +18,8 @@ $GapsFrameBudget = 50;
 (* ── Ulam spiral visualisation ────────────────────────── *)
 
 AnimateUlam[model_Association, cfg_Association, outDir_String] :=
-  Module[{grid, n, colorPrimes, colorComposite,
-          fps, width, height,
+  Module[{plan, grid, n, colorPrimes, colorComposite,
+          width, height,
           primeColor, compositeColor,
           primePlot, mainPath, gifPath,
           zoom, half, centre, zoomGrid, zoomPlot, zoomPath},
@@ -36,7 +28,6 @@ AnimateUlam[model_Association, cfg_Association, outDir_String] :=
     n              = model["size"];
     colorPrimes    = GetCfg[cfg, {"simulation","ulam","color_primes"},    "white"];
     colorComposite = GetCfg[cfg, {"simulation","ulam","color_composite"}, "black"];
-    fps    = GetCfg[cfg, {"animation","fps"},    12];
     width  = GetCfg[cfg, {"animation","width"},  600];
     height = GetCfg[cfg, {"animation","height"}, 600];
 
@@ -57,10 +48,15 @@ AnimateUlam[model_Association, cfg_Association, outDir_String] :=
     Export[mainPath, primePlot, "PNG"];
     Print["  Spiral PNG: ", mainPath];
 
-    (* Single-frame GIF for pipeline consistency *)
+    (* Single-frame GIF, held for the length of the row-scan audio
+       ($UlamScanDuration, sonify.wl) the same way cellular's Rule 110
+       spacetime GIF is held for its audio -- previously it was shown
+       for one 12 fps frame (0.08 s) per loop. *)
     gifPath = FileNameJoin[{outDir, "ulam_spiral.gif"}];
-    ExportGIF[{primePlot}, gifPath, fps];
-    STEMDescribeGIF[gifPath, 1, fps];
+    plan = GIFFramePlan[$UlamScanDuration, 1.0 / $UlamScanDuration,
+                        "MinFps" -> 0, "MinFrames" -> 1, "MaxFrames" -> 1];
+    ExportGIF[{primePlot}, gifPath, plan];
+    STEMDescribeGIF[gifPath, 1, plan["FrameRate"]];
 
     (* ── Zoomed 31×31 centre region with visible cell borders ── *)
     zoom   = 31;
@@ -97,8 +93,8 @@ AnimateUlam[model_Association, cfg_Association, outDir_String] :=
 (* ── Prime gap animation ──────────────────────────────── *)
 
 AnimateGaps[model_Association, cfg_Association, outDir_String] :=
-  Module[{gaps, primes, meanGap, twinCount, maxGapDisplay,
-          width, height, nGaps, tempoBpm, targetDuration,
+  Module[{plan, gaps, primes, meanGap, twinCount, maxGapDisplay,
+          width, height, nGaps, tempoBpm, toneDurMs, targetDuration,
           frameRate, actualNFrames,
           frameEnds, nFrames, frames, histPlot,
           gapDist, sortedGapVals, distCounts,
@@ -114,29 +110,30 @@ AnimateGaps[model_Association, cfg_Association, outDir_String] :=
 
     nGaps = Length[gaps];
 
-    (* Target duration must match SonifyGaps' baseDuration exactly (same
-       formula, same tempo_bpm config key) so gaps_animation.gif's
-       playback time equals gaps_audio.wav's length. *)
+    (* Target duration must match the base WAV's length exactly: SonifyGaps'
+       baseDuration (same formula, same tempo_bpm config key) plus the
+       one tone_duration_ms tail it renders after the last onset. *)
     tempoBpm       = GetCfg[cfg, {"sonification","gaps","tempo_bpm"}, 120];
-    targetDuration = 30.0 * 120.0 / N[tempoBpm];
+    toneDurMs      = GetCfg[cfg, {"sonification","gaps","tone_duration_ms"}, 80];
+    targetDuration = 30.0 * 120.0 / N[tempoBpm] + N[toneDurMs] / 1000.0;
 
     (* $GapsFrameBudget is a render-budget target, not a literal frame
-       count: frameRate is solved from budget/duration and clamped to
-       [$MinAnimationFps, $MaxAnimationFps], then the frame count is
-       recomputed from the clamped rate so total playback time equals
-       targetDuration exactly (same reasoning as ExportAnimation in
-       lorenz/src/animate.wl). Frames are spread evenly across the gap
-       sequence via Subdivide so the reveal still progresses smoothly. *)
-    frameRate     = Clip[$GapsFrameBudget / targetDuration,
-                          {$MinAnimationFps, $MaxAnimationFps}];
-    actualNFrames = Min[nGaps, Max[2, Round[frameRate * targetDuration]]];
+       count: GIFFramePlan (stem-core) clamps budget/duration to 2-30 fps,
+       rounds the frame delay to whole centiseconds and derives the frame
+       count from it (capped at nGaps, lengthening the delay if the cap
+       applies). Frames are spread evenly across the gap sequence via
+       Subdivide so the reveal still progresses smoothly. *)
+    plan          = GIFFramePlan[targetDuration, $GapsFrameBudget / targetDuration,
+                                 "MaxFrames" -> nGaps];
+    frameRate     = plan["FrameRate"];
+    actualNFrames = plan["FrameCount"];
 
     frameEnds = Max[1, #] & /@ Round[Subdivide[1, nGaps, actualNFrames - 1]];
     nFrames   = Length[frameEnds];
 
-    Print["  Building ", nFrames, " animation frames at ", FmtN[frameRate, 3],
-          " fps (", FmtN[nFrames / frameRate, 3],
-          "s, matching audio duration ", FmtN[targetDuration, 3], "s)..."];
+    Print["  Building ", nFrames, " animation frames at ", FmtDec[frameRate],
+          " fps (", FmtDec[plan["FrameDelay"]], " s per frame, ",
+          FmtDec[plan["GIFDuration"]], " s in total)."];
 
     (* Gap frequency histogram for the final frame inset *)
     gapDist       = model["gap_distribution"];
@@ -189,7 +186,7 @@ AnimateGaps[model_Association, cfg_Association, outDir_String] :=
 
     gifPath = FileNameJoin[{outDir, "gaps_animation.gif"}];
     EnsureDir[gifPath];
-    ExportGIF[frames, gifPath, frameRate];
+    ExportGIF[frames, gifPath, plan];
     STEMDescribeGIF[gifPath, nFrames, frameRate];
 
     STEMSay[ToString[Length[primes]] <> " primes analysed. " <>

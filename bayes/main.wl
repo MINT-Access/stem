@@ -143,6 +143,7 @@ Which[
     STEMSay["Rendering the Beta posterior animation"];
     {$gifFrames, $gifFps} = AnimateCoin[coinSeq, thetaTrue, outGIF, wavDuration];
     STEMDescribeGIF[outGIF, $gifFrames, $gifFps];
+    SyncWAVToGIF[outGIF, outWAV];
     Print[""];
 
     Print["[5/", $nSteps5, "] Exporting data table..."];
@@ -191,6 +192,7 @@ Which[
     STEMSay["Rendering the Gaussian posterior animation"];
     {$gifFrames, $gifFps} = AnimateGaussian[gaussSeq, muLo, muHi, muTrue, mu0, outGIF, wavDuration];
     STEMDescribeGIF[outGIF, $gifFrames, $gifFps];
+    SyncWAVToGIF[outGIF, outWAV];
     Print[""];
 
     Print["[5/", $nSteps5, "] Exporting data table..."];
@@ -234,6 +236,7 @@ Which[
     STEMSay["Rendering the Bayes factor meter"];
     {$gifFrames, $gifFps} = AnimateModel[modelFlips, modelSeq, outGIF, wavDuration];
     STEMDescribeGIF[outGIF, $gifFrames, $gifFps];
+    SyncWAVToGIF[outGIF, outWAV];
     Print[""];
 
     Print["[5/", $nSteps5, "] Exporting data table..."];

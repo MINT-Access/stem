@@ -21,14 +21,14 @@
    a strobing frame rate and a very long one doesn't demand an
    implausibly slow one -- the frame COUNT is what flexes at the clamp
    boundary (recomputed as Round[fps * targetDuration]) so actual
-   playback duration always equals targetDuration exactly. *)
+   playback duration equals targetDuration to within half a frame delay. *)
 
 $ScatFrameBudget = 150;
 $ScatMinFps      = 2;
 $ScatMaxFps      = 30;
 
-ScatAnimationRate[targetDuration_?NumericQ] :=
-  Clip[$ScatFrameBudget / targetDuration, {$ScatMinFps, $ScatMaxFps}]
+ScatAnimationPlan[targetDuration_?NumericQ] :=
+  GIFFramePlan[targetDuration, $ScatFrameBudget / targetDuration, "MinFps" -> $ScatMinFps, "MaxFps" -> $ScatMaxFps]
 
 
 (* ========================================================
@@ -36,7 +36,7 @@ ScatAnimationRate[targetDuration_?NumericQ] :=
    ======================================================== *)
 
 AnimateScatter[model_Association, outGif_String, targetDuration_?NumericQ] :=
-  Module[{
+  Module[{plan,
     xArr, yArr, speedArr, nPts, nFrames, frameRate, speedMin, speedMax,
     vInitHat, vFinalHat, p0, pf, extend, footPoint,
     incomingA, incomingB, outgoingA, outgoingB,
@@ -44,11 +44,12 @@ AnimateScatter[model_Association, outGif_String, targetDuration_?NumericQ] :=
   },
     xArr = model["x"]; yArr = model["y"]; speedArr = model["speed"];
     nPts = Length[xArr];
-    frameRate = ScatAnimationRate[targetDuration];
-    nFrames = Max[2, Round[frameRate * targetDuration]];
-    Print["  Rendering ", nFrames, " frames at ", FmtN[frameRate, 3],
-          " fps (", FmtN[nFrames / frameRate, 3],
-          "s, matching audio duration ", FmtN[targetDuration, 3], "s)..."];
+    plan      = ScatAnimationPlan[targetDuration];
+    frameRate = plan["FrameRate"];
+    nFrames = plan["FrameCount"];
+    Print["  Rendering ", nFrames, " frames at ", FmtDec[frameRate],
+          " fps (", FmtDec[plan["FrameDelay"]], " s per frame, ",
+          FmtDec[plan["GIFDuration"]], " s in total)."];
     {speedMin, speedMax} = MinMax[speedArr];
     thetaDeg = model["thetaAnalyticDeg"];
 
@@ -112,7 +113,7 @@ AnimateScatter[model_Association, outGif_String, targetDuration_?NumericQ] :=
       ],
       {k, nFrames}
     ];
-    ExportGIF[frames, outGif, frameRate];
+    ExportGIF[frames, outGif, plan];
     {nFrames, frameRate}
   ]
 
@@ -122,13 +123,14 @@ AnimateScatter[model_Association, outGif_String, targetDuration_?NumericQ] :=
    ======================================================== *)
 
 AnimateDistribution[model_Association, outGif_String, targetDuration_?NumericQ] :=
-  Module[{b, thetaDeg, n, bmax, nFrames, frameRate, curveB, curveTheta, histMax, frames},
+  Module[{plan, b, thetaDeg, n, bmax, nFrames, frameRate, curveB, curveTheta, histMax, frames},
     b = model["b"]; thetaDeg = model["thetaDeg"]; n = model["n"]; bmax = model["bmax"];
-    frameRate = ScatAnimationRate[targetDuration];
-    nFrames = Max[2, Round[frameRate * targetDuration]];
-    Print["  Rendering ", nFrames, " frames at ", FmtN[frameRate, 3],
-          " fps (", FmtN[nFrames / frameRate, 3],
-          "s, matching audio duration ", FmtN[targetDuration, 3], "s)..."];
+    plan      = ScatAnimationPlan[targetDuration];
+    frameRate = plan["FrameRate"];
+    nFrames = plan["FrameCount"];
+    Print["  Rendering ", nFrames, " frames at ", FmtDec[frameRate],
+          " fps (", FmtDec[plan["FrameDelay"]], " s per frame, ",
+          FmtDec[plan["GIFDuration"]], " s in total)."];
 
     curveB     = N @ Subdivide[0.05, bmax, 200];
     curveTheta = 2.0 * ArcCot[curveB] * 180.0 / Pi;
@@ -158,7 +160,7 @@ AnimateDistribution[model_Association, outGif_String, targetDuration_?NumericQ] 
       ],
       {k, nFrames}
     ];
-    ExportGIF[frames, outGif, frameRate];
+    ExportGIF[frames, outGif, plan];
     {nFrames, frameRate}
   ]
 
@@ -168,15 +170,16 @@ AnimateDistribution[model_Association, outGif_String, targetDuration_?NumericQ] 
    ======================================================== *)
 
 AnimateDiscovery[model_Association, outGif_String, targetDuration_?NumericQ] :=
-  Module[{thomsonThetaDeg, rutherfordThetaDeg, n, nFrames, frameRate, histMax, frames},
+  Module[{plan, thomsonThetaDeg, rutherfordThetaDeg, n, nFrames, frameRate, histMax, frames},
     thomsonThetaDeg    = model["thomsonThetaDeg"];
     rutherfordThetaDeg = model["rutherfordThetaDeg"];
     n = model["n"];
-    frameRate = ScatAnimationRate[targetDuration];
-    nFrames = Max[2, Round[frameRate * targetDuration]];
-    Print["  Rendering ", nFrames, " frames at ", FmtN[frameRate, 3],
-          " fps (", FmtN[nFrames / frameRate, 3],
-          "s, matching audio duration ", FmtN[targetDuration, 3], "s)..."];
+    plan      = ScatAnimationPlan[targetDuration];
+    frameRate = plan["FrameRate"];
+    nFrames = plan["FrameCount"];
+    Print["  Rendering ", nFrames, " frames at ", FmtDec[frameRate],
+          " fps (", FmtDec[plan["FrameDelay"]], " s per frame, ",
+          FmtDec[plan["GIFDuration"]], " s in total)."];
     histMax = Max[8.0, 0.6 * n];
 
     frames = Table[
@@ -202,6 +205,6 @@ AnimateDiscovery[model_Association, outGif_String, targetDuration_?NumericQ] :=
       ],
       {k, nFrames}
     ];
-    ExportGIF[frames, outGif, frameRate];
+    ExportGIF[frames, outGif, plan];
     {nFrames, frameRate}
   ]

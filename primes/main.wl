@@ -106,6 +106,7 @@ Which[
 
     Print["[4/4] Sonifying..."];
     SonifyPrimes[model, cfg, $outDir];
+    SyncWAVToGIF[FileNameJoin[{$outDir, "ulam_spiral.gif"}], FileNameJoin[{$outDir, "ulam_audio.wav"}]];
     Print[""],
 
 
@@ -166,6 +167,7 @@ Which[
 
     Print["[4/4] Sonifying..."];
     SonifyPrimes[model, cfg, $outDir];
+    SyncWAVToGIF[FileNameJoin[{$outDir, "gaps_animation.gif"}], FileNameJoin[{$outDir, "gaps_audio.wav"}]];
     Print[""],
 
 

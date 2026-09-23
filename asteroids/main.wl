@@ -140,6 +140,7 @@ outWAV = FileNameJoin[{$projectRoot, "output",
   "asteroids_" <> startDate <> "_" <> endDate <> ".wav"}];
 trajDuration = ExportSonification[asteroids, cfg, outWAV];
 STEMDescribeWAV[outWAV, trajDuration];
+SyncWAVToGIF[outGIF, outWAV];
 
 Print[""];
 STEMHeading["Done"];

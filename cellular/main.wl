@@ -93,6 +93,7 @@ Which[
     outWAV = FileNameJoin[{$outDir, "life_" <> pattern <> "_audio.wav"}];
     SonifyCellular[grid3D, cfg, outWAV];
     STEMDescribeWAV[outWAV, $targetDuration];
+    SyncWAVToGIF[outGIF, outWAV];
     Print[""],
 
 
@@ -139,6 +140,7 @@ Which[
     outWAV = FileNameJoin[{$outDir, "rule110_audio.wav"}];
     SonifyCellular[grid3D, cfg, outWAV];
     STEMDescribeWAV[outWAV, $targetDuration];
+    SyncWAVToGIF[outGIF, outWAV];
     Print[""],
 
 

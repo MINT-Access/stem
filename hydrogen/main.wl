@@ -144,6 +144,7 @@ Which[
     STEMSay["Rendering orbital animation"];
     AnimateOrbital[orbitalModel, FileNameJoin[{$outDir, "orbitals.gif"}],
                                  FileNameJoin[{$outDir, "orbitals.png"}], $audioDur];
+    SyncWAVToGIF[FileNameJoin[{$outDir, "orbitals.gif"}], outWAV];
     Print[""];
 
     Print["[4/4] Exporting data table..."];
@@ -210,6 +211,7 @@ Which[
     STEMSay["Rendering spectrum animation"];
     {$gifFrames, $gifFps} = AnimateSpectrum[spectrumResult, FileNameJoin[{$outDir, "spectrum.gif"}], $audioDur];
     STEMDescribeGIF[FileNameJoin[{$outDir, "spectrum.gif"}], $gifFrames, $gifFps];
+    SyncWAVToGIF[FileNameJoin[{$outDir, "spectrum.gif"}], outWAV];
     Print[""];
 
     Print["[5/5] Exporting data table..."];
@@ -269,6 +271,7 @@ Which[
     STEMSay["Rendering the energy level diagram"];
     {$gifFrames, $gifFps} = AnimateTransitions[cascadesList, nStart, FileNameJoin[{$outDir, "transitions.gif"}], $audioDur];
     STEMDescribeGIF[FileNameJoin[{$outDir, "transitions.gif"}], $gifFrames, $gifFps];
+    SyncWAVToGIF[FileNameJoin[{$outDir, "transitions.gif"}], outWAV];
     Print[""];
 
     Print["[4/5] Exporting data table..."];

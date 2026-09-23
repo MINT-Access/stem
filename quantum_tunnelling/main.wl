@@ -128,6 +128,9 @@ Which[
     {nFrames, gifFps} = AnimateBarrier[model, FileNameJoin[{$outDir, "barrier.gif"}],
                              FileNameJoin[{$outDir, "barrier.png"}], barrierTargetDuration];
     STEMDescribeGIF[FileNameJoin[{$outDir, "barrier.gif"}], nFrames, gifFps];
+    SyncWAVToGIF[FileNameJoin[{$outDir, "barrier.gif"}], outWAV,
+      "IntroSeconds" -> N[Length[introBuffer] + If[Length[introBuffer] > 0, Length[pauseBuf], 0]] / sr,
+      "OutroSeconds" -> N[Length[outroBuffer] + If[Length[outroBuffer] > 0, Length[pauseBuf], 0]] / sr];
     Print[""];
 
     Print["[4/4] Done."];
@@ -174,6 +177,8 @@ Which[
     EnsureDir[outWAV];
     ExportAudioBuffer[NormalizeToLoudness[{finalLeft, finalRight}, -17.0, 0.97, sr], outWAV, sr];
     STEMDescribeWAV[outWAV, N[Length[finalLeft]] / sr];
+    SyncWAVToGIF[FileNameJoin[{$outDir, "sweep.gif"}], outWAV,
+                 "IntroSeconds" -> N[Length[introBuffer] + Length[pauseBuf]] / sr];
     Print[""];
 
     Print["[4/4] Done."];
@@ -219,6 +224,8 @@ Which[
     EnsureDir[outWAV];
     ExportAudioBuffer[NormalizeToLoudness[{finalLeft, finalRight}, -17.0, 0.97, sr], outWAV, sr];
     STEMDescribeWAV[outWAV, N[Length[finalLeft]] / sr];
+    SyncWAVToGIF[FileNameJoin[{$outDir, "energy.gif"}], outWAV,
+                 "IntroSeconds" -> N[Length[introBuffer] + Length[pauseBuf]] / sr];
     Print[""];
 
     Print["[4/4] Done."];

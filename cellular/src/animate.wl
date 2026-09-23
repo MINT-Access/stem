@@ -25,16 +25,11 @@
    ======================================================== *)
 
 
-(* Sane bounds on Game-of-Life GIF playback frame rate — mirrors
-   lorenz's src/animate.wl. Keeps a very short WAV (few generations,
-   large base_note_duration) from demanding a strobing frame rate, and
-   a very long one from demanding an implausibly slow one. Frame COUNT
-   (subsampled from the nGen generations, see AnimateCellular) is what
-   flexes at the clamp boundary so playback duration still lands on
-   targetDuration exactly. Not used by the Rule 110 branch, which has
-   no frame rate to clamp — see module header above. *)
-$MinAnimationFps = 2;
-$MaxAnimationFps = 30;
+(* GIF timing: frame delay and frame count come from stem-core's
+   GIFFramePlan, which clamps the requested rate to 2-30 fps, rounds the
+   frame delay to whole centiseconds (what the GIF format stores) and
+   derives the frame count from that delay; main.wl then measures both
+   files with SyncWAVToGIF. *)
 
 
 (* CellularFrame
@@ -67,7 +62,7 @@ CellularFrame[genGrid_?MatrixQ, cellPx_Integer] :=
    Returns {actualNFrames, frameRate} for STEMDescribeGIF reporting. *)
 
 AnimateCellular[grid3D_List, cfg_Association, outPath_String, targetDuration_?NumericQ] :=
-  Module[{nGen, nRows, nCols, width, height, cellPx,
+  Module[{plan, nGen, nRows, nCols, width, height, cellPx,
           frames, spacetime, spacetimePlot, pngPath,
           frameRate, actualNFrames, indices},
 
@@ -104,30 +99,31 @@ AnimateCellular[grid3D_List, cfg_Association, outPath_String, targetDuration_?Nu
       Export[pngPath, spacetimePlot, "PNG"];
       Print["  Spacetime PNG — ", pngPath];
 
-      frameRate = 1.0 / Max[targetDuration, 0.1];
-      Print["  Single-frame GIF held for ", FmtN[Max[targetDuration, 0.1], 3],
-            "s per loop (matching audio duration)..."];
+      plan = GIFFramePlan[Max[targetDuration, 0.1], 1.0 / Max[targetDuration, 0.1],
+                          "MinFps" -> 0, "MinFrames" -> 1, "MaxFrames" -> 1];
+      frameRate = plan["FrameRate"];
+      Print["  The single-frame GIF is held for ", FmtDec[plan["GIFDuration"]], " s per loop."];
 
-      ExportGIF[{spacetimePlot}, outPath, frameRate];
+      ExportGIF[{spacetimePlot}, outPath, plan];
       {1, frameRate},
 
       (* ── Game of Life: animated GIF ──
          nGen is a render budget, not a literal frame count: frameRate
          is solved as nGen/targetDuration and clamped to
-         [$MinAnimationFps, $MaxAnimationFps], then actualNFrames is
+         [2, 30] fps (stem-core GIFFramePlan), then actualNFrames is
          recomputed as Round[frameRate * targetDuration] so playback
-         duration lands on targetDuration exactly even when the clamp
+         duration lands on targetDuration to within half a frame delay even when the clamp
          bites. Frames are indices into the nGen generations, evenly
          subsampled (identical to nGen when unclamped, which is the
          common case at the default 0.06s/generation tempo). *)
-      frameRate = Clip[nGen / targetDuration, {$MinAnimationFps, $MaxAnimationFps}];
-      actualNFrames = Max[2, Round[frameRate * targetDuration]];
+      plan      = GIFFramePlan[targetDuration, nGen / targetDuration];
+      frameRate = plan["FrameRate"];
+      actualNFrames = plan["FrameCount"];
       indices = Round[Subdivide[1, nGen, actualNFrames - 1]];
 
       Print["  Rendering ", Length[indices], " frames (", nRows, "x", nCols,
-            " grid, ", cellPx, " px/cell) at ", FmtN[frameRate, 3], " fps (",
-            FmtN[Length[indices] / frameRate, 3],
-            "s, matching audio duration ", FmtN[targetDuration, 3], "s)..."];
+            " grid, ", cellPx, " px/cell) at ", FmtDec[frameRate], " fps (",
+            FmtDec[plan["FrameDelay"]], " s per frame, ", FmtDec[plan["GIFDuration"]], " s in total)."];
       STEMSay["Rendering " <> ToString[Length[indices]] <> " frames"];
 
       frames = Table[
@@ -138,7 +134,7 @@ AnimateCellular[grid3D_List, cfg_Association, outPath_String, targetDuration_?Nu
         {i, 1, Length[indices]}
       ];
 
-      ExportGIF[frames, outPath, frameRate];
+      ExportGIF[frames, outPath, plan];
       {actualNFrames, frameRate}
     ]
   ]

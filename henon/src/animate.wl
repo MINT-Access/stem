@@ -31,7 +31,7 @@
    this value is known exactly). nFrames is a RENDER BUDGET: frameRate
    is solved as nFrames/targetDuration then clamped to
    [$HenonMinGifFps, $HenonMaxGifFps] so the frame COUNT flexes at the
-   clamp boundary, keeping actual playback duration exactly
+   clamp boundary, keeping actual playback duration within half a frame delay of
    targetDuration — same pattern as lorenz/src/animate.wl's
    ExportAnimation. Sweep mode has only as many distinct bifurcation-
    diagram states as a_steps (discrete Reynolds-style sweep points, no
@@ -42,8 +42,8 @@ $HenonMinGifFps = 2;
 $HenonMaxGifFps = 30;
 $HenonGifFrameBudget = 150;
 
-HenonGifRate[targetDuration_?NumericQ, nFrames_:$HenonGifFrameBudget] :=
-  Clip[nFrames / targetDuration, {$HenonMinGifFps, $HenonMaxGifFps}];
+HenonGifPlan[targetDuration_?NumericQ, nFrames_:$HenonGifFrameBudget] :=
+  GIFFramePlan[targetDuration, nFrames / targetDuration, "MinFps" -> $HenonMinGifFps, "MaxFps" -> $HenonMaxGifFps];
 
 
 (* ── shared colour ramp (attractor + sweep) ────────────────────────
@@ -96,16 +96,17 @@ RenderAttractorFrame[trajectory_List, k_Integer, plotRange_, title_String:""] :=
    evenly-spaced frame indices always ending at the full point set. *)
 ExportAttractorAnimation[trajectory_List, filePath_String, targetDuration_?NumericQ,
                          nFrames_:$HenonGifFrameBudget, title_String:"Hénon Attractor"] :=
-  Module[{plotRange, frameRate, actualNFrames, indices, frames},
-    frameRate     = HenonGifRate[targetDuration, nFrames];
-    actualNFrames = Max[2, Round[frameRate * targetDuration]];
+  Module[{plan, plotRange, frameRate, actualNFrames, indices, frames},
+    plan          = HenonGifPlan[targetDuration, nFrames];
+    frameRate     = plan["FrameRate"];
+    actualNFrames = plan["FrameCount"];
     plotRange = ComputeAttractorPlotRange[trajectory];
     indices = Round[Subdivide[1, Length[trajectory], actualNFrames - 1]];
     indices = Max[2, #] & /@ indices;
-    Print["  Rendering ", Length[indices], " frames at ", N[frameRate], " fps (",
-          N[Length[indices] / frameRate], "s, matching audio duration ", N[targetDuration], "s)..."];
+    Print["  Rendering ", Length[indices], " frames at ", FmtDec[frameRate], " fps (",
+          FmtDec[plan["FrameDelay"]], " s per frame, ", FmtDec[plan["GIFDuration"]], " s in total)."];
     frames = RenderAttractorFrame[trajectory, #, plotRange, title] & /@ indices;
-    ExportGIF[frames, filePath, frameRate];
+    ExportGIF[frames, filePath, plan];
     {actualNFrames, frameRate}
   ];
 
@@ -173,21 +174,22 @@ ComputeSweepYRange[attractors_List] :=
 
 AnimateSweepBifurcation[sweepModel_Association, landmarks_Association, filePath_String,
                         targetDuration_?NumericQ, nFrames_:$HenonGifFrameBudget] :=
-  Module[{aValues, attractors, nSteps, yRange, frameRate, actualNFrames, indices, frames},
+  Module[{plan, aValues, attractors, nSteps, yRange, frameRate, actualNFrames, indices, frames},
     aValues    = sweepModel["aValues"];
     attractors = sweepModel["attractors"];
     nSteps     = Length[aValues];
     yRange     = ComputeSweepYRange[attractors];
-    frameRate     = HenonGifRate[targetDuration, nFrames];
-    actualNFrames = Max[2, Round[frameRate * targetDuration]];
+    plan          = HenonGifPlan[targetDuration, nFrames];
+    frameRate     = plan["FrameRate"];
+    actualNFrames = plan["FrameCount"];
     (* nSteps discrete a-steps are the only distinct visual states;
        Subdivide's rounding naturally holds a state across consecutive
        frames when actualNFrames exceeds nSteps - 1. *)
     indices = Clip[Round[Subdivide[2, nSteps, actualNFrames - 1]], {2, nSteps}];
-    Print["  Rendering ", Length[indices], " bifurcation-diagram frames at ", N[frameRate],
-          " fps (", N[Length[indices] / frameRate], "s, matching audio duration ", N[targetDuration], "s)..."];
+    Print["  Rendering ", Length[indices], " bifurcation-diagram frames at ", FmtDec[frameRate],
+          " fps (", FmtDec[plan["FrameDelay"]], " s per frame, ", FmtDec[plan["GIFDuration"]], " s in total)."];
     frames = RenderSweepFrame[aValues, attractors, #, landmarks, yRange] & /@ indices;
-    ExportGIF[frames, filePath, frameRate];
+    ExportGIF[frames, filePath, plan];
     {actualNFrames, frameRate}
   ];
 

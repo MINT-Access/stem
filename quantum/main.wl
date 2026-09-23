@@ -100,6 +100,7 @@ Which[
 
     Print["[4/4] Sonifying..."];
     SonifyQuantum[solution, cfg, $outDir];
+    SyncWAVToGIF[FileNameJoin[{$outDir, mode <> "_density.gif"}], FileNameJoin[{$outDir, mode <> "_audio.wav"}]];
     Print[""],
 
 
@@ -151,6 +152,7 @@ Which[
 
     Print["[4/4] Sonifying..."];
     SonifyQuantum[solution, cfg, $outDir];
+    SyncWAVToGIF[FileNameJoin[{$outDir, mode <> "_density.gif"}], FileNameJoin[{$outDir, mode <> "_audio.wav"}]];
     Print[""],
 
 

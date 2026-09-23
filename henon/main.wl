@@ -131,6 +131,7 @@ Which[
     {$gifFrames, $gifFps} = ExportAttractorAnimation[attractorModel["trajectory"], outGIF, $audioDur];
     ExportAttractorPNG[attractorModel["trajectory"], outPNG];
     STEMDescribeGIF[outGIF, $gifFrames, $gifFps];
+    SyncWAVToGIF[outGIF, outWAV];
     Print["  PNG written: ", outPNG];
     Print[""],
 
@@ -186,6 +187,7 @@ Which[
     {$gifFrames, $gifFps} = AnimateSweepBifurcation[sweepModel, landmarks, outGIF, $audioDur];
     ExportSweepPNG[sweepModel, landmarks, outPNG];
     STEMDescribeGIF[outGIF, $gifFrames, $gifFps];
+    SyncWAVToGIF[outGIF, outWAV];
     Print["  PNG written: ", outPNG];
     Print[""],
 

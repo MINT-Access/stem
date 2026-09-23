@@ -128,6 +128,7 @@ Which[
     {$gifFrames, $gifFps} = AnimateAndExportField[mandelbrotModel, outGIF, outPNG, $wavDurationSec,
                                                    150, $DefaultMaxAnimationDurationSec, $overlayFadeSeconds];
     STEMDescribeGIF[outGIF, $gifFrames, $gifFps];
+    SyncWAVToGIF[outGIF, outWAV];
     Print[""],
 
   (* ===== julia ===== *)
@@ -172,6 +173,7 @@ Which[
     {$gifFrames, $gifFps} = AnimateAndExportField[juliaModel, outGIF, outPNG, $wavDurationSec,
                                                    150, $DefaultMaxAnimationDurationSec, $overlayFadeSeconds];
     STEMDescribeGIF[outGIF, $gifFrames, $gifFps];
+    SyncWAVToGIF[outGIF, outWAV];
     Print[""],
 
   (* ===== zoom ===== *)
@@ -214,6 +216,7 @@ Which[
     outPNG = FileNameJoin[{$projectRoot, "output", "mandelbrot_zoom.png"}];
     {$gifFrames, $gifFps} = AnimateZoom[zoomModel, outGIF, outPNG, $wavDurationSec];
     STEMDescribeGIF[outGIF, $gifFrames, $gifFps];
+    SyncWAVToGIF[outGIF, outWAV];
     Print[""],
 
   (* ===== unknown mode ===== *)

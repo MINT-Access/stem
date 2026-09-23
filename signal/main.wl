@@ -116,6 +116,7 @@ Which[
     Print["[5/5] Exporting audio..."];
     STEMSay["Exporting audio"];
     SonifySignal[analysis, cfg, $outDir];
+    SyncWAVToGIF[FileNameJoin[{$outDir, mode <> "_animation.gif"}], FileNameJoin[{$outDir, mode <> "_clean.wav"}]];
 
     With[{
       snrImprovement = analysis["snr_after"] - analysis["snr_before"],
@@ -185,6 +186,7 @@ Which[
     Print["[5/5] Exporting audio..."];
     STEMSay["Exporting audio"];
     SonifySignal[analysis, cfg, $outDir];
+    SyncWAVToGIF[FileNameJoin[{$outDir, mode <> "_animation.gif"}], FileNameJoin[{$outDir, mode <> "_clean.wav"}]];
     Print[""];
     STEMHeading["Done"];
     STEMSay["Sweep recovered. SNR improvement: " <>
@@ -255,6 +257,7 @@ Which[
     Print["[5/5] Exporting audio..."];
     STEMSay["Exporting audio"];
     SonifySignal[analysis, cfg, $outDir];
+    SyncWAVToGIF[FileNameJoin[{$outDir, mode <> "_animation.gif"}], FileNameJoin[{$outDir, mode <> "_clean.wav"}]];
 
     With[{
       snrImprovement = analysis["snr_after"] - analysis["snr_before"],

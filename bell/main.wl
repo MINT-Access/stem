@@ -115,6 +115,7 @@ Which[
     outPNG = FileNameJoin[{$projectRoot, "output", "bell_correlations.png"}];
     {$gifFrames, $gifFps} = AnimateCorrelations[corrModel, outGIF, outPNG, wavDuration];
     STEMDescribeGIF[outGIF, $gifFrames, $gifFps];
+    SyncWAVToGIF[outGIF, outWAV];
     Print[""],
 
   (* ===== chsh ===== *)
@@ -158,6 +159,7 @@ Which[
     outPNG = FileNameJoin[{$projectRoot, "output", "bell_chsh.png"}];
     {$gifFrames, $gifFps} = AnimateChsh[chshModel, outGIF, outPNG, wavDuration];
     STEMDescribeGIF[outGIF, $gifFrames, $gifFps];
+    SyncWAVToGIF[outGIF, outWAV];
     Print[""],
 
   (* ===== measurement ===== *)

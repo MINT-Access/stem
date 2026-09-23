@@ -21,7 +21,7 @@
    this value is known exactly). nFrames is a RENDER BUDGET: frameRate
    is solved as nFrames/targetDuration then clamped to
    [$HydrogenMinGifFps, $HydrogenMaxGifFps] so the frame COUNT flexes
-   at the clamp boundary, keeping actual playback duration exactly
+   at the clamp boundary, keeping actual playback duration within half a frame delay of
    targetDuration -- same pattern as lorenz/src/animate.wl's
    ExportAnimation. Spectrum and transitions modes have only as many
    distinct visual states as spectral lines / cascade steps (often far
@@ -31,8 +31,8 @@ $HydrogenMinGifFps = 2;
 $HydrogenMaxGifFps = 30;
 $HydrogenGifFrameBudget = 150;
 
-HydrogenGifRate[targetDuration_?NumericQ, nFrames_:$HydrogenGifFrameBudget] :=
-  Clip[nFrames / targetDuration, {$HydrogenMinGifFps, $HydrogenMaxGifFps}];
+HydrogenGifPlan[targetDuration_?NumericQ, nFrames_:$HydrogenGifFrameBudget] :=
+  GIFFramePlan[targetDuration, nFrames / targetDuration, "MinFps" -> $HydrogenMinGifFps, "MaxFps" -> $HydrogenMaxGifFps];
 
 
 (* ── Orbitals: Hilbert sweep over the coloured density map ────────
@@ -62,7 +62,7 @@ OrbitalDensityToRGB[density_List] :=
   ];
 
 AnimateOrbital[orbitalModel_Association, outGIF_String, outPNG_String, targetDuration_?NumericQ] :=
-  Module[{density, gridSize, traversal, nPixels, rgbGrid, displayData,
+  Module[{plan, density, gridSize, traversal, nPixels, rgbGrid, displayData,
           gCoords, frameRate, nGIFFrames, frameUpTo, gifFrames, staticFig},
 
     density   = orbitalModel["density"];
@@ -77,8 +77,9 @@ AnimateOrbital[orbitalModel_Association, outGIF_String, outPNG_String, targetDur
     displayData = Reverse[rgbGrid];
 
     gCoords = Map[{#[[1]] - 0.5, gridSize - #[[2]] + 0.5} &, traversal];
-    frameRate  = HydrogenGifRate[targetDuration];
-    nGIFFrames = Max[2, Round[frameRate * targetDuration]];
+    plan       = HydrogenGifPlan[targetDuration];
+    frameRate  = plan["FrameRate"];
+    nGIFFrames = plan["FrameCount"];
     frameUpTo = Table[Max[1, Round[k * nPixels / nGIFFrames]], {k, nGIFFrames}];
 
     gifFrames = Table[
@@ -93,7 +94,7 @@ AnimateOrbital[orbitalModel_Association, outGIF_String, outPNG_String, targetDur
       ],
       {k, nGIFFrames}
     ];
-    ExportGIF[gifFrames, outGIF, frameRate];
+    ExportGIF[gifFrames, outGIF, plan];
     STEMDescribeGIF[outGIF, nGIFFrames, frameRate];
 
     staticFig = Graphics[
@@ -155,20 +156,21 @@ SpectrumFrame[sweepLines_List, sweepAmps_List, revealCount_Integer] :=
   ];
 
 AnimateSpectrum[spectrumResult_Association, outGIF_String, targetDuration_?NumericQ] :=
-  Module[{lines, order, sweepLines, sweepAmps, nLines, frameRate, nFrames, indices, frames},
+  Module[{plan, lines, order, sweepLines, sweepAmps, nLines, frameRate, nFrames, indices, frames},
     lines      = spectrumResult["lines"];
     order      = spectrumResult["sweepOrder"];
     sweepLines = lines[[order]];
     sweepAmps  = spectrumResult["amps"][[order]];
     nLines     = Length[sweepLines];
-    frameRate  = HydrogenGifRate[targetDuration];
-    nFrames    = Max[2, Round[frameRate * targetDuration]];
+    plan       = HydrogenGifPlan[targetDuration];
+    frameRate  = plan["FrameRate"];
+    nFrames    = plan["FrameCount"];
     (* nLines discrete spectral-line reveal states are the only distinct
        visual states; Subdivide's rounding naturally holds a state
        across consecutive frames when nFrames exceeds nLines. *)
     indices = Clip[Round[Subdivide[1, nLines, nFrames - 1]], {1, nLines}];
     frames = SpectrumFrame[sweepLines, sweepAmps, #] & /@ indices;
-    ExportGIF[frames, outGIF, frameRate];
+    ExportGIF[frames, outGIF, plan];
     {nFrames, frameRate}
   ];
 
@@ -216,7 +218,7 @@ GrotrianFrame[maxN_Integer, stepsShown_List, realizationIdx_Integer] :=
   ];
 
 AnimateTransitions[cascadesList_List, nStart_Integer, outGIF_String, targetDuration_?NumericQ] :=
-  Module[{nRealToShow, allFrames, nAvail, frameRate, nFrames, indices, frames},
+  Module[{plan, nRealToShow, allFrames, nAvail, frameRate, nFrames, indices, frames},
     nRealToShow = Min[4, Length[cascadesList]];
     allFrames = Flatten[
       Table[
@@ -229,13 +231,14 @@ AnimateTransitions[cascadesList_List, nStart_Integer, outGIF_String, targetDurat
       1
     ];
     nAvail    = Length[allFrames];
-    frameRate = HydrogenGifRate[targetDuration];
-    nFrames   = Max[2, Round[frameRate * targetDuration]];
+    plan      = HydrogenGifPlan[targetDuration];
+    frameRate = plan["FrameRate"];
+    nFrames   = plan["FrameCount"];
     (* nAvail discrete cascade-step states are the only distinct visual
        states; Subdivide's rounding holds a state across consecutive
        frames when nFrames exceeds nAvail. *)
     indices = Clip[Round[Subdivide[1, nAvail, nFrames - 1]], {1, nAvail}];
     frames = allFrames[[indices]];
-    ExportGIF[frames, outGIF, frameRate];
+    ExportGIF[frames, outGIF, plan];
     {nFrames, frameRate}
   ];

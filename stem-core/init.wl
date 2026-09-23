@@ -9,11 +9,12 @@
      Get[FileNameJoin[{$stemCoreRoot, "init.wl"}]];
 
    Modules loaded (in dependency order):
-     utils.wl         — EnsureDir, LogError, FmtN
+     utils.wl         — EnsureDir, LogError, FmtN, FmtDec
      scales.wl        — $StemSampleRate, $StemScales, SemitoneToHz, ScaleLookup
      synth.wl         — StemSynthNote, NormalizeBuffer, NormalizeToLoudness,
                         MeasureIntegratedLoudness, ExportAudioBuffer
-     export.wl        — ExportCSV, ExportGIF
+     export.wl        — ExportCSV, GIFFramePlan, ExportGIF, GIFFrameDelays,
+                        WAVDuration, PadWAVWithSilence, SyncWAVToGIF
      accessibility.wl — STEMHeading, STEMSection, STEMBullet, STEMPrintN,
                         STEMDescribeCSV, STEMDescribeWAV, STEMDescribeGIF,
                         $STEMSpeakEnabled, STEMSay

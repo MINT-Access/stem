@@ -20,14 +20,14 @@
    strobing frame rate and a very long one doesn't demand an
    implausibly slow one -- the frame COUNT is what flexes at the clamp
    boundary (recomputed as Round[fps * targetDuration]) so actual
-   playback duration always equals targetDuration exactly. *)
+   playback duration equals targetDuration to within half a frame delay. *)
 
 $MagFrameBudget = 150;
 $MagMinFps      = 2;
 $MagMaxFps      = 30;
 
-MagAnimationRate[targetDuration_?NumericQ] :=
-  Clip[$MagFrameBudget / targetDuration, {$MagMinFps, $MagMaxFps}]
+MagAnimationPlan[targetDuration_?NumericQ] :=
+  GIFFramePlan[targetDuration, $MagFrameBudget / targetDuration, "MinFps" -> $MagMinFps, "MaxFps" -> $MagMaxFps]
 
 
 (* ========================================================
@@ -35,15 +35,16 @@ MagAnimationRate[targetDuration_?NumericQ] :=
    ======================================================== *)
 
 AnimateCyclotron[model_Association, outGif_String, targetDuration_?NumericQ] :=
-  Module[{xArr, yArr, zArr, isHelix, rc, nPts, nFrames, frameRate, frames},
+  Module[{plan, xArr, yArr, zArr, isHelix, rc, nPts, nFrames, frameRate, frames},
     xArr = model["x"]; yArr = model["y"]; zArr = model["z"];
     isHelix = model["isHelix"]; rc = model["rc"];
     nPts = Length[xArr];
-    frameRate = MagAnimationRate[targetDuration];
-    nFrames = Max[2, Round[frameRate * targetDuration]];
-    Print["  Rendering ", nFrames, " frames at ", FmtN[frameRate, 3],
-          " fps (", FmtN[nFrames / frameRate, 3],
-          "s, matching audio duration ", FmtN[targetDuration, 3], "s)..."];
+    plan      = MagAnimationPlan[targetDuration];
+    frameRate = plan["FrameRate"];
+    nFrames = plan["FrameCount"];
+    Print["  Rendering ", nFrames, " frames at ", FmtDec[frameRate],
+          " fps (", FmtDec[plan["FrameDelay"]], " s per frame, ",
+          FmtDec[plan["GIFDuration"]], " s in total)."];
 
     frames = If[!isHelix,
       (* 2D circle: growing trail + current dot + radius annotation *)
@@ -85,7 +86,7 @@ AnimateCyclotron[model_Association, outGif_String, targetDuration_?NumericQ] :=
         {k, nFrames}
       ]
     ];
-    ExportGIF[frames, outGif, frameRate];
+    ExportGIF[frames, outGif, plan];
     {nFrames, frameRate}
   ]
 
@@ -95,14 +96,15 @@ AnimateCyclotron[model_Association, outGif_String, targetDuration_?NumericQ] :=
    ======================================================== *)
 
 AnimateDrift[model_Association, outGif_String, targetDuration_?NumericQ] :=
-  Module[{xArr, yArr, speedArr, nPts, nFrames, frameRate, speedMin, speedMax, yRange, frames},
+  Module[{plan, xArr, yArr, speedArr, nPts, nFrames, frameRate, speedMin, speedMax, yRange, frames},
     xArr = model["x"]; yArr = model["y"]; speedArr = model["speed"];
     nPts = Length[xArr];
-    frameRate = MagAnimationRate[targetDuration];
-    nFrames = Max[2, Round[frameRate * targetDuration]];
-    Print["  Rendering ", nFrames, " frames at ", FmtN[frameRate, 3],
-          " fps (", FmtN[nFrames / frameRate, 3],
-          "s, matching audio duration ", FmtN[targetDuration, 3], "s)..."];
+    plan      = MagAnimationPlan[targetDuration];
+    frameRate = plan["FrameRate"];
+    nFrames = plan["FrameCount"];
+    Print["  Rendering ", nFrames, " frames at ", FmtDec[frameRate],
+          " fps (", FmtDec[plan["FrameDelay"]], " s per frame, ",
+          FmtDec[plan["GIFDuration"]], " s in total)."];
     {speedMin, speedMax} = MinMax[speedArr];
     yRange = MinMax[yArr];
 
@@ -128,7 +130,7 @@ AnimateDrift[model_Association, outGif_String, targetDuration_?NumericQ] :=
       ],
       {k, nFrames}
     ];
-    ExportGIF[frames, outGif, frameRate];
+    ExportGIF[frames, outGif, plan];
     {nFrames, frameRate}
   ]
 
@@ -138,17 +140,18 @@ AnimateDrift[model_Association, outGif_String, targetDuration_?NumericQ] :=
    ======================================================== *)
 
 AnimateMirror[model_Association, outGif_String, targetDuration_?NumericQ] :=
-  Module[{xArr, yArr, zArr, Bfield, bounceTimes, tArr, nPts, nFrames, frameRate,
+  Module[{plan, xArr, yArr, zArr, Bfield, bounceTimes, tArr, nPts, nFrames, frameRate,
           bMin, bMax, zRange, bouncePts, frames},
     xArr = model["x"]; yArr = model["y"]; zArr = model["z"];
     Bfield = model["Bfield"]; tArr = model["t"];
     bounceTimes = model["bounceTimes"];
     nPts = Length[xArr];
-    frameRate = MagAnimationRate[targetDuration];
-    nFrames = Max[2, Round[frameRate * targetDuration]];
-    Print["  Rendering ", nFrames, " frames at ", FmtN[frameRate, 3],
-          " fps (", FmtN[nFrames / frameRate, 3],
-          "s, matching audio duration ", FmtN[targetDuration, 3], "s)..."];
+    plan      = MagAnimationPlan[targetDuration];
+    frameRate = plan["FrameRate"];
+    nFrames = plan["FrameCount"];
+    Print["  Rendering ", nFrames, " frames at ", FmtDec[frameRate],
+          " fps (", FmtDec[plan["FrameDelay"]], " s per frame, ",
+          FmtDec[plan["GIFDuration"]], " s in total)."];
     {bMin, bMax} = MinMax[Bfield];
     zRange = MinMax[zArr];
 
@@ -185,7 +188,7 @@ AnimateMirror[model_Association, outGif_String, targetDuration_?NumericQ] :=
       ],
       {k, nFrames}
     ];
-    ExportGIF[frames, outGif, frameRate];
+    ExportGIF[frames, outGif, plan];
     {nFrames, frameRate}
   ]
 
@@ -195,14 +198,15 @@ AnimateMirror[model_Association, outGif_String, targetDuration_?NumericQ] :=
    ======================================================== *)
 
 AnimateMulti[model_Association, outGif_String, targetDuration_?NumericQ] :=
-  Module[{proton, alphaP, electron, tArr, nPts, nFrames, frameRate, rMax, frames},
+  Module[{plan, proton, alphaP, electron, tArr, nPts, nFrames, frameRate, rMax, frames},
     proton = model["proton"]; alphaP = model["alpha"]; electron = model["electron"];
     tArr = model["t"]; nPts = Length[tArr];
-    frameRate = MagAnimationRate[targetDuration];
-    nFrames = Max[2, Round[frameRate * targetDuration]];
-    Print["  Rendering ", nFrames, " frames at ", FmtN[frameRate, 3],
-          " fps (", FmtN[nFrames / frameRate, 3],
-          "s, matching audio duration ", FmtN[targetDuration, 3], "s)..."];
+    plan      = MagAnimationPlan[targetDuration];
+    frameRate = plan["FrameRate"];
+    nFrames = plan["FrameCount"];
+    Print["  Rendering ", nFrames, " frames at ", FmtDec[frameRate],
+          " fps (", FmtDec[plan["FrameDelay"]], " s per frame, ",
+          FmtDec[plan["GIFDuration"]], " s in total)."];
     rMax = Max[proton["r"], alphaP["r"], 1.2 * electron["r"], 0.3];
 
     frames = Table[
@@ -229,6 +233,6 @@ AnimateMulti[model_Association, outGif_String, targetDuration_?NumericQ] :=
       ],
       {k, nFrames}
     ];
-    ExportGIF[frames, outGif, frameRate];
+    ExportGIF[frames, outGif, plan];
     {nFrames, frameRate}
   ]

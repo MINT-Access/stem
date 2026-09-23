@@ -148,7 +148,11 @@ PrependIntroAndExport[introText_String, leftMain_List, rightMain_List,
     finalRight  = Join[introBuffer, pauseBuffer, rightMain];
     EnsureDir[outWav];
     ExportAudioBuffer[NormalizeToLoudness[{finalLeft, finalRight}, -17.0, 0.97, sr], outWav, sr];
-    STEMDescribeWAV[outWav, N[Length[finalLeft]] / sr]
+    STEMDescribeWAV[outWav, N[Length[finalLeft]] / sr];
+    (* Spoken-part lengths, so main.wl's SyncWAVToGIF can compare the
+       GIF with the sonified section it is timed to. *)
+    <|"IntroSeconds" -> N[Length[introBuffer] + Length[pauseBuffer]] / sr,
+      "OutroSeconds" -> 0.0|>
   ]
 
 
@@ -386,5 +390,7 @@ SonifyDiscovery[model_Association, cfg_Association, outWav_String] :=
 
     EnsureDir[outWav];
     ExportAudioBuffer[NormalizeToLoudness[{finalLeft, finalRight}, -17.0, 0.97, sr], outWav, sr];
-    STEMDescribeWAV[outWav, N[Length[finalLeft]] / sr]
+    STEMDescribeWAV[outWav, N[Length[finalLeft]] / sr];
+    <|"IntroSeconds" -> If[Length[introBuf] > 0, N[Length[introBuf] + Length[pauseBuf]] / sr, 0.0],
+      "OutroSeconds" -> If[Length[outroBuf] > 0, N[Length[outroBuf] + Length[pauseBuf]] / sr, 0.0]|>
   ]

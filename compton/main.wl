@@ -125,6 +125,7 @@ Which[
     {$gifFrames, $gifFps} = AnimateScatter[model, FileNameJoin[{$outDir, "scatter.gif"}],
                              FileNameJoin[{$outDir, "scatter.png"}], wavDuration];
     STEMDescribeGIF[FileNameJoin[{$outDir, "scatter.gif"}], $gifFrames, $gifFps];
+    SyncWAVToGIF[FileNameJoin[{$outDir, "scatter.gif"}], outWAV];
     Print[""];
 
     Print["[4/4] Done."];
@@ -169,6 +170,7 @@ Which[
     {$gifFrames, $gifFps} = AnimateSweep[model, FileNameJoin[{$outDir, "sweep.gif"}],
                            FileNameJoin[{$outDir, "sweep.png"}], wavDuration];
     STEMDescribeGIF[FileNameJoin[{$outDir, "sweep.gif"}], $gifFrames, $gifFps];
+    SyncWAVToGIF[FileNameJoin[{$outDir, "sweep.gif"}], outWAV];
     Print[""];
 
     Print["[4/4] Done."];
@@ -212,6 +214,7 @@ Which[
     {$gifFrames, $gifFps} = AnimateEnergy[model, FileNameJoin[{$outDir, "energy.gif"}],
                             FileNameJoin[{$outDir, "energy.png"}], wavDuration];
     STEMDescribeGIF[FileNameJoin[{$outDir, "energy.gif"}], $gifFrames, $gifFps];
+    SyncWAVToGIF[FileNameJoin[{$outDir, "energy.gif"}], outWAV];
     Print[""];
 
     Print["[4/4] Done."];
