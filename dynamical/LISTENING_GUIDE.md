@@ -25,6 +25,53 @@ to chaotic in a single audio file:
 wolframscript -file main.wl
 ```
 
+Finally, listen to `lyapunov` mode, which measures the chaos you have
+just heard:
+
+```sh
+wolframscript -file main.wl -- --simulation.mode=lyapunov
+wolframscript -file main.wl -- --simulation.mode=lyapunov --simulation.dynamical.preset=lyapunov_window
+```
+
+## Listening to the Lyapunov exponent (lyapunov mode)
+
+The Lyapunov exponent λ says how fast two almost identical starting
+points drift apart. Positive λ: they separate exponentially — chaos.
+Negative λ: they converge onto the same cycle — order.
+
+- **The steady tone is zero.** A pure 220 Hz sine sounds throughout.
+- **The moving tone is λ.** It is slightly buzzier (it has two quiet
+  overtones), so you can tell it from the steady tone even when they
+  meet. One octave up or down is one unit of λ.
+- **Above the steady tone, chaos; below it, order.**
+- **Beating means a crossing is near.** When the two tones are within a
+  few hertz of each other you hear a slow pulsing; the pulse slows to
+  nothing exactly at the crossing.
+- **The moving tone bottoms out** at half an octave below the steady
+  tone (λ = −0.5). Deep inside periodic windows λ is far lower; it is
+  held there so that none of the moving tone's overtones can ever meet
+  the steady tone and fake a crossing.
+- **Marker tones**: 660 Hz at the first period doubling (r ≈ 3.0), 880 Hz
+  at the second (period 4, r ≈ 3.449), 440 Hz at the onset of chaos
+  (r ≈ 3.57), 528 Hz at the period-3 window (r ≈ 3.83). Together they
+  make an A minor chord.
+
+What to listen for in the default sweep (2.5 to 4.0, 120 s after the
+intro): the moving tone stays below the steady tone, rising to touch it
+at each period doubling (r = 3.0, 3.449 and 3.544, where λ reaches
+−0.001, −0.0006 and −0.004) and falling away again — you hear slow
+beating there although λ does not cross zero. Just
+after the onset-of-chaos marker it rises through the steady tone for the
+first time, near r = 3.570. From there on it mostly stays above, with
+brief dives below at each periodic window — the widest is the period-3
+window, which begins at the 528 Hz marker. At r = 4 it ends at λ = log 2,
+about 0.69 octave above the steady tone. The console lists every
+crossing with the time you hear it.
+
+The `lyapunov_window` preset zooms into r 3.40 to 3.90 over 40 s, where
+the crossings come thick and fast; it matches the listening prototype
+this mode was built from.
+
 ## What the event markers mean (sweep mode)
 
 - **First accent tone** (660 Hz): the first period-doubling bifurcation —

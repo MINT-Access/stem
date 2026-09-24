@@ -13,6 +13,7 @@ a rewrite.
 |------|---|-----------|--------|
 | `sweep` | swept r_start -> r_end | r-step index (attractor recorded at each r) | Stereo WAV; progressive bifurcation-diagram GIF |
 | `iterate` | fixed (or named preset) | iteration index n | Stereo WAV; x_n vs n time-series GIF |
+| `lyapunov` | swept r_min -> r_max | seconds, r linear in time | Stereo WAV (λ tone vs. λ = 0 reference, markers, intro + outro); two-panel bifurcation / λ(r) GIF with cursor |
 
 ## Key design decisions (read before modifying sonify.wl)
 
@@ -99,6 +100,94 @@ not exposed via config (the config surface matches the spec's exact
 `notes_per_step` under `simulation.dynamical` and thread it through
 `SonifySweep`.
 
+### 5. Lyapunov mode is a continuous glide — the one deliberate exception to decision 1
+
+`lyapunov` mode sonifies one scalar per r, λ(r), and its most important
+event — λ crossing zero, the boundary between order and chaos — is
+heard as *beating* between the λ tone and a steady reference tone at
+λ = 0. Beating needs two sustained tones a few hertz apart, which
+discrete note bursts cannot produce, so this mode uses a phase-
+accumulated continuous tone (λ linearly interpolated between steps,
+`Accumulate` of the per-sample frequency) instead of decision 1's
+discrete notes. Nothing in it needs to be rhythmically countable, so
+decision 1's rationale does not apply. It still does not use
+`SonifyTrajectory`: the reference tone, the harmonics and the
+equal-loudness gain are all specific to this mode.
+
+The design was chosen by listening: `prototype_lyapunov.wl` (kept in the
+repository as a record, not part of the app) rendered three variants
+over r 3.40–3.90 — A: λ sine + reference sine; B: λ tone with 2nd/3rd
+harmonics (0.25, 0.12) so it is distinguishable from the pure reference
+when they meet; C: reference faded in only near λ = 0. **B was chosen.**
+The `lyapunov_window` preset reproduces the prototype's range, steps
+and duration for direct comparison; the mode itself averages longer
+(1000 + 10000 iterations vs. the prototype's 500 + 2000) and floors at
+−0.5 instead of −1 — see decision 6.
+
+### 6. The λ floor is −0.5 because of the λ tone's harmonics — do not lower it casually
+
+The λ tone's harmonic k sits at k · reference · 2^(λ · octaves_per_unit).
+At λ · octaves_per_unit = −1 the 2nd harmonic lands exactly on the
+reference (220 Hz) and beats with it — a *false unison* that sounds
+exactly like a zero crossing. The prototype's floor of −1 allowed this.
+With floor −0.5 and 1 octave per unit, the 2nd harmonic never comes
+closer than a tritone (6 semitones) above the reference, the 3rd
+harmonic 13 semitones. `LyapunovHarmonicClearance` (sonify.wl) computes
+this, and `tests/test_model.wl` reads `floor` and `octaves_per_unit`
+from `config.json` and fails if any harmonic can come within one
+semitone of the reference. If you change either key, run the tests.
+
+Consequences of the floor to remember:
+- Check 5 (`LyapunovCurveCheck`) computes λ with a floor of −100, not
+  −0.5: the period-2 value at r = 3.2 is −0.916 (below the floor), and
+  at r = 3.835 a floored value would be negative whatever the orbit did,
+  so "λ < 0" would be vacuous.
+- λ is truly −∞ at superstable parameters (x = 0.5 on the cycle); a
+  finite average there plunges arbitrarily low (the lowest grid value in
+  3.40–3.90 is −2.16 at r ≈ 3.832). The floor also keeps the λ tone's
+  pitch range bounded there.
+- `Log[0.]` is `Indeterminate` in machine arithmetic, not `-Infinity`, so
+  `LyapunovExponent` clamps |f′| at `$MinMachineNumber` before the `Log`.
+
+### 7. Lyapunov-mode loudness, markers and GIF timing
+
+- **Equal-loudness compensation uses A-weighting (IEC 61672-1)**, the
+  closed-form approximation to the inverse 40-phon ISO 226 contour.
+  `LyapunovLoudnessGain` weights each of the three partials at its own
+  frequency, root-sum-squares them, and divides the value at the
+  reference frequency by the value at the current fundamental, so the
+  gain is exactly 1 at λ = 0 (λ tone and reference then match in level,
+  which makes beating deepest). Range at the defaults: +3.3 dB at the
+  floor (156 Hz), −3.9 dB at λ = log 2 (356 Hz). At listening levels well
+  above 40 phon A-weighting slightly over-boosts the low end; ISO 226 at
+  a stated phon level would be the refinement if that is ever audible.
+- **Markers**: the sweep mode's three accents (660/440/528 Hz) plus a
+  period-4 marker at r = 3.449, 880 Hz, 80 ms. 440 : 528 : 660 : 880 =
+  1 : 6/5 : 3/2 : 2, a just A minor triad with its octave, so the new
+  marker is from the same family; it takes the other period-doubling
+  marker's 80 ms. Markers only fire inside [r_min, r_max] (pitfall 3).
+- **GIF covers the whole WAV** (intro + sweep + outro), not just the
+  sweep: the cursor waits at r_min during the intro and rests at r_max
+  during the outro, so GIF and WAV can simply start together (e.g. in
+  tools/make_presentation_video.wl). `SyncWAVToGIF` is therefore called
+  without `IntroSeconds`/`OutroSeconds`. Frame i shows the r heard at
+  the middle of its display interval.
+- **Rendering**: both panels are static, so they are drawn and
+  rasterised once at 144 dpi (the 2x pixel size `Export` gives this
+  app's other GIFs, 1440 × 1200 here) with fixed `ImageSize`,
+  `ImagePadding` and `AspectRatio -> Full`; each frame is that image
+  plus the cursor and text in the same coordinates. Without
+  `AspectRatio -> Full` the plot area follows the plot range's aspect
+  ratio and the panels come out narrow, breaking the r-to-column
+  mapping.
+- **Zero crossings** are located by linear interpolation between grid
+  points (`LyapunovZeroCrossings`), the same interpolation the audio
+  uses, so the printed time is when the crossing is heard. Crossings in
+  the chaotic region come in close down/up pairs at each periodic
+  window; a pair at r ≈ 3.786 in the prototype's shorter-average data
+  disappears with the mode's longer averaging (λ there is +0.029, the
+  2000-iterate estimate was −0.0004).
+
 ## Project structure
 
 ```
@@ -106,24 +195,34 @@ dynamical/
   main.wl              — thin orchestrator: config, correctness checks, mode dispatch
   config.json            — default simulation parameters
   experiments.wl          — 9 curated preset invocations (RunExperiment)
+  prototype_lyapunov.wl    — listening prototype for lyapunov mode (record only; see decision 5)
   LISTENING_GUIDE.md       — user-facing recommended listening sequence
   AGENTS.md                — this file
   src/
     model.wl              — LogisticMap, SafeX0, $dynamicalPresets, PresetR/PresetDescription,
                             IterateTrajectory, AttractorPoints, BifurcationPoint,
                             FeigenbaumCheck, FixedPointCheck, Period2Check,
-                            LyapunovExponent/LyapunovCheck, SweepEventRValues,
-                            SweepModel, IterateModelData
+                            LyapunovCheck, SweepEventRValues, SweepModel, IterateModelData,
+                            $lyapunovPresets, LyapunovExponent, LyapunovSweep,
+                            LyapunovZeroCrossings, Period2LyapunovExact, LyapunovCurveCheck
     sonify.wl               — PitchScale3Octaves, SynthesizeDiscreteNotes, OverlayEvent,
-                            SonifySweep, SonifyIterate ($sweepNotesPerStep constant)
+                            SonifySweep, SonifyIterate ($sweepNotesPerStep constant),
+                            LyapunovMarkers, LyapunovToneHz, AWeightingResponse,
+                            LyapunovLoudnessGain, LyapunovHarmonicClearance,
+                            LyapunovTimeOfR, SonifyLyapunov
     speech.wl                — ResampleLinear, DynamicalSpeakToBufferPlatform, BuildIntroBuffer,
-                            BuildSweepIntroText, BuildIterateIntroText
+                            BuildSweepIntroText, BuildIterateIntroText,
+                            BuildLyapunovIntroText, BuildLyapunovOutroText
     animate.wl                — RenderSweepFrame/AnimateSweepBifurcation,
-                            RenderIterateFrame/AnimateIterateTimeSeries
+                            RenderIterateFrame/AnimateIterateTimeSeries,
+                            LyapunovBackground/RenderLyapunovFrame/AnimateLyapunov
     output.wl                  — PitchPanVolume, ExportSweepCSV, ExportIterateCSV,
-                            PrintCorrectnessChecks, PrintSweepSummary, PrintIterateSummary
+                            PrintCorrectnessChecks, PrintSweepSummary, PrintIterateSummary,
+                            PrintLyapunovCurveCheck, ExportLyapunovCSV, PrintLyapunovSummary,
+                            PrintLoudnessLine
   tests/
-    test_model.wl            — unit tests (fixed point, period-2, Feigenbaum, Lyapunov, presets)
+    test_model.wl            — unit tests (fixed point, period-2, Feigenbaum, Lyapunov, presets,
+                              lyapunov mode incl. the config-driven false-unison guard)
   output/                     — generated files (gitignored)
 ```
 
@@ -140,6 +239,9 @@ wolframscript -file dynamical/main.wl -- --simulation.dynamical.preset=chaos
 wolframscript -file dynamical/main.wl -- --simulation.dynamical.r=3.83
 wolframscript -file dynamical/main.wl -- --simulation.dynamical.r_steps=1000
 wolframscript -file dynamical/main.wl -- --simulation.dynamical.note_duration=0.04
+wolframscript -file dynamical/main.wl -- --simulation.mode=lyapunov
+wolframscript -file dynamical/main.wl -- --simulation.mode=lyapunov --simulation.dynamical.preset=lyapunov_window
+wolframscript -file dynamical/main.wl -- --simulation.mode=lyapunov --simulation.dynamical.lyapunov.duration_seconds=60
 
 wolframscript -file dynamical/tests/test_model.wl
 wolframscript -file dynamical/experiments.wl
@@ -153,7 +255,8 @@ config.json + CLI args
    LoadConfig (stem-core)
         |
    [correctness checks: FeigenbaumCheck, FixedPointCheck,
-    Period2Check, LyapunovCheck — always run, printed PASS/FAIL]
+    Period2Check, LyapunovCheck, LyapunovCurveCheck — always run,
+    printed PASS/FAIL; check 5 prints one sentence per r value]
         |
    sweep mode:                          iterate mode:
      SweepModel                           PresetR + IterateModelData
@@ -166,6 +269,21 @@ config.json + CLI args
         |                                    |
    AnimateSweepBifurcation -> GIF          AnimateIterateTimeSeries -> GIF
    ExportSweepCSV -> CSV                   ExportIterateCSV -> CSV
+```
+
+Lyapunov mode:
+
+```
+   $lyapunovPresets (optional) -> LyapunovSweep -> {{r, lambda}, ...}
+        |                          AttractorPoints per r (bifurcation panel)
+        |                          LyapunovZeroCrossings
+   SonifyLyapunov -> {leftBuf, rightBuf, markers}
+        |
+   Join[intro, pause, sweep, pause, outro] -> NormalizeToLoudness(-17 LUFS) -> WAV
+        |
+   PrintLyapunovSummary (crossings, min/max, floor count)
+   AnimateLyapunov -> GIF (covers the whole WAV); SyncWAVToGIF; PrintLoudnessLine
+   ExportLyapunovCSV -> CSV
 ```
 
 `SonifySweep`/`SonifyIterate` return buffers, not exported files — same
@@ -194,6 +312,14 @@ duration includes the intro.
 `IterateModelData[r, x0, nIterations, preset]` returns `"r"`, `"x0"`,
 `"nIterations"`, `"preset"`, `"trajectory"` (length `nIterations + 1`,
 including x0).
+
+`LyapunovSweep[rMin, rMax, steps, x0, transient, nAverage, floor]` returns
+a plain list `{{r, lambda}, ...}` (steps rows, r ascending, lambda >= floor).
+`LyapunovZeroCrossings[sweep]` returns `<|"r", "direction" ("upward" |
+"downward"), "index"|>` per sign change. `SonifyLyapunov[...]` returns
+`"leftBuf"`, `"rightBuf"`, `"nSamples"` (= Round[duration * sr]),
+`"markers"` (the in-range markers, each with its `"time"` in seconds into
+the sweep), `"gainRangeDB"` and `"toneHzRange"` (for the console line).
 
 ## Common pitfalls
 

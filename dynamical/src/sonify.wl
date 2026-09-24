@@ -206,3 +206,156 @@ SonifyIterate[iterateModel_Association, noteDuration_?NumericQ, sr_Integer] :=
       "xVals" -> traj, "times" -> times, "speeds" -> speeds, "sr" -> sr
     |>
   ];
+
+
+(* ── Lyapunov mode ────────────────────────────────────────────────────
+   Two continuous tones plus marker bursts, after example S15.4 in
+   Grond & Berger, The Sonification Handbook, ch. 15, and variant B of
+   prototype_lyapunov.wl (chosen after listening):
+
+     lambda tone     fundamental refHz * 2^(lambda * octavesPerUnit), with
+                     2nd and 3rd harmonics at 0.25 and 0.12 of the
+                     fundamental's amplitude; lambda is interpolated
+                     linearly between sweep steps and the phase is
+                     accumulated sample by sample, so the tone glides
+                     without clicks
+     reference tone  pure sine at refHz (lambda = 0) for the whole sweep;
+                     where lambda nears zero the two tones beat
+     markers         the sweep mode's accent bursts (OverlayEvent) at the
+                     bifurcation points inside the range, plus a period-4
+                     marker at r = 3.449
+
+   Unlike the sweep and iterate modes this is a continuous glide, not
+   discrete notes: here the quantity heard is a single scalar per r, and
+   its crossing of zero is heard as beating against the reference, which
+   only a continuous tone can produce (see AGENTS.md design decision 5). *)
+
+$lyapunovHarmonics = {1.0, 0.25, 0.12};   (* fundamental, 2nd, 3rd harmonic *)
+$lyapunovToneAmp   = 0.3;                 (* both tones, before loudness normalisation *)
+$lyapunovEdgeFade  = 0.02;                (* s, raised-cosine fade in/out of both tones *)
+
+(* LyapunovMarkers
+   The marker family: the sweep mode's three events (same frequencies and
+   durations as SonifySweep) plus the period-4 bifurcation. 440, 528, 660
+   and 880 Hz stand in the ratios 1 : 6/5 : 3/2 : 2, the just-intoned A
+   minor triad with its octave, so the added 880 Hz marker belongs to the
+   same chord; it takes the 0.08 s length of the other period-doubling
+   marker. Returned in ascending r. *)
+LyapunovMarkers[] :=
+  Module[{ev = SweepEventRValues[]},
+    {
+      <|"key" -> "first_bifurcation", "r" -> ev["first_bifurcation"],
+        "label" -> "first period-doubling bifurcation", "freq" -> 660.0, "dur" -> 0.08|>,
+      <|"key" -> "period4", "r" -> 3.449,
+        "label" -> "period-4 bifurcation", "freq" -> 880.0, "dur" -> 0.08|>,
+      <|"key" -> "chaos_onset", "r" -> ev["chaos_onset"],
+        "label" -> "onset of chaos", "freq" -> 440.0, "dur" -> 0.12|>,
+      <|"key" -> "period3_window", "r" -> ev["period3_window"],
+        "label" -> "period-3 window", "freq" -> 528.0, "dur" -> 0.10|>
+    }
+  ];
+
+(* LyapunovToneHz — fundamental of the lambda tone. *)
+LyapunovToneHz[lambda_, refHz_?NumericQ, octavesPerUnit_?NumericQ] :=
+  refHz * 2.0^(lambda * octavesPerUnit);
+
+(* AWeightingResponse
+   Linear amplitude response of the A-weighting filter (IEC 61672-1),
+   without the +2.00 dB that normalises it to 0 dB at 1 kHz (it cancels
+   in the ratio below). Works element-wise on a list of frequencies. *)
+AWeightingResponse[f_] :=
+  (12194.0^2 * f^4) /
+    ((f^2 + 20.6^2) * Sqrt[(f^2 + 107.7^2) * (f^2 + 737.9^2)] * (f^2 + 12194.0^2));
+
+(* LyapunovLoudnessGain
+   Equal-loudness compensation for the lambda tone, using A-weighting
+   (IEC 61672-1), the standard closed-form approximation to the inverse
+   of the 40-phon ISO 226 equal-loudness contour. The tone's A-weighted
+   amplitude is the root-sum-square of its three partials, each weighted
+   at its own frequency; the gain is the ratio of that amplitude at the
+   reference frequency to its value at f, so the gain is exactly 1 when
+   lambda = 0 (the lambda tone then matches the reference in level, which
+   makes the beating near a crossing deepest) and rises as the tone falls
+   in pitch. Over the default range (lambda from -0.5 to log 2, i.e. about
+   156 to 356 Hz) it spans +3.3 dB to -3.9 dB. At listening levels
+   well above 40 phon A-weighting slightly over-corrects the low end. *)
+LyapunovLoudnessGain[f_, refHz_?NumericQ, Optional[harmonics_List, $lyapunovHarmonics]] :=
+  Module[{weighted},
+    weighted[g_] := Sqrt[Total[MapIndexed[(#1 * AWeightingResponse[#2[[1]] * g])^2 &, harmonics]]];
+    weighted[refHz] / weighted[f]
+  ];
+
+(* LyapunovHarmonicClearance
+   For each harmonic k >= 2 of the lambda tone, the smallest distance in
+   semitones between that harmonic and the reference frequency over every
+   lambda the sweep can produce (lambda >= floor, since LyapunovExponent
+   clips there). Harmonic k sits at k * refHz * 2^(lambda * octavesPerUnit),
+   lowest at lambda = floor, so the clearance is
+   12 (log2 k + floor * octavesPerUnit). A value <= 0 means the harmonic
+   passes through the reference: a false unison, heard as beating as if
+   lambda were crossing zero. With floor -0.5 and 1 octave per unit the
+   2nd harmonic stays 6 semitones (a tritone) above the reference.
+   Returns <|k -> semitones, ...|>. *)
+LyapunovHarmonicClearance[floor_?NumericQ, octavesPerUnit_?Positive,
+                          Optional[harmonics_List, $lyapunovHarmonics]] :=
+  AssociationMap[12.0 * (Log2[N[#]] + floor * octavesPerUnit) &, Range[2, Length[harmonics]]];
+
+(* LyapunovTimeOfR — seconds into the sweep at which it passes r. *)
+LyapunovTimeOfR[r_?NumericQ, rMin_?NumericQ, rMax_?NumericQ, durSec_?NumericQ] :=
+  (r - rMin) / (rMax - rMin) * durSec;
+
+(* LyapunovPerSample
+   lambda at every sample, linearly interpolated between the sweep's
+   control points, which sit at t_k = (k-1) * durSec / (steps - 1). *)
+LyapunovPerSample[lams_List, nS_Integer, durSec_?NumericQ, sr_Integer] :=
+  Module[{dt, pos, i0, fr},
+    dt  = durSec / (Length[lams] - 1);
+    pos = N[Range[0, nS - 1] / sr] / dt;
+    i0  = Clip[Floor[pos], {0, Length[lams] - 2}];
+    fr  = pos - i0;
+    lams[[i0 + 1]] * (1.0 - fr) + lams[[i0 + 2]] * fr
+  ];
+
+LyapunovEdgeFade[nS_Integer, sr_Integer] :=
+  Module[{nF = Round[$lyapunovEdgeFade * sr], ramp},
+    ramp = 0.5 * (1.0 - Cos[Pi * Range[0, nF - 1] / nF]);
+    Join[ramp, ConstantArray[1.0, nS - 2 nF], Reverse[ramp]]
+  ];
+
+(* SonifyLyapunov
+   sweep = LyapunovSweep output {{r, lambda}, ...}. Returns buffers, not a
+   file, like SonifySweep/SonifyIterate, so main.wl can add the spoken
+   intro and outro before the single final export. *)
+SonifyLyapunov[sweep_List, durSec_?NumericQ, refHz_?NumericQ,
+               octavesPerUnit_?NumericQ, sr_Integer] :=
+  Module[{rs, lams, rMin, rMax, nS, lamS, freqS, phase, fade, gainS,
+          lamTone, refTone, mono, leftBuf, rightBuf, markers},
+    rs   = sweep[[All, 1]];
+    lams = sweep[[All, 2]];
+    rMin = First[rs]; rMax = Last[rs];
+    nS   = Round[durSec * sr];
+
+    lamS  = LyapunovPerSample[lams, nS, durSec, sr];
+    freqS = LyapunovToneHz[lamS, refHz, octavesPerUnit];
+    phase = 2.0 Pi * Accumulate[freqS] / sr;
+    fade  = LyapunovEdgeFade[nS, sr];
+    gainS = LyapunovLoudnessGain[freqS, refHz];
+
+    lamTone = $lyapunovToneAmp * fade * gainS *
+      Total[MapIndexed[#1 * Sin[#2[[1]] * phase] &, $lyapunovHarmonics]];
+    refTone = $lyapunovToneAmp * fade * Sin[2.0 Pi * refHz * N[Range[0, nS - 1] / sr]];
+    mono    = lamTone + refTone;
+    leftBuf = mono; rightBuf = mono;
+
+    markers = Select[LyapunovMarkers[], rMin <= #["r"] <= rMax &];
+    markers = Map[Append[#, "time" -> LyapunovTimeOfR[#["r"], rMin, rMax, durSec]] &, markers];
+    Scan[
+      ({leftBuf, rightBuf} = OverlayEvent[leftBuf, rightBuf, #["freq"], #["dur"], 0.7, #["time"], sr]) &,
+      markers];
+
+    <|
+      "leftBuf" -> leftBuf, "rightBuf" -> rightBuf, "nSamples" -> nS,
+      "markers" -> markers, "gainRangeDB" -> 20.0 * Log10[MinMax[gainS]],
+      "toneHzRange" -> MinMax[freqS], "sr" -> sr
+    |>
+  ];

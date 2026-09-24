@@ -102,6 +102,21 @@ PresetDescription[preset_String] :=
   ];
 
 
+(* ── Named presets (lyapunov mode) ─────────────────────────────────
+   Each overrides the sweep range, step count and duration of
+   simulation.dynamical.lyapunov; transient, averaging length and floor
+   stay as configured. lyapunov_window reproduces the range, steps and
+   duration of prototype_lyapunov.wl so the two can be compared directly
+   (the prototype averaged over 500 + 2000 iterations with a floor of -1). *)
+
+$lyapunovPresets = <|
+  "lyapunov_window" -> <|
+    "r_min" -> 3.40, "r_max" -> 3.90, "steps" -> 500, "duration_seconds" -> 40.0,
+    "desc" -> "the window from r equals 3.40 to 3.90, as in the listening prototype"
+  |>
+|>;
+
+
 (* ── Iteration ────────────────────────────────────────────────────── *)
 
 (* IterateTrajectory
@@ -194,27 +209,111 @@ Period2Check[Optional[r_?NumericQ, 3.2], Optional[x0_?NumericQ, 0.5],
   ];
 
 
-(* ── Lyapunov exponent check (r = 4.0) ───────────────────────────────
+(* ── Lyapunov exponent ────────────────────────────────────────────────
    lambda = mean(log|F'(x_n)|) = mean(log|r(1-2x_n)|) over a long
    trajectory. Positive lambda is the signature of chaos: nearby
-   trajectories diverge at rate e^(lambda n). For r = 4 exactly,
-   lambda = log(2) analytically. *)
-LyapunovExponent[r_?NumericQ, x0_?NumericQ, nIter_Integer] :=
-  Module[{traj},
-    traj = IterateTrajectory[x0, r, nIter];
-    Mean[Log[Abs[r * (1.0 - 2.0 * #)]] & /@ Most[traj]]
+   trajectories diverge at rate e^(lambda n); negative lambda means they
+   converge onto a periodic attractor.
+
+   LyapunovExponent discards `transient` iterations, averages over the
+   next `nAverage`, and returns Max[floor, mean]. The floor exists for
+   the lyapunov mode's sonification: at superstable parameters (x = 0.5
+   on the cycle) the true exponent is -Infinity, and a finite average
+   near them plunges arbitrarily low. |F'| is clamped at
+   $MinMachineNumber before the Log because Log[0.] is Indeterminate,
+   not -Infinity, in machine arithmetic. The orbit starts from SafeX0[x0]
+   via AttractorPoints, as the rest of the app does. *)
+LyapunovExponent[r_?NumericQ, Optional[x0_?NumericQ, 0.5],
+                 Optional[transient_Integer, 1000], Optional[nAverage_Integer, 10000],
+                 Optional[floor_?NumericQ, -0.5]] :=
+  Module[{pts},
+    pts = AttractorPoints[x0, r, transient, nAverage];
+    Max[floor, Mean[Log[Max[Abs[r * (1.0 - 2.0 * #)], $MinMachineNumber]] & /@ pts]]
   ];
 
+(* LyapunovSweep
+   lambda at `steps` equally spaced r values from rMin to rMax (both
+   ends included). Returns {{r1, lambda1}, {r2, lambda2}, ...}. *)
+LyapunovSweep[rMin_?NumericQ, rMax_?NumericQ, steps_Integer,
+              Optional[x0_?NumericQ, 0.5], Optional[transient_Integer, 1000],
+              Optional[nAverage_Integer, 10000], Optional[floor_?NumericQ, -0.5]] :=
+  Map[{#, LyapunovExponent[#, x0, transient, nAverage, floor]} &,
+      N[Subdivide[rMin, rMax, steps - 1]]];
+
+(* LyapunovZeroCrossings
+   Sign changes of lambda between consecutive sweep points, located by
+   linear interpolation between them — the same interpolation the
+   lyapunov-mode audio uses for its glide, so the crossing time is exact
+   for the audio. Returns a list of <|"r", "direction" ("upward" or
+   "downward"), "index" (the step just before the crossing)|>. *)
+LyapunovZeroCrossings[sweep_List] :=
+  Module[{rs = sweep[[All, 1]], lams = sweep[[All, 2]], idx},
+    idx = Flatten @ Position[Sign[Most[lams]] * Sign[Rest[lams]], -1];
+    Map[
+      <|"r" -> rs[[#]] - lams[[#]] * (rs[[# + 1]] - rs[[#]]) / (lams[[# + 1]] - lams[[#]]),
+        "direction" -> If[lams[[# + 1]] > lams[[#]], "upward", "downward"],
+        "index" -> #|> &,
+      idx]
+  ];
+
+(* Period2LyapunovExact
+   Closed-form lambda of the period-2 cycle: the two cycle points are
+   x = ((r+1) +- Sqrt[(r+1)(r-3)]) / (2r), and lambda =
+   0.5 Log|F'(x1) F'(x2)|. Valid for 3 < r < 1 + Sqrt[6]. *)
+Period2LyapunovExact[r_?NumericQ] :=
+  Module[{d, x1, x2},
+    d  = Sqrt[(r + 1.0) * (r - 3.0)];
+    x1 = ((r + 1.0) + d) / (2.0 * r);
+    x2 = ((r + 1.0) - d) / (2.0 * r);
+    0.5 * Log[Abs[r * (1.0 - 2.0 * x1) * r * (1.0 - 2.0 * x2)]]
+  ];
+
+(* LyapunovCheck — check 4, r = 4.0. For r = 4 exactly, lambda = log(2)
+   analytically. Averages over the whole trajectory from x0 (no
+   transient), as it has since the check was introduced. *)
 LyapunovCheck[Optional[r_?NumericQ, 4.0], Optional[x0_?NumericQ, 0.5],
              Optional[nIter_Integer, 10000], Optional[tolerance_?NumericQ, 0.05]] :=
-  Module[{lambda, expected, relErr},
-    lambda   = LyapunovExponent[r, x0, nIter];
+  Module[{traj, lambda, expected, relErr},
+    traj     = IterateTrajectory[x0, r, nIter];
+    lambda   = Mean[Log[Abs[r * (1.0 - 2.0 * #)]] & /@ Most[traj]];
     expected = Log[2.0];
     relErr   = Abs[lambda - expected] / expected;
     <|
       "lambda" -> lambda, "expected" -> expected, "relError" -> relErr,
       "pass" -> (lambda > 0 && relErr < tolerance)
     |>
+  ];
+
+(* LyapunovCurveCheck — check 5, the lambda(r) curve the lyapunov mode
+   sonifies, at four r values with known answers:
+     r = 2.8    fixed point, lambda = Log|2 - r| = Log[0.8]
+     r = 3.2    period-2 cycle, lambda = Period2LyapunovExact[3.2]
+     r = 3.835  inside the period-3 window, lambda < 0
+     r = 4.0    lambda = Log[2]
+   Uses LyapunovExponent with the mode's transient and averaging lengths
+   but a floor of -100 rather than the mode's -0.5: the period-2 value
+   at r = 3.2 is -0.916, below the sonification floor, and a floored
+   value at r = 3.835 would be negative whatever the orbit did. *)
+LyapunovCurveCheck[Optional[transient_Integer, 1000], Optional[nAverage_Integer, 10000],
+                   Optional[tolerance_?NumericQ, 0.01]] :=
+  Module[{lam, cases},
+    lam[r_] := LyapunovExponent[r, 0.5, transient, nAverage, -100.0];
+    cases = {
+      <|"r" -> 2.8,   "lambda" -> lam[2.8],   "expected" -> Log[0.8],
+        "what" -> "the fixed-point value Log[0.8]"|>,
+      <|"r" -> 3.2,   "lambda" -> lam[3.2],   "expected" -> Period2LyapunovExact[3.2],
+        "what" -> "the closed-form period-2 value 0.5 Log|f'(x1) f'(x2)|"|>,
+      <|"r" -> 3.835, "lambda" -> lam[3.835], "expected" -> Missing["Negative"],
+        "what" -> "inside the period-3 window it must be negative"|>,
+      <|"r" -> 4.0,   "lambda" -> lam[4.0],   "expected" -> Log[2.0],
+        "what" -> "the fully chaotic value Log[2]"|>
+    };
+    cases = Map[
+      Append[#, "pass" -> If[NumericQ[#["expected"]],
+        Abs[#["lambda"] - #["expected"]] < tolerance, #["lambda"] < 0]] &,
+      cases];
+    <|"cases" -> cases, "tolerance" -> tolerance,
+      "pass" -> AllTrue[cases, #["pass"] &]|>
   ];
 
 

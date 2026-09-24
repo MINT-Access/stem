@@ -1,0 +1,188 @@
+# dynamical/ lyapunov mode — verification (measured 2026-09-24)
+
+## Context
+- Repo HEAD: bdc2b3f (main), working tree with the lyapunov-mode changes uncommitted. wolframscript on Mac OS X ARM.
+- Every value below comes from a run made on 2026-09-24 in this session, after the last code change.
+- Measurement scripts (session scratchpad, not in the repo): measure.py (Python: wave for WAV duration, PIL for GIF frame delays, soundfile + pyloudnorm for loudness and peak) and analyse.wl (crossings recomputed from the exported CSV with LyapunovZeroCrossings; stem-core MeasureIntegratedLoudness, WAVDuration, GIFFrameDelays; prototype recomputation).
+- Equal-loudness weighting used for the lambda tone: A-weighting (IEC 61672-1), applied to the root-sum-square of the three partials, gain 1 at the reference frequency.
+
+## Commands
+- Default: `wolframscript -file dynamical/main.wl -- --simulation.mode=lyapunov`
+- Preset: `wolframscript -file dynamical/main.wl -- --simulation.mode=lyapunov --simulation.dynamical.preset=lyapunov_window`
+- Prototype: `wolframscript -file dynamical/prototype_lyapunov.wl`
+- Tests: `wolframscript -file dynamical/tests/test_model.wl`
+- File measurements: `python3 measure.py lyapunov lyapunov_window`
+- Crossing and prototype analysis: `wolframscript -file analyse.wl`
+- Regression run of an existing mode: `wolframscript -file dynamical/main.wl -- --simulation.mode=iterate`
+
+## Default mode (r 2.5 -> 4.0, 750 steps, 120 s)
+- Exit code: 0
+- Wall time: 49.4 s
+- Output WAV: dynamical/output/lyapunov_audio.wav
+- Output GIF: dynamical/output/lyapunov.gif
+- Output CSV: dynamical/output/lyapunov_data.csv
+- WAV duration (Python wave): 154.2958 s
+- WAV duration (stem-core WAVDuration): 154.2960 s
+- WAV format: 2 channels, 44100 Hz
+- GIF frames: 309
+- GIF frame delay: 0.50 s
+- GIF duration (PIL): 154.5000 s
+- GIF duration (stem-core GIFFrameDelays): 154.5000 s
+- GIF minus WAV: +0.2042 s
+- GIF minus WAV is below half a frame delay (0.25 s): yes
+- GIF pixel size: 1440 x 1200
+- App's sync sentence: "GIF/WAV sync: the GIF has 309 frames of 0.5 s each and plays for 154.5 s, the WAV plays for 154.296 s, and the GIF is 0.204 s longer than the WAV."
+- Integrated loudness (stem-core MeasureIntegratedLoudness): -17.00 LUFS
+- Integrated loudness (pyloudnorm): -17.04 LUFS
+- Peak: -9.21 dBFS
+- App's loudness line: "Loudness: the WAV was normalised to -17 LUFS and measures -17 LUFS integrated, with a peak of -9.21 dBFS."
+- Spoken intro plus pause before the sweep (from the CSV, audio_time_s - sweep_time_s): 22.835 s
+- Pause plus spoken outro after the sweep (WAV - intro - 120 s): 11.461 s
+- Lambda tone range: 155.6 to 355.7 Hz
+- A-weighting gain range: -3.86 to +3.34 dB relative to the reference frequency
+- Markers in range: 4 (first bifurcation r 3.0 at 40 s, period-4 r 3.449 at 75.92 s, chaos onset r 3.5699 at 85.59 s, period-3 window r 3.8284 at 106.27 s; times into the sweep)
+- Number of zero crossings: 15
+- Crossing 1: upward, r = 3.570, 108.45 s into the audio
+- Crossing 2: downward, r = 3.589, 109.98 s
+- Crossing 3: upward, r = 3.590, 110.00 s
+- Crossing 4: downward, r = 3.605, 111.20 s
+- Crossing 5: upward, r = 3.606, 111.35 s
+- Crossing 6: downward, r = 3.626, 112.92 s
+- Crossing 7: upward, r = 3.634, 113.52 s
+- Crossing 8: downward, r = 3.739, 121.95 s
+- Crossing 9: upward, r = 3.744, 122.34 s
+- Crossing 10: downward, r = 3.829, 129.14 s
+- Crossing 11: upward, r = 3.848, 130.70 s
+- Crossing 12: downward, r = 3.853, 131.11 s
+- Crossing 13: upward, r = 3.854, 131.16 s
+- Crossing 14: downward, r = 3.905, 135.27 s
+- Crossing 15: upward, r = 3.906, 135.34 s
+- Crossing list recomputed from the CSV equals the console list: yes
+- First upward crossing: r = 3.5702
+- First upward crossing minus 3.5699: +0.0003
+- First upward crossing within 0.01 of 3.5699: PASS
+- Minimum lambda: -0.5000 (the floor), first reached at r = 2.500
+- Maximum lambda: 0.6931, at r = 4.000
+- Steps at the floor: 144 of 750
+- Closest approach to zero without crossing near r = 3.0: lambda -0.0013 at r = 2.9987
+- Closest approach to zero without crossing near r = 3.449: lambda -0.0006 at r = 3.4493
+- Closest approach to zero without crossing near r = 3.544: lambda -0.0040 at r = 3.5434
+
+## Preset lyapunov_window (r 3.40 -> 3.90, 500 steps, 40 s)
+- Exit code: 0
+- Wall time: 43.2 s
+- Output WAV: dynamical/output/lyapunov_window_audio.wav
+- Output GIF: dynamical/output/lyapunov_window.gif
+- Output CSV: dynamical/output/lyapunov_window_data.csv
+- WAV duration (Python wave): 74.0868 s
+- WAV duration (stem-core WAVDuration): 74.0868 s
+- WAV format: 2 channels, 44100 Hz
+- GIF frames: 296
+- GIF frame delay: 0.25 s
+- GIF duration (PIL): 74.0000 s
+- GIF duration (stem-core GIFFrameDelays): 74.0000 s
+- GIF minus WAV: -0.0868 s
+- GIF minus WAV is below half a frame delay (0.125 s): yes
+- GIF pixel size: 1440 x 1200
+- App's sync sentence: "GIF/WAV sync: the GIF has 296 frames of 0.25 s each and plays for 74 s, the WAV plays for 74.087 s, and the GIF is 0.087 s shorter than the WAV."
+- Integrated loudness (stem-core MeasureIntegratedLoudness): -17.00 LUFS
+- Integrated loudness (pyloudnorm): -17.03 LUFS
+- Peak: -7.40 dBFS
+- App's loudness line: "Loudness: the WAV was normalised to -17 LUFS and measures -17 LUFS integrated, with a peak of -7.4 dBFS."
+- Spoken intro plus pause before the sweep: 22.754 s
+- Pause plus spoken outro after the sweep: 11.333 s
+- Lambda tone range: 155.6 to 313.3 Hz
+- A-weighting gain range: -2.93 to +3.34 dB relative to the reference frequency
+- Markers in range: 3 (period-4 r 3.449 at 3.92 s, chaos onset r 3.5699 at 13.59 s, period-3 window r 3.8284 at 34.27 s; times into the sweep)
+- Number of zero crossings: 19
+- Crossing 1: upward, r = 3.570, 36.35 s into the audio
+- Crossing 2: downward, r = 3.582, 37.30 s
+- Crossing 3: upward, r = 3.583, 37.41 s
+- Crossing 4: downward, r = 3.605, 39.14 s
+- Crossing 5: upward, r = 3.606, 39.26 s
+- Crossing 6: downward, r = 3.627, 40.89 s
+- Crossing 7: upward, r = 3.633, 41.39 s
+- Crossing 8: downward, r = 3.662, 43.72 s
+- Crossing 9: upward, r = 3.663, 43.79 s
+- Crossing 10: downward, r = 3.703, 46.96 s
+- Crossing 11: upward, r = 3.703, 46.96 s
+- Crossing 12: downward, r = 3.738, 49.81 s
+- Crossing 13: upward, r = 3.743, 50.20 s
+- Crossing 14: downward, r = 3.801, 54.80 s
+- Crossing 15: upward, r = 3.801, 54.83 s
+- Crossing 16: downward, r = 3.829, 57.04 s
+- Crossing 17: upward, r = 3.849, 58.68 s
+- Crossing 18: downward, r = 3.853, 59.02 s
+- Crossing 19: upward, r = 3.854, 59.11 s
+- Crossing list recomputed from the CSV equals the console list: yes
+- First upward crossing: r = 3.5700
+- First upward crossing minus 3.5699: +0.0001
+- First upward crossing within 0.01 of 3.5699: PASS
+- Minimum lambda: -0.5000 (the floor), first reached at r = 3.492
+- Maximum lambda: 0.5098, at r = 3.898
+- Steps at the floor: 16 of 500
+
+## Preset vs. prototype
+- Prototype settings: 500 transient, 2000 averaged, floor -1.0; preset settings: 1000 transient, 10000 averaged, floor -0.5; same 500-point r grid 3.40 -> 3.90, same 40 s
+- Prototype rerun exit code: 0
+- Prototype WAVs A/B/C after the rerun byte-identical to the files present before it: yes
+- Prototype printed crossing count: 21
+- Preset crossing count: 19
+- Prototype crossings recomputed with LyapunovExponent[r, 0.5, 500, 2000, -100] equal the prototype's printed list: yes (21, same r values)
+- Crossings present in both: 19
+- Largest |r difference| among the 19 shared crossings: 0.0000286 (r = 3.627)
+- Shared crossings with |r difference| > 0.02: 0
+- Crossings only in the prototype: 2 (downward and upward, both r = 3.786, t = 30.86 s into the sweep)
+- Lambda at r = 3.7858, prototype (500 + 2000): -0.0004
+- Lambda at r = 3.7858, transient changed only (1000 + 2000): +0.0002
+- Lambda at r = 3.7858, averaging changed only (500 + 10000): +0.0292
+- Lambda at r = 3.7858, preset (1000 + 10000): +0.0292
+- Explanation of the missing pair: the prototype's 2000-iterate estimate (-0.0004) is indistinguishable from zero, so any change flips its sign; the 10000-iterate estimate is +0.029 whatever the transient, so the 0.030 change there comes from the longer averaging
+- Prototype printed maximum lambda: 0.5041
+- Preset maximum lambda: 0.5098
+- Maximum difference: +0.0057 (below 0.02)
+- Prototype printed minimum before clipping: -2.161
+- Preset minimum before clipping (recomputed, floor -100): -2.1589, both at r = 3.832
+- Unclipped minimum difference: 0.0019 (below 0.02)
+- Prototype printed minimum after clipping: -1.0
+- Preset minimum after clipping: -0.5
+- Clipped minimum difference: 0.5, caused by the floor (-1.0 in the prototype, -0.5 in the mode as specified), not by the averaging
+- Prototype printed steps clipped at the floor: 3 (floor -1.0)
+- Preset steps at the floor: 16 (floor -0.5)
+- Steps below -1.0, prototype vs. preset data: 3 vs. 3
+- Steps at or below -0.5, prototype vs. preset data: 16 vs. 16
+- Grid points where |preset - prototype| > 0.02 (either value above -0.5): 8
+- Largest such difference: 0.0818 (r = 3.7637; prototype 0.2935, preset 0.3753)
+- Grid points > 0.02 from the prototype with only the transient changed: 1 (r = 3.7106, 0.0233)
+- Grid points > 0.02 from the prototype with only the averaging changed: 5
+- Grid points where the preset differs by > 0.02 from averaging-only (i.e. the effect of the transient once averaging is 10000): 0
+- Attribution: every per-point difference beyond 0.02 is finite-sample noise of the 2000-iterate mean in the chaotic region; with 10000 iterations the transient length makes no difference above 0.02, and the single point moved by the transient alone (r = 3.7106) is the same noise, sampled from an orbit window shifted by 500 iterations
+
+## Correctness checks (printed identically by all three main.wl runs)
+- Summary line: "Checks: 1[PASS] 2[PASS] 3[PASS] 4[PASS] 5[PASS]"
+- Check 1: "1. Feigenbaum ratio: 4.7514  (delta = 4.6692, 1.761% error)"
+- Check 2: "2. Fixed point (r=2.8): analytic 0.642857  numeric 0.642857"
+- Check 3: "3. Period-2 (r=3.2): 2 distinct values, sum 1.3125 (expected 1.3125)"
+- Check 4: "4. Lyapunov (r=4.0): 0.693116  (log 2 = 0.693147, 0.004498% error)"
+- Check 5a: "[PASS] At r = 2.8 the Lyapunov exponent is -0.223144 and the fixed-point value Log[0.8] is -0.223144; they differ by 5.55*^-16, within the tolerance of 0.01."
+- Check 5b: "[PASS] At r = 3.2 the Lyapunov exponent is -0.916291 and the closed-form period-2 value 0.5 Log|f'(x1) f'(x2)| is -0.916291; they differ by 1.11*^-16, within the tolerance of 0.01."
+- Check 5c: "[PASS] At r = 3.835 the Lyapunov exponent is -0.309518, and inside the period-3 window it must be negative; it is."
+- Check 5d: "[PASS] At r = 4 the Lyapunov exponent is 0.693076 and the fully chaotic value Log[2] is 0.693147; they differ by 0.0000714, within the tolerance of 0.01."
+- Check 5 floor: computed with floor -100, because the period-2 value -0.916 lies below the mode's floor of -0.5 and a floored value at r = 3.835 would be negative whatever the orbit did
+
+## Unit tests
+- Command: `wolframscript -file dynamical/tests/test_model.wl`
+- Result: "Results: 60 passed, 0 failed."
+- Exit code: 0
+- Tests before this change: 36
+- New tests: 24 (LyapunovExponent section 13, Lyapunov sonification section 11)
+- False-unison guard, config values read: floor -0.5, octaves_per_unit 1.0
+- False-unison guard, clearance of the 2nd harmonic above the reference: 6.0 semitones
+- False-unison guard, clearance of the 3rd harmonic above the reference: 13.02 semitones
+- False-unison guard, required clearance: at least 1 semitone
+- False-unison guard flags a floor of -1.0 (2nd harmonic in unison): yes
+
+## Regression: existing iterate mode
+- Exit code: 0
+- WAV duration printed: 32.55 s
+- App's sync sentence: "GIF/WAV sync: the GIF has 148 frames of 0.22 s each and plays for 32.56 s, the WAV plays for 32.553 s, and the GIF is 0.007 s longer than the WAV."

@@ -130,3 +130,27 @@ BuildIterateIntroText[r_?NumericQ, presetDesc_String, nIterations_Integer, x0_?N
   If[presetDesc =!= "", presetDesc <> ". ", ""] <>
   ToString[nIterations] <> " iterations from x naught equals " <>
   ToString[NumberForm[N[x0], {3,2}]] <> ".";
+
+
+(* BuildLyapunovIntroText
+   Says what is heard before the sweep starts. Numbers in r are spoken
+   with two decimals, as in BuildSweepIntroText. *)
+BuildLyapunovIntroText[rMin_?NumericQ, rMax_?NumericQ] :=
+  "Lyapunov exponent of the logistic map, r from " <> ToString[NumberForm[rMin, {3,2}]] <>
+  " to " <> ToString[NumberForm[rMax, {3,2}]] <> ". The steady tone is zero. " <>
+  "The moving tone is the Lyapunov exponent. Above the steady tone the orbit is chaotic, " <>
+  "and nearby starting points separate exponentially. Below it they converge. " <>
+  "Beating between the two tones means a crossing is near. " <>
+  "Short high tones mark the bifurcation points.";
+
+
+(* BuildLyapunovOutroText
+   firstUp is the r of the first upward zero crossing, or Missing[] when
+   the range has none. *)
+BuildLyapunovOutroText[rMin_?NumericQ, rMax_?NumericQ, firstUp_] :=
+  "End of the Lyapunov sweep from r equals " <> ToString[NumberForm[rMin, {3,2}]] <>
+  " to " <> ToString[NumberForm[rMax, {3,2}]] <> ". " <>
+  If[NumericQ[firstUp],
+    "The exponent first rose above zero at r equals " <>
+      ToString[NumberForm[firstUp, {4,3}]] <> ", where chaos begins.",
+    "The exponent did not rise above zero in this range."];

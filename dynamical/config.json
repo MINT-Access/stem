@@ -15,7 +15,18 @@
       "n_attractor": 100,
       "n_iterations": 300,
       "note_duration": 0.08,
-      "x0": 0.5
+      "x0": 0.5,
+      "lyapunov": {
+        "r_min": 2.5,
+        "r_max": 4.0,
+        "steps": 750,
+        "duration_seconds": 120,
+        "reference_hz": 220,
+        "octaves_per_unit": 1.0,
+        "floor": -0.5,
+        "transient": 1000,
+        "average_iterations": 10000
+      }
     }
   }
 }

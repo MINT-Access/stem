@@ -102,6 +102,10 @@ wolframscript -file main.wl -- --simulation.dynamical.preset=chaos
 # Manual r value
 wolframscript -file main.wl -- --simulation.dynamical.r=3.83
 
+# Lyapunov mode: hear the Lyapunov exponent lambda(r) against a lambda = 0 reference tone
+wolframscript -file main.wl -- --simulation.mode=lyapunov
+wolframscript -file main.wl -- --simulation.mode=lyapunov --simulation.dynamical.preset=lyapunov_window
+
 # Finer sweep resolution / faster rhythm
 wolframscript -file main.wl -- --simulation.dynamical.r_steps=1000
 wolframscript -file main.wl -- --simulation.dynamical.note_duration=0.04
@@ -162,7 +166,66 @@ wolframscript -file main.wl -- --simulation.mode=iterate --simulation.dynamical.
 # Windows: Start-Process wmplayer output\iterate_audio.wav
 ```
 
-## Sonification mapping (both modes)
+### lyapunov
+
+Sweeps r from `r_min` to `r_max` (default 2.5 to 4.0) in `steps` equal
+steps (default 750) spread over `duration_seconds` (default 120 s) and
+sonifies the Lyapunov exponent λ(r) — the average rate at which nearby
+starting points separate (λ > 0, chaos) or converge (λ < 0, a periodic
+attractor). At each r the map discards `transient` iterations (1000),
+then λ is the mean of log|r(1 − 2x)| over the next `average_iterations`
+(10000), clipped at `floor` (−0.5).
+
+Two tones sound together, centred:
+
+| Voice | Encoding |
+|---|---|
+| λ tone | fundamental `reference_hz` × 2^(λ × `octaves_per_unit`) (220 Hz × 2^λ by default, 156–356 Hz), plus 2nd and 3rd harmonics at 0.25 and 0.12 of the fundamental; glides continuously between steps (phase-accumulated, no clicks) |
+| reference tone | pure sine at `reference_hz`, the pitch of λ = 0, for the whole sweep |
+
+Above the reference the orbit is chaotic; below it, orderly. Near a
+zero crossing the two tones beat. The λ tone is equal-loudness
+compensated with **A-weighting** (IEC 61672-1): its gain keeps its
+A-weighted level equal to the level it has at the reference pitch, so
+it does not seem to fade as it falls (+3.3 dB at the floor, −3.9 dB at
+λ = log 2). The floor keeps every harmonic of the λ tone clear of the
+reference: at λ = −1 the 2nd harmonic would sit exactly on 220 Hz and
+beat like a real crossing. A unit test reads `floor` and
+`octaves_per_unit` from `config.json` and fails if any harmonic can
+come within a semitone of the reference.
+
+Marker tones (the sweep mode's accents, plus one) sound at the points
+inside the range:
+
+| Marker | Frequency | Duration | r |
+|---|---|---|---|
+| First period-doubling bifurcation | 660 Hz | 80 ms | 3.0 (located numerically) |
+| Period-4 bifurcation | 880 Hz | 80 ms | 3.449 |
+| Onset of chaos | 440 Hz | 120 ms | 3.5699 |
+| Period-3 window | 528 Hz | 100 ms | 3.8284 |
+
+440, 528, 660 and 880 Hz form a just-intoned A minor triad with its
+octave, so the new period-4 marker belongs to the same chord.
+
+A spoken intro says what the two tones mean; a short spoken outro
+names the r where λ first rose above zero. The console prints every
+zero crossing with its r and the time it is heard, the minimum and
+maximum λ with their r, and how many steps sit at the floor.
+
+The preset `lyapunov_window` (r 3.40 to 3.90, 500 steps, 40 s) matches
+`prototype_lyapunov.wl`, the listening prototype this mode was built
+from (its variant B), so the two can be compared directly.
+
+**Best for:** hearing *where* chaos is, quantitatively — the onset near
+r ≈ 3.57 and every periodic window inside the chaotic region, where λ
+dips below zero.
+
+```sh
+wolframscript -file main.wl -- --simulation.mode=lyapunov
+# macOS:   afplay output/lyapunov_audio.wav
+```
+
+## Sonification mapping (sweep and iterate modes)
 
 | Quantity | Encoding |
 |---|---|
@@ -173,7 +236,7 @@ wolframscript -file main.wl -- --simulation.mode=iterate --simulation.dynamical.
 
 ## Correctness checks
 
-Every run prints four physical/mathematical correctness checks:
+Every run prints five physical/mathematical correctness checks:
 
 1. **Feigenbaum constant**: the first three period-doubling bifurcation
    points are located numerically (via `FindRoot` on the map's
@@ -186,6 +249,12 @@ Every run prints four physical/mathematical correctness checks:
 4. **Lyapunov exponent** (r=4.0): computed as the mean of
    log|r(1-2x_n)| over a long trajectory, verified positive and within
    5% of the analytic value log(2) ≈ 0.693.
+5. **Lyapunov curve** (the λ(r) the lyapunov mode sonifies, 1000
+   transient + 10000 averaged iterations, no floor): λ(2.8) = log 0.8,
+   λ(3.2) = the closed-form period-2 value ½ log|f′(x₁) f′(x₂)| (−0.916),
+   each within 0.01; λ(3.835), inside the period-3 window, negative;
+   λ(4.0) = log 2 within 0.01. Each is printed as a sentence with the
+   computed and expected values.
 
 ## Outputs
 
@@ -197,22 +266,35 @@ Every run prints four physical/mathematical correctness checks:
 | `output/iterate_audio.wav` | Spoken intro + iteration sonification (16-bit PCM, 44100 Hz, stereo) |
 | `output/iterate.gif` | x_n vs. n time-series animation |
 | `output/iterate_data.csv` | Per-iteration table: n, x_n, pitch_hz, pan, volume |
+| `output/lyapunov_audio.wav` | Spoken intro + λ tone, reference tone and markers + spoken outro (stereo) |
+| `output/lyapunov.gif` | Bifurcation diagram over λ(r), shared r axis, moving cursor with r and λ printed |
+| `output/lyapunov_data.csv` | Per-step table: r, lambda, at_floor, sweep_time_s, audio_time_s, lambda_tone_hz |
+| `output/lyapunov_window_*` | The same three files for the `lyapunov_window` preset |
 
 ## Configuration parameters (`dynamical/config.json`)
 
 | Key | Default | Description |
 |-----|---------|--------------|
-| `simulation.mode` | `"sweep"` | `sweep` or `iterate` |
+| `simulation.mode` | `"sweep"` | `sweep`, `iterate` or `lyapunov` |
 | `simulation.dynamical.r_start` | `2.5` | Sweep start r (sweep mode) |
 | `simulation.dynamical.r_end` | `4.0` | Sweep end r (sweep mode) |
 | `simulation.dynamical.r_steps` | `500` | Number of r values sampled (sweep mode) |
 | `simulation.dynamical.r` | `3.8` | Fixed r value (iterate mode, used when `preset` is empty) |
-| `simulation.dynamical.preset` | `""` | Named preset: `fixed_point`, `period2`, `period4`, `period3_window`, `chaos` (iterate mode) |
+| `simulation.dynamical.preset` | `""` | Named preset: `fixed_point`, `period2`, `period4`, `period3_window`, `chaos` (iterate mode); `lyapunov_window` (lyapunov mode) |
 | `simulation.dynamical.n_transient` | `200` | Transient iterations discarded before recording the attractor (sweep mode) |
 | `simulation.dynamical.n_attractor` | `100` | Attractor iterations recorded per r-step (sweep mode) |
 | `simulation.dynamical.n_iterations` | `300` | Total iterations (iterate mode) |
 | `simulation.dynamical.note_duration` | `0.08` | Seconds per note, both modes |
 | `simulation.dynamical.x0` | `0.5` | Initial population fraction |
+| `simulation.dynamical.lyapunov.r_min` | `2.5` | Sweep start r (lyapunov mode) |
+| `simulation.dynamical.lyapunov.r_max` | `4.0` | Sweep end r |
+| `simulation.dynamical.lyapunov.steps` | `750` | Number of r values |
+| `simulation.dynamical.lyapunov.duration_seconds` | `120` | Length of the sonified sweep (intro and outro come on top) |
+| `simulation.dynamical.lyapunov.reference_hz` | `220` | Reference tone, the pitch of λ = 0 |
+| `simulation.dynamical.lyapunov.octaves_per_unit` | `1.0` | Octaves the λ tone moves per unit of λ |
+| `simulation.dynamical.lyapunov.floor` | `-0.5` | λ is clipped here; keeps the λ tone's harmonics off the reference |
+| `simulation.dynamical.lyapunov.transient` | `1000` | Iterations discarded at each r |
+| `simulation.dynamical.lyapunov.average_iterations` | `10000` | Iterations averaged at each r |
 
 ## Performance notes
 
@@ -224,7 +306,9 @@ clearly audible as a repeating cycle, while keeping the default
 500-step sweep to a manageable ~5.3 minutes rather than the ~66 minutes
 a literal one-note-per-attractor-point mapping would produce). Iterate
 mode audio duration is simply `n_iterations * note_duration` (~24s at
-the defaults).
+the defaults). Lyapunov mode's sweep lasts exactly `duration_seconds`;
+at the defaults the WAV is about 154 s with the intro and outro, and a
+run takes under a minute.
 
 ## Project structure
 
@@ -232,20 +316,26 @@ the defaults).
 dynamical/
   main.wl              — Entry point (thin orchestrator)
   experiments.wl        — 9 curated preset invocations
+  prototype_lyapunov.wl — Listening prototype for lyapunov mode (variants A/B/C; B was chosen), kept as a record
   config.json           — App defaults
   LISTENING_GUIDE.md     — Recommended listening sequence and pitch/event reference
   src/
     model.wl            — LogisticMap, SafeX0, presets, AttractorPoints,
                           BifurcationPoint (Feigenbaum root-finder),
-                          correctness checks, SweepModel, IterateModelData
+                          correctness checks, SweepModel, IterateModelData,
+                          LyapunovExponent, LyapunovSweep, LyapunovZeroCrossings
     sonify.wl            — Discrete event-driven note synthesis (SynthesizeDiscreteNotes,
-                          OverlayEvent), SonifySweep, SonifyIterate
+                          OverlayEvent), SonifySweep, SonifyIterate, SonifyLyapunov
+                          (continuous λ and reference tones, A-weighting compensation)
     speech.wl             — Spoken intro synthesis (SpeechSynthesize -> platform TTS ->
-                          text-only fallback), BuildSweepIntroText, BuildIterateIntroText
-    animate.wl             — AnimateSweepBifurcation, AnimateIterateTimeSeries
-    output.wl              — ExportSweepCSV, ExportIterateCSV, correctness-check printing
+                          text-only fallback), BuildSweepIntroText, BuildIterateIntroText,
+                          BuildLyapunovIntroText, BuildLyapunovOutroText
+    animate.wl             — AnimateSweepBifurcation, AnimateIterateTimeSeries, AnimateLyapunov
+    output.wl              — ExportSweepCSV, ExportIterateCSV, ExportLyapunovCSV,
+                          correctness-check printing, PrintLyapunovSummary, PrintLoudnessLine
   tests/
-    test_model.wl         — Unit tests (fixed point, period-2, Feigenbaum, Lyapunov)
+    test_model.wl         — Unit tests (fixed point, period-2, Feigenbaum, Lyapunov,
+                          lyapunov mode incl. the false-unison guard)
   output/                 — Output files (not committed)
   README.md
   AGENTS.md

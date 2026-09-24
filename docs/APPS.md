@@ -11,7 +11,7 @@ document covers CLI options, modes, config keys, and output files for each.
 |-----|--------|-------|-----------|---------------|
 | `pendulum` | Physics ODE | `simple`, `double` | `output/` | No |
 | `lorenz` | Strange attractor | `lorenz`, `rossler` | `output/` | No |
-| `dynamical` | Logistic map / route to chaos | `sweep`, `iterate` | `output/` | No |
+| `dynamical` | Logistic map / route to chaos | `sweep`, `iterate`, `lyapunov` | `output/` | No |
 | `asteroids` | NASA NeoWs API | — | `output/` | Yes |
 | `cellular` | Cellular automata | `life`, `rule110` | `output/` | No |
 | `signal` | Fourier analysis | `chord`, `sweep`, `am` | `output/` | No |
@@ -150,7 +150,10 @@ named preset) and sonifies the map's actual time evolution over
 `n_iterations` steps, transient included. Discrete per-point note synthesis
 (not the continuous `SonifyTrajectory` pipeline used by `lorenz`/`pendulum`)
 makes period-doubling audible as a directly countable rhythm — period-4
-genuinely sounds like a four-note cycle.
+genuinely sounds like a four-note cycle. `lyapunov` mode sweeps r and
+sonifies the Lyapunov exponent λ(r) as a continuous tone gliding around a
+steady reference tone at λ = 0: above it the orbit is chaotic, below it
+periodic, and beating between the two marks a zero crossing.
 
 **Run:**
 ```sh
@@ -163,6 +166,8 @@ wolframscript -file dynamical/main.wl -- --simulation.dynamical.preset=period3_w
 wolframscript -file dynamical/main.wl -- --simulation.dynamical.preset=chaos
 wolframscript -file dynamical/main.wl -- --simulation.dynamical.r=3.83
 wolframscript -file dynamical/main.wl -- --simulation.dynamical.r_steps=1000
+wolframscript -file dynamical/main.wl -- --simulation.mode=lyapunov          # λ(r), r 2.5→4.0, 120 s
+wolframscript -file dynamical/main.wl -- --simulation.mode=lyapunov --simulation.dynamical.preset=lyapunov_window
 ```
 
 Named presets (`iterate` mode): `fixed_point` (r=2.8), `period2` (r=3.2),
@@ -170,13 +175,15 @@ Named presets (`iterate` mode): `fixed_point` (r=2.8), `period2` (r=3.2),
 `period3_window` preset uses r=3.830 rather than the textbook-cited 3.8284 —
 that value is the window's exact tangent-bifurcation opening edge, where
 convergence to the 3-cycle is pathologically slow; 3.830 converges cleanly
-within the default `n_iterations`.
+within the default `n_iterations`. Named preset (`lyapunov` mode):
+`lyapunov_window` (r 3.40→3.90, 500 steps, 40 s — the range of the
+listening prototype `dynamical/prototype_lyapunov.wl`).
 
 **Key config keys (`dynamical/config.json`):**
 
 | Key | Default | Description |
 |-----|---------|-------------|
-| `simulation.mode` | `"sweep"` | `"sweep"` or `"iterate"` |
+| `simulation.mode` | `"sweep"` | `"sweep"`, `"iterate"` or `"lyapunov"` |
 | `simulation.dynamical.r_start` | `2.5` | Sweep start r (sweep mode) |
 | `simulation.dynamical.r_end` | `4.0` | Sweep end r (sweep mode) |
 | `simulation.dynamical.r_steps` | `500` | Number of r values sampled (sweep mode) |
@@ -187,6 +194,14 @@ within the default `n_iterations`.
 | `simulation.dynamical.n_iterations` | `300` | Total iterations (iterate mode) |
 | `simulation.dynamical.note_duration` | `0.08` | Seconds per note, both modes |
 | `simulation.dynamical.x0` | `0.5` | Initial population fraction |
+| `simulation.dynamical.lyapunov.r_min` / `.r_max` | `2.5` / `4.0` | Sweep range (lyapunov mode) |
+| `simulation.dynamical.lyapunov.steps` | `750` | Number of r values |
+| `simulation.dynamical.lyapunov.duration_seconds` | `120` | Length of the sonified sweep |
+| `simulation.dynamical.lyapunov.reference_hz` | `220` | Reference tone (λ = 0) |
+| `simulation.dynamical.lyapunov.octaves_per_unit` | `1.0` | λ tone: octaves per unit of λ |
+| `simulation.dynamical.lyapunov.floor` | `-0.5` | λ clip; keeps the λ tone's harmonics off the reference |
+| `simulation.dynamical.lyapunov.transient` | `1000` | Iterations discarded per r |
+| `simulation.dynamical.lyapunov.average_iterations` | `10000` | Iterations averaged per r |
 
 **Output files:**
 
@@ -198,6 +213,9 @@ within the default `n_iterations`.
 | `output/iterate_audio.wav` | Spoken intro + iteration sonification (stereo) |
 | `output/iterate.gif` | x_n vs. n time-series animation |
 | `output/iterate_data.csv` | n, x_n, pitch_hz, pan, volume |
+| `output/lyapunov_audio.wav` | Spoken intro + λ tone, reference tone, markers + spoken outro (stereo) |
+| `output/lyapunov.gif` | Bifurcation diagram above λ(r), shared r axis, moving cursor with r and λ |
+| `output/lyapunov_data.csv` | r, lambda, at_floor, sweep_time_s, audio_time_s, lambda_tone_hz |
 
 **Notes:**
 - Sonification mapping: pitch = x_n on a 3-octave minor pentatonic scale
@@ -208,13 +226,15 @@ within the default `n_iterations`.
   console and via speech as the sweep reaches them: the first
   period-doubling bifurcation (660 Hz, r≈3.0, located numerically), the
   onset of chaos (440 Hz, r≈3.57), and the period-3 window (528 Hz, r≈3.83).
-- Four correctness checks run on every invocation, printed as
-  `Checks: 1[PASS] 2[PASS] 3[PASS] 4[PASS]`: the Feigenbaum constant
+- Five correctness checks run on every invocation, printed as
+  `Checks: 1[PASS] 2[PASS] 3[PASS] 4[PASS] 5[PASS]`: the Feigenbaum constant
   (bifurcation points located via `FindRoot` on the map's stability
   conditions, not hardcoded — ratio verified within 5% of δ≈4.669), the
   analytic fixed point x*=1−1/r at r=2.8, the period-2 sum formula
   (r+1)/r at r=3.2, and the Lyapunov exponent at r=4.0 (verified within
-  5% of log 2 ≈ 0.693).
+  5% of log 2 ≈ 0.693), and check 5, the λ(r) curve lyapunov mode
+  sonifies: λ(2.8) = log 0.8, λ(3.2) = the closed-form period-2 value,
+  λ(4.0) = log 2 (each within 0.01), and λ(3.835) < 0 in the period-3 window.
 - Sweep mode audio duration scales as `r_steps × 8 × note_duration` — only
   8 of each r-step's recorded attractor points become audible notes (all
   are equally valid post-transient points; 8 is enough to make any
