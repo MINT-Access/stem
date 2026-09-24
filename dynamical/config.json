@@ -26,6 +26,15 @@
         "floor": -0.5,
         "transient": 1000,
         "average_iterations": 10000
+      },
+      "divergence": {
+        "r": 4.0,
+        "x0": 0.3,
+        "delta": 1.0e-6,
+        "iterations": 150,
+        "saturation": 0.1,
+        "separation_voice": true,
+        "note_duration": 0.08
       }
     }
   }

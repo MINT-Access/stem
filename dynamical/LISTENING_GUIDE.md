@@ -72,6 +72,52 @@ The `lyapunov_window` preset zooms into r 3.40 to 3.90 over 40 s, where
 the crossings come thick and fast; it matches the listening prototype
 this mode was built from.
 
+## Two nearby orbits (divergence mode)
+
+Lyapunov mode tells you *how fast* nearby starting points separate;
+divergence mode lets you hear it happen. Two populations start one part
+in a million apart and are iterated side by side:
+
+- **Left ear**: the first population, played exactly like iterate mode's
+  notes. **Right ear**: the second. While they agree you hear one sound
+  in the middle of your head; as they drift apart the sound splits into
+  two, one in each ear.
+- **The middle tone** (hollow, sustained) is the distance between them:
+  up one octave for every three powers of ten. Exponential growth is a
+  steady climb, exponential shrinking a steady fall — and the steepness of
+  that climb or fall is the Lyapunov exponent.
+- **A 440 Hz marker** sounds once when the distance first exceeds one
+  tenth: from here on the two populations are unrelated.
+
+Play the four presets in this order (all four are the same length,
+about a minute):
+
+```sh
+wolframscript -file main.wl -- --simulation.mode=divergence --simulation.dynamical.preset=divergence_chaotic
+wolframscript -file main.wl -- --simulation.mode=divergence --simulation.dynamical.preset=divergence_edge
+wolframscript -file main.wl -- --simulation.mode=divergence --simulation.dynamical.preset=divergence_periodic
+wolframscript -file main.wl -- --simulation.mode=divergence --simulation.dynamical.preset=divergence_stable
+```
+
+1. **`divergence_chaotic`** (r = 4.0): the middle tone climbs steadily
+   and the marker sounds at iteration 18 (λ predicts 16.6, 1.44 s into
+   the notes); three iterations earlier, at iteration 15, the sound
+   has already split into two, and from then on the two ears play unrelated notes.
+2. **`divergence_edge`** (r = 3.57): λ is almost zero (+0.011). The
+   middle tone creeps up only a little, from one part in a million to
+   three parts in ten thousand; the two ears stay together throughout.
+3. **`divergence_periodic`** (r = 3.2): the middle tone falls, then holds
+   at the bottom once the distance is below one part in a million
+   million; by iteration 42 the two populations are the same number.
+   The two ears are identical throughout. (It first rises a little: both
+   orbits linger near an unstable point before they settle.)
+4. **`divergence_stable`** (r = 2.8): a steady, slow fall — both
+   populations settle onto the same fixed point, identical by
+   iteration 102. The two ears are identical throughout.
+
+`--simulation.dynamical.divergence.separation_voice=false` leaves only
+the two orbits, for pure stereo listening.
+
 ## What the event markers mean (sweep mode)
 
 - **First accent tone** (660 Hz): the first period-doubling bifurcation —

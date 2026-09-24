@@ -154,3 +154,81 @@ BuildLyapunovOutroText[rMin_?NumericQ, rMax_?NumericQ, firstUp_] :=
     "The exponent first rose above zero at r equals " <>
       ToString[NumberForm[firstUp, {4,3}]] <> ", where chaos begins.",
     "The exponent did not rise above zero in this range."];
+
+
+(* ── Divergence mode narration ─────────────────────────────────────── *)
+
+(* SpokenSmall — a small positive number as TTS-friendly words:
+   1.*^-6 -> "one part in a million", 3.2*^-15 -> "3.2 times ten to the
+   minus 15"; 0.1 -> "one tenth". *)
+SpokenSmall[x_?NumericQ] :=
+  Module[{e, m},
+    Which[
+      x == 0,        "zero",
+      x == 10^-6,    "one part in a million",
+      x == 10^-9,    "one part in a billion",
+      x == 0.1,      "one tenth",
+      x == 0.01,     "one hundredth",
+      x >= 0.001,    ToString[NumberForm[N[x], 2]],
+      True,
+        e = Floor[Log10[x]]; m = x / 10.^e;
+        ToString[NumberForm[m, 2]] <> " times ten to the minus " <> ToString[-e]]
+  ];
+
+(* DivergenceNarration
+   Intro and outro text for one case, computed from its own orbits, fit
+   and lambda. main.wl calls it for the current run and for the four
+   presets, and pads the spoken intro and outro to the longest of them, so
+   the four presets render to the same length. *)
+DivergenceNarration[r_?NumericQ, case_String, x0_?NumericQ, delta_?NumericQ,
+                    n_Integer, saturation_?NumericQ] :=
+  Module[{orb, fit, lam, pred, rTxt, deltaTxt, satTxt, caseTxt, outro, period, nZero},
+    orb  = DivergenceOrbits[r, x0, delta, n];
+    fit  = DivergenceFit[orb["separation"], saturation];
+    lam  = LyapunovExponent[r, x0, 1000, 10000, -100.0];
+    pred = DivergencePredictedSaturation[lam, delta, saturation];
+    rTxt = ToString[NumberForm[N[r], {3, 2}]];
+    deltaTxt = If[delta == 10^-6 || delta == 10^-9, SpokenSmall[delta],
+                  "a difference of " <> SpokenSmall[delta]];
+    satTxt = SpokenSmall[saturation];
+    caseTxt = Switch[case,
+      "chaotic",
+        "This is the chaotic case, r equals " <> rTxt <> ". Expect the left and right " <>
+        "tones to agree at first while the middle tone climbs steadily" <>
+        If[fit["saturated"],
+          "; after about " <> ToString[Round[fit["nSat"]]] <> " iterations the separation " <>
+          "reaches " <> satTxt <> ", a marker sounds, and the two tones go their own ways.",
+          "."],
+      "edge",
+        "This is the edge of chaos, r equals " <> rTxt <> ", where the exponent is close " <>
+        "to zero. Expect the middle tone to drift slowly instead of climbing, and the left " <>
+        "and right tones to stay together.",
+      "periodic",
+        period = AttractorPeriod[r];
+        "This is a periodic case, r equals " <> rTxt <>
+        If[IntegerQ[period], ", a cycle of period " <> ToString[period], ""] <>
+        ". Expect the middle tone to fall as the two populations converge onto the same " <>
+        "cycle, and the left and right tones to stay together.",
+      _,
+        "This is the stable case, r equals " <> rTxt <> ", a single fixed point. Expect " <>
+        "the middle tone to fall steadily as both populations settle to the same value."];
+    nZero = FirstPosition[orb["separation"], 0., {Missing[]}, {1}][[1]];
+    outro = If[fit["saturated"],
+      "The separation exceeded " <> satTxt <> " at iteration " <> ToString[fit["nSat"]] <>
+        ". The Lyapunov exponent predicted iteration " <> ToString[NumberForm[pred, {4, 1}]] <> ".",
+      "The separation never exceeded " <> satTxt <> " in " <> ToString[n] <> " iterations; " <>
+        If[IntegerQ[nZero],
+          "it shrank to zero, at machine precision, by iteration " <> ToString[nZero - 1] <> ".",
+          "it ended at " <> SpokenSmall[Last[orb["separation"]]] <> "."] <>
+        If[NumericQ[pred],
+          " The Lyapunov exponent predicted it would take about " <> ToString[Round[pred]] <>
+            " iterations.",
+          " The Lyapunov exponent, " <> ToString[NumberForm[lam, {3, 2}]] <>
+            ", is negative, so it predicted the separation would shrink."]];
+    <|"intro" ->
+        "Sensitive dependence on initial conditions in the logistic map. Two populations " <>
+        "start with " <> deltaTxt <> " between them. The left tone follows the first, the " <>
+        "right tone follows the second, and the middle tone rises as they separate. Its rate " <>
+        "of rise is the Lyapunov exponent. " <> caseTxt,
+      "outro" -> outro, "lambda" -> lam, "fit" -> fit, "predicted" -> pred|>
+  ];

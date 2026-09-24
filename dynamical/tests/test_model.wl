@@ -204,5 +204,54 @@ Module[{res = SonifyLyapunov[{{3.4, -0.2}, {3.6, 0.1}, {3.8, 0.4}}, 1.0, 220.0, 
 ];
 Print[""];
 
+(* ── Divergence mode ──────────────────────────────────────────────── *)
+Print["-- Divergence mode --"];
+Module[{orb = DivergenceOrbits[4.0, 0.3, 10^-6, 150]},
+  AssertTrue["DivergenceOrbits returns n + 1 values per orbit",
+    Length[orb["x"]] === 151 && Length[orb["y"]] === 151 && Length[orb["separation"]] === 151];
+  AssertTrue["the orbits start exactly delta apart (no SafeX0 nudge)",
+    Abs[orb["separation"][[1]] - 10^-6] < 10^-15];
+];
+Module[{sep = 10^-6 * Exp[0.5 * Range[0, 40]], fit},
+  fit = DivergenceFit[N[sep], 0.1];
+  AssertTrue["DivergenceFit recovers slope 0.5 from exact exponential growth", Abs[fit["slope"] - 0.5] < 10^-9];
+  AssertTrue["DivergenceFit reports the first n above saturation (24)", fit["nSat"] === 24 && fit["nEnd"] === 24];
+];
+Module[{sep = Join[N[10^-6 * 0.5^Range[0, 30]], ConstantArray[0., 10]], fit},
+  fit = DivergenceFit[sep, 0.1];
+  AssertTrue["without saturation the fit stops before the 1e-12 floor (n = 19)",
+    !fit["saturated"] && fit["nEnd"] === 19 && Abs[fit["slope"] - Log[0.5]] < 10^-9];
+];
+AssertTrue["predicted saturation Log[0.1/1e-6]/Log[2] = 16.61",
+  Abs[DivergencePredictedSaturation[Log[2.], 10^-6, 0.1] - 16.6096] < 10^-3];
+AssertTrue["no predicted saturation for negative lambda",
+  MissingQ[DivergencePredictedSaturation[-0.2, 10^-6, 0.1]]];
+AssertTrue["DivergenceCheck[] (check 6) passes", DivergenceCheck[]["pass"]];
+AssertTrue["the classifier agrees with the four presets' cases",
+  AllTrue[Values[$divergencePresets],
+    DivergenceCase[#["r"], LyapunovExponent[#["r"], 0.3, 1000, 10000, -100.0]] === #["case"] &]];
+AssertTrue["presets set only r and the case, so all four render to the same length",
+  AllTrue[Values[$divergencePresets], Sort[Keys[#]] === {"case", "r"} &]];
+AssertTrue["separation pitch: delta -> 220 Hz, 1 -> 880 Hz, 0 -> 55 Hz (floor 1e-12)",
+  Max[Abs[DivergenceSeparationHz[{10^-6, 1.0, 0.0}, 10^-6] - {220., 880., 55.}]] < 10^-9];
+Module[{m},
+  m = DivergenceNoteMapping[{0.2, 0.5, 0.8}, {0.2, 0.5, 0.8}];
+  AssertTrue["identical orbits get identical notes", MissingQ[m["firstDifferentNote"]]];
+  AssertTrue["pitch resolution is one scale degree, 1/15 of the x range", Abs[m["pitchBin"] - 1/15] < 10^-12];
+];
+Module[{orb = DivergenceOrbits[2.8, 0.3, 10^-6, 40], res},
+  res = SonifyDivergence[orb, 0.05, 0.1, True, 8000];
+  AssertTrue["converging orbits (r = 2.8) give sample-identical left and right buffers",
+    res["leftBuf"] === res["rightBuf"]];
+  AssertTrue["no saturation marker when the separation never exceeds saturation",
+    MissingQ[res["markerTime"]]];
+];
+Module[{orb = DivergenceOrbits[4.0, 0.3, 10^-6, 40], res},
+  res = SonifyDivergence[orb, 0.05, 0.1, False, 8000];
+  AssertTrue["saturation marker at nSat * note_duration (18 * 0.05 s)", Abs[res["markerTime"] - 0.9] < 10^-12];
+  AssertTrue["buffers last (n + 1) * note_duration", Length[res["leftBuf"]] === Round[41 * 0.05 * 8000] + 1];
+];
+Print[""];
+
 Print["Results: ", passed, " passed, ", failed, " failed."];
 If[failed > 0, Exit[1], Exit[0]];

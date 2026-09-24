@@ -317,6 +317,130 @@ LyapunovCurveCheck[Optional[transient_Integer, 1000], Optional[nAverage_Integer,
   ];
 
 
+(* ── Divergence of two nearby orbits (divergence mode) ────────────────
+   Sensitive dependence on initial conditions, the physical meaning of
+   the Lyapunov exponent: two orbits at the same r, started at x0 and
+   x0 + delta, separate (lambda > 0) or converge (lambda < 0) roughly as
+   delta * e^(lambda n), until the separation saturates at the size of
+   the attractor. *)
+
+(* $divergenceSeparationFloor
+   Separations below this are not used: converging orbits end on the same
+   double, so the separation becomes exactly 0. (measured: from 1e-6 it
+   reaches 0. by n = 150 at r = 2.8 and at r = 3.2), and Log[0.] is
+   Indeterminate. 1e-12 is still about 10^4 units in the last place of an
+   x near 0.5, so values above it are free of rounding. *)
+$divergenceSeparationFloor = 10^-12;
+
+(* DivergenceOrbits
+   The two orbits (n + 1 values each, x_0 .. x_n) and their separation
+   |x_n - y_n|. The orbits start exactly at x0 and x0 + delta — SafeX0 is
+   not applied, since nudging one start would change delta. *)
+DivergenceOrbits[r_?NumericQ, x0_?NumericQ, delta_?NumericQ, n_Integer] :=
+  Module[{xs, ys},
+    xs = NestList[LogisticMap[#, r] &, N[x0], n];
+    ys = NestList[LogisticMap[#, r] &, N[x0 + delta], n];
+    <|"r" -> r, "x0" -> x0, "delta" -> delta, "n" -> n,
+      "x" -> xs, "y" -> ys, "separation" -> Abs[xs - ys]|>
+  ];
+
+(* DivergenceFit
+   Least-squares line through Log[separation] against n, for n from 0 up
+   to and including nSat, the first n at which the separation exceeds
+   `saturation`. When it never does (lambda <= 0, or too few iterations),
+   the fit runs to the last n before the separation first drops below
+   `floor` ($divergenceSeparationFloor), or to the end of the list.
+   The slope is a finite-time Lyapunov exponent, in nats per iteration.
+   Returns <|"slope", "intercept", "nSat" (Missing[] when never
+   saturated), "saturated", "nEnd" (last n in the fit)|>. *)
+DivergenceFit[separations_List, saturation_?NumericQ,
+              Optional[floor_?NumericQ, $divergenceSeparationFloor]] :=
+  Module[{nSat, nLow, nEnd, ns, a, b},
+    nSat = FirstPosition[separations, v_ /; v > saturation, {Missing[]}, {1}][[1]];
+    nSat = If[IntegerQ[nSat], nSat - 1, Missing[]];
+    nLow = FirstPosition[separations, v_ /; v < floor, {Missing[]}, {1}][[1]];
+    nEnd = Which[
+      IntegerQ[nSat], nSat,
+      IntegerQ[nLow], nLow - 2,
+      True,           Length[separations] - 1];
+    ns = Range[0, Max[nEnd, 1]];
+    {a, b} = LeastSquares[Transpose[{ConstantArray[1.0, Length[ns]], N[ns]}],
+                          Log[Max[#, $MinMachineNumber] & /@ separations[[ns + 1]]]];
+    <|"slope" -> b, "intercept" -> a, "nSat" -> nSat,
+      "saturated" -> IntegerQ[nSat], "nEnd" -> Max[nEnd, 1]|>
+  ];
+
+(* DivergencePredictedSaturation
+   Iterations for delta to grow to saturation at rate lambda:
+   Log[saturation/delta]/lambda. Missing[] when lambda <= 0. *)
+DivergencePredictedSaturation[lambda_?NumericQ, delta_?NumericQ, saturation_?NumericQ] :=
+  If[lambda > 0, Log[saturation / delta] / lambda, Missing["NoGrowth"]];
+
+(* AttractorPeriod — smallest period 1..64 of the attractor at r (from
+   x0 = 0.5, 2000 transient iterations), else Missing[]. *)
+AttractorPeriod[r_?NumericQ] :=
+  Module[{pts = AttractorPoints[0.5, r, 2000, 128]},
+    SelectFirst[Range[64], Max[Abs[pts[[# + 1 ;;]] - pts[[;; -# - 1]]]] < 10^-6 &, Missing[]]
+  ];
+
+(* DivergenceCase
+   "chaotic", "edge", "periodic" or "stable" for an r without a preset:
+   lambda > 0.05 is chaotic; otherwise an attractor of period 1 is
+   stable, of period 2..64 periodic, and anything else (the accumulation
+   of period doublings, lambda near 0) the edge of chaos. *)
+DivergenceCase[r_?NumericQ, lambda_?NumericQ] :=
+  Module[{period},
+    If[lambda > 0.05, Return["chaotic"]];
+    period = AttractorPeriod[r];
+    Which[period === 1, "stable", IntegerQ[period], "periodic", True, "edge"]
+  ];
+
+(* DivergenceCheck — check 6.
+   At r = 4.0 and r = 2.8, with delta = 1e-6 and saturation 0.1 from
+   x0 = 0.3, the fitted slope must agree with LyapunovExponent (1000
+   transient + 10000 averaged iterations, no floor) within 25 percent:
+   Log[2] for growth at r = 4, Log[0.8] for shrinking at r = 2.8.
+
+   Why 25 percent: a single pair of orbits followed for a few dozen
+   iterations gives a finite-time exponent — the mean of Log|f'(x_n)|
+   along that one short stretch of orbit — not the long-run average
+   LyapunovExponent computes. It depends on where the orbit happens to
+   be (measured: 0.671 against 0.693 at r = 4 over 18 iterations; at
+   r = 3.2 the orbit first lingers near the unstable fixed point, where
+   |f'| = 1.2, and the fit gives -0.40 against -0.92). 25 percent passes
+   the finite-time scatter while still failing a wrong sign, a wrong
+   base of logarithm (a factor of 2.3) or a missing factor of 2. *)
+DivergenceCheck[Optional[x0_?NumericQ, 0.3], Optional[delta_?NumericQ, 10^-6],
+                Optional[saturation_?NumericQ, 0.1], Optional[n_Integer, 150],
+                Optional[tolerance_?NumericQ, 0.25]] :=
+  Module[{cases},
+    cases = Map[
+      Function[{r},
+        Module[{orb, fit, lam},
+          orb = DivergenceOrbits[r, x0, delta, n];
+          fit = DivergenceFit[orb["separation"], saturation];
+          lam = LyapunovExponent[r, x0, 1000, 10000, -100.0];
+          <|"r" -> r, "slope" -> fit["slope"], "lambda" -> lam, "fit" -> fit,
+            "relError" -> Abs[fit["slope"] - lam] / Abs[lam],
+            "pass" -> (Abs[fit["slope"] - lam] <= tolerance * Abs[lam])|>]],
+      {4.0, 2.8}];
+    <|"cases" -> cases, "tolerance" -> tolerance, "delta" -> delta,
+      "saturation" -> saturation, "pass" -> AllTrue[cases, #["pass"] &]|>
+  ];
+
+(* ── Named presets (divergence mode) ────────────────────────────────
+   The four cases of a talk sequence. Each sets only r (and the case, so
+   the narration does not depend on the classifier); x0, delta,
+   iterations, saturation and tempo come from simulation.dynamical.
+   divergence, so all four render to the same length. *)
+$divergencePresets = <|
+  "divergence_chaotic"  -> <|"r" -> 4.0,  "case" -> "chaotic"|>,
+  "divergence_edge"     -> <|"r" -> 3.57, "case" -> "edge"|>,
+  "divergence_periodic" -> <|"r" -> 3.2,  "case" -> "periodic"|>,
+  "divergence_stable"   -> <|"r" -> 2.8,  "case" -> "stable"|>
+|>;
+
+
 (* SweepEventRValues
    The three r values marked with accent tones during the sweep.
    "first_bifurcation" is located via BifurcationPoint (same numerical

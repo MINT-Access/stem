@@ -78,14 +78,28 @@ ExportIterateCSV[iterateResult_Association, outCSV_String] :=
    style used in lagrange/relativity/cosmology/waves main.wl files. *)
 PrintCorrectnessChecks[feigenbaum_Association, fixedPoint_Association,
                        period2_Association, lyapunov_Association,
-                       lyapunovCurve_Association] :=
+                       lyapunovCurve_Association, divergence_Association] :=
   Print["  Checks: ",
     If[feigenbaum["pass"], "1[PASS]", "1[FAIL]"], " ",
     If[fixedPoint["pass"],  "2[PASS]", "2[FAIL]"], " ",
     If[period2["pass"],     "3[PASS]", "3[FAIL]"], " ",
     If[lyapunov["pass"],    "4[PASS]", "4[FAIL]"], " ",
-    If[lyapunovCurve["pass"], "5[PASS]", "5[FAIL]"]
+    If[lyapunovCurve["pass"], "5[PASS]", "5[FAIL]"], " ",
+    If[divergence["pass"],    "6[PASS]", "6[FAIL]"]
   ];
+
+(* PrintDivergenceCheck — check 6, one self-contained sentence per r. *)
+PrintDivergenceCheck[chk_Association] :=
+  MapIndexed[
+    Function[{c, idx},
+      Print["    6", FromCharacterCode[96 + idx[[1]]], ". ", If[c["pass"], "[PASS] ", "[FAIL] "],
+        "At r = ", FmtDec[c["r"], 3], " two orbits started ", FmtN[N[chk["delta"]], 2],
+        " apart ", If[c["lambda"] > 0, "separate", "converge"], " with a fitted slope of ",
+        FmtN[c["slope"], 4], " per iteration (iterations 0 to ", c["fit"]["nEnd"],
+        ") and LyapunovExponent predicts ", FmtN[c["lambda"], 4], "; they differ by ",
+        FmtDec[100 * c["relError"], 1], " percent, ", If[c["pass"], "within", "outside"],
+        " the tolerance of ", FmtDec[100 * chk["tolerance"]], " percent."]],
+    chk["cases"]];
 
 (* PrintLyapunovCurveCheck
    Check 5, one self-contained sentence per r value. *)
@@ -194,4 +208,60 @@ PrintLoudnessLine[wavPath_String, targetLUFS_?NumericQ] :=
           " LUFS and measures ", FmtDec[lufs, 2], " LUFS integrated, with a peak of ",
           FmtDec[peak, 2], " dBFS."];
     <|"lufs" -> lufs, "peakDB" -> peak|>
+  ];
+
+
+(* ── Divergence mode ───────────────────────────────────────────────── *)
+
+(* ExportDivergenceCSV
+   Columns: n, x_n, y_n, separation, log10_separation, in_fit, note_start_s
+   (seconds into the WAV), pitch_x_hz, pitch_y_hz, volume_x, volume_y *)
+ExportDivergenceCSV[orbits_Association, fit_Association, mapping_Association,
+                    noteDuration_?NumericQ, introSec_?NumericQ, outCSV_String] :=
+  Module[{xs = orbits["x"], ys = orbits["y"], sep = orbits["separation"], rows},
+    rows = Table[
+      {i - 1, xs[[i]], ys[[i]], sep[[i]],
+       If[sep[[i]] > 0, Log10[sep[[i]]], ""], If[i - 1 <= fit["nEnd"], 1, 0],
+       introSec + (i - 1) * noteDuration,
+       mapping["freqX"][[i]], mapping["freqY"][[i]], mapping["ampX"][[i]], mapping["ampY"][[i]]},
+      {i, Length[xs]}];
+    ExportCSV[Join[{{"n", "x_n", "y_n", "separation", "log10_separation", "in_fit",
+                     "note_start_s", "pitch_x_hz", "pitch_y_hz", "volume_x", "volume_y"}}, rows],
+              outCSV];
+    STEMDescribeCSV[outCSV, Length[rows], 11]
+  ];
+
+(* PrintDivergenceSummary — one sentence per line. *)
+PrintDivergenceSummary[orbits_Association, fit_Association, lambda_?NumericQ,
+                       predicted_, saturation_?NumericQ, mapping_Association] :=
+  Module[{sep = orbits["separation"], n = orbits["n"], iMax, nZero},
+    STEMSection["Divergence Summary"];
+    If[fit["saturated"],
+      Print["  The separation first exceeded ", FmtDec[saturation], " at iteration ", fit["nSat"],
+            "; the Lyapunov exponent predicts iteration ", FmtDec[predicted, 1],
+            " (Log[", FmtDec[saturation], "/delta]/lambda)."],
+      nZero = FirstPosition[sep, 0., {Missing[]}, {1}][[1]];
+      Print["  The separation never exceeded ", FmtDec[saturation], " in ", n,
+            " iterations; the final separation is ",
+            If[IntegerQ[nZero], "exactly 0, reached at iteration " <> ToString[nZero - 1],
+               FmtN[Last[sep], 3]], "."];
+      Print["  ", If[NumericQ[predicted],
+        "The Lyapunov exponent " <> FmtN[lambda, 3] <> " predicts saturation after " <>
+          FmtDec[predicted, 0] <> " iterations, beyond the " <> ToString[n] <> " computed.",
+        "The Lyapunov exponent " <> FmtN[lambda, 3] <> " is negative, so it predicts that " <>
+          "the separation shrinks and never saturates."]]];
+    Print["  The fitted slope is ", FmtN[fit["slope"], 4], " per iteration over iterations 0 to ",
+          fit["nEnd"], ", the predicted Lyapunov exponent is ", FmtN[lambda, 4],
+          ", and their ratio is ", FmtN[fit["slope"] / lambda, 3], "."];
+    iMax = First[Ordering[sep, -1]];
+    Print["  The maximum separation reached is ", FmtN[sep[[iMax]], 3], ", at iteration ", iMax - 1, "."];
+    Print["  The note mapping's resolution is ", FmtN[mapping["resolution"], 3],
+          " (pitch bin ", FmtN[mapping["pitchBin"], 3], " in x, volume bin ",
+          FmtN[mapping["volumeBin"], 3], " in step size); ",
+          If[IntegerQ[mapping["firstDifferentNote"]],
+            "the two orbits first get different notes at iteration " <>
+              ToString[mapping["firstDifferentNote"]] <> ", where the separation is " <>
+              FmtN[sep[[mapping["firstDifferentNote"] + 1]], 3] <> ".",
+            "the two orbits get the same note at every iteration, so the left and right " <>
+              "channels are identical throughout."]];
   ];

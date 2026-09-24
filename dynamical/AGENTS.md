@@ -14,6 +14,7 @@ a rewrite.
 | `sweep` | swept r_start -> r_end | r-step index (attractor recorded at each r) | Stereo WAV; progressive bifurcation-diagram GIF |
 | `iterate` | fixed (or named preset) | iteration index n | Stereo WAV; x_n vs n time-series GIF |
 | `lyapunov` | swept r_min -> r_max | seconds, r linear in time | Stereo WAV (λ tone vs. λ = 0 reference, markers, intro + outro); two-panel bifurcation / λ(r) GIF with cursor |
+| `divergence` | fixed (or preset) | iteration index n | Stereo WAV (orbit x0 hard left, orbit x0 + δ hard right, separation tone centre, intro + outro); two-panel orbits / log10 separation GIF with cursor |
 
 ## Key design decisions (read before modifying sonify.wl)
 
@@ -188,6 +189,66 @@ Consequences of the floor to remember:
   disappears with the mode's longer averaging (λ there is +0.029, the
   2000-iterate estimate was −0.0004).
 
+### 8. Divergence mode: two orbits, one separation tone
+
+`divergence` shows what λ *means*: two orbits at the same r, started at
+x0 and x0 + δ (defaults 0.3 and 1e-6), separate or converge as
+δ e^(λ n) until the separation saturates. `DivergenceFit` fits a line to
+Log[separation] vs. n up to the first n above `saturation` (0.1), and the
+prediction comes from `LyapunovExponent` (1000 + 10000 iterations, no
+floor), so the mode checks lambda mode's numbers against a direct
+experiment. Things to know before changing it:
+
+- **Voices 1 and 2 are iterate mode's note mapping with two deliberate
+  changes**, both needed for the stereo image to be exactly centred while
+  the orbits agree: the volume's normalising max step is *shared* by both
+  orbits (per-orbit maxima would give identical notes different
+  volumes), and the volume is *quantised to 16 levels* like the pitch's 16
+  scale degrees. With iterate mode's continuous volume the two voices
+  differ by ~1e-6 from the first note, which flips 16-bit rounding in some
+  samples, so the left and right channels would never be sample-identical.
+  `SynthesizeDiscreteNotes` itself is untouched (sweep/iterate unchanged).
+- **The mapping's audible resolution is one quantisation step**: 1/15 of
+  the x range in pitch and 1/15 of the shared max step in volume
+  (`DivergenceNoteMapping["resolution"]` is the smaller, in x units).
+  Separations above it always change the note; smaller ones change it
+  only when the two values sit on either side of a rounding boundary
+  (chance about separation/bin per note). Measured at r = 4: channels
+  sample-identical for iterations 0–14, first difference at iteration 15
+  (separation 0.026, 0.4 bins: x 0.1770 vs. y 0.1505 straddle the pitch
+  boundary at 0.1667), one iteration before the separation reaches the
+  resolution (n = 16). At r = 3.57, 3.2 and 2.8 the channels are
+  identical for the whole file.
+- **Voice 3** is continuous and centred, odd harmonics only (1, 0.2 at
+  3f, 0.08 at 5f), pitch linear in Log10[separation]: δ -> 220 Hz,
+  1 -> 880 Hz, so growth at rate λ is a steady rise of
+  2 λ / (Ln[10] · −Log10[δ]) octaves per iteration. Separations below
+  `$divergenceSeparationFloor` (1e-12) hold at the bottom (55 Hz for
+  δ = 1e-6). Converging orbits really reach separation 0.0 (same double)
+  — at iteration 42 for r = 3.2 and 102 for r = 2.8 — so the floor is
+  needed for the pitch and for the fit (`Log[0.]` is `Indeterminate`).
+  `separation_voice: false` drops voice 3 for a stereo-only rendering;
+  the saturation marker (sweep mode's 440 Hz chaos-onset accent, once,
+  at the first n above saturation) stays, since it is centred and keeps
+  the channels identical where they should be.
+- **The four presets render to the same length** (60.21 s at the
+  defaults, measured): presets set only r, and main.wl builds the intro
+  and outro text of the current run *and* all four presets
+  (`DivergenceNarration`), synthesises them, and pads the spoken intro
+  and outro to the longest. This costs about ten TTS calls per run.
+- **Finite-time exponents**: check 6 allows 25 percent because one pair
+  of orbits over a few dozen iterations gives a finite-time exponent.
+  The periodic preset shows how far off that can be: from x0 = 0.3 at
+  r = 3.2 the orbit first lingers near the unstable fixed point
+  (|f′| = 1.2), and the fit gives −0.40 against λ = −0.92 (ratio 0.44).
+  This is correct behaviour, and why check 6 uses r = 4 and r = 2.8.
+- **Edge preset (r = 3.57)**: λ from x0 = 0.3 is +0.011, so the predicted
+  saturation is ~1070 iterations; within 150 the separation only grows
+  from 1e-6 to 3e-4.
+- **GIF** covers the whole WAV like lyapunov mode's (cursor at n = 0
+  during the intro, at the last n during the outro) and shares its
+  renderer, `RenderTwoPanelFrame`.
+
 ## Project structure
 
 ```
@@ -204,25 +265,35 @@ dynamical/
                             FeigenbaumCheck, FixedPointCheck, Period2Check,
                             LyapunovCheck, SweepEventRValues, SweepModel, IterateModelData,
                             $lyapunovPresets, LyapunovExponent, LyapunovSweep,
-                            LyapunovZeroCrossings, Period2LyapunovExact, LyapunovCurveCheck
+                            LyapunovZeroCrossings, Period2LyapunovExact, LyapunovCurveCheck,
+                            $divergenceSeparationFloor, DivergenceOrbits, DivergenceFit,
+                            DivergencePredictedSaturation, AttractorPeriod, DivergenceCase,
+                            DivergenceCheck, $divergencePresets
     sonify.wl               — PitchScale3Octaves, SynthesizeDiscreteNotes, OverlayEvent,
                             SonifySweep, SonifyIterate ($sweepNotesPerStep constant),
                             LyapunovMarkers, LyapunovToneHz, AWeightingResponse,
                             LyapunovLoudnessGain, LyapunovHarmonicClearance,
-                            LyapunovTimeOfR, SonifyLyapunov
+                            LyapunovTimeOfR, SonifyLyapunov,
+                            DivergenceSeparationHz, DivergenceNoteMapping,
+                            DivergenceNoteBuffer, SonifyDivergence
     speech.wl                — ResampleLinear, DynamicalSpeakToBufferPlatform, BuildIntroBuffer,
                             BuildSweepIntroText, BuildIterateIntroText,
-                            BuildLyapunovIntroText, BuildLyapunovOutroText
+                            BuildLyapunovIntroText, BuildLyapunovOutroText,
+                            SpokenSmall, DivergenceNarration
     animate.wl                — RenderSweepFrame/AnimateSweepBifurcation,
                             RenderIterateFrame/AnimateIterateTimeSeries,
-                            LyapunovBackground/RenderLyapunovFrame/AnimateLyapunov
+                            LyapunovBackground/RenderLyapunovFrame/AnimateLyapunov,
+                            RenderTwoPanelFrame (shared),
+                            DivergenceBackground/AnimateDivergence
     output.wl                  — PitchPanVolume, ExportSweepCSV, ExportIterateCSV,
                             PrintCorrectnessChecks, PrintSweepSummary, PrintIterateSummary,
                             PrintLyapunovCurveCheck, ExportLyapunovCSV, PrintLyapunovSummary,
-                            PrintLoudnessLine
+                            PrintLoudnessLine, PrintDivergenceCheck,
+                            ExportDivergenceCSV, PrintDivergenceSummary
   tests/
     test_model.wl            — unit tests (fixed point, period-2, Feigenbaum, Lyapunov, presets,
-                              lyapunov mode incl. the config-driven false-unison guard)
+                              lyapunov mode incl. the config-driven false-unison guard,
+                              divergence mode incl. left/right buffer identity)
   output/                     — generated files (gitignored)
 ```
 
@@ -242,6 +313,12 @@ wolframscript -file dynamical/main.wl -- --simulation.dynamical.note_duration=0.
 wolframscript -file dynamical/main.wl -- --simulation.mode=lyapunov
 wolframscript -file dynamical/main.wl -- --simulation.mode=lyapunov --simulation.dynamical.preset=lyapunov_window
 wolframscript -file dynamical/main.wl -- --simulation.mode=lyapunov --simulation.dynamical.lyapunov.duration_seconds=60
+wolframscript -file dynamical/main.wl -- --simulation.mode=divergence                                    # r = 4
+wolframscript -file dynamical/main.wl -- --simulation.mode=divergence --simulation.dynamical.preset=divergence_chaotic
+wolframscript -file dynamical/main.wl -- --simulation.mode=divergence --simulation.dynamical.preset=divergence_edge
+wolframscript -file dynamical/main.wl -- --simulation.mode=divergence --simulation.dynamical.preset=divergence_periodic
+wolframscript -file dynamical/main.wl -- --simulation.mode=divergence --simulation.dynamical.preset=divergence_stable
+wolframscript -file dynamical/main.wl -- --simulation.mode=divergence --simulation.dynamical.divergence.separation_voice=false
 
 wolframscript -file dynamical/tests/test_model.wl
 wolframscript -file dynamical/experiments.wl
@@ -255,8 +332,9 @@ config.json + CLI args
    LoadConfig (stem-core)
         |
    [correctness checks: FeigenbaumCheck, FixedPointCheck,
-    Period2Check, LyapunovCheck, LyapunovCurveCheck — always run,
-    printed PASS/FAIL; check 5 prints one sentence per r value]
+    Period2Check, LyapunovCheck, LyapunovCurveCheck, DivergenceCheck —
+    always run, printed PASS/FAIL; checks 5 and 6 print one sentence
+    per r value]
         |
    sweep mode:                          iterate mode:
      SweepModel                           PresetR + IterateModelData
@@ -284,6 +362,20 @@ Lyapunov mode:
    PrintLyapunovSummary (crossings, min/max, floor count)
    AnimateLyapunov -> GIF (covers the whole WAV); SyncWAVToGIF; PrintLoudnessLine
    ExportLyapunovCSV -> CSV
+```
+
+Divergence mode:
+
+```
+   $divergencePresets (optional) -> DivergenceOrbits -> {x, y, separation}
+        |                           DivergenceFit, LyapunovExponent -> prediction
+   SonifyDivergence -> {leftBuf (orbit x), rightBuf (orbit y), + centre separation tone, marker}
+        |
+   DivergenceNarration for this run and the 4 presets -> speech padded to the longest
+   Join[intro, pause, notes, pause, outro] -> NormalizeToLoudness(-17 LUFS) -> WAV
+        |
+   PrintDivergenceSummary; AnimateDivergence -> GIF; SyncWAVToGIF; PrintLoudnessLine
+   ExportDivergenceCSV -> CSV
 ```
 
 `SonifySweep`/`SonifyIterate` return buffers, not exported files — same

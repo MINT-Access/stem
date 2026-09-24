@@ -22,6 +22,8 @@
      wolframscript -file main.wl -- --simulation.dynamical.note_duration=0.04
      wolframscript -file main.wl -- --simulation.mode=lyapunov
      wolframscript -file main.wl -- --simulation.mode=lyapunov --simulation.dynamical.preset=lyapunov_window
+     wolframscript -file main.wl -- --simulation.mode=divergence
+     wolframscript -file main.wl -- --simulation.mode=divergence --simulation.dynamical.preset=divergence_edge
 
    New to this app? Start with dynamical/LISTENING_GUIDE.md.
 
@@ -36,11 +38,18 @@
                            lambda(r) as a gliding tone against a steady
                            reference tone at lambda = 0, with marker
                            tones at the bifurcation points
+     divergence         -- two orbits at the same r started delta apart,
+                           panned hard left and right, plus a centre tone
+                           whose pitch tracks Log10 of their separation;
+                           presets divergence_chaotic / _edge / _periodic /
+                           _stable
 
    Outputs (dynamical/output/):
      sweep_audio.wav / sweep.gif / sweep_data.csv
      iterate_audio.wav / iterate.gif / iterate_data.csv
      lyapunov_audio.wav / lyapunov.gif / lyapunov_data.csv
+       (with a preset: <preset>_audio.wav / <preset>.gif / <preset>_data.csv)
+     divergence_audio.wav / divergence.gif / divergence_data.csv
        (with a preset: <preset>_audio.wav / <preset>.gif / <preset>_data.csv)
    ======================================================== *)
 
@@ -102,7 +111,8 @@ $fixedPt    = FixedPointCheck[];
 $period2Chk = Period2Check[];
 $lyapunov   = LyapunovCheck[];
 $lyapCurve  = LyapunovCurveCheck[];
-PrintCorrectnessChecks[$feigenbaum, $fixedPt, $period2Chk, $lyapunov, $lyapCurve];
+$divChk     = DivergenceCheck[];
+PrintCorrectnessChecks[$feigenbaum, $fixedPt, $period2Chk, $lyapunov, $lyapCurve, $divChk];
 Print["    1. Feigenbaum ratio: ", FmtN[$feigenbaum["ratio"], 5],
       "  (delta = ", FmtN[$FeigenbaumConstant, 6], ", ",
       FmtN[$feigenbaum["relError"] * 100, 4], "% error)"];
@@ -114,6 +124,7 @@ Print["    4. Lyapunov (r=4.0): ", FmtN[$lyapunov["lambda"], 6],
       "  (log 2 = ", FmtN[$lyapunov["expected"], 6], ", ",
       FmtN[$lyapunov["relError"] * 100, 4], "% error)"];
 PrintLyapunovCurveCheck[$lyapCurve];
+PrintDivergenceCheck[$divChk];
 Print[""];
 
 Which[
@@ -340,8 +351,108 @@ Which[
       "Play audio: " <> STEMPlayCmd[outWAV]
     ],
 
+  (* ===== Divergence mode ===== *)
+  mode === "divergence",
+
+    dvCfg[key_, default_] := GetCfg[cfg, {"simulation", "dynamical", "divergence", key}, default];
+    dvNum[v_] := N @ If[StringQ[v], ToExpression[StringReplace[v, "e" | "E" -> "*^"]], v];
+    dvR       = dvNum @ dvCfg["r", 4.0];
+    dvX0      = dvNum @ dvCfg["x0", 0.3];
+    dvDelta   = dvNum @ dvCfg["delta", 10^-6];
+    dvN       =         dvCfg["iterations", 150];
+    dvSat     = dvNum @ dvCfg["saturation", 0.1];
+    dvVoice3  = TrueQ @ dvCfg["separation_voice", True];
+    dvNoteDur = dvNum @ dvCfg["note_duration", 0.08];
+
+    dvName = "divergence"; dvCase = Missing[];
+    Which[
+      KeyExistsQ[$divergencePresets, preset],
+        dvR = N @ $divergencePresets[preset]["r"];
+        dvCase = $divergencePresets[preset]["case"];
+        dvName = preset,
+      preset =!= "",
+        Print["  Preset \"", preset, "\" is not a divergence-mode preset and is ignored; ",
+              "divergence-mode presets: ", StringRiffle[Keys[$divergencePresets], ", "], "."]
+    ];
+
+    outWAV = FileNameJoin[{$outDir, dvName <> "_audio.wav"}];
+    outGIF = FileNameJoin[{$outDir, dvName <> ".gif"}];
+    outCSV = FileNameJoin[{$outDir, dvName <> "_data.csv"}];
+
+    Print["[2/5] Iterating two orbits started delta apart..."];
+    STEMSay["Iterating two nearby orbits"];
+    dvOrbits = DivergenceOrbits[dvR, dvX0, dvDelta, dvN];
+    dvFit    = DivergenceFit[dvOrbits["separation"], dvSat];
+    dvLambda = LyapunovExponent[dvR, dvX0, 1000, 10000, -100.0];
+    dvPred   = DivergencePredictedSaturation[dvLambda, dvDelta, dvSat];
+    If[MissingQ[dvCase], dvCase = DivergenceCase[dvR, dvLambda]];
+    Print["  r: ", FmtN[dvR, 4], "  (", dvCase, If[dvName =!= "divergence", ", preset: " <> dvName, ""], ")"];
+    Print["  Orbits start at x0 = ", FmtN[dvX0, 4], " and x0 + delta, delta = ", FmtN[dvDelta, 3],
+          "; ", dvN, " iterations of ", FmtDec[dvNoteDur], " s each; saturation at ", FmtDec[dvSat], "."];
+    Print["  Predicted lambda (LyapunovExponent, 1000 transient + 10000 averaged iterations): ",
+          FmtN[dvLambda, 4], "."];
+    Print[""];
+
+    Print["[3/5] Sonifying the two orbits and their separation..."];
+    STEMSay["Sonifying the two orbits and their separation"];
+    dvResult = SonifyDivergence[dvOrbits, dvNoteDur, dvSat, dvVoice3, sr];
+    Print["  Voices: left orbit, right orbit", If[dvVoice3, ", separation tone in the centre", " (separation voice off)"],
+          If[NumericQ[dvResult["markerTime"]],
+            "; saturation marker (440 Hz) at " <> FmtDec[dvResult["markerTime"], 2] <> " s into the sonified part.", "."]];
+
+    (* Spoken intro and outro, padded to the longest of this run's and the
+       four presets' texts, so the presets render to the same length. *)
+    dvNarr   = DivergenceNarration[dvR, dvCase, dvX0, dvDelta, dvN, dvSat];
+    dvTexts  = DeleteDuplicates @ Join[{dvNarr},
+      KeyValueMap[DivergenceNarration[#2["r"], #2["case"], dvX0, dvDelta, dvN, dvSat] &, $divergencePresets]];
+    dvSpeech = AssociationMap[
+      Function[t, With[{b = BuildIntroBuffer[t, sr]}, If[Length[b] > 0, NormalizeBuffer[b, 0.95], b]]],
+      DeleteDuplicates[Flatten[{#["intro"], #["outro"]} & /@ dvTexts]]];
+    dvIntroSlot = Max[Length[dvSpeech[#["intro"]]] & /@ dvTexts];
+    dvOutroSlot = Max[Length[dvSpeech[#["outro"]]] & /@ dvTexts];
+    Print["  Spoken intro: ", dvNarr["intro"]];
+    Print["  Spoken outro: ", dvNarr["outro"]];
+    Print["  Speech is padded to the longest intro (", FmtDec[dvIntroSlot / N[sr], 2],
+          " s) and outro (", FmtDec[dvOutroSlot / N[sr], 2], " s) of this run and the four presets."];
+    pauseBuffer = ConstantArray[0.0, Round[sr * 0.4]];
+    introPart = If[dvIntroSlot > 0,
+      Join[PadRight[dvSpeech[dvNarr["intro"]], dvIntroSlot, 0.0], pauseBuffer], {}];
+    outroPart = If[dvOutroSlot > 0,
+      Join[pauseBuffer, PadRight[dvSpeech[dvNarr["outro"]], dvOutroSlot, 0.0]], {}];
+    dvIntroSec = N[Length[introPart]] / sr;
+    Print[""];
+
+    finalLeft  = Join[introPart, dvResult["leftBuf"],  outroPart];
+    finalRight = Join[introPart, dvResult["rightBuf"], outroPart];
+    EnsureDir[outWAV];
+    Export[outWAV, Sound[SampledSoundList[NormalizeToLoudness[{finalLeft, finalRight}, -17.0, 0.97, sr], sr]], "WAV"];
+    totalDurSec = N[Length[finalLeft]] / sr;
+    STEMDescribeWAV[outWAV, totalDurSec];
+    PrintDivergenceSummary[dvOrbits, dvFit, dvLambda, dvPred, dvSat, dvResult["mapping"]];
+    Print[""];
+
+    Print["[4/5] Rendering the orbits and separation animation..."];
+    STEMSay["Rendering the two orbits and their separation"];
+    {$gifFrames, $gifFps} = AnimateDivergence[dvOrbits, dvFit, dvLambda, dvSat,
+      <|"intro" -> dvIntroSec, "noteDuration" -> dvNoteDur, "total" -> totalDurSec|>, outGIF];
+    STEMDescribeGIF[outGIF, $gifFrames, $gifFps];
+    SyncWAVToGIF[outGIF, outWAV];
+    PrintLoudnessLine[outWAV, -17.0];
+    Print[""];
+
+    Print["[5/5] Exporting data table..."];
+    ExportDivergenceCSV[dvOrbits, dvFit, dvResult["mapping"], dvNoteDur, dvIntroSec, outCSV];
+    Print[""];
+
+    STEMHeading["Done"];
+    STEMSay[
+      "Divergence complete, r equals " <> ToString[NumberForm[dvR, {3,2}]] <> ", the " <> dvCase <>
+      " case. Total duration: " <> ToString[NumberForm[totalDurSec, {5,1}]] <> " seconds. " <>
+      "Play audio: " <> STEMPlayCmd[outWAV]
+    ],
+
   (* ===== Unknown mode ===== *)
   True,
-    Print["Error: unknown simulation.mode \"", mode, "\" -- expected \"sweep\", \"iterate\" or \"lyapunov\"."];
+    Print["Error: unknown simulation.mode \"", mode, "\" -- expected \"sweep\", \"iterate\", \"lyapunov\" or \"divergence\"."];
     Exit[1]
 ];

@@ -359,3 +359,133 @@ SonifyLyapunov[sweep_List, durSec_?NumericQ, refHz_?NumericQ,
       "toneHzRange" -> MinMax[freqS], "sr" -> sr
     |>
   ];
+
+
+(* ── Divergence mode ──────────────────────────────────────────────────
+   Three voices:
+     voice 1 (hard left)  orbit started at x0
+     voice 2 (hard right) orbit started at x0 + delta
+     voice 3 (centre)     the separation |x_n - y_n|, a continuous tone
+   Voices 1 and 2 use iterate mode's note mapping (ScaleLookup pitch on
+   PitchScale3Octaves, StemSynthNote with harmonics {1, 0.25} and decay
+   0.35, one note of note_duration per iterate, volume 0.25 + 0.70 *
+   step / max step), with the pan replaced by hard left / hard right and
+   two changes that make identical orbits produce identical samples:
+     - the max step normalising the volume is shared by both orbits
+       (iterate mode normalises by its own orbit's max, which would give
+       the two voices different volumes while their orbits still agree);
+     - the volume is quantised to 16 levels, like the 16 scale degrees of
+       the pitch. A continuous volume would differ by ~1e-6 from the first
+       note on, which flips 16-bit rounding in some samples, so the two
+       channels would never be sample-identical.
+   So the mapping's audible resolution is one quantisation step: 1/15 of
+   the x range in pitch (one scale degree) and 1/15 of the shared max
+   step in volume. While the separation is below it the two channels are
+   the same note for note and the stereo image is centred.
+
+   Voice 3's pitch is linear in Log10[separation]: delta sounds at
+   $divergenceLowHz (220 Hz), a separation of 1 two octaves higher
+   (880 Hz). Exponential growth delta * e^(lambda n) is therefore a
+   steady rise of 2 lambda / (Ln[10] * -Log10[delta]) octaves per
+   iteration (0.0668 at delta = 1e-6 and lambda = Log[2]); shrinking is a
+   steady fall. Separations below $divergenceSeparationFloor (1e-12,
+   including the exact 0. converging orbits reach) hold at the bottom of
+   the range, 55 Hz for delta = 1e-6. The timbre is odd harmonics only
+   (a hollow, clarinet-like tone), sustained and gliding, against the
+   plucked notes of the orbit voices. *)
+
+$divergenceLowHz          = 220.0;
+$divergenceOctaves        = 2.0;
+$divergenceSepHarmonics   = {1.0, 0.0, 0.2, 0.0, 0.08};
+$divergenceSepAmp         = 0.3;
+$divergenceVolumeLevels   = 16;
+$divergenceNoteHarmonics  = {1.0, 0.25};   (* as SynthesizeDiscreteNotes *)
+$divergenceNoteDecay      = 0.35;           (* as SynthesizeDiscreteNotes *)
+
+(* DivergenceSeparationHz — voice 3's pitch for a separation (or list). *)
+DivergenceSeparationHz[sep_, delta_?NumericQ] :=
+  Module[{ld = Log10[N[delta]]},
+    $divergenceLowHz * 2.0^($divergenceOctaves *
+      (Log10[Clip[sep, {N[$divergenceSeparationFloor], 1.0}]] - ld) / (-ld))
+  ];
+
+(* DivergenceNoteMapping
+   Pitch (Hz) and quantised volume of every note of both orbits.
+   Returns <|"freqX", "freqY", "ampX", "ampY", "stepMax",
+   "resolution" (min of the pitch and volume bins, in x units),
+   "firstDifferentNote" (first n whose pitch or volume differs between
+   the orbits, Missing[] if none)|>. *)
+DivergenceNoteMapping[xs_List, ys_List] :=
+  Module[{scale = PitchScale3Octaves[], nLev = $divergenceVolumeLevels - 1,
+          stepX, stepY, stepMax, quant, freqX, freqY, ampX, ampY, diff},
+    stepX = Prepend[Abs[Differences[xs]], 0.0];
+    stepY = Prepend[Abs[Differences[ys]], 0.0];
+    stepMax = Max[stepX, stepY];
+    If[stepMax <= 0, stepMax = 1.0];
+    quant[steps_] := 0.25 + 0.70 * Round[nLev * Clip[steps / stepMax, {0.0, 1.0}]] / nLev;
+    freqX = ScaleLookup[#, 0.0, 1.0, scale, $dynamicalRootHz] & /@ xs;
+    freqY = ScaleLookup[#, 0.0, 1.0, scale, $dynamicalRootHz] & /@ ys;
+    ampX = quant[stepX]; ampY = quant[stepY];
+    diff = FirstPosition[MapThread[#1 != #2 || #3 != #4 &, {freqX, freqY, ampX, ampY}], True, {Missing[]}, {1}][[1]];
+    <|"freqX" -> freqX, "freqY" -> freqY, "ampX" -> ampX, "ampY" -> ampY,
+      "stepMax" -> stepMax,
+      "pitchBin" -> 1.0 / (Length[scale] - 1), "volumeBin" -> stepMax / nLev,
+      "resolution" -> Min[1.0 / (Length[scale] - 1), stepMax / nLev],
+      "firstDifferentNote" -> If[IntegerQ[diff], diff - 1, Missing[]]|>
+  ];
+
+(* DivergenceNoteBuffer — one mono voice of discrete notes. *)
+DivergenceNoteBuffer[freqs_List, amps_List, noteDuration_?NumericQ, nSamples_Integer, sr_Integer] :=
+  Module[{buf = ConstantArray[0.0, nSamples], toneSamples = Round[noteDuration * sr],
+          mono, start, len},
+    Do[
+      mono  = StemSynthNote[freqs[[i]], noteDuration, amps[[i]],
+                            $divergenceNoteHarmonics, $divergenceNoteDecay, sr];
+      start = Clip[Round[(i - 1) * noteDuration * sr] + 1, {1, nSamples}];
+      len   = Min[toneSamples, nSamples - start + 1, Length[mono]];
+      If[len > 0, buf[[start ;; start + len - 1]] += mono[[1 ;; len]]],
+      {i, Length[freqs]}];
+    buf
+  ];
+
+(* SonifyDivergence
+   orbits = DivergenceOrbits output. Returns buffers (main.wl adds the
+   spoken intro and outro) plus the note mapping. *)
+SonifyDivergence[orbits_Association, noteDuration_?NumericQ, saturation_?NumericQ,
+                 separationVoice_, sr_Integer] :=
+  Module[{xs = orbits["x"], ys = orbits["y"], sep = orbits["separation"], n, nSamples,
+          mapping, left, right, logSep, dt, pos, i0, fr, lsS, freqS, phase, fade, sepTone,
+          nSat, markerTime = Missing[]},
+    n = Length[xs];
+    nSamples = Round[n * noteDuration * sr] + 1;
+    mapping  = DivergenceNoteMapping[xs, ys];
+    left  = DivergenceNoteBuffer[mapping["freqX"], mapping["ampX"], noteDuration, nSamples, sr];
+    right = DivergenceNoteBuffer[mapping["freqY"], mapping["ampY"], noteDuration, nSamples, sr];
+
+    If[TrueQ[separationVoice],
+      (* Log10 of the clamped separation, linear between note onsets. *)
+      logSep = Log10[Clip[sep, {N[$divergenceSeparationFloor], 1.0}]];
+      dt  = noteDuration;
+      pos = N[Range[0, nSamples - 1] / sr] / dt;
+      i0  = Clip[Floor[pos], {0, n - 2}];
+      fr  = Clip[pos - i0, {0.0, 1.0}];
+      lsS = logSep[[i0 + 1]] * (1.0 - fr) + logSep[[i0 + 2]] * fr;
+      freqS = DivergenceSeparationHz[10.0^lsS, orbits["delta"]];
+      phase = 2.0 Pi * Accumulate[freqS] / sr;
+      fade  = LyapunovEdgeFade[nSamples, sr];
+      sepTone = $divergenceSepAmp * fade *
+        Total[MapIndexed[#1 * Sin[#2[[1]] * phase] &, $divergenceSepHarmonics]] /
+        Total[$divergenceSepHarmonics];
+      left  += Sqrt[0.5] * sepTone;
+      right += Sqrt[0.5] * sepTone];
+
+    (* Saturation marker: the chaos-onset accent (440 Hz, 0.12 s), once. *)
+    nSat = DivergenceFit[sep, saturation]["nSat"];
+    If[IntegerQ[nSat],
+      markerTime = nSat * noteDuration;
+      {left, right} = OverlayEvent[left, right, 440.0, 0.12, 0.7, markerTime, sr]];
+
+    <|"leftBuf" -> left, "rightBuf" -> right, "nSamples" -> nSamples,
+      "noteSamples" -> Round[noteDuration * sr], "mapping" -> mapping,
+      "markerTime" -> markerTime, "separationVoice" -> TrueQ[separationVoice], "sr" -> sr|>
+  ];

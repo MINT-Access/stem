@@ -106,6 +106,10 @@ wolframscript -file main.wl -- --simulation.dynamical.r=3.83
 wolframscript -file main.wl -- --simulation.mode=lyapunov
 wolframscript -file main.wl -- --simulation.mode=lyapunov --simulation.dynamical.preset=lyapunov_window
 
+# Divergence mode: two orbits delta apart (left/right) and their separation (centre)
+wolframscript -file main.wl -- --simulation.mode=divergence
+wolframscript -file main.wl -- --simulation.mode=divergence --simulation.dynamical.preset=divergence_stable
+
 # Finer sweep resolution / faster rhythm
 wolframscript -file main.wl -- --simulation.dynamical.r_steps=1000
 wolframscript -file main.wl -- --simulation.dynamical.note_duration=0.04
@@ -225,6 +229,24 @@ wolframscript -file main.wl -- --simulation.mode=lyapunov
 # macOS:   afplay output/lyapunov_audio.wav
 ```
 
+### divergence
+
+Sensitive dependence on initial conditions: two orbits at the same r
+(default 4.0), started at `x0` (0.3) and `x0 + delta` (1e-6), iterated
+`iterations` (150) times at iterate mode's tempo (`note_duration`,
+0.08 s). The first orbit plays hard left, the second hard right, each
+with iterate mode's note mapping (volume shared-normalised and quantised
+to 16 levels so identical notes give identical samples); a centred,
+sustained odd-harmonic tone tracks Log10 of their separation, from 220 Hz
+at delta to 880 Hz at 1, so exponential growth is a steady rise whose
+slope is the Lyapunov exponent. A 440 Hz marker sounds once when the
+separation first exceeds `saturation` (0.1). The console compares the
+saturation iteration with the prediction Log[saturation/delta]/λ and the
+fitted slope with λ from `LyapunovExponent`. Presets for a talk sequence,
+all rendered to the same length: `divergence_chaotic` (r 4.0),
+`divergence_edge` (3.57), `divergence_periodic` (3.2), `divergence_stable`
+(2.8). `separation_voice: false` gives a stereo-only rendering.
+
 ## Sonification mapping (sweep and iterate modes)
 
 | Quantity | Encoding |
@@ -236,7 +258,7 @@ wolframscript -file main.wl -- --simulation.mode=lyapunov
 
 ## Correctness checks
 
-Every run prints five physical/mathematical correctness checks:
+Every run prints six physical/mathematical correctness checks:
 
 1. **Feigenbaum constant**: the first three period-doubling bifurcation
    points are located numerically (via `FindRoot` on the map's
@@ -255,6 +277,10 @@ Every run prints five physical/mathematical correctness checks:
    each within 0.01; λ(3.835), inside the period-3 window, negative;
    λ(4.0) = log 2 within 0.01. Each is printed as a sentence with the
    computed and expected values.
+6. **Divergence** (δ = 1e-6, saturation 0.1, x0 = 0.3): the fitted growth
+   rate of the separation of two orbits matches `LyapunovExponent` within
+   25 percent at r = 4.0 (Log 2) and r = 2.8 (Log 0.8, shrinking). 25
+   percent because one pair of orbits gives a finite-time exponent.
 
 ## Outputs
 
@@ -270,17 +296,21 @@ Every run prints five physical/mathematical correctness checks:
 | `output/lyapunov.gif` | Bifurcation diagram over λ(r), shared r axis, moving cursor with r and λ printed |
 | `output/lyapunov_data.csv` | Per-step table: r, lambda, at_floor, sweep_time_s, audio_time_s, lambda_tone_hz |
 | `output/lyapunov_window_*` | The same three files for the `lyapunov_window` preset |
+| `output/divergence_audio.wav` | Spoken intro + two orbits (L/R) and separation tone (centre) + spoken outro |
+| `output/divergence.gif` | Two orbits above log10 separation with fit, λ prediction and saturation line; cursor |
+| `output/divergence_data.csv` | n, x_n, y_n, separation, log10_separation, in_fit, note_start_s, pitch and volume of both voices |
+| `output/divergence_<case>_*` | The same three files for each divergence preset |
 
 ## Configuration parameters (`dynamical/config.json`)
 
 | Key | Default | Description |
 |-----|---------|--------------|
-| `simulation.mode` | `"sweep"` | `sweep`, `iterate` or `lyapunov` |
+| `simulation.mode` | `"sweep"` | `sweep`, `iterate`, `lyapunov` or `divergence` |
 | `simulation.dynamical.r_start` | `2.5` | Sweep start r (sweep mode) |
 | `simulation.dynamical.r_end` | `4.0` | Sweep end r (sweep mode) |
 | `simulation.dynamical.r_steps` | `500` | Number of r values sampled (sweep mode) |
 | `simulation.dynamical.r` | `3.8` | Fixed r value (iterate mode, used when `preset` is empty) |
-| `simulation.dynamical.preset` | `""` | Named preset: `fixed_point`, `period2`, `period4`, `period3_window`, `chaos` (iterate mode); `lyapunov_window` (lyapunov mode) |
+| `simulation.dynamical.preset` | `""` | Named preset: `fixed_point`, `period2`, `period4`, `period3_window`, `chaos` (iterate mode); `lyapunov_window` (lyapunov mode); `divergence_chaotic`, `divergence_edge`, `divergence_periodic`, `divergence_stable` (divergence mode) |
 | `simulation.dynamical.n_transient` | `200` | Transient iterations discarded before recording the attractor (sweep mode) |
 | `simulation.dynamical.n_attractor` | `100` | Attractor iterations recorded per r-step (sweep mode) |
 | `simulation.dynamical.n_iterations` | `300` | Total iterations (iterate mode) |
@@ -295,6 +325,13 @@ Every run prints five physical/mathematical correctness checks:
 | `simulation.dynamical.lyapunov.floor` | `-0.5` | λ is clipped here; keeps the λ tone's harmonics off the reference |
 | `simulation.dynamical.lyapunov.transient` | `1000` | Iterations discarded at each r |
 | `simulation.dynamical.lyapunov.average_iterations` | `10000` | Iterations averaged at each r |
+| `simulation.dynamical.divergence.r` | `4.0` | r for both orbits (divergence mode) |
+| `simulation.dynamical.divergence.x0` | `0.3` | Start of the first orbit |
+| `simulation.dynamical.divergence.delta` | `1.0e-6` | Offset of the second orbit's start |
+| `simulation.dynamical.divergence.iterations` | `150` | Iterations of each orbit |
+| `simulation.dynamical.divergence.saturation` | `0.1` | Separation that counts as saturated (fit range end, marker) |
+| `simulation.dynamical.divergence.separation_voice` | `true` | Centre separation tone on/off |
+| `simulation.dynamical.divergence.note_duration` | `0.08` | Seconds per iteration, as iterate mode |
 
 ## Performance notes
 

@@ -11,7 +11,7 @@ document covers CLI options, modes, config keys, and output files for each.
 |-----|--------|-------|-----------|---------------|
 | `pendulum` | Physics ODE | `simple`, `double` | `output/` | No |
 | `lorenz` | Strange attractor | `lorenz`, `rossler` | `output/` | No |
-| `dynamical` | Logistic map / route to chaos | `sweep`, `iterate`, `lyapunov` | `output/` | No |
+| `dynamical` | Logistic map / route to chaos | `sweep`, `iterate`, `lyapunov`, `divergence` | `output/` | No |
 | `asteroids` | NASA NeoWs API | — | `output/` | Yes |
 | `cellular` | Cellular automata | `life`, `rule110` | `output/` | No |
 | `signal` | Fourier analysis | `chord`, `sweep`, `am` | `output/` | No |
@@ -154,6 +154,9 @@ genuinely sounds like a four-note cycle. `lyapunov` mode sweeps r and
 sonifies the Lyapunov exponent λ(r) as a continuous tone gliding around a
 steady reference tone at λ = 0: above it the orbit is chaotic, below it
 periodic, and beating between the two marks a zero crossing.
+`divergence` mode plays two orbits started 1e-6 apart in the left and
+right ears plus a centred tone tracking Log10 of their separation, whose
+rate of rise is the Lyapunov exponent.
 
 **Run:**
 ```sh
@@ -168,6 +171,8 @@ wolframscript -file dynamical/main.wl -- --simulation.dynamical.r=3.83
 wolframscript -file dynamical/main.wl -- --simulation.dynamical.r_steps=1000
 wolframscript -file dynamical/main.wl -- --simulation.mode=lyapunov          # λ(r), r 2.5→4.0, 120 s
 wolframscript -file dynamical/main.wl -- --simulation.mode=lyapunov --simulation.dynamical.preset=lyapunov_window
+wolframscript -file dynamical/main.wl -- --simulation.mode=divergence        # two orbits, r=4.0
+wolframscript -file dynamical/main.wl -- --simulation.mode=divergence --simulation.dynamical.preset=divergence_edge
 ```
 
 Named presets (`iterate` mode): `fixed_point` (r=2.8), `period2` (r=3.2),
@@ -177,13 +182,16 @@ that value is the window's exact tangent-bifurcation opening edge, where
 convergence to the 3-cycle is pathologically slow; 3.830 converges cleanly
 within the default `n_iterations`. Named preset (`lyapunov` mode):
 `lyapunov_window` (r 3.40→3.90, 500 steps, 40 s — the range of the
-listening prototype `dynamical/prototype_lyapunov.wl`).
+listening prototype `dynamical/prototype_lyapunov.wl`). Named presets
+(`divergence` mode, same length, for playing in sequence):
+`divergence_chaotic` (r=4.0), `divergence_edge` (3.57),
+`divergence_periodic` (3.2), `divergence_stable` (2.8).
 
 **Key config keys (`dynamical/config.json`):**
 
 | Key | Default | Description |
 |-----|---------|-------------|
-| `simulation.mode` | `"sweep"` | `"sweep"`, `"iterate"` or `"lyapunov"` |
+| `simulation.mode` | `"sweep"` | `"sweep"`, `"iterate"`, `"lyapunov"` or `"divergence"` |
 | `simulation.dynamical.r_start` | `2.5` | Sweep start r (sweep mode) |
 | `simulation.dynamical.r_end` | `4.0` | Sweep end r (sweep mode) |
 | `simulation.dynamical.r_steps` | `500` | Number of r values sampled (sweep mode) |
@@ -202,6 +210,11 @@ listening prototype `dynamical/prototype_lyapunov.wl`).
 | `simulation.dynamical.lyapunov.floor` | `-0.5` | λ clip; keeps the λ tone's harmonics off the reference |
 | `simulation.dynamical.lyapunov.transient` | `1000` | Iterations discarded per r |
 | `simulation.dynamical.lyapunov.average_iterations` | `10000` | Iterations averaged per r |
+| `simulation.dynamical.divergence.r` / `.x0` / `.delta` | `4.0` / `0.3` / `1.0e-6` | The two orbits start at x0 and x0 + delta (divergence mode) |
+| `simulation.dynamical.divergence.iterations` | `150` | Iterations per orbit |
+| `simulation.dynamical.divergence.saturation` | `0.1` | Separation that counts as saturated |
+| `simulation.dynamical.divergence.separation_voice` | `true` | Centre separation tone on/off |
+| `simulation.dynamical.divergence.note_duration` | `0.08` | Seconds per iteration |
 
 **Output files:**
 
@@ -216,6 +229,9 @@ listening prototype `dynamical/prototype_lyapunov.wl`).
 | `output/lyapunov_audio.wav` | Spoken intro + λ tone, reference tone, markers + spoken outro (stereo) |
 | `output/lyapunov.gif` | Bifurcation diagram above λ(r), shared r axis, moving cursor with r and λ |
 | `output/lyapunov_data.csv` | r, lambda, at_floor, sweep_time_s, audio_time_s, lambda_tone_hz |
+| `output/divergence_audio.wav` | Spoken intro + orbit x (left), orbit y (right), separation tone (centre) + spoken outro |
+| `output/divergence.gif` | Two orbits above log10 separation, fit and λ prediction, cursor |
+| `output/divergence_data.csv` | n, x_n, y_n, separation, log10_separation, in_fit, note_start_s, pitches, volumes |
 
 **Notes:**
 - Sonification mapping: pitch = x_n on a 3-octave minor pentatonic scale
@@ -226,15 +242,17 @@ listening prototype `dynamical/prototype_lyapunov.wl`).
   console and via speech as the sweep reaches them: the first
   period-doubling bifurcation (660 Hz, r≈3.0, located numerically), the
   onset of chaos (440 Hz, r≈3.57), and the period-3 window (528 Hz, r≈3.83).
-- Five correctness checks run on every invocation, printed as
-  `Checks: 1[PASS] 2[PASS] 3[PASS] 4[PASS] 5[PASS]`: the Feigenbaum constant
+- Six correctness checks run on every invocation, printed as
+  `Checks: 1[PASS] 2[PASS] 3[PASS] 4[PASS] 5[PASS] 6[PASS]`: the Feigenbaum constant
   (bifurcation points located via `FindRoot` on the map's stability
   conditions, not hardcoded — ratio verified within 5% of δ≈4.669), the
   analytic fixed point x*=1−1/r at r=2.8, the period-2 sum formula
   (r+1)/r at r=3.2, and the Lyapunov exponent at r=4.0 (verified within
   5% of log 2 ≈ 0.693), and check 5, the λ(r) curve lyapunov mode
   sonifies: λ(2.8) = log 0.8, λ(3.2) = the closed-form period-2 value,
-  λ(4.0) = log 2 (each within 0.01), and λ(3.835) < 0 in the period-3 window.
+  λ(4.0) = log 2 (each within 0.01), and λ(3.835) < 0 in the period-3 window;
+  check 6, the fitted growth rate of two orbits' separation against
+  `LyapunovExponent` within 25% at r=4.0 and r=2.8.
 - Sweep mode audio duration scales as `r_steps × 8 × note_duration` — only
   8 of each r-step's recorded attractor points become audible notes (all
   are equally valid post-transient points; 8 is enough to make any

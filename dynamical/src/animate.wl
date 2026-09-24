@@ -196,25 +196,35 @@ LyapunovBackground[sweep_List, bifPoints_List, markerRs_List, floor_?NumericQ, y
                    {Rasterize[bottom, ImageResolution -> 144]}}]
   ];
 
-(* RenderLyapunovFrame — background plus cursor at r and the r/lambda text. *)
-RenderLyapunovFrame[bg_Image, r_?NumericQ, lambda_?NumericQ, rMin_?NumericQ, rMax_?NumericQ] :=
+(* RenderTwoPanelFrame
+   A frame of a two-panel animation built on a rasterised background from
+   LyapunovPanelOpts panels (lyapunov and divergence modes): the
+   background, a red cursor at data value xVal through both panels, and a
+   line of text in the top padding, leftText left-aligned and rightText
+   right-aligned. *)
+RenderTwoPanelFrame[bg_Image, xVal_?NumericQ, xMin_?NumericQ, xMax_?NumericQ,
+                    leftText_, rightText_] :=
   Module[{w = $lyapunovPanelW, h = $lyapunovPanelH, l, rt, b, t, xPix},
     {{l, rt}, {b, t}} = $lyapunovPadding;
-    xPix = l + (r - rMin) / (rMax - rMin) * (w - l - rt);
+    xPix = l + (xVal - xMin) / (xMax - xMin) * (w - l - rt);
     Graphics[
       {Inset[bg, {0, 0}, {0, 0}, {w, 2 h}],
        {Red, AbsoluteThickness[2],
         Line[{{xPix, h + b}, {xPix, 2 h - t}}], Line[{{xPix, b}, {xPix, h - t}}]},
-       Text[Style["Logistic map: bifurcation diagram and Lyapunov exponent", White, 12],
-            {l, 2 h - t / 2}, {-1, 0}],
-       Text[Style["r = " <> ToString[NumberForm[r, {4, 2}]] <> "    \[Lambda] = " <>
-                  ToString[NumberForm[lambda, {3, 2}, NumberSigns -> {"\[Minus]", ""}]],
-                  Yellow, Bold, 13],
-            {w - rt, 2 h - t / 2}, {1, 0}]},
+       Text[leftText, {l, 2 h - t / 2}, {-1, 0}],
+       Text[rightText, {w - rt, 2 h - t / 2}, {1, 0}]},
       PlotRange -> {{0, w}, {0, 2 h}}, PlotRangePadding -> None,
       ImagePadding -> None, ImageSize -> {w, 2 h}, Background -> Black
     ]
   ];
+
+(* RenderLyapunovFrame — background plus cursor at r and the r/lambda text. *)
+RenderLyapunovFrame[bg_Image, r_?NumericQ, lambda_?NumericQ, rMin_?NumericQ, rMax_?NumericQ] :=
+  RenderTwoPanelFrame[bg, r, rMin, rMax,
+    Style["Logistic map: bifurcation diagram and Lyapunov exponent", White, 12],
+    Style["r = " <> ToString[NumberForm[r, {4, 2}]] <> "    \[Lambda] = " <>
+          ToString[NumberForm[lambda, {3, 2}, NumberSigns -> {"\[Minus]", ""}]],
+          Yellow, Bold, 13]];
 
 (* AnimateLyapunov
    The GIF covers the whole WAV, so the two can start together: during
@@ -243,6 +253,77 @@ AnimateLyapunov[sweep_List, bifPoints_List, markers_List, floor_?NumericQ,
           " fps (", FmtDec[delay], " s per frame, ", FmtDec[plan["GIFDuration"]], " s in total)."];
     frames = RenderLyapunovFrame[bg, #, lamOf[#], rMin, rMax] & /@ rAt;
 
+    ExportGIF[frames, outGIF, plan];
+    {plan["FrameCount"], plan["FrameRate"]}
+  ];
+
+
+(* ── Divergence mode: two orbits over their separation ─────────────────
+   Two panels sharing the n axis, drawn once and rasterised like the
+   lyapunov mode's: the two orbits x_n (blue, left channel) and y_n
+   (orange, right channel) on top; Log10 of the separation below, with the
+   least-squares fit over the pre-saturation range (solid green), the
+   slope LyapunovExponent predicts from the fit's starting point over the
+   same range (dashed yellow), and the saturation level (grey line).
+   Separations below 1e-16, including exact zeros, are drawn at 1e-16.
+   The y axis runs from 1e-16 (or a decade below delta, if lower) to 1 so
+   that the four presets share the same axes. *)
+
+$divergenceColorX = RGBColor[0.35, 0.7, 1.0];
+$divergenceColorY = RGBColor[1.0, 0.6, 0.2];
+
+DivergenceBackground[orbits_Association, fit_Association, lambda_?NumericQ,
+                     saturation_?NumericQ] :=
+  Module[{xs = orbits["x"], ys = orbits["y"], sep = orbits["separation"], nMax, yLo,
+          ls, fitPts, predPts, ns, top, bottom},
+    nMax = Length[xs] - 1;
+    yLo  = Min[-16.0, Floor[Log10[orbits["delta"]]] - 1.0];
+    ls   = Log10[Clip[sep, {10.^yLo, 1.0}]];
+    ns   = {0, fit["nEnd"]};
+    fitPts  = {#, (fit["intercept"] + fit["slope"] * #) / Log[10.]} & /@ ns;
+    predPts = {#, (fit["intercept"] + lambda * #) / Log[10.]} & /@ ns;
+    top = Graphics[
+      {{$divergenceColorX, AbsoluteThickness[1.5], Line[Transpose[{Range[0, nMax], xs}]]},
+       {$divergenceColorY, AbsoluteThickness[1.5], Dashing[{0.012, 0.008}],
+        Line[Transpose[{Range[0, nMax], ys}]]}},
+      LyapunovPanelOpts[0, nMax, {0, 1}, "x", None]];
+    bottom = Graphics[
+      {{GrayLevel[0.7], AbsoluteThickness[1], Line[{{0, Log10[saturation]}, {nMax, Log10[saturation]}}]},
+       {GrayLevel[0.9], AbsoluteThickness[1.2], Line[Transpose[{Range[0, nMax], ls}]]},
+       {GrayLevel[0.9], AbsolutePointSize[2.5], Point[Transpose[{Range[0, nMax], ls}]]},
+       {RGBColor[0.3, 0.9, 0.4], Opacity[0.7], AbsoluteThickness[5], Line[fitPts]},
+       {Yellow, AbsoluteThickness[2], Dashed, Line[predPts]}},
+      LyapunovPanelOpts[0, nMax, {yLo - 0.5, 0.5}, "log10 |x \[Minus] y|",
+        Style["iteration n", White, 12]]];
+    ImageAssemble[{{Rasterize[top, ImageResolution -> 144]},
+                   {Rasterize[bottom, ImageResolution -> 144]}}]
+  ];
+
+(* AnimateDivergence
+   Same timing contract as AnimateLyapunov: the GIF covers the whole WAV,
+   the cursor waits at n = 0 during the intro, moves one iteration per
+   note_duration during the sonified part and rests at the last n during
+   the outro. timing holds "intro" (seconds before the first note),
+   "noteDuration" and "total" (WAV duration). Returns {frameCount, frameRate}. *)
+AnimateDivergence[orbits_Association, fit_Association, lambda_?NumericQ,
+                  saturation_?NumericQ, timing_Association, outGIF_String,
+                  Optional[nFrames_Integer, 300]] :=
+  Module[{nMax = Length[orbits["x"]] - 1, bg, plan, delay, times, nAt, legend, values, frames},
+    bg = DivergenceBackground[orbits, fit, lambda, saturation];
+    plan  = GIFFramePlan[timing["total"], nFrames / timing["total"]];
+    delay = plan["FrameDelay"];
+    times = (Range[plan["FrameCount"]] - 0.5) * delay;
+    nAt   = Clip[(times - timing["intro"]) / timing["noteDuration"], {0.0, N[nMax]}];
+    legend = Row[{Style["left: x0 = " <> ToString[orbits["x0"]], $divergenceColorX, 12],
+                  Style["    right: x0 + \[Delta]", $divergenceColorY, 12]}];
+    values = Style[Row[{"r = ", NumberForm[N[orbits["r"]], {3, 2}],
+                        "   \[Delta] = ", ScientificForm[N[orbits["delta"]], {2, 1}],
+                        "   fitted slope ", NumberForm[fit["slope"], {4, 3}, NumberSigns -> {"\[Minus]", ""}],
+                        "   predicted \[Lambda] ", NumberForm[lambda, {4, 3}, NumberSigns -> {"\[Minus]", ""}]}],
+                   Yellow, Bold, 12];
+    Print["  Rendering ", plan["FrameCount"], " frames at ", FmtDec[plan["FrameRate"]],
+          " fps (", FmtDec[delay], " s per frame, ", FmtDec[plan["GIFDuration"]], " s in total)."];
+    frames = RenderTwoPanelFrame[bg, #, 0, nMax, legend, values] & /@ nAt;
     ExportGIF[frames, outGIF, plan];
     {plan["FrameCount"], plan["FrameRate"]}
   ];
