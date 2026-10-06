@@ -232,11 +232,11 @@ inside the range:
 440, 528, 660 and 880 Hz form a just-intoned A minor triad with its
 octave, so the new period-4 marker belongs to the same chord.
 
-A spoken intro (19.8 s) says the range, what the two tones mean and
-which side is chaotic, that the λ tone touches zero at each period
-doubling inside the range (r = 3, 3.449 and 3.544), that later dips are
-windows of order, that beating means a crossing and that short high
-tones mark bifurcations. A one-sentence spoken outro (14.8 s) gives the
+A spoken intro (24.8 s, complete sentences) says the range, what the two
+tones mean and which side is chaotic, that the λ tone touches zero at
+each period doubling inside the range (r = 3, 3.449 and 3.544), that
+later dips are windows of order, that beating means a crossing and that
+short high tones mark bifurcations. A spoken outro (19.0 s) gives the
 end marker, the r where λ first rose above zero and the three widest
 windows in the range with their period, all computed from the run. The
 console prints the onset of chaos (the first upward crossing), then one

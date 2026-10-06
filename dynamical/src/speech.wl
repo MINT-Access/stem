@@ -236,50 +236,50 @@ BuildIterateOutroText[r_?NumericQ] :=
 (* ── Lyapunov narration ──────────────────────────────────────────────── *)
 
 (* BuildLyapunovIntroText
-   Says what is heard before the sweep starts, in at most 20 s of speech
-   (measured 19.8 s with macOS say):
-   what the two tones are, which side is chaotic, the touching at each
-   period doubling (doublingRs, PeriodDoublingRs[]; only those inside
-   the range are named), that later dips are windows of order, that
-   beating announces a crossing and that short high tones mark
-   bifurcations. The r range is said here and not again in the outro. *)
+   Says what is heard before the sweep starts, in complete sentences and
+   at most 25 s of speech (measured 24.7 s with macOS say): the r range,
+   what the two tones are, the touching at each period doubling inside
+   the range (doublingRs, r1 .. r3 from check 1), which side is chaotic,
+   that later dips are windows of order, that beating announces a
+   crossing and that short high tones mark bifurcations. The doubling
+   sentence follows the tone sentence directly, so its "It" can only be
+   the moving tone. The r range is said here and not again in the outro. *)
 BuildLyapunovIntroText[rMin_?NumericQ, rMax_?NumericQ, doublingRs_List] :=
   Module[{inRange = Select[doublingRs, rMin <= # <= rMax &]},
     "Here r runs from " <> SpokenDec[rMin, 2] <> " to " <> SpokenDec[rMax, 2] <> ". " <>
-    "The steady tone is zero, the moving tone the Lyapunov exponent: chaos above, order below. " <>
+    "The steady tone is zero, and the moving tone is the Lyapunov exponent. " <>
     If[inRange =!= {},
-      "It touches zero at " <> If[Length[inRange] > 1, "each doubling: ", "a doubling: "] <>
-        SpokenList[SpokenDec[#, 3] & /@ inRange] <> ". ",
+      "It touches zero at " <> If[Length[inRange] > 1, "each period doubling", "a period doubling"] <>
+        ", at r equals " <> SpokenList[SpokenDec[#, 3] & /@ inRange] <> ". ",
       ""] <>
-    "Later dips are windows of order. " <>
-    "Beating means a crossing; short high tones mark bifurcations."
+    "Above the steady tone the motion is chaotic, and below it the motion is orderly. " <>
+    "Later dips below zero are windows of order. " <>
+    "Beating means that a crossing is near, and short high tones mark bifurcations."
   ];
 
 (* BuildLyapunovOutroText
-   One sentence, at most 15 s of speech: the end marker, where the
-   exponent first rose above zero (firstUp, or Missing[] when the range
-   has none) and the widest (at most three) windows from LyapunovWindows
-   in ascending r, each with its period. "period" is said once when every
-   named window's period was identified. rMin and rMax are not spoken
-   (the intro says the range). Measured with macOS say: three windows at
-   three decimals take 14.8 s; the six window bounds alone take about
-   9 s, so the wording is terse. *)
+   Complete sentences, at most 20 s of speech (measured 19 s for three
+   windows): the end marker, where the exponent first rose above zero
+   (firstUp, or Missing[] when the range has none) and the widest (at
+   most three) windows from LyapunovWindows in ascending r, each named
+   "the period-N window from a to b" so no bare number stands before
+   "from". rMin and rMax are not spoken (the intro says the range). *)
 BuildLyapunovOutroText[rMin_?NumericQ, rMax_?NumericQ, firstUp_, windows_List] :=
-  Module[{widest, allId, item},
+  Module[{widest, name},
     widest = SortBy[Take[ReverseSortBy[windows, #["width"] &], UpTo[3]], #["rStart"] &];
-    allId  = AllTrue[widest, IntegerQ[#["period"]] &];
-    item[w_, first_] :=
-      If[IntegerQ[w["period"]],
-        If[first || !allId, "period ", ""] <> ToString[w["period"]],
-        "unidentified period"] <>
+    name[w_] :=
+      If[IntegerQ[w["period"]], "the period-" <> ToString[w["period"]] <> " window",
+        "a window of unidentified period"] <>
       " from " <> SpokenDec[w["rStart"], 3] <> " to " <> SpokenDec[w["rEnd"], 3];
-    "End: " <>
-    If[NumericQ[firstUp], "chaos from " <> SpokenDec[firstUp, 3], "the exponent never rose above zero"] <>
+    "This is the end of the sweep. " <>
+    If[NumericQ[firstUp],
+      "Chaos began at r equals " <> SpokenDec[firstUp, 3] <> ". ",
+      "The exponent never rose above zero. "] <>
     Switch[Length[widest],
-      0, ", and no window of order.",
-      1, "; the only window " <> item[widest[[1]], True] <> ".",
-      _, "; widest windows " <> StringRiffle[MapIndexed[item[#1, #2[[1]] === 1] &, Most[widest]], ", "] <>
-           " and " <> item[Last[widest], False] <> "."]
+      0, "There were no windows of order.",
+      1, "The widest window was " <> name[widest[[1]]] <> ".",
+      _, "The widest windows were " <> StringRiffle[name /@ Most[widest], ", "] <>
+           " and " <> name[Last[widest]] <> "."]
   ];
 
 

@@ -295,12 +295,14 @@ timing that `PrintTimingLine` prints). The rules, for any new text:
   the period doublings r1 … r3 inside the range (check 1's bisection);
   the outro names the three widest windows (`LyapunovWindows`), with a
   period when the window opens within 0.005 of a known one
-  (`$lyapunovKnownWindows`), else "unidentified period". The intro is at
-  most 20 s (measured 19.8 s) and says the r range; the outro is one
-  sentence of at most 15 s (measured 14.77 s, 14.83 s for lyapunov_window) and does not repeat it. Six
-  three-decimal window bounds alone take about 9 s with macOS `say`, so
-  the outro wording is deliberately terse ("End: chaos from 3.57; widest
-  windows period 6 from …"); re-measure if you add anything.
+  (`$lyapunovKnownWindows`), else "a window of unidentified period".
+  Both are complete sentences with normal function words. The intro is
+  at most 25 s (measured 24.78 s, 24.73 s for lyapunov_window) and says
+  the r range; the outro is at most 20 s (measured 19.00 s and 19.07 s)
+  and does not repeat it. Each window is named "the period-N window from
+  a to b", never a bare number before "from", which a listener can
+  mishear as part of the range (tested). Six three-decimal window bounds
+  alone take about 9 s with macOS `say`; re-measure if you add anything.
 - **Iterate presets write preset-named files** (`iterate_<preset>_audio.wav`,
   `.gif`, `_data.csv`), like the lyapunov and divergence presets; the
   default run keeps `iterate_audio.wav` / `iterate.gif` /

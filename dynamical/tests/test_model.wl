@@ -341,27 +341,33 @@ Module[{texts, divTexts, windows},
     AllTrue[texts, NarrationConventionIssues[#] === {} &]];
   AssertTrue["sweep, iterate, lyapunov and divergence outros are spoken end markers (they say \"End\")",
     AllTrue[{BuildSweepOutroText[2.5, 4.0], BuildIterateOutroText[2.8]}, StringContainsQ[#, "End of the"] &] &&
-    StringStartsQ[BuildLyapunovOutroText[2.5, 4.0, 3.57, windows], "End: "] &&
+    StringStartsQ[BuildLyapunovOutroText[2.5, 4.0, 3.57, windows], "This is the end of the sweep."] &&
     AllTrue[divTexts[[2 ;; ;; 2]], StringStartsQ[#, "End of the"] &]];
   AssertTrue["the iterate outro states the fixed point and the attract/repel verdict, computed (r = 2.8 and 3.2)",
     StringContainsQ[BuildIterateOutroText[2.8], "0.643" ~~ __ ~~ "0.80, below one" ~~ __ ~~ "attracts"] &&
     StringContainsQ[BuildIterateOutroText[3.2], "0.688" ~~ __ ~~ "1.20, above one" ~~ __ ~~ "repels"]];
   AssertTrue["the lyapunov intro names only the doublings inside the range (3.40 to 3.90: 3.449 and 3.544)",
-    StringContainsQ[BuildLyapunovIntroText[3.4, 3.9, PeriodDoublingRs[]], "each doubling: 3.449 and 3.544."]];
+    StringContainsQ[BuildLyapunovIntroText[3.4, 3.9, PeriodDoublingRs[]], "each period doubling, at r equals 3.449 and 3.544."]];
   AssertTrue["the lyapunov intro states the r range once and the outro does not repeat it",
     StringCount[BuildLyapunovIntroText[2.5, 4.0, PeriodDoublingRs[]], "2.5 to 4"] === 1 &&
     !StringContainsQ[BuildLyapunovOutroText[2.5, 4.0, 3.57, windows], "2.5"]];
   AssertTrue["the lyapunov intro keeps every fact: tones, chaos side, doublings, windows, beating, markers",
-    AllTrue[{"steady tone is zero", "moving tone the Lyapunov exponent", "chaos above, order below",
-             "3, 3.449 and 3.544", "windows of order", "Beating means a crossing", "short high tones mark bifurcations"},
+    AllTrue[{"steady tone is zero", "moving tone is the Lyapunov exponent",
+             "Above the steady tone the motion is chaotic, and below it the motion is orderly",
+             "3, 3.449 and 3.544", "windows of order", "Beating means that a crossing is near",
+             "short high tones mark bifurcations"},
       StringContainsQ[BuildLyapunovIntroText[2.5, 4.0, PeriodDoublingRs[]], #] &]];
   AssertTrue["the edge outro says the separation never exceeded one tenth and gives its maximum",
     With[{o = DivergenceNarration[3.57, "edge", 0.3, 10^-6, 119, 0.1]["outro"]},
       StringContainsQ[o, "never exceeded one tenth; its maximum was 2.6 times ten to the minus 4"]]];
   AssertTrue["the lyapunov outro names windows with their period, or says it was not identified",
     BuildLyapunovOutroText[2.5, 4.0, 3.5699, windows] ===
-      "End: chaos from 3.57; widest windows period 6 from 3.628 to 3.634 and unidentified period from 3.7 to 3.701." &&
-    BuildLyapunovOutroText[2.5, 4.0, 3.5699, Most[windows]] === "End: chaos from 3.57; the only window period 6 from 3.628 to 3.634."];
+      "This is the end of the sweep. Chaos began at r equals 3.57. The widest windows were the period-6 window " <>
+      "from 3.628 to 3.634 and a window of unidentified period from 3.7 to 3.701." &&
+    BuildLyapunovOutroText[2.5, 4.0, 3.5699, Most[windows]] ===
+      "This is the end of the sweep. Chaos began at r equals 3.57. The widest window was the period-6 window from 3.628 to 3.634."];
+  AssertTrue["no window number in the lyapunov outro stands bare before \"from\"",
+    !StringMatchQ[BuildLyapunovOutroText[2.5, 4.0, 3.5699, windows], ___ ~~ (", " | " and ") ~~ DigitCharacter .. ~~ " from" ~~ ___]];
 ];
 Print[""];
 
