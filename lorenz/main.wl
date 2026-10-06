@@ -6,6 +6,8 @@
           wolframscript -file main.wl -- --config-dump
           wolframscript -file main.wl -- --simulation.mode rossler
           wolframscript -file main.wl -- --simulation.mode=rossler
+          wolframscript -file main.wl -- --simulation.lorenz.preset=stable
+          wolframscript -file main.wl -- --simulation.lorenz.transient_seconds=0
           Note: --key value (space) also accepted in addition to --key=value.
    ======================================================== *)
 
@@ -46,42 +48,62 @@ Which[
   (* ===== Lorenz attractor (default) ===== *)
   mode === "lorenz",
 
-    With[{ic = GetCfg[cfg, {"simulation","initial_conditions"}, {0.1, 0.0, 0.0}]},
-      params = <|
-        "Sigma"    -> GetCfg[cfg, {"simulation","lorenz","sigma"}, 10.0],
-        "Rho"      -> GetCfg[cfg, {"simulation","lorenz","rho"},   28.0],
-        "Beta"     -> GetCfg[cfg, {"simulation","lorenz","beta"},  8/3],
-        "InitX"    -> N[ic[[1]]],
-        "InitY"    -> N[ic[[2]]],
-        "InitZ"    -> N[ic[[3]]],
-        "TimeEnd"  -> GetCfg[cfg, {"simulation","duration"},       40.0],
-        "TimeStep" -> GetCfg[cfg, {"simulation","timestep"},       0.005]
-      |>
-    ];
+    (* A named preset (simulation.lorenz.preset, see $lorenzPresets) sets
+       sigma, rho, beta, duration and start (1, 1, 1) and writes
+       lorenz_*_<preset> files; without one the config values are used. *)
+    preset    = GetCfg[cfg, {"simulation","lorenz","preset"}, ""];
+    transient = N @ GetCfg[cfg, {"simulation","lorenz","transient_seconds"}, 5.0];
+    If[preset =!= "" && !KeyExistsQ[$lorenzPresets, preset],
+      Print["  Preset \"", preset, "\" is not a lorenz preset and is ignored; the presets are ",
+            StringRiffle[Keys[$lorenzPresets], ", "], "."]; preset = ""];
+    params = If[preset =!= "", LorenzPresetParams[preset],
+      With[{ic = GetCfg[cfg, {"simulation","initial_conditions"}, {0.1, 0.0, 0.0}]},
+        <|
+          "Sigma"    -> GetCfg[cfg, {"simulation","lorenz","sigma"}, 10.0],
+          "Rho"      -> GetCfg[cfg, {"simulation","lorenz","rho"},   28.0],
+          "Beta"     -> GetCfg[cfg, {"simulation","lorenz","beta"},  8/3],
+          "InitX"    -> N[ic[[1]]],
+          "InitY"    -> N[ic[[2]]],
+          "InitZ"    -> N[ic[[3]]],
+          "TimeEnd"  -> GetCfg[cfg, {"simulation","duration"},       40.0],
+          "TimeStep" -> GetCfg[cfg, {"simulation","timestep"},       0.005]
+        |>]];
+    suffix = If[preset =!= "", "_" <> preset, ""];
 
     STEMHeading["Lorenz Attractor"];
     Print["  sigma = ", params["Sigma"],
           "   rho = ", params["Rho"],
-          "   beta = ", FmtN[N[params["Beta"]], 4]];
+          "   beta = ", FmtN[N[params["Beta"]], 4],
+          If[preset =!= "", "   (preset " <> preset <> ": " <> $lorenzPresets[preset]["desc"] <> ")", ""]];
     Print["  Initial: (",
       params["InitX"], ", ",
       params["InitY"], ", ",
       params["InitZ"], ")"];
-    Print["  Duration: ", params["TimeEnd"], " s"];
+    Print["  The first ", FmtDec[transient], " s of the trajectory are discarded as transient; the next ",
+          FmtDec[params["TimeEnd"]], " s are sonified, animated and exported."];
     Print[""];
 
     Print["[1/5] Solving Lorenz ODE..."];
     STEMSay["Solving Lorenz ODE"];
-    solution = SolveLorenz[params];
-    Print["  Computed ", Length[solution], " steps."];
+    solveParams = Append[params, "TimeEnd" -> transient + params["TimeEnd"]];
+    If[preset =!= "" && TrueQ[$lorenzPresets[preset]["Dual"]],
+      {solution, solution2} = DiscardTransient[#, transient] & /@ SolveLorenzPair[solveParams, 0.001],
+      solution = DiscardTransient[SolveLorenz[solveParams], transient]];
+    Print["  Computed ", Length[solution], " steps after the transient."];
     PrintSummary[solution, params];
     Print[""];
 
     Print["[2/5] Correctness checks..."];
     STEMSay["Running correctness checks"];
-    $divChk   = LorenzDivergenceCheck[params["Sigma"], params["Rho"], N[params["Beta"]]];
-    $eqChk    = LorenzEquilibriumCheck[params["Sigma"], params["Rho"], N[params["Beta"]]];
-    $lyapChk  = LorenzLyapunovCheck[params["Sigma"], params["Rho"], N[params["Beta"]]];
+    (* Checks 1-3 use the run's sigma/rho/beta, except for a preset, where
+       they use the canonical (10, 28, 8/3): check 3's benchmark is the
+       rho = 28 exponent, and the stable preset (rho = 20) has none. *)
+    chkP = If[preset =!= "", <|"Sigma" -> 10.0, "Rho" -> 28.0, "Beta" -> 8/3|>, params];
+    If[preset =!= "", Print["  Checks 1 to 3 run at the canonical sigma = 10, rho = 28, beta = 8/3, ",
+                            "not at the preset's parameters; check 4 uses this run's trajectory."]];
+    $divChk   = LorenzDivergenceCheck[chkP["Sigma"], chkP["Rho"], N[chkP["Beta"]]];
+    $eqChk    = LorenzEquilibriumCheck[chkP["Sigma"], chkP["Rho"], N[chkP["Beta"]]];
+    $lyapChk  = LorenzLyapunovCheck[chkP["Sigma"], chkP["Rho"], N[chkP["Beta"]]];
     $boundChk = TrajectoryBoundedCheck[solution];
     PrintCorrectnessChecks[$divChk, $eqChk, $lyapChk, $boundChk];
     Print["    1. Constant phase-space divergence: ", FmtN[$divChk["expected"], 4],
@@ -97,31 +119,37 @@ Which[
     Print[""];
 
     Print["[3/5] Exporting trajectory data..."];
-    outCSV = FileNameJoin[{$projectRoot, "output", "lorenz_trajectory.csv"}];
+    outCSV = FileNameJoin[{$projectRoot, "output", "lorenz_trajectory" <> suffix <> ".csv"}];
     ExportResults[solution, params, outCSV];
     STEMDescribeCSV[outCSV, Length[solution], 5];
     Print[""];
 
     Print["[4/5] Rendering animation..."];
     STEMSay["Rendering animation"];
-    outGIF = FileNameJoin[{$projectRoot, "output", "lorenz_animation.gif"}];
-    {$gifFrames, $gifFps} = ExportAnimation[solution, outGIF, solution[[-1, 1]], 150, "Lorenz Attractor"];
+    outGIF = FileNameJoin[{$projectRoot, "output", "lorenz_animation" <> suffix <> ".gif"}];
+    {$gifFrames, $gifFps} = If[preset =!= "" && TrueQ[$lorenzPresets[preset]["Dual"]],
+      ExportDualAnimation[solution, solution2, outGIF, solution[[-1, 1]], 150],
+      ExportAnimation[solution, outGIF, solution[[-1, 1]], 150,
+        If[preset =!= "", "Lorenz rho=" <> FmtN[params["Rho"], 4], "Lorenz Attractor"]]];
     STEMDescribeGIF[outGIF, $gifFrames, $gifFps];
     Print[""];
 
     Print["[5/5] Synthesising audio..."];
     STEMSay["Synthesising audio"];
-    outWAV = FileNameJoin[{$projectRoot, "output", "lorenz_audio.wav"}];
+    outWAV = FileNameJoin[{$projectRoot, "output", "lorenz_audio" <> suffix <> ".wav"}];
     ExportSonification[solution, params, cfg, outWAV];
     STEMDescribeWAV[outWAV, solution[[-1, 1]]];
     SyncWAVToGIF[outGIF, outWAV];
+    STEMLoudnessLine[outWAV, -17.0];
+    STEMTimingLine[<|"notes" -> WAVDuration[outWAV]|>];
     Print[""],
 
   (* ===== Rossler attractor ===== *)
   mode === "rossler",
 
-    ic     = GetCfg[cfg, {"simulation","initial_conditions"}, {0.1, 0.0, 0.0}];
-    rBlock = GetCfg[cfg, {"simulation","rossler"}, <|"a"->0.2,"b"->0.2,"c"->5.7|>];
+    ic        = GetCfg[cfg, {"simulation","initial_conditions"}, {0.1, 0.0, 0.0}];
+    rBlock    = GetCfg[cfg, {"simulation","rossler"}, <|"a"->0.2,"b"->0.2,"c"->5.7|>];
+    transient = N @ GetCfg[cfg, {"simulation","rossler","transient_seconds"}, 50.0];
     params = <|
       "A"       -> rBlock["a"],
       "B"       -> rBlock["b"],
@@ -141,13 +169,14 @@ Which[
       params["InitX"], ", ",
       params["InitY"], ", ",
       params["InitZ"], ")"];
-    Print["  Duration: ", params["TimeEnd"], " s"];
+    Print["  The first ", FmtDec[transient], " s of the trajectory are discarded as transient; the next ",
+          FmtDec[params["TimeEnd"]], " s are sonified, animated and exported."];
     Print[""];
 
     Print["[1/5] Solving Rossler ODE..."];
     STEMSay["Solving Rossler ODE"];
-    solution = SolveRossler[params];
-    Print["  Computed ", Length[solution], " steps."];
+    solution = DiscardTransient[SolveRossler[Append[params, "TimeEnd" -> transient + params["TimeEnd"]]], transient];
+    Print["  Computed ", Length[solution], " steps after the transient."];
     PrintSummary[solution, params];
     Print[""];
 
@@ -187,6 +216,8 @@ Which[
     ExportSonification[solution, params, cfg, outWAV];
     STEMDescribeWAV[outWAV, solution[[-1, 1]]];
     SyncWAVToGIF[outGIF, outWAV];
+    STEMLoudnessLine[outWAV, -17.0];
+    STEMTimingLine[<|"notes" -> WAVDuration[outWAV]|>];
     Print[""],
 
   (* ===== Unknown mode ===== *)

@@ -92,17 +92,23 @@ RenderAttractorFrame[trajectory_List, k_Integer, plotRange_, title_String:""] :=
     ]
   ];
 
-(* ExportAttractorAnimation — growing point-cloud GIF, lorenz-style
-   evenly-spaced frame indices always ending at the full point set. *)
-ExportAttractorAnimation[trajectory_List, filePath_String, targetDuration_?NumericQ,
+(* ExportAttractorAnimation — growing point-cloud GIF covering the whole
+   WAV, with dynamical's hold-during-intro contract: while the spoken
+   intro plays the first frame (2 points) is held; during the notes the
+   point cloud grows in proportion to the time into the notes, reaching
+   the full set at the end of the notes; during the outro the full set is
+   held. Frame i shows the state at the middle of its display interval.
+   timing holds "intro" (seconds before the notes, pause included),
+   "notes" and "total" (the WAV's duration). *)
+ExportAttractorAnimation[trajectory_List, filePath_String, timing_Association,
                          nFrames_:$HenonGifFrameBudget, title_String:"Hénon Attractor"] :=
-  Module[{plan, plotRange, frameRate, actualNFrames, indices, frames},
-    plan          = HenonGifPlan[targetDuration, nFrames];
+  Module[{plan, plotRange, frameRate, actualNFrames, indices, frames, times, n = Length[trajectory]},
+    plan          = HenonGifPlan[timing["total"], nFrames];
     frameRate     = plan["FrameRate"];
     actualNFrames = plan["FrameCount"];
     plotRange = ComputeAttractorPlotRange[trajectory];
-    indices = Round[Subdivide[1, Length[trajectory], actualNFrames - 1]];
-    indices = Max[2, #] & /@ indices;
+    times   = (Range[actualNFrames] - 0.5) * plan["FrameDelay"];
+    indices = Max[2, #] & /@ Round[1 + Clip[(times - timing["intro"]) / timing["notes"], {0.0, 1.0}] * (n - 1)];
     Print["  Rendering ", Length[indices], " frames at ", FmtDec[frameRate], " fps (",
           FmtDec[plan["FrameDelay"]], " s per frame, ", FmtDec[plan["GIFDuration"]], " s in total)."];
     frames = RenderAttractorFrame[trajectory, #, plotRange, title] & /@ indices;
@@ -172,20 +178,26 @@ ComputeSweepYRange[attractors_List] :=
     {Min[allX] - pad, Max[allX] + pad}
   ];
 
+(* AnimateSweepBifurcation — same hold-during-intro contract as
+   ExportAttractorAnimation: the diagram waits at its first step during
+   the intro, advances through the a-steps in proportion to the time into
+   the notes, reaching the last step at the end of the notes, and rests
+   there during the outro. timing holds "intro", "notes" and "total".
+   (Advancing one step per step duration instead drew the last step when
+   it began, one step plus the final note's tail before the notes end:
+   0.57 s early, more than one frame, for sweep_chaos_zoom.) *)
 AnimateSweepBifurcation[sweepModel_Association, landmarks_Association, filePath_String,
-                        targetDuration_?NumericQ, nFrames_:$HenonGifFrameBudget] :=
-  Module[{plan, aValues, attractors, nSteps, yRange, frameRate, actualNFrames, indices, frames},
+                        timing_Association, nFrames_:$HenonGifFrameBudget] :=
+  Module[{plan, aValues, attractors, nSteps, yRange, frameRate, actualNFrames, indices, frames, times},
     aValues    = sweepModel["aValues"];
     attractors = sweepModel["attractors"];
     nSteps     = Length[aValues];
     yRange     = ComputeSweepYRange[attractors];
-    plan          = HenonGifPlan[targetDuration, nFrames];
+    plan          = HenonGifPlan[timing["total"], nFrames];
     frameRate     = plan["FrameRate"];
     actualNFrames = plan["FrameCount"];
-    (* nSteps discrete a-steps are the only distinct visual states;
-       Subdivide's rounding naturally holds a state across consecutive
-       frames when actualNFrames exceeds nSteps - 1. *)
-    indices = Clip[Round[Subdivide[2, nSteps, actualNFrames - 1]], {2, nSteps}];
+    times   = (Range[actualNFrames] - 0.5) * plan["FrameDelay"];
+    indices = Clip[Round[1 + Clip[(times - timing["intro"]) / timing["notes"], {0.0, 1.0}] * (nSteps - 1)], {2, nSteps}];
     Print["  Rendering ", Length[indices], " bifurcation-diagram frames at ", FmtDec[frameRate],
           " fps (", FmtDec[plan["FrameDelay"]], " s per frame, ", FmtDec[plan["GIFDuration"]], " s in total)."];
     frames = RenderSweepFrame[aValues, attractors, #, landmarks, yRange] & /@ indices;

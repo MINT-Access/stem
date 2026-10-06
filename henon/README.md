@@ -242,7 +242,7 @@ henon/
                             four correctness checks, per-mode model builders
     sonify.wl                — lorenz-style continuous trajectory (attractor),
                             dynamical-style discrete notes (sweep, reverse)
-    speech.wl                 — Spoken intro synthesis and per-mode intro text
+    speech.wl                 — Spoken intro/outro synthesis and per-mode texts
     animate.wl                  — Per-mode GIF/PNG renderers
     output.wl                     — CSV export and console summaries
   tests/
@@ -268,7 +268,12 @@ surface a contradiction, are each the right tool for their own mode.
 
 Step numbers `[1/5]` through `[5/5]` mark each pipeline stage. Export
 confirmations use `STEMDescribeWAV`, `STEMDescribeGIF`, and
-`STEMDescribeCSV`. Set `STEM_SPEAK=1` for spoken stage announcements in
+`STEMDescribeCSV`. Every mode prints its spoken intro and outro
+("Spoken intro:" / "Spoken outro:"), the GIF/WAV sync sentence (attractor
+and sweep), the loudness line (`STEMLoudnessLine`) and the Timing line
+(`STEMTimingLine`: intro, pause, notes, pause, outro, total). The WAV is
+intro, 0.4 s pause, notes, 0.4 s pause, outro; the GIF holds its first
+frame during the intro and its last during the outro. Set `STEM_SPEAK=1` for spoken stage announcements in
 addition to the intro:
 
 ```sh

@@ -169,6 +169,29 @@ STEMDescribeGIF["output/anim.gif", 148, 4.5454545]
 (* →  "  Animation: 148 frames at 4.545 fps — output/anim.gif" *)
 ```
 
+##### `STEMLoudnessLine[wavPath_String, targetLUFS_?NumericQ]`
+Measures the written WAV (`MeasureIntegratedLoudness`, EBU R128, and the
+sample peak) and prints one sentence, the wording dynamical/ uses.
+Returns `<|"lufs", "peakDB"|>`. Call it after the WAV is exported.
+
+```wolfram
+STEMLoudnessLine["output/lorenz_audio.wav", -17.0]
+(* →  "  Loudness: the WAV was normalised to -17 LUFS and measures -17.02 LUFS
+       integrated, with a peak of -3.1 dBFS." *)
+```
+
+##### `STEMTimingLine[t_Association]`
+Prints the structure of a WAV in one sentence: spoken intro, pause, notes,
+pause, spoken outro and total, every part stated even when it is zero.
+Keys `"intro"`, `"introPause"`, `"notes"`, `"outroPause"`, `"outro"`
+(seconds; missing keys count as 0). Returns the total.
+
+```wolfram
+STEMTimingLine[<|"notes" -> 20.0|>]
+(* →  "  Timing: the WAV holds 0 s of spoken intro and a 0 s pause, then 20 s of
+       notes from 0 s, then a 0 s pause and 0 s of spoken outro, 20 s in total." *)
+```
+
 #### Speech integration
 
 ##### `$STEMSpeakEnabled`
@@ -531,7 +554,7 @@ metadata is embedded.
 
 **Screen-reader output**: `accessibility.wl` provides `STEMHeading`, `STEMSection`,
 `STEMBullet`, `STEMPrintN`, `STEMDescribeCSV`, `STEMDescribeWAV`, `STEMDescribeGIF`,
-and `STEMSay` — all guaranteed to emit exactly one complete stdout line, so
+`STEMLoudnessLine`, `STEMTimingLine` and `STEMSay` — all guaranteed to emit exactly one complete stdout line, so
 VoiceOver reads each item as a discrete unit. Set `STEM_SPEAK=1` in the shell
 environment before running any project to also invoke `say` for `STEMSay` calls.
 See `docs/voiceover-wolframscript-guide.md` for a full workflow walkthrough.

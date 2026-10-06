@@ -17,6 +17,7 @@
                         WAVDuration, PadWAVWithSilence, SyncWAVToGIF
      accessibility.wl — STEMHeading, STEMSection, STEMBullet, STEMPrintN,
                         STEMDescribeCSV, STEMDescribeWAV, STEMDescribeGIF,
+                        STEMLoudnessLine, STEMTimingLine,
                         $STEMSpeakEnabled, STEMSay
      hilbert.wl       — HilbertTraversalOrder
      config.wl        — LoadConfig, DeepMerge, GetCfg, $HardcodedDefaults

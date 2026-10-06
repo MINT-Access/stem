@@ -9,9 +9,10 @@ butterfly-shaped attractor, and a WAV sonification.
 ## Project structure
 
 - `main.wl`               — Full pipeline: solve → correctness checks → CSV → GIF → WAV
-- `experiment.wl`         — Named presets for parameter exploration
+- `experiment.wl`         — Runs one named preset through main.wl (set its ACTIVE PRESET line)
 - `src/model.wl`          — Lorenz ODE (`SolveLorenz`), Rossler ODE (`SolveRossler`),
-                            pair solver (`SolveLorenzPair`), divergence
+                            `DiscardTransient`, presets (`$lorenzPresets`,
+                            `LorenzPresetParams`), pair solver (`SolveLorenzPair`), divergence
                             (`LorenzDivergence`), four correctness checks (see
                             "Correctness checks" below)
 - `src/output.wl`         — CSV export (`ExportResults`, `ExportDivergence`,
@@ -25,7 +26,8 @@ butterfly-shaped attractor, and a WAV sonification.
 
 ```bash
 wolframscript -file main.wl          # full run
-wolframscript -file experiment.wl    # experiment with presets
+wolframscript -file main.wl -- --simulation.lorenz.preset=stable   # a named preset
+wolframscript -file experiment.wl    # the preset on its ACTIVE PRESET line
 wolframscript -file tests/test_model.wl
 afplay output/lorenz_audio.wav         # play audio on macOS
 ```
@@ -52,7 +54,52 @@ near-origin starting point, not a stale table entry.
 
 - rho < 1:        fixed point at origin
 - 1 < rho < 24.74: stable fixed points (two symmetric spirals)
+- 24.06 < rho < 24.74: the stable fixed points coexist with a chaotic set,
+  so a run can wander chaotically for a long time before settling (the old
+  "stable" preset at rho = 24 was all transient over its 30 s)
 - rho > 24.74:    chaotic strange attractor
+
+## Transient and presets (config keys)
+
+- `simulation.lorenz.transient_seconds` (default 5) and
+  `simulation.rossler.transient_seconds` (default 50): main.wl integrates
+  for transient + `simulation.duration`, then `DiscardTransient` drops the
+  transient and restarts the time column at 0 before the CSV, the GIF and
+  the WAV, the same way the Lyapunov checks discard their own transient.
+  Why: from the config start (0.1, 0, 0) lorenz's first ~0.6 s is a
+  transient at the top of the 80-1200 Hz pitch range that set the WAV's
+  peak, so the -17 LUFS normalisation hit its 0.97 peak ceiling and lorenz
+  mode measured -25 LUFS (presets -24.9 to -32.5). Discarding it raised
+  lorenz mode to -21.6 LUFS, but most runs stay peak-limited: the
+  sonification's own dynamic range (volume from speed over -24..0 dB, pitch
+  up to 1200 Hz; 1 s RMS spans 30-50 dB, crest factor 25-30 dB) puts fast
+  passages at the ceiling. Measured after the change (stem-core meter):
+  lorenz -21.58, classic -23.61, butterfly -19.70, wild -21.71, slow
+  -18.89, rho9996 -26.41; rossler -17.00 and stable -16.95 reach the
+  target. A limiter before normalisation or a narrower volume range would
+  be the next step (a sound change, not made yet). Rossler's 50 s matches
+  its slow spiral-out from near the origin (growth rate about a/2 = 0.1
+  per time unit, about 46 time units from 0.1 to the attractor's size).
+  Set either to 0 to hear the start again.
+- `simulation.lorenz.preset` (default ""): one of `$lorenzPresets`
+  (src/model.wl): classic, butterfly, stable, wild, slow, rho9996. A preset
+  sets sigma, rho, beta and duration, starts from (1, 1, 1), and writes
+  `lorenz_audio_<preset>.wav`, `lorenz_animation_<preset>.gif` and
+  `lorenz_trajectory_<preset>.csv`; butterfly also solves the pair and
+  renders the dual animation (the WAV sonifies the first trajectory). With
+  a preset, checks 1-3 run at the canonical sigma = 10, rho = 28,
+  beta = 8/3 (check 3's benchmark is the rho = 28 exponent, and the stable
+  preset has a negative one); check 4 uses the run's trajectory.
+- The `stable` preset is rho = 20 (was 24): after the 5 s transient the
+  state is within 0.5 of C+ or C- for the second half of its 30 s and ends
+  0.04 away at speed 0.4 (tested). rho = 15 or 13 settle faster but sit
+  still for most of the 30 s.
+- experiment.wl no longer holds parameter blocks: it sets `label` and runs
+  main.wl with `--simulation.lorenz.preset=<label>`, so its output is
+  identical to the main.wl preset run.
+- Console: every mode ends with the stem-core loudness line
+  (`STEMLoudnessLine`) and Timing line (`STEMTimingLine`; lorenz has no
+  narration, so intro, pauses and outro are 0 s).
 
 ## Sonification design (src/sonify.wl)
 

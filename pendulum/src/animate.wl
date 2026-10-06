@@ -243,6 +243,14 @@ DoublePendulumFrame[theta1_?NumericQ, theta2_?NumericQ,
   ]
 
 
+(* PendulumFrameSamples
+   The solution rows shown by nFrames frames of frameDelay seconds of
+   simulation time each: frame k is the row nearest t = (k - 1) *
+   frameDelay. The solution is sampled every dt from t = 0. *)
+PendulumFrameSamples[solution_List, nFrames_Integer, frameDelay_?NumericQ, dt_?NumericQ] :=
+  solution[[Clip[Round[(Range[nFrames] - 1) * frameDelay / dt] + 1, {1, Length[solution]}]]];
+
+
 (* AnimateDoublePendulum
    Renders the two-rod double pendulum and exports an animated GIF.
    Parameters are pulled from cfg via GetCfg. *)
@@ -256,8 +264,15 @@ AnimateDoublePendulum[solution_List, cfg_Association, outPath_String] :=
     dt        = GetCfg[cfg, {"simulation","timestep"},         0.01];
     frameRate = 25;
 
-    stride     = Max[1, Round[1.0 / (frameRate * dt)]];
-    sampledSol = solution[[1 ;; -1 ;; stride]];
+    (* Frame count and delay come from GIFFramePlan for the audio's
+       duration (500 frames of 4 cs for 20 s), and frame k shows the
+       state at t = (k - 1) * delay. The solution holds both t = 0 and
+       t = duration (duration/dt + 1 samples), so a stride over all of
+       it used to keep both ends and give one frame more than the audio
+       (501 frames, 20.04 s); the CSV still exports every sample. *)
+    plan       = GIFFramePlan[solution[[-1, 1]], frameRate, "MinFps" -> 0, "MaxFps" -> 50];
+    stride     = Max[1, Round[plan["FrameDelay"] / dt]];
+    sampledSol = PendulumFrameSamples[solution, plan["FrameCount"], plan["FrameDelay"], dt];
 
     (* Convert config trail_length (solution steps) to subsampled frames *)
     trailLen = Max[2, Round[GetCfg[cfg, {"animation","trail_length"}, 60] / stride]];
@@ -298,12 +313,6 @@ AnimateDoublePendulum[solution_List, cfg_Association, outPath_String] :=
       {k, 1, Length[sampledSol]}
     ];
 
-    (* Frames are fixed by the 25 fps sampling of the solution, so the
-       plan keeps that count and the 25 fps (4 cs) delay; it exists so
-       every GIF export goes through GIFFramePlan's whole-centisecond
-       delay. *)
-    plan = GIFFramePlan[solution[[-1, 1]], frameRate, "MinFps" -> 0, "MaxFps" -> 50,
-                        "FrameCount" -> Length[frames]];
     ExportGIF[frames, outPath, plan];
     Length[frames]
   ]
@@ -327,9 +336,12 @@ ExportAnimation[solution_List, params_Association, filePath_String,
 
     dt = params["TimeStep"];
 
-    (* Sub-sample so we get approximately frameRate fps of simulation time *)
-    stride = Max[1, Round[1.0 / (frameRate * dt * speedup)]];
-    sampledSol = solution[[1 ;; -1 ;; stride]];
+    (* Frame count and delay from GIFFramePlan for the audio's duration
+       (divided by speedup); frame k shows the state at simulation time
+       (k - 1) * delay * speedup. See AnimateDoublePendulum. *)
+    plan       = GIFFramePlan[solution[[-1, 1]] / speedup, frameRate, "MinFps" -> 0, "MaxFps" -> 50];
+    stride     = Max[1, Round[plan["FrameDelay"] * speedup / dt]];
+    sampledSol = PendulumFrameSamples[solution, plan["FrameCount"], plan["FrameDelay"] * speedup, dt];
 
     (* Trail length: keep last ~0.3 s worth of frames *)
     trailLen = Max[2, Round[0.3 * frameRate]];
@@ -362,10 +374,6 @@ ExportAnimation[solution_List, params_Association, filePath_String,
       {k, 1, Length[sampledSol]}
     ];
 
-    (* Frame count is fixed by the sampling above; see
-       AnimateDoublePendulum for why this still goes through a plan. *)
-    plan = GIFFramePlan[solution[[-1, 1]] / speedup, frameRate, "MinFps" -> 0, "MaxFps" -> 50,
-                        "FrameCount" -> Length[frames]];
     ExportGIF[frames, filePath, plan];
     Length[frames]
   ]

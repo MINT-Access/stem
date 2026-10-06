@@ -97,6 +97,47 @@ STEMDescribeGIF[filePath_String] :=
 STEMDescribeGIF[filePath_String, nFrames_Integer, fps_?NumericQ] :=
   Print["  Animation: ", nFrames, " frames at ", FmtDec[fps], " fps — ", filePath]
 
+(* STEMLoudnessLine
+   Measures the written WAV (stem-core MeasureIntegratedLoudness, EBU
+   R128, and the sample peak) and prints one sentence, the same wording
+   as dynamical's loudness line:
+     "  Loudness: the WAV was normalised to -17 LUFS and measures -17.02
+      LUFS integrated, with a peak of -1.13 dBFS."
+   targetLUFS is the target the app normalised to. Returns
+   <|"lufs", "peakDB"|>. *)
+STEMLoudnessLine[wavPath_String, targetLUFS_?NumericQ] :=
+  Module[{data, sr, lufs, peak},
+    data = Import[wavPath, "Data"]; sr = Import[wavPath, "SampleRate"];
+    If[VectorQ[data], data = {data}];
+    lufs = MeasureIntegratedLoudness[Audio[data, SampleRate -> sr]];
+    peak = 20.0 * Log10[Max[Abs[Flatten[data]]]];
+    Print["  Loudness: the WAV was normalised to ", FmtDec[targetLUFS, 1],
+          " LUFS and measures ", FmtDec[lufs, 2], " LUFS integrated, with a peak of ",
+          FmtDec[peak, 2], " dBFS."];
+    <|"lufs" -> lufs, "peakDB" -> peak|>
+  ];
+
+(* STEMTimingLine
+   One sentence giving the structure of a WAV, the same wording as
+   dynamical's Timing line, with every part stated even when it is zero:
+     "  Timing: the WAV holds 0 s of spoken intro and a 0 s pause, then
+      20 s of notes from 0 s, then a 0 s pause and 0 s of spoken outro,
+      20 s in total."
+   t holds "intro" (speech), "introPause", "notes", "outroPause" and
+   "outro" (speech), all in seconds; missing keys count as 0. The total
+   is their sum. Returns the total. *)
+STEMTimingLine[t_Association] :=
+  Module[{g, total},
+    g[k_] := N @ Lookup[t, k, 0.0];
+    total = g["intro"] + g["introPause"] + g["notes"] + g["outroPause"] + g["outro"];
+    Print["  Timing: the WAV holds ", FmtDec[g["intro"], 2], " s of spoken intro and a ",
+          FmtDec[g["introPause"], 2], " s pause, then ", FmtDec[g["notes"], 2],
+          " s of notes from ", FmtDec[g["intro"] + g["introPause"], 2], " s, then a ",
+          FmtDec[g["outroPause"], 2], " s pause and ", FmtDec[g["outro"], 2],
+          " s of spoken outro, ", FmtDec[total, 2], " s in total."];
+    total
+  ];
+
 
 (* ── 4. Speech integration (optional) ───────────────────── *)
 

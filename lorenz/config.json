@@ -7,8 +7,8 @@
     "mode": "lorenz",
     "duration": 40.0,
     "timestep": 0.005,
-    "lorenz":   { "sigma": 10.0, "rho": 28.0, "beta": 2.6667 },
-    "rossler":  { "a": 0.2,  "b": 0.2,  "c": 5.7  },
+    "lorenz":   { "sigma": 10.0, "rho": 28.0, "beta": 2.6667, "preset": "", "transient_seconds": 5.0 },
+    "rossler":  { "a": 0.2,  "b": 0.2,  "c": 5.7, "transient_seconds": 50.0 },
     "initial_conditions": [0.1, 0.0, 0.0]
   },
 

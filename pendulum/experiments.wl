@@ -49,6 +49,9 @@ RunExperiment[name_String, params_Association] :=
 
     ExportSonification[sol, params, $cfg, wavFile];
     Print["    WAV -> ", wavFile];
+    SyncWAVToGIF[gifFile, wavFile];
+    STEMLoudnessLine[wavFile, -17.0];
+    STEMTimingLine[<|"notes" -> WAVDuration[wavFile]|>];
   ]
 
 

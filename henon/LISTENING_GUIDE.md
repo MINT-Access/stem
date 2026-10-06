@@ -73,8 +73,13 @@ decisions 3-4 for the full reasoning.
 - Use headphones — stereo pan carries real spatial information in every
   mode, and the two modes' opposite x/y-to-pitch/pan conventions are
   easiest to notice with a stereo image you can actually localise.
-- In `sweep` mode, the spoken introduction previews all three event
-  a-values before the sweep begins, so you know what to listen for.
+- In `sweep` mode, the spoken introduction previews the event a-values
+  that lie inside the sweep's range before the sweep begins, so you know
+  what to listen for; a zoomed sweep mentions only its own landmarks.
+- Every mode ends with a short spoken outro ("This is the end of …"), so
+  you know when the recording is over.
+- The animations wait on their first frame while the intro is spoken and
+  move with the notes, so you can start the GIF and the WAV together.
 - Try `--simulation.henon.a_steps=500` for a much finer sweep, or
   `--simulation.henon.note_duration=0.05` for a faster rhythm.
 - In `attractor` mode, try `--simulation.henon.n_points=5000` for a

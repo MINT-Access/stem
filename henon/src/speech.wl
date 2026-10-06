@@ -121,16 +121,49 @@ BuildAttractorIntroText[a_?NumericQ, b_?NumericQ] :=
   "folds back on itself.";
 
 
-(* BuildSweepIntroText *)
+(* BuildSweepIntroText
+   Names only the landmarks inside [aMin, aMax]: the doublings (first,
+   second, third bifurcation), the onset of chaos and the period-seven
+   window. A zoomed sweep therefore no longer announces a doubling or a
+   window it never reaches (sweep_chaos_zoom, a 1.05 to 1.4, used to say
+   "doubling near a equals 0.37"; sweep_cascade_zoom, a 0.3 to 1.1, used
+   to promise the window at 1.23). The full sweep's text is unchanged. *)
 BuildSweepIntroText[aMin_?NumericQ, aMax_?NumericQ, landmarks_Association] :=
-  "Hénon map bifurcation sweep, a from " <> ToString[NumberForm[aMin, {3, 2}]] <>
-  " to " <> ToString[NumberForm[aMax, {3, 2}]] <> ". Listen for the rhythm " <>
-  "doubling near a equals " <> ToString[NumberForm[landmarks["first_bifurcation"], {3, 2}]] <>
-  ", doubling again twice more, before dissolving into chaos near a equals " <>
-  ToString[NumberForm[landmarks["chaos_onset"], {3, 2}]] <>
-  ". A brief period-seven window near a equals " <>
-  ToString[NumberForm[landmarks["periodic_window"], {3, 2}]] <>
-  " produces a surprising return to order.";
+  Module[{f, inR, doublings, nLater, chaosIn, windowIn, doublingTxt},
+    f[x_] := ToString[NumberForm[x, {3, 2}]];
+    inR[k_] := aMin <= landmarks[k] <= aMax;
+    doublings = Select[{"first_bifurcation", "second_bifurcation", "third_bifurcation"}, inR];
+    chaosIn  = inR["chaos_onset"];
+    windowIn = inR["periodic_window"];
+    nLater   = Length[Select[doublings, # =!= "first_bifurcation" &]];
+    doublingTxt = Which[
+      MemberQ[doublings, "first_bifurcation"],
+        "Listen for the rhythm doubling near a equals " <> f[landmarks["first_bifurcation"]] <>
+        Switch[nLater, 2, ", doubling again twice more", 1, ", doubling again", _, ""],
+      doublings =!= {},
+        "Listen for the rhythm doubling again near a equals " <>
+        StringRiffle[f[landmarks[#]] & /@ doublings, " and "],
+      True, ""];
+    "Hénon map bifurcation sweep, a from " <> f[aMin] <> " to " <> f[aMax] <> ". " <>
+    Which[
+      doublingTxt =!= "" && chaosIn,
+        doublingTxt <> ", before dissolving into chaos near a equals " <> f[landmarks["chaos_onset"]] <> ". ",
+      doublingTxt =!= "", doublingTxt <> ". ",
+      chaosIn, "Listen for the rhythm dissolving into chaos near a equals " <> f[landmarks["chaos_onset"]] <> ". ",
+      True, ""] <>
+    If[windowIn,
+      "A brief period-seven window near a equals " <> f[landmarks["periodic_window"]] <>
+        " produces a surprising return to order.",
+      If[doublingTxt === "" && !chaosIn, "No bifurcation landmark lies inside this range.", ""]] //
+      StringTrim
+  ];
+
+(* Outros — a short spoken end marker for each mode. *)
+BuildAttractorOutroText[] := "This is the end of the Hénon attractor.";
+BuildSweepOutroText[aMin_?NumericQ, aMax_?NumericQ] :=
+  "This is the end of the sweep from a equals " <> ToString[NumberForm[aMin, {3, 2}]] <>
+  " to " <> ToString[NumberForm[aMax, {3, 2}]] <> ".";
+BuildReverseOutroText[] := "This is the end of the reverse demonstration.";
 
 
 (* BuildReverseIntroText *)

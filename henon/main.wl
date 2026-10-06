@@ -109,15 +109,9 @@ Which[
     STEMSay["Synthesising audio"];
     outWAV = FileNameJoin[{$projectRoot, "output", "henon_attractor.wav"}];
     {rawLeft, rawRight} = AttractorStereoBuffer[attractorModel, cfg];
-    introText   = BuildAttractorIntroText[a, b];
-    introBuffer = BuildIntroBuffer[introText, sr];
-    introBuffer = If[Length[introBuffer] > 0, NormalizeBuffer[introBuffer, 0.95], introBuffer];
-    pauseBuffer = If[Length[introBuffer] > 0, ConstantArray[0.0, Round[sr * 0.4]], {}];
-    finalLeft  = Join[introBuffer, pauseBuffer, rawLeft];
-    finalRight = Join[introBuffer, pauseBuffer, rawRight];
-    EnsureDir[outWAV];
-    Export[outWAV, Sound[SampledSoundList[NormalizeToLoudness[{finalLeft, finalRight}, -17.0, 0.97, sr], sr]], "WAV"];
-    $audioDur = N[Length[finalLeft]] / sr;
+    timing = ExportHenonNarratedWAV[outWAV, BuildAttractorIntroText[a, b], BuildAttractorOutroText[],
+                                    rawLeft, rawRight, sr];
+    $audioDur = timing["total"];
     STEMDescribeWAV[outWAV, $audioDur];
     Print[""];
 
@@ -128,10 +122,13 @@ Which[
     STEMSay["Rendering animation"];
     outGIF = FileNameJoin[{$projectRoot, "output", "henon_attractor.gif"}];
     outPNG = FileNameJoin[{$projectRoot, "output", "henon_attractor.png"}];
-    {$gifFrames, $gifFps} = ExportAttractorAnimation[attractorModel["trajectory"], outGIF, $audioDur];
+    {$gifFrames, $gifFps} = ExportAttractorAnimation[attractorModel["trajectory"], outGIF,
+      <|"intro" -> timing["notesStart"], "notes" -> timing["notes"], "total" -> $audioDur|>];
     ExportAttractorPNG[attractorModel["trajectory"], outPNG];
     STEMDescribeGIF[outGIF, $gifFrames, $gifFps];
     SyncWAVToGIF[outGIF, outWAV];
+    STEMLoudnessLine[outWAV, -17.0];
+    STEMTimingLine[timing];
     Print["  PNG written: ", outPNG];
     Print[""],
 
@@ -162,16 +159,11 @@ Which[
     Print["[3/5] Synthesising audio..."];
     STEMSay["Synthesising audio"];
     sweepResult = SonifySweep[sweepModel, landmarks, noteDuration, sr];
-    introText   = BuildSweepIntroText[aMin, aMax, landmarks];
-    introBuffer = BuildIntroBuffer[introText, sr];
-    introBuffer = If[Length[introBuffer] > 0, NormalizeBuffer[introBuffer, 0.95], introBuffer];
-    pauseBuffer = If[Length[introBuffer] > 0, ConstantArray[0.0, Round[sr * 0.4]], {}];
-    finalLeft   = Join[introBuffer, pauseBuffer, sweepResult["leftBuf"]];
-    finalRight  = Join[introBuffer, pauseBuffer, sweepResult["rightBuf"]];
     outWAV = FileNameJoin[{$projectRoot, "output", "henon_sweep.wav"}];
-    EnsureDir[outWAV];
-    Export[outWAV, Sound[SampledSoundList[NormalizeToLoudness[{finalLeft, finalRight}, -17.0, 0.97, sr], sr]], "WAV"];
-    $audioDur = N[Length[finalLeft]] / sr;
+    timing = ExportHenonNarratedWAV[outWAV, BuildSweepIntroText[aMin, aMax, landmarks],
+                                    BuildSweepOutroText[aMin, aMax],
+                                    sweepResult["leftBuf"], sweepResult["rightBuf"], sr];
+    $audioDur = timing["total"];
     STEMDescribeWAV[outWAV, $audioDur];
     Print[""];
 
@@ -184,10 +176,14 @@ Which[
     STEMSay["Rendering animation"];
     outGIF = FileNameJoin[{$projectRoot, "output", "henon_sweep.gif"}];
     outPNG = FileNameJoin[{$projectRoot, "output", "henon_sweep.png"}];
-    {$gifFrames, $gifFps} = AnimateSweepBifurcation[sweepModel, landmarks, outGIF, $audioDur];
+    {$gifFrames, $gifFps} = AnimateSweepBifurcation[sweepModel, landmarks, outGIF,
+      <|"intro" -> timing["notesStart"], "notes" -> timing["notes"],
+        "total" -> $audioDur|>];
     ExportSweepPNG[sweepModel, landmarks, outPNG];
     STEMDescribeGIF[outGIF, $gifFrames, $gifFps];
     SyncWAVToGIF[outGIF, outWAV];
+    STEMLoudnessLine[outWAV, -17.0];
+    STEMTimingLine[timing];
     Print["  PNG written: ", outPNG];
     Print[""],
 
@@ -222,16 +218,12 @@ Which[
     Print["[3/5] Synthesising audio..."];
     STEMSay["Synthesising audio"];
     reverseResult = SonifyReverse[reverseModel, noteDuration, sr];
-    introText     = BuildReverseIntroText[reverseSteps];
-    introBuffer   = BuildIntroBuffer[introText, sr];
-    introBuffer   = If[Length[introBuffer] > 0, NormalizeBuffer[introBuffer, 0.95], introBuffer];
-    pauseBuffer   = If[Length[introBuffer] > 0, ConstantArray[0.0, Round[sr * 0.4]], {}];
-    finalLeft     = Join[introBuffer, pauseBuffer, reverseResult["leftBuf"]];
-    finalRight    = Join[introBuffer, pauseBuffer, reverseResult["rightBuf"]];
     outWAV = FileNameJoin[{$projectRoot, "output", "henon_reverse.wav"}];
-    EnsureDir[outWAV];
-    Export[outWAV, Sound[SampledSoundList[NormalizeToLoudness[{finalLeft, finalRight}, -17.0, 0.97, sr], sr]], "WAV"];
-    STEMDescribeWAV[outWAV, N[Length[finalLeft]] / sr];
+    timing = ExportHenonNarratedWAV[outWAV, BuildReverseIntroText[reverseSteps], BuildReverseOutroText[],
+                                    reverseResult["leftBuf"], reverseResult["rightBuf"], sr];
+    STEMDescribeWAV[outWAV, timing["total"]];
+    STEMLoudnessLine[outWAV, -17.0];
+    STEMTimingLine[timing];
     Print[""];
 
     Print["[4/5] Exporting reverse-demo data..."];

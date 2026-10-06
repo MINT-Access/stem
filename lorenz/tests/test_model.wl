@@ -123,5 +123,34 @@ Module[{a = 0.2, b = 0.2, c = 5.7, chk, rsol, rparams},
 ];
 
 Print[""];
+Print["-- Transient discard and presets --"];
+Module[{p, sol, kept},
+  p = <| "Sigma"->10.0, "Rho"->28.0, "Beta"->8/3, "InitX"->0.1, "InitY"->0.0, "InitZ"->0.0,
+         "TimeEnd"->7.0, "TimeStep"->0.005 |>;
+  sol  = SolveLorenz[p];
+  kept = DiscardTransient[sol, 5.0];
+  AssertTrue["DiscardTransient keeps duration/dt + 1 samples after a 5 s transient (401 of 1401)",
+    Length[sol] === 1401 && Length[kept] === 401];
+  AssertTrue["the retained part restarts at t = 0 and ends at t = 2 (the duration)",
+    kept[[1, 1]] == 0 && Abs[kept[[-1, 1]] - 2.0] < 10^-9];
+  AssertTrue["the retained first state is the solution's state at t = 5",
+    kept[[1, 2 ;; 4]] === sol[[1001, 2 ;; 4]]];
+  AssertTrue["a zero transient leaves the solution unchanged", DiscardTransient[sol, 0] === sol];
+];
+AssertTrue["six presets: classic, butterfly, stable, wild, slow, rho9996",
+  Keys[$lorenzPresets] === {"classic", "butterfly", "stable", "wild", "slow", "rho9996"}];
+AssertTrue["the stable preset uses rho = 20", $lorenzPresets["stable"]["Rho"] == 20.0];
+Module[{p, sol, beta = 8/3., rho = 20.0, cp, last, speed},
+  p    = LorenzPresetParams["stable"];
+  sol  = DiscardTransient[SolveLorenz[Append[p, "TimeEnd" -> 5.0 + p["TimeEnd"]]], 5.0];
+  cp   = {Sqrt[beta (rho - 1)], Sqrt[beta (rho - 1)], rho - 1};
+  last = Last[sol][[2 ;; 4]];
+  speed = Norm[(sol[[-1, 2 ;; 4]] - sol[[-2, 2 ;; 4]]) / 0.005];
+  AssertTrue["stable preset: after 5 s transient + 30 s, within 0.5 of C+ or C-",
+    Min[Norm[last - cp], Norm[last - {-1, -1, 1} cp]] < 0.5];
+  AssertTrue["stable preset: speed at the end below 1", speed < 1];
+];
+
+Print[""];
 Print["Results: ", passed, " passed, ", failed, " failed."];
 If[failed > 0, Exit[1], Exit[0]];

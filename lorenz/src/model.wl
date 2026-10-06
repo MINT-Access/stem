@@ -110,6 +110,59 @@ SolveRossler[params_Association] :=
   ]
 
 
+(* DiscardTransient
+   Drops the first tTransient seconds of a {t, x, y, z} solution sampled
+   every dt from t = 0, and restarts its time column at 0, so what
+   remains is the retained part of the run with times 0, dt, 2 dt, ...
+   main.wl integrates for transient + duration and calls this before
+   sonification, animation and CSV export, the same way the Lyapunov
+   checks discard their own transient before measuring. *)
+DiscardTransient[solution_List, tTransient_?NumericQ] :=
+  Module[{dt, n, kept},
+    If[tTransient <= 0, Return[solution]];
+    dt   = solution[[2, 1]] - solution[[1, 1]];
+    n    = Round[tTransient / dt];
+    kept = Drop[solution, n];
+    MapThread[Prepend[Rest[#1], #2] &, {kept, (Range[Length[kept]] - 1) * dt}]
+  ];
+
+(* $lorenzPresets
+   Named runs for lorenz mode, selected with simulation.lorenz.preset
+   (main.wl) or the ACTIVE PRESET line of experiment.wl. TimeEnd is the
+   retained duration; simulation.lorenz.transient_seconds is discarded
+   before it. Outputs are lorenz_audio_<preset>.wav,
+   lorenz_animation_<preset>.gif, lorenz_trajectory_<preset>.csv.
+   "stable" uses rho = 20, not 24: at rho = 24 a chaotic set coexists
+   with the stable fixed points (24.06 < rho < 24.74), and a 30 s run
+   from (1,1,1) is all chaotic transient (measured: still at speed 75 at
+   t = 30). At rho = 20 the fixed points' slowest eigenvalue has real
+   part -0.155, and after the 5 s transient the state is within 0.5 of
+   C+ or C- for the last 15 s of the 30 s (measured end distance 0.04,
+   speed 0.4). rho = 15 or 13 settle faster (end distance 1e-4, 3e-6)
+   but sit still for most of the 30 s; 20 keeps an audible spiral for
+   half the run. *)
+$lorenzPresets = <|
+  "classic"   -> <|"Sigma" -> 10.0, "Rho" -> 28.0,  "Beta" -> 8/3, "TimeEnd" -> 40.0,  "Dual" -> False,
+                   "desc" -> "classic chaotic attractor"|>,
+  "butterfly" -> <|"Sigma" -> 10.0, "Rho" -> 28.0,  "Beta" -> 8/3, "TimeEnd" -> 30.0,  "Dual" -> True,
+                   "desc" -> "two trajectories 0.001 apart, side by side in the animation"|>,
+  "stable"    -> <|"Sigma" -> 10.0, "Rho" -> 20.0,  "Beta" -> 8/3, "TimeEnd" -> 30.0,  "Dual" -> False,
+                   "desc" -> "rho = 20, a spiral settling onto a fixed point"|>,
+  "wild"      -> <|"Sigma" -> 10.0, "Rho" -> 99.96, "Beta" -> 8/3, "TimeEnd" -> 20.0,  "Dual" -> False,
+                   "desc" -> "rho = 99.96, a wilder chaotic regime"|>,
+  "slow"      -> <|"Sigma" -> 4.0,  "Rho" -> 28.0,  "Beta" -> 8/3, "TimeEnd" -> 60.0,  "Dual" -> False,
+                   "desc" -> "sigma = 4, slower mixing"|>,
+  "rho9996"   -> <|"Sigma" -> 10.0, "Rho" -> 99.96, "Beta" -> 8/3, "TimeEnd" -> 120.0, "Dual" -> False,
+                   "desc" -> "rho = 99.96 for 120 s, the GIF frame-rate stress test"|>
+|>;
+
+(* LorenzPresetParams — the SolveLorenz params of a preset, started
+   from (1, 1, 1) with timestep 0.005 (TimeEnd is the retained part). *)
+LorenzPresetParams[name_String] :=
+  Join[KeyTake[$lorenzPresets[name], {"Sigma", "Rho", "Beta", "TimeEnd"}],
+       <|"InitX" -> 1.0, "InitY" -> 1.0, "InitZ" -> 1.0, "TimeStep" -> 0.005|>];
+
+
 (* SolveLorenzPair
    Solves two trajectories with nearly identical initial conditions.
    Used to demonstrate sensitive dependence (butterfly effect).

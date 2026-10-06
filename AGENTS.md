@@ -75,6 +75,7 @@ Get[FileNameJoin[{$stemCoreRoot, "init.wl"}]];
 ```sh
 wolframscript -file pendulum/main.wl
 wolframscript -file lorenz/main.wl
+wolframscript -file lorenz/main.wl -- --simulation.lorenz.preset=stable   # presets: classic butterfly stable wild slow rho9996
 wolframscript -file asteroids/main.wl                                    # last 7 days, MinorPentatonic
 wolframscript -file asteroids/main.wl -- 2026-01-01 2026-12-31           # full year
 wolframscript -file asteroids/main.wl -- 2026-01-01 2026-06-25 Phrygian  # date range + scale
@@ -215,6 +216,8 @@ After `Get[".../stem-core/init.wl"]` all of the following are available:
 | `STEMDescribeCSV[path, nRows, nCols]` | accessibility | Print CSV export summary line |
 | `STEMDescribeWAV[path, durationSec]` | accessibility | Print WAV export summary line |
 | `STEMDescribeGIF[path, nFrames, fps]` | accessibility | Print GIF export summary line |
+| `STEMLoudnessLine[wavPath, targetLUFS]` | accessibility | Measure the written WAV and print its integrated loudness and peak |
+| `STEMTimingLine[<\|"intro", "introPause", "notes", "outroPause", "outro"\|>]` | accessibility | Print the WAV's structure (zero parts stated) |
 | `$STEMSpeakEnabled` | accessibility | Boolean flag; `True` when `STEM_SPEAK=1` env var is set at load time |
 | `STEMSay[text]` | accessibility | Print text + optionally speak via `say` |
 

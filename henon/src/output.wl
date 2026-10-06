@@ -170,3 +170,36 @@ PrintReverseSummary[reverseModel_Association] :=
     Print["  Inverse-demo round-trip max error: ", FmtN[reverseModel["inverseDemoMaxError"], 12],
           "  (amplified from ~1e-16 by the area-expanding inverse map — see AGENTS.md)"];
   ];
+
+
+(* ── Narrated WAV (all three modes) ─────────────────────────────────
+
+   ExportHenonNarratedWAV
+   Speaks introText and outroText (BuildIntroBuffer, peak 0.95 each),
+   prints both texts as "Spoken intro:" / "Spoken outro:" lines like
+   dynamical, joins intro speech, a 0.4 s pause, the notes, a 0.4 s
+   pause and outro speech, normalises to -17 LUFS (peak ceiling 0.97)
+   and writes the WAV. A speech part that could not be synthesised
+   drops its pause too. Returns the timing in seconds for
+   STEMTimingLine and the animations: <|"intro" (speech), "introPause",
+   "notes", "outroPause", "outro" (speech), "notesStart", "total"|>. *)
+ExportHenonNarratedWAV[outWAV_String, introText_String, outroText_String,
+                       left_List, right_List, sr_Integer] :=
+  Module[{speak, introBuf, outroBuf, pause, introPart, outroPart, finalLeft, finalRight},
+    speak[t_] := With[{b = BuildIntroBuffer[t, sr]}, If[Length[b] > 0, NormalizeBuffer[b, 0.95], b]];
+    Print["  Spoken intro: ", introText];
+    Print["  Spoken outro: ", outroText];
+    introBuf = speak[introText];
+    outroBuf = speak[outroText];
+    pause = ConstantArray[0.0, Round[sr * 0.4]];
+    introPart = If[Length[introBuf] > 0, Join[introBuf, pause], {}];
+    outroPart = If[Length[outroBuf] > 0, Join[pause, outroBuf], {}];
+    finalLeft  = Join[introPart, left,  outroPart];
+    finalRight = Join[introPart, right, outroPart];
+    EnsureDir[outWAV];
+    Export[outWAV, Sound[SampledSoundList[NormalizeToLoudness[{finalLeft, finalRight}, -17.0, 0.97, sr], sr]], "WAV"];
+    <|"intro" -> N[Length[introBuf]] / sr, "introPause" -> If[Length[introBuf] > 0, 0.4, 0.0],
+      "notes" -> N[Length[left]] / sr, "outroPause" -> If[Length[outroBuf] > 0, 0.4, 0.0],
+      "outro" -> N[Length[outroBuf]] / sr, "notesStart" -> N[Length[introPart]] / sr,
+      "total" -> N[Length[finalLeft]] / sr|>
+  ];

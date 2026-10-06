@@ -112,6 +112,36 @@ call in the discrete-note path at all), so prepending an intro there is the
 same straightforward `Join[introBuffer, pauseBuffer, mainBuffer]` pattern
 `dynamical/main.wl` uses.
 
+All three modes (main.wl and experiments.wl) now assemble the WAV in one
+place, `ExportHenonNarratedWAV` (output.wl): spoken intro, 0.4 s pause,
+notes, 0.4 s pause, spoken outro, normalised to -17 LUFS. It prints the
+intro and outro texts as "Spoken intro:" / "Spoken outro:" lines, like
+dynamical, and returns the timing of each part, which feeds the stem-core
+Timing line (`STEMTimingLine`) and the animations. Each mode ends with a
+short outro as its spoken end marker (`BuildAttractorOutroText`,
+`BuildSweepOutroText`, `BuildReverseOutroText`), then the GIF/WAV sync
+sentence (attractor and sweep; reverse has no GIF), the stem-core loudness
+line (`STEMLoudnessLine`) and the Timing line.
+
+### 5a. Animations hold during the intro and outro
+
+`ExportAttractorAnimation` and `AnimateSweepBifurcation` take a timing
+Association and follow dynamical's hold-during-intro contract: the first
+frame is held while the intro plays, frames advance with the notes only
+(attractor: points, sweep: a-steps, both in proportion to the time into the
+notes, so the final state appears at the end of the notes), and the final
+state is held through the outro. Frame i shows the state at the middle of its display
+interval. Before, frames were spread evenly over the whole WAV, so during
+the 18-20 s intro the picture ran ahead of the sound.
+
+### 5b. The sweep intro names only landmarks inside the sweep's range
+
+`BuildSweepIntroText` checks each landmark (first, second and third
+bifurcation, chaos onset, period-seven window) against [a_min, a_max]. The
+full sweep's text is unchanged; sweep_chaos_zoom (1.05-1.4) no longer
+announces the doubling at 0.37 and sweep_cascade_zoom (0.3-1.1) no longer
+promises the window at 1.23. A range with no landmark says so.
+
 ### 6. Correctness checks always run at canonical (a,b)=(1.4,0.3), independent of the active mode's configured parameters
 
 Matches `dynamical/main.wl`'s own convention: its `FixedPointCheck`,
@@ -252,10 +282,12 @@ henon/
                           MixLayers directly — see decision 2), SynthesizeDiscreteNotesHenon
                           + SonifySweep/SonifyReverse (dynamical-style discrete notes)
     speech.wl                  — Spoken intro synthesis (SpeechSynthesize -> platform
-                          TTS -> text-only fallback), BuildXIntroText per mode
+                          TTS -> text-only fallback), BuildXIntroText and
+                          BuildXOutroText per mode
     animate.wl                   — attractor point-cloud GIF/PNG, sweep bifurcation-diagram
                           GIF/PNG, reverse three-phase overlay PNG
-    output.wl                     — Export*CSV per mode, Print*Summary per mode
+    output.wl                     — Export*CSV per mode, Print*Summary per mode,
+                          ExportHenonNarratedWAV (intro + notes + outro WAV)
   tests/
     test_model.wl               — unit tests (map/inverse, Jacobian, fixed point,
                           bifurcation landmarks, Lyapunov exponents, all four checks,

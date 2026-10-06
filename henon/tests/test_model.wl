@@ -6,6 +6,7 @@ $projectRoot  = FileNameJoin[{DirectoryName[$InputFileName], ".."}];
 $stemCoreRoot = FileNameJoin[{$projectRoot, "..", "stem-core"}];
 Get[FileNameJoin[{$stemCoreRoot, "init.wl"}]];
 Get[FileNameJoin[{$projectRoot, "src", "model.wl"}]];
+Get[FileNameJoin[{$projectRoot, "src", "speech.wl"}]];
 
 passed = 0; failed = 0;
 AssertTrue[label_String, condition_] :=
@@ -139,6 +140,27 @@ Print["-- BoxCountingDimension --"];
 Module[{am = HenonAttractorModel[0.1, 0.1, 1.4, 0.3, 500, 4000], dim},
   dim = BoxCountingDimension[am["trajectory"]];
   AssertTrue["dimension estimate lands in a plausible range (1.0, 1.6)", 1.0 < dim < 1.6]
+];
+Print[""];
+
+(* ── Narration: sweep intro names only in-range landmarks; outros ── *)
+Print["-- Narration --"];
+Module[{lm = HenonSweepLandmarks[0.3], full, chaosZoom, cascadeZoom},
+  full        = BuildSweepIntroText[0.2, 1.4, lm];
+  chaosZoom   = BuildSweepIntroText[1.05, 1.4, lm];
+  cascadeZoom = BuildSweepIntroText[0.3, 1.1, lm];
+  AssertTrue["full sweep intro is unchanged (doubling at 0.37, twice more, chaos 1.05, window 1.23)",
+    StringEndsQ[full, "non map bifurcation sweep, a from 0.20 to 1.40. Listen for the rhythm doubling near a equals 0.37, doubling again twice more, before dissolving into chaos near a equals 1.05. A brief period-seven window near a equals 1.23 produces a surprising return to order."]];
+  AssertTrue["sweep_chaos_zoom (1.05 to 1.4) no longer announces the doubling at 0.37",
+    !StringContainsQ[chaosZoom, "0.37"] && StringContainsQ[chaosZoom, "period-seven window near a equals 1.23"]];
+  AssertTrue["sweep_cascade_zoom (0.3 to 1.1) no longer promises the period-7 window at 1.23",
+    !StringContainsQ[cascadeZoom, "period-seven"] && !StringContainsQ[cascadeZoom, "1.23"] &&
+    StringContainsQ[cascadeZoom, "doubling near a equals 0.37, doubling again twice more"]];
+  AssertTrue["a range with no landmark says so",
+    StringContainsQ[BuildSweepIntroText[0.1, 0.3, lm], "No bifurcation landmark lies inside this range."]];
+  AssertTrue["each mode has an outro ending in a full stop",
+    AllTrue[{BuildAttractorOutroText[], BuildSweepOutroText[0.2, 1.4], BuildReverseOutroText[]},
+      StringStartsQ[#, "This is the end of the"] && StringEndsQ[#, "."] &]];
 ];
 Print[""];
 

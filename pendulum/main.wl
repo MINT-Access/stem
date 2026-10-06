@@ -106,6 +106,8 @@ Which[
     ExportSonification[solution, params, cfg, outWAV];
     STEMDescribeWAV[outWAV, solution[[-1, 1]]];
     SyncWAVToGIF[outGIF, outWAV];
+    STEMLoudnessLine[outWAV, -17.0];
+    STEMTimingLine[<|"notes" -> WAVDuration[outWAV]|>];
     Print[""],
 
 
@@ -173,6 +175,8 @@ Which[
     SonifyDoublePendulum[solution, cfg, outWAV];
     STEMDescribeWAV[outWAV, solution[[-1, 1]]];
     SyncWAVToGIF[outGIF, outWAV];
+    STEMLoudnessLine[outWAV, -17.0];
+    STEMTimingLine[<|"notes" -> WAVDuration[outWAV]|>];
     Print[""],
 
 

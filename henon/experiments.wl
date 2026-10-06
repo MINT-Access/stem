@@ -23,7 +23,7 @@ RunExperiment[name_String, overrides_Association] :=
           attractorModel, dimension, rawLeft, rawRight,
           sweepModel, landmarks, sweepResult,
           reverseModel, reverseResult,
-          introText, introBuffer, pauseBuffer, finalLeft, finalRight, totalDurSec},
+          timing, totalDurSec},
 
     Print[""];
     STEMHeading["Experiment: " <> name];
@@ -58,18 +58,16 @@ RunExperiment[name_String, overrides_Association] :=
         PrintAttractorSummary[attractorModel, dimension];
 
         {rawLeft, rawRight} = AttractorStereoBuffer[attractorModel, cfg];
-        introText   = BuildAttractorIntroText[a, b];
-        introBuffer = BuildIntroBuffer[introText, sr];
-        introBuffer = If[Length[introBuffer] > 0, NormalizeBuffer[introBuffer, 0.95], introBuffer];
-        pauseBuffer = If[Length[introBuffer] > 0, ConstantArray[0.0, Round[sr * 0.4]], {}];
-        finalLeft   = Join[introBuffer, pauseBuffer, rawLeft];
-        finalRight  = Join[introBuffer, pauseBuffer, rawRight];
-        EnsureDir[outWAV];
-        Export[outWAV, Sound[SampledSoundList[NormalizeToLoudness[{finalLeft, finalRight}, -17.0, 0.97, sr], sr]], "WAV"];
-        totalDurSec = N[Length[finalLeft]] / sr;
+        timing = ExportHenonNarratedWAV[outWAV, BuildAttractorIntroText[a, b], BuildAttractorOutroText[],
+                                        rawLeft, rawRight, sr];
+        totalDurSec = timing["total"];
         STEMDescribeWAV[outWAV, totalDurSec];
 
-        ExportAttractorAnimation[attractorModel["trajectory"], outGIF, totalDurSec];
+        ExportAttractorAnimation[attractorModel["trajectory"], outGIF,
+          <|"intro" -> timing["notesStart"], "notes" -> timing["notes"], "total" -> totalDurSec|>];
+        SyncWAVToGIF[outGIF, outWAV];
+        STEMLoudnessLine[outWAV, -17.0];
+        STEMTimingLine[timing];
         ExportAttractorPNG[attractorModel["trajectory"], outPNG];
         ExportAttractorCSV[BuildAttractorTrajectory[attractorModel], cfg, outCSV],
 
@@ -79,18 +77,18 @@ RunExperiment[name_String, overrides_Association] :=
         PrintSweepSummary[sweepModel, landmarks];
 
         sweepResult = SonifySweep[sweepModel, landmarks, noteDuration, sr];
-        introText   = BuildSweepIntroText[aMin, aMax, landmarks];
-        introBuffer = BuildIntroBuffer[introText, sr];
-        introBuffer = If[Length[introBuffer] > 0, NormalizeBuffer[introBuffer, 0.95], introBuffer];
-        pauseBuffer = If[Length[introBuffer] > 0, ConstantArray[0.0, Round[sr * 0.4]], {}];
-        finalLeft   = Join[introBuffer, pauseBuffer, sweepResult["leftBuf"]];
-        finalRight  = Join[introBuffer, pauseBuffer, sweepResult["rightBuf"]];
-        EnsureDir[outWAV];
-        Export[outWAV, Sound[SampledSoundList[NormalizeToLoudness[{finalLeft, finalRight}, -17.0, 0.97, sr], sr]], "WAV"];
-        totalDurSec = N[Length[finalLeft]] / sr;
+        timing = ExportHenonNarratedWAV[outWAV, BuildSweepIntroText[aMin, aMax, landmarks],
+                                        BuildSweepOutroText[aMin, aMax],
+                                        sweepResult["leftBuf"], sweepResult["rightBuf"], sr];
+        totalDurSec = timing["total"];
         STEMDescribeWAV[outWAV, totalDurSec];
 
-        AnimateSweepBifurcation[sweepModel, landmarks, outGIF, totalDurSec];
+        AnimateSweepBifurcation[sweepModel, landmarks, outGIF,
+          <|"intro" -> timing["notesStart"], "notes" -> timing["notes"],
+            "total" -> totalDurSec|>];
+        SyncWAVToGIF[outGIF, outWAV];
+        STEMLoudnessLine[outWAV, -17.0];
+        STEMTimingLine[timing];
         ExportSweepPNG[sweepModel, landmarks, outPNG];
         ExportSweepCSV[sweepResult, sweepModel["aValues"], outCSV],
 
@@ -99,16 +97,12 @@ RunExperiment[name_String, overrides_Association] :=
         PrintReverseSummary[reverseModel];
 
         reverseResult = SonifyReverse[reverseModel, noteDuration, sr];
-        introText     = BuildReverseIntroText[reverseSteps];
-        introBuffer   = BuildIntroBuffer[introText, sr];
-        introBuffer   = If[Length[introBuffer] > 0, NormalizeBuffer[introBuffer, 0.95], introBuffer];
-        pauseBuffer   = If[Length[introBuffer] > 0, ConstantArray[0.0, Round[sr * 0.4]], {}];
-        finalLeft     = Join[introBuffer, pauseBuffer, reverseResult["leftBuf"]];
-        finalRight    = Join[introBuffer, pauseBuffer, reverseResult["rightBuf"]];
-        EnsureDir[outWAV];
-        Export[outWAV, Sound[SampledSoundList[NormalizeToLoudness[{finalLeft, finalRight}, -17.0, 0.97, sr], sr]], "WAV"];
-        totalDurSec = N[Length[finalLeft]] / sr;
+        timing = ExportHenonNarratedWAV[outWAV, BuildReverseIntroText[reverseSteps], BuildReverseOutroText[],
+                                        reverseResult["leftBuf"], reverseResult["rightBuf"], sr];
+        totalDurSec = timing["total"];
         STEMDescribeWAV[outWAV, totalDurSec];
+        STEMLoudnessLine[outWAV, -17.0];
+        STEMTimingLine[timing];
 
         ExportReversePNG[reverseModel, outPNG];
         ExportReverseCSV[reverseResult, outCSV]

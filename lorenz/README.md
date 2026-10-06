@@ -33,8 +33,12 @@ wolframscript -file main.wl
 wolframscript -file main.wl -- --simulation.mode=rossler
 wolframscript -file main.wl -- --simulation.mode rossler
 
-# Experiment with presets
-wolframscript -file experiment.wl
+# Named presets (classic, butterfly, stable, wild, slow, rho9996)
+wolframscript -file main.wl -- --simulation.lorenz.preset=stable
+wolframscript -file experiment.wl          # the preset on its ACTIVE PRESET line
+
+# Hear the start-up transient too (default: the first 5 s are discarded)
+wolframscript -file main.wl -- --simulation.lorenz.transient_seconds=0
 
 # Tests
 wolframscript -file tests/test_model.wl
@@ -127,15 +131,41 @@ range is tunable via `sonification.pitch.min_hz`/`max_hz` in `config.json`.
 trajectories side-by-side, used by the `butterfly` experiment preset to
 visualise how quickly they diverge.
 
-## Experiment presets (experiment.wl)
+## Presets (`simulation.lorenz.preset`, or experiment.wl)
+
+Selected with `--simulation.lorenz.preset=<name>` on main.wl, or by the
+ACTIVE PRESET line of experiment.wl, which runs main.wl with it. Every
+preset starts from (1, 1, 1), discards the first
+`simulation.lorenz.transient_seconds` (5 s), and writes
+`lorenz_audio_<name>.wav`, `lorenz_animation_<name>.gif` and
+`lorenz_trajectory_<name>.csv`.
 
 | Label      | What it shows                                    |
 |------------|--------------------------------------------------|
 | classic    | Standard attractor, 40 s                         |
-| butterfly  | Two near-identical trajectories diverging apart  |
-| stable     | rho=24, below chaos — spirals to fixed point     |
-| wild       | rho=99.96, different chaotic regime              |
-| slow       | sigma=4, slower mixing dynamics                  |
+| butterfly  | Two trajectories 0.001 apart side by side in the GIF, 30 s (the WAV follows the first) |
+| stable     | rho=20, 30 s — a spiral settling onto a fixed point (ends within 0.04 of it) |
+| wild       | rho=99.96, different chaotic regime, 20 s        |
+| slow       | sigma=4, slower mixing dynamics, 60 s            |
+| rho9996    | rho=99.96 for 120 s, the GIF frame-rate stress test |
+
+The stable preset was rho = 24 until it was measured: 24 lies in the
+range 24.06-24.74 where a chaotic set coexists with the stable fixed
+points, and the whole 30 s was chaotic transient.
+
+## Transient
+
+`simulation.lorenz.transient_seconds` (default 5) and
+`simulation.rossler.transient_seconds` (default 50) are integrated and
+then dropped before the CSV, GIF and WAV; the time column restarts at 0
+and `simulation.duration` is the length of what remains. Without it the
+lorenz start from (0.1, 0, 0) produced a loud transient at the top of the
+pitch range in the first 0.6 s, the loudness normalisation hit its peak
+ceiling, and the WAV came out near -25 LUFS instead of -17. With the
+transient discarded lorenz mode measures -21.6 LUFS: still below the
+target, because fast passages at the top of the pitch range keep hitting
+the peak ceiling (most presets measure -19 to -26 LUFS; rossler and the
+stable preset reach -17). See AGENTS.md "Transient and presets".
 
 ## Project structure
 
@@ -164,7 +194,11 @@ each and remain as bare `Print`; the four correctness checks print as a
 followed by one detail line per check; export confirmations use
 `STEMDescribeCSV` (1 row per step, 5 columns), `STEMDescribeGIF` (frame
 count and fps as actually rendered — see "Animation" above), and
-`STEMDescribeWAV` (duration from `params["TimeEnd"]`).
+`STEMDescribeWAV` (duration from `params["TimeEnd"]`). After the GIF/WAV sync
+sentence each run prints the loudness line (`STEMLoudnessLine`: target,
+measured integrated LUFS and peak) and the Timing line (`STEMTimingLine`:
+intro, pause, notes, pause, outro and total; lorenz has no narration, so
+only the notes are non-zero).
 `STEMSay` is called at each pipeline phase (ODE solve, correctness checks,
 animation, sonification) and as the final completion message with the
 platform-appropriate play command.

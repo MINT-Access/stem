@@ -1,0 +1,253 @@
+# Supporting apps: fixes verification (measured 2026-10-06)
+
+## Context
+- Repo HEAD: b523d24 (main); all changes uncommitted, as asked.
+- Every value below comes from runs made in this session after the last code change. "Before" values come from docs/STATE_supporting_apps.md, measured earlier in this session on the unchanged code.
+- WAV duration = Python wave frames / rate; GIF duration = sum of PIL frame durations; loudness = pyloudnorm integrated LUFS; peak = max |sample| dBFS. The apps' own loudness line uses stem-core MeasureIntegratedLoudness.
+- Run script: batch.sh (scratchpad), the commands below in this order; report: report.py (scratchpad).
+
+## Commands
+- pendulum_simple: `wolframscript -file pendulum/main.wl -- --simulation.mode=simple` (exit 0, wall 23 s)
+- pendulum_double: `wolframscript -file pendulum/main.wl -- --simulation.mode=double` (exit 0, wall 33 s)
+- pendulum_experiments: `wolframscript -file pendulum/experiments.wl` (exit 0, wall 98 s)
+- pendulum_tests: `wolframscript -file pendulum/tests/test_model.wl` (exit 0, wall 5 s)
+- lorenz_lorenz: `wolframscript -file lorenz/main.wl -- --simulation.mode=lorenz` (exit 0, wall 51 s)
+- lorenz_rossler: `wolframscript -file lorenz/main.wl -- --simulation.mode=rossler` (exit 0, wall 50 s)
+- lorenz_preset_classic: `wolframscript -file lorenz/main.wl -- --simulation.lorenz.preset=classic` (exit 0, wall 50 s)
+- lorenz_preset_butterfly: `wolframscript -file lorenz/main.wl -- --simulation.lorenz.preset=butterfly` (exit 0, wall 85 s)
+- lorenz_preset_stable: `wolframscript -file lorenz/main.wl -- --simulation.lorenz.preset=stable` (exit 0, wall 51 s)
+- lorenz_preset_wild: `wolframscript -file lorenz/main.wl -- --simulation.lorenz.preset=wild` (exit 0, wall 49 s)
+- lorenz_preset_slow: `wolframscript -file lorenz/main.wl -- --simulation.lorenz.preset=slow` (exit 0, wall 58 s)
+- lorenz_preset_rho9996: `wolframscript -file lorenz/main.wl -- --simulation.lorenz.preset=rho9996` (exit 0, wall 94 s)
+- lorenz_experiment: `wolframscript -file lorenz/experiment.wl` (exit 0, wall 85 s)
+- lorenz_tests: `wolframscript -file lorenz/tests/test_model.wl` (exit 0, wall 6 s)
+- henon_attractor: `wolframscript -file henon/main.wl -- --simulation.mode=attractor` (exit 0, wall 37 s)
+- henon_reverse: `wolframscript -file henon/main.wl -- --simulation.mode=reverse` (exit 0, wall 10 s)
+- stemcore_gifsync: `wolframscript -file stem-core/tests/test_gifsync.wl` (exit 0, wall 7 s)
+- henon_sweep: `wolframscript -file henon/main.wl -- --simulation.mode=sweep` (exit 0, wall 28 s)
+- henon_experiments: `wolframscript -file henon/experiments.wl` (exit 0, wall 107 s)
+- henon_tests: `wolframscript -file henon/tests/test_model.wl` (exit 0, wall 13 s)
+
+## Part 1: pendulum fencepost
+- pendulum simple: frames 500, GIF 20.00 s, WAV 20.0000 s, difference +0.0000 s (before: 501 frames, +0.04 s)
+- pendulum simple sync sentence: "GIF/WAV sync: the GIF has 500 frames of 0.04 s each and plays for 20 s, the WAV plays for 20 s, and the GIF and the WAV have the same duration to the millisecond."
+- pendulum simple CSV: 2001 data rows, first time 0, last time 20 (final time sample kept)
+- pendulum double: frames 500, GIF 20.00 s, WAV 20.0000 s, difference +0.0000 s (before: 501 frames, +0.04 s)
+- pendulum double sync sentence: "GIF/WAV sync: the GIF has 500 frames of 0.04 s each and plays for 20 s, the WAV plays for 20 s, and the GIF and the WAV have the same duration to the millisecond."
+- pendulum double CSV: 2001 data rows, first time 0, last time 20 (final time sample kept)
+- pendulum baseline: frames 250, GIF 10.00 s, WAV 10.0000 s, difference +0.0000 s (before: one frame more, +0.04 s)
+- pendulum baseline sync sentence: "GIF/WAV sync: the GIF has 250 frames of 0.04 s each and plays for 10 s, the WAV plays for 10 s, and the GIF and the WAV have the same duration to the millisecond."
+- pendulum long_pendulum: frames 375, GIF 15.00 s, WAV 15.0000 s, difference +0.0000 s (before: one frame more, +0.04 s)
+- pendulum long_pendulum sync sentence: "GIF/WAV sync: the GIF has 375 frames of 0.04 s each and plays for 15 s, the WAV plays for 15 s, and the GIF and the WAV have the same duration to the millisecond."
+- pendulum short_pendulum: frames 200, GIF 8.00 s, WAV 8.0000 s, difference +0.0000 s (before: one frame more, +0.04 s)
+- pendulum short_pendulum sync sentence: "GIF/WAV sync: the GIF has 200 frames of 0.04 s each and plays for 8 s, the WAV plays for 8 s, and the GIF and the WAV have the same duration to the millisecond."
+- pendulum large_angle: frames 300, GIF 12.00 s, WAV 12.0000 s, difference +0.0000 s (before: one frame more, +0.04 s)
+- pendulum large_angle sync sentence: "GIF/WAV sync: the GIF has 300 frames of 0.04 s each and plays for 12 s, the WAV plays for 12 s, and the GIF and the WAV have the same duration to the millisecond."
+- pendulum moon_gravity: frames 625, GIF 25.00 s, WAV 25.0000 s, difference +0.0000 s (before: one frame more, +0.04 s)
+- pendulum moon_gravity sync sentence: "GIF/WAV sync: the GIF has 625 frames of 0.04 s each and plays for 25 s, the WAV plays for 25 s, and the GIF and the WAV have the same duration to the millisecond."
+- pendulum pushed: frames 250, GIF 10.00 s, WAV 10.0000 s, difference +0.0000 s (before: one frame more, +0.04 s)
+- pendulum pushed sync sentence: "GIF/WAV sync: the GIF has 250 frames of 0.04 s each and plays for 10 s, the WAV plays for 10 s, and the GIF and the WAV have the same duration to the millisecond."
+- Cause and fix: pendulum/src/animate.wl `PendulumFrameSamples` picks frame k at t = (k - 1) x delay from a `GIFFramePlan` for the audio duration (in `AnimateDoublePendulum` and `ExportAnimation`), replacing `solution[[1 ;; -1 ;; stride]]`, which kept both t = 0 and t = duration.
+
+## Part 2: lorenz transient and loudness
+- lorenz lorenz before: -25.01 LUFS, peak -0.26 dBFS
+- lorenz lorenz after: -21.55 LUFS, peak -0.26 dBFS (pyloudnorm); app line: "Loudness: the WAV was normalised to -17 LUFS and measures -21.58 LUFS integrated, with a peak of -0.26 dBFS."
+- lorenz lorenz reaches -17 LUFS by the app's own meter (stem-core, which the normalisation uses), within 0.1 LU: NO (-21.58); pyloudnorm -21.55, -4.55 LU from -17
+- lorenz lorenz transient line: "The first 5 s of the trajectory are discarded as transient; the next 40 s are sonified, animated and exported."
+- lorenz lorenz why: crest factor 27.7 dB; the highest peak is at 13.41 s near 1200 Hz; 1 s RMS levels range from -63 to -15 dBFS
+- lorenz rossler before: -17.21 LUFS, peak -6.47 dBFS
+- lorenz rossler after: -17.62 LUFS, peak -2.04 dBFS (pyloudnorm); app line: "Loudness: the WAV was normalised to -17 LUFS and measures -17 LUFS integrated, with a peak of -2.04 dBFS."
+- lorenz rossler reaches -17 LUFS by the app's own meter (stem-core, which the normalisation uses), within 0.1 LU: yes (-17.00); pyloudnorm -17.62, -0.62 LU from -17
+- lorenz rossler transient line: "The first 50 s of the trajectory are discarded as transient; the next 40 s are sonified, animated and exported."
+- lorenz rossler why: crest factor 26.1 dB; the highest peak is at 0.13 s near 700 Hz; 1 s RMS levels range from -72 to -12 dBFS
+- lorenz preset classic before: -25.92 LUFS, peak -0.26 dBFS
+- lorenz preset classic after: -23.62 LUFS, peak -0.26 dBFS (pyloudnorm); app line: "Loudness: the WAV was normalised to -17 LUFS and measures -23.61 LUFS integrated, with a peak of -0.26 dBFS."
+- lorenz preset classic reaches -17 LUFS by the app's own meter (stem-core, which the normalisation uses), within 0.1 LU: NO (-23.61); pyloudnorm -23.62, -6.62 LU from -17
+- lorenz preset classic transient line: "The first 5 s of the trajectory are discarded as transient; the next 40 s are sonified, animated and exported."
+- lorenz preset classic why: crest factor 28.6 dB; the highest peak is at 38.80 s near 1200 Hz; 1 s RMS levels range from -53 to -15 dBFS
+- lorenz preset butterfly before: -24.86 LUFS, peak -0.26 dBFS
+- lorenz preset butterfly after: -19.69 LUFS, peak -0.26 dBFS (pyloudnorm); app line: "Loudness: the WAV was normalised to -17 LUFS and measures -19.7 LUFS integrated, with a peak of -0.26 dBFS."
+- lorenz preset butterfly reaches -17 LUFS by the app's own meter (stem-core, which the normalisation uses), within 0.1 LU: NO (-19.70); pyloudnorm -19.69, -2.69 LU from -17
+- lorenz preset butterfly transient line: "The first 5 s of the trajectory are discarded as transient; the next 30 s are sonified, animated and exported."
+- lorenz preset butterfly why: crest factor 25.0 dB; the highest peak is at 9.08 s near 1225 Hz; 1 s RMS levels range from -43 to -15 dBFS
+- lorenz preset stable before: -25.94 LUFS, peak -0.26 dBFS
+- lorenz preset stable after: -17.71 LUFS, peak -0.29 dBFS (pyloudnorm); app line: "Loudness: the WAV was normalised to -17 LUFS and measures -16.95 LUFS integrated, with a peak of -0.29 dBFS."
+- lorenz preset stable reaches -17 LUFS by the app's own meter (stem-core, which the normalisation uses), within 0.1 LU: yes (-16.95); pyloudnorm -17.71, -0.71 LU from -17
+- lorenz preset stable transient line: "The first 5 s of the trajectory are discarded as transient; the next 30 s are sonified, animated and exported."
+- lorenz preset stable why: crest factor 24.6 dB; the highest peak is at 0.68 s near 150 Hz; 1 s RMS levels range from -45 to -11 dBFS
+- lorenz preset wild before: -27.18 LUFS, peak -0.26 dBFS
+- lorenz preset wild after: -21.58 LUFS, peak -0.26 dBFS (pyloudnorm); app line: "Loudness: the WAV was normalised to -17 LUFS and measures -21.71 LUFS integrated, with a peak of -0.26 dBFS."
+- lorenz preset wild reaches -17 LUFS by the app's own meter (stem-core, which the normalisation uses), within 0.1 LU: NO (-21.71); pyloudnorm -21.58, -4.58 LU from -17
+- lorenz preset wild transient line: "The first 5 s of the trajectory are discarded as transient; the next 20 s are sonified, animated and exported."
+- lorenz preset wild why: crest factor 26.5 dB; the highest peak is at 0.86 s near 1200 Hz; 1 s RMS levels range from -33 to -17 dBFS
+- lorenz preset slow before: -17.71 LUFS, peak -0.26 dBFS
+- lorenz preset slow after: -21.00 LUFS, peak -0.26 dBFS (pyloudnorm); app line: "Loudness: the WAV was normalised to -17 LUFS and measures -18.89 LUFS integrated, with a peak of -0.26 dBFS."
+- lorenz preset slow reaches -17 LUFS by the app's own meter (stem-core, which the normalisation uses), within 0.1 LU: NO (-18.89); pyloudnorm -21.00, -4.00 LU from -17
+- lorenz preset slow transient line: "The first 5 s of the trajectory are discarded as transient; the next 60 s are sonified, animated and exported."
+- lorenz preset slow why: crest factor 30.4 dB; the highest peak is at 0.04 s near 150 Hz; 1 s RMS levels range from -46 to -12 dBFS
+- lorenz preset rho9996 before: -32.52 LUFS, peak -0.26 dBFS
+- lorenz preset rho9996 after: -26.45 LUFS, peak -0.26 dBFS (pyloudnorm); app line: "Loudness: the WAV was normalised to -17 LUFS and measures -26.41 LUFS integrated, with a peak of -0.26 dBFS."
+- lorenz preset rho9996 reaches -17 LUFS by the app's own meter (stem-core, which the normalisation uses), within 0.1 LU: NO (-26.41); pyloudnorm -26.45, -9.45 LU from -17
+- lorenz preset rho9996 transient line: "The first 5 s of the trajectory are discarded as transient; the next 120 s are sonified, animated and exported."
+- lorenz preset rho9996 why: crest factor 29.8 dB; the highest peak is at 13.91 s near 275 Hz; 1 s RMS levels range from -35 to -17 dBFS
+
+## Part 3: lorenz stable preset
+- Command: `wolframscript -file lorenz/main.wl -- --simulation.lorenz.preset=stable` (rho = 20, 30 s after a 5 s transient)
+- CSV: lorenz/output/lorenz_trajectory_stable.csv, 6001 data rows, last time 30 s
+- Last state (x, y, z): (-7.0958, -7.0833, 18.9952)
+- Fixed points C+/C- at rho = 20: (+-7.1181, +-7.1181, 19.0)
+- Distance from the nearer fixed point at the end: 0.0416 (limit 0.5): PASS
+- Speed at the end (CSV speed column): 0.4161 (limit 1): PASS
+- Within 0.5 of the fixed point from t = 15.010 s to the end of the 30 s
+- Why rho = 20: at rho = 24 (the old value) the run was all chaotic transient (end speed 75.5); measured settling for rho = 13, 15, 18, 20, 22 after 5 + 30 s: end distance 3e-6, 1e-4, 0.004, 0.04, 0.46 and speed 2e-5, 8e-4, 0.035, 0.42, 3.3 (prototype run). rho = 22 barely meets the limit; 15 and 13 settle within 3-7 s and sit still for the rest; 20 settles at about the midpoint, keeping an audible spiral.
+- Preset selection from main.wl: `--simulation.lorenz.preset=<name>`; all six ran through main.wl (above). experiment.wl now runs main.wl with its ACTIVE PRESET label: `wolframscript -file lorenz/experiment.wl` exit 0; it printed "GIF/WAV sync: the GIF has 150 frames of 0.2 s each and plays for 30 s, the WAV plays for 30 s, and the GIF and the WAV have the same duration to the millisecond."
+
+## Part 4: henon timing and narration
+- henon attractor: WAV 30.9492 s (file); app timing line: "Timing: the WAV holds 18.17 s of spoken intro and a 0.4 s pause, then 10 s of notes from 18.57 s, then a 0.4 s pause and 1.98 s of spoken outro, 30.95 s in total."
+- henon attractor: intro 18.17 s, notes 10 s, outro 1.98 s
+- henon attractor loudness: -17.03 LUFS, peak -1.61 dBFS (pyloudnorm); app line: "Loudness: the WAV was normalised to -17 LUFS and measures -17 LUFS integrated, with a peak of -1.61 dBFS."
+- henon attractor narration, intro: "Hénon attractor, a equals 1.40, b equals 0.30. A two-dimensional invertible map, built by Michel Hénon as a simplified model of a cross-section through the Lorenz attractor. Listen for the stereo position tracing the fractal cross-section as the trajectory folds back on itself."
+- henon attractor narration, outro: "This is the end of the Hénon attractor."
+- henon attractor GIF: 147 frames, 30.87 s; sync difference -0.0792 s; app sync line: "GIF/WAV sync: the GIF has 147 frames of 0.21 s each and plays for 30.87 s, the WAV plays for 30.949 s, and the GIF is 0.079 s shorter than the WAV."
+- henon attractor hold check: frame 88 (shown 18.27-18.48 s) is the last frame entirely within the intro, which ends at 18.57 s; it is identical to frame 1, and frames 1-88 are all identical
+- henon attractor next frame: frame 89 (shown 18.48-18.69 s) straddles the start of the notes and shows the state at its midpoint, 18.59 s
+- henon attractor end check: the final image first appears at frame 137, from 28.56 s; the notes end at 28.57 s; difference -0.01 s (one frame = 0.21 s): within one frame
+- henon sweep: WAV 145.3726 s (file); app timing line: "Timing: the WAV holds 19.93 s of spoken intro and a 0.4 s pause, then 120 s of notes from 20.33 s, then a 0.4 s pause and 4.64 s of spoken outro, 145.37 s in total."
+- henon sweep: intro 19.93 s, notes 120 s, outro 4.64 s
+- henon sweep loudness: -17.05 LUFS, peak -4.27 dBFS (pyloudnorm); app line: "Loudness: the WAV was normalised to -17 LUFS and measures -17 LUFS integrated, with a peak of -4.27 dBFS."
+- henon sweep narration, intro: "Hénon map bifurcation sweep, a from 0.20 to 1.40. Listen for the rhythm doubling near a equals 0.37, doubling again twice more, before dissolving into chaos near a equals 1.05. A brief period-seven window near a equals 1.23 produces a surprising return to order."
+- henon sweep narration, outro: "This is the end of the sweep from a equals 0.20 to 1.40."
+- henon sweep GIF: 291 frames, 145.50 s; sync difference +0.1274 s; app sync line: "GIF/WAV sync: the GIF has 291 frames of 0.5 s each and plays for 145.5 s, the WAV plays for 145.373 s, and the GIF is 0.127 s longer than the WAV."
+- henon sweep hold check: frame 40 (shown 19.50-20.00 s) is the last frame entirely within the intro, which ends at 20.33 s; it is identical to frame 1, and frames 1-40 are all identical
+- henon sweep next frame: frame 41 (shown 20.00-20.50 s) straddles the start of the notes and shows the state at its midpoint, 20.25 s
+- henon sweep end check: the final image first appears at frame 281, from 140.00 s; the notes end at 140.33 s; difference -0.33 s (one frame = 0.50 s): within one frame
+- henon reverse: WAV 29.4846 s (file); app timing line: "Timing: the WAV holds 18.49 s of spoken intro and a 0.4 s pause, then 7.92 s of notes from 18.89 s, then a 0.4 s pause and 2.27 s of spoken outro, 29.48 s in total."
+- henon reverse: intro 18.49 s, notes 7.92 s, outro 2.27 s
+- henon reverse loudness: -17.04 LUFS, peak -4.92 dBFS (pyloudnorm); app line: "Loudness: the WAV was normalised to -17 LUFS and measures -17 LUFS integrated, with a peak of -4.92 dBFS."
+- henon reverse narration, intro: "Hénon reverse demonstration. First, a short forward segment on the attractor. Then, the same segment replayed in reverse order — a simple reversal, numerically exact. Finally, the last 10 points recovered by applying the exact inverse map formula, proving the Hénon map is genuinely invertible."
+- henon reverse narration, outro: "This is the end of the reverse demonstration."
+- henon attractor_canonical: WAV 30.9492 s (file); app timing line: "Timing: the WAV holds 18.17 s of spoken intro and a 0.4 s pause, then 10 s of notes from 18.57 s, then a 0.4 s pause and 1.98 s of spoken outro, 30.95 s in total."
+- henon attractor_canonical: intro 18.17 s, notes 10 s, outro 1.98 s
+- henon attractor_canonical loudness: -17.03 LUFS, peak -1.55 dBFS (pyloudnorm); app line: "Loudness: the WAV was normalised to -17 LUFS and measures -17 LUFS integrated, with a peak of -1.55 dBFS."
+- henon attractor_canonical narration, intro: "Hénon attractor, a equals 1.40, b equals 0.30. A two-dimensional invertible map, built by Michel Hénon as a simplified model of a cross-section through the Lorenz attractor. Listen for the stereo position tracing the fractal cross-section as the trajectory folds back on itself."
+- henon attractor_canonical narration, outro: "This is the end of the Hénon attractor."
+- henon attractor_canonical GIF: 147 frames, 30.87 s; sync difference -0.0792 s; app sync line: "GIF/WAV sync: the GIF has 147 frames of 0.21 s each and plays for 30.87 s, the WAV plays for 30.949 s, and the GIF is 0.079 s shorter than the WAV."
+- henon attractor_canonical hold check: frame 88 (shown 18.27-18.48 s) is the last frame entirely within the intro, which ends at 18.57 s; it is identical to frame 1, and frames 1-88 are all identical
+- henon attractor_canonical next frame: frame 89 (shown 18.48-18.69 s) straddles the start of the notes and shows the state at its midpoint, 18.59 s
+- henon attractor_canonical end check: the final image first appears at frame 137, from 28.56 s; the notes end at 28.57 s; difference -0.01 s (one frame = 0.21 s): within one frame
+- henon sweep_full: WAV 145.3726 s (file); app timing line: "Timing: the WAV holds 19.93 s of spoken intro and a 0.4 s pause, then 120 s of notes from 20.33 s, then a 0.4 s pause and 4.64 s of spoken outro, 145.37 s in total."
+- henon sweep_full: intro 19.93 s, notes 120 s, outro 4.64 s
+- henon sweep_full loudness: -17.05 LUFS, peak -4.27 dBFS (pyloudnorm); app line: "Loudness: the WAV was normalised to -17 LUFS and measures -17 LUFS integrated, with a peak of -4.27 dBFS."
+- henon sweep_full narration, intro: "Hénon map bifurcation sweep, a from 0.20 to 1.40. Listen for the rhythm doubling near a equals 0.37, doubling again twice more, before dissolving into chaos near a equals 1.05. A brief period-seven window near a equals 1.23 produces a surprising return to order."
+- henon sweep_full narration, outro: "This is the end of the sweep from a equals 0.20 to 1.40."
+- henon sweep_full GIF: 291 frames, 145.50 s; sync difference +0.1274 s; app sync line: "GIF/WAV sync: the GIF has 291 frames of 0.5 s each and plays for 145.5 s, the WAV plays for 145.373 s, and the GIF is 0.127 s longer than the WAV."
+- henon sweep_full hold check: frame 40 (shown 19.50-20.00 s) is the last frame entirely within the intro, which ends at 20.33 s; it is identical to frame 1, and frames 1-40 are all identical
+- henon sweep_full next frame: frame 41 (shown 20.00-20.50 s) straddles the start of the notes and shows the state at its midpoint, 20.25 s
+- henon sweep_full end check: the final image first appears at frame 281, from 140.00 s; the notes end at 140.33 s; difference -0.33 s (one frame = 0.50 s): within one frame
+- henon reverse_demo: WAV 29.4846 s (file); app timing line: "Timing: the WAV holds 18.49 s of spoken intro and a 0.4 s pause, then 7.92 s of notes from 18.89 s, then a 0.4 s pause and 2.27 s of spoken outro, 29.48 s in total."
+- henon reverse_demo: intro 18.49 s, notes 7.92 s, outro 2.27 s
+- henon reverse_demo loudness: -17.04 LUFS, peak -4.92 dBFS (pyloudnorm); app line: "Loudness: the WAV was normalised to -17 LUFS and measures -17 LUFS integrated, with a peak of -4.92 dBFS."
+- henon reverse_demo narration, intro: "Hénon reverse demonstration. First, a short forward segment on the attractor. Then, the same segment replayed in reverse order — a simple reversal, numerically exact. Finally, the last 10 points recovered by applying the exact inverse map formula, proving the Hénon map is genuinely invertible."
+- henon reverse_demo narration, outro: "This is the end of the reverse demonstration."
+- henon sweep_cascade_zoom: WAV 73.6489 s (file); app timing line: "Timing: the WAV holds 14.18 s of spoken intro and a 0.4 s pause, then 54 s of notes from 14.58 s, then a 0.4 s pause and 4.67 s of spoken outro, 73.65 s in total."
+- henon sweep_cascade_zoom: intro 14.18 s, notes 54 s, outro 4.67 s
+- henon sweep_cascade_zoom loudness: -17.04 LUFS, peak -6.37 dBFS (pyloudnorm); app line: "Loudness: the WAV was normalised to -17 LUFS and measures -17 LUFS integrated, with a peak of -6.37 dBFS."
+- henon sweep_cascade_zoom narration, intro: "Hénon map bifurcation sweep, a from 0.30 to 1.10. Listen for the rhythm doubling near a equals 0.37, doubling again twice more, before dissolving into chaos near a equals 1.05."
+- henon sweep_cascade_zoom narration, outro: "This is the end of the sweep from a equals 0.30 to 1.10."
+- henon sweep_cascade_zoom GIF: 150 frames, 73.50 s; sync difference -0.1489 s; app sync line: "GIF/WAV sync: the GIF has 150 frames of 0.49 s each and plays for 73.5 s, the WAV plays for 73.649 s, and the GIF is 0.149 s shorter than the WAV."
+- henon sweep_cascade_zoom hold check: frame 29 (shown 13.72-14.21 s) is the last frame entirely within the intro, which ends at 14.58 s; it is identical to frame 1, and frames 1-29 are all identical
+- henon sweep_cascade_zoom next frame: frame 30 (shown 14.21-14.70 s) straddles the start of the notes and shows the state at its midpoint, 14.46 s
+- henon sweep_cascade_zoom end check: the final image first appears at frame 141, from 68.60 s; the notes end at 68.58 s; difference +0.02 s (one frame = 0.49 s): within one frame
+- henon sweep_chaos_zoom: WAV 74.5313 s (file); app timing line: "Timing: the WAV holds 15.17 s of spoken intro and a 0.4 s pause, then 54 s of notes from 15.57 s, then a 0.4 s pause and 4.56 s of spoken outro, 74.53 s in total."
+- henon sweep_chaos_zoom: intro 15.17 s, notes 54 s, outro 4.56 s
+- henon sweep_chaos_zoom loudness: -17.04 LUFS, peak -4.70 dBFS (pyloudnorm); app line: "Loudness: the WAV was normalised to -17 LUFS and measures -17 LUFS integrated, with a peak of -4.7 dBFS."
+- henon sweep_chaos_zoom narration, intro: "Hénon map bifurcation sweep, a from 1.05 to 1.40. Listen for the rhythm dissolving into chaos near a equals 1.05. A brief period-seven window near a equals 1.23 produces a surprising return to order."
+- henon sweep_chaos_zoom narration, outro: "This is the end of the sweep from a equals 1.05 to 1.40."
+- henon sweep_chaos_zoom GIF: 149 frames, 74.50 s; sync difference -0.0313 s; app sync line: "GIF/WAV sync: the GIF has 149 frames of 0.5 s each and plays for 74.5 s, the WAV plays for 74.531 s, and the GIF is 0.031 s shorter than the WAV."
+- henon sweep_chaos_zoom hold check: frame 31 (shown 15.00-15.50 s) is the last frame entirely within the intro, which ends at 15.57 s; it is identical to frame 1, and frames 1-31 are all identical
+- henon sweep_chaos_zoom next frame: frame 32 (shown 15.50-16.00 s) straddles the start of the notes and shows the state at its midpoint, 15.75 s
+- henon sweep_chaos_zoom end check: the final image first appears at frame 140, from 69.50 s; the notes end at 69.57 s; difference -0.07 s (one frame = 0.50 s): within one frame
+- henon attractor_weakly_dissipative: WAV 31.1001 s (file); app timing line: "Timing: the WAV holds 18.32 s of spoken intro and a 0.4 s pause, then 10 s of notes from 18.72 s, then a 0.4 s pause and 1.98 s of spoken outro, 31.1 s in total."
+- henon attractor_weakly_dissipative: intro 18.32 s, notes 10 s, outro 1.98 s
+- henon attractor_weakly_dissipative loudness: -17.03 LUFS, peak -2.00 dBFS (pyloudnorm); app line: "Loudness: the WAV was normalised to -17 LUFS and measures -17 LUFS integrated, with a peak of -2 dBFS."
+- henon attractor_weakly_dissipative narration, intro: "Hénon attractor, a equals 1.05, b equals 0.50. A two-dimensional invertible map, built by Michel Hénon as a simplified model of a cross-section through the Lorenz attractor. Listen for the stereo position tracing the fractal cross-section as the trajectory folds back on itself."
+- henon attractor_weakly_dissipative narration, outro: "This is the end of the Hénon attractor."
+- henon attractor_weakly_dissipative GIF: 148 frames, 31.08 s; sync difference -0.0201 s; app sync line: "GIF/WAV sync: the GIF has 148 frames of 0.21 s each and plays for 31.08 s, the WAV plays for 31.1 s, and the GIF is 0.02 s shorter than the WAV."
+- henon attractor_weakly_dissipative hold check: frame 89 (shown 18.48-18.69 s) is the last frame entirely within the intro, which ends at 18.72 s; it is identical to frame 1, and frames 1-89 are all identical
+- henon attractor_weakly_dissipative next frame: frame 90 (shown 18.69-18.90 s) straddles the start of the notes and shows the state at its midpoint, 18.80 s
+- henon attractor_weakly_dissipative end check: the final image first appears at frame 138, from 28.77 s; the notes end at 28.72 s; difference +0.05 s (one frame = 0.21 s): within one frame
+- henon reverse_demo_longer: WAV 30.3774 s (file); app timing line: "Timing: the WAV holds 18.58 s of spoken intro and a 0.4 s pause, then 8.72 s of notes from 18.98 s, then a 0.4 s pause and 2.27 s of spoken outro, 30.38 s in total."
+- henon reverse_demo_longer: intro 18.58 s, notes 8.72 s, outro 2.27 s
+- henon reverse_demo_longer loudness: -17.04 LUFS, peak -4.90 dBFS (pyloudnorm); app line: "Loudness: the WAV was normalised to -17 LUFS and measures -17 LUFS integrated, with a peak of -4.9 dBFS."
+- henon reverse_demo_longer narration, intro: "Hénon reverse demonstration. First, a short forward segment on the attractor. Then, the same segment replayed in reverse order — a simple reversal, numerically exact. Finally, the last 20 points recovered by applying the exact inverse map formula, proving the Hénon map is genuinely invertible."
+- henon reverse_demo_longer narration, outro: "This is the end of the reverse demonstration."
+- Sweep intros name only in-range landmarks: see the sweep_cascade_zoom and sweep_chaos_zoom narration above (unit tests in henon/tests/test_model.wl).
+
+## Part 5: Timing lines (one per run)
+- pendulum_simple: "Timing: the WAV holds 0 s of spoken intro and a 0 s pause, then 20 s of notes from 0 s, then a 0 s pause and 0 s of spoken outro, 20 s in total."
+- pendulum_double: "Timing: the WAV holds 0 s of spoken intro and a 0 s pause, then 20 s of notes from 0 s, then a 0 s pause and 0 s of spoken outro, 20 s in total."
+- lorenz_lorenz: "Timing: the WAV holds 0 s of spoken intro and a 0 s pause, then 40 s of notes from 0 s, then a 0 s pause and 0 s of spoken outro, 40 s in total."
+- lorenz_rossler: "Timing: the WAV holds 0 s of spoken intro and a 0 s pause, then 40 s of notes from 0 s, then a 0 s pause and 0 s of spoken outro, 40 s in total."
+- henon_attractor: "Timing: the WAV holds 18.17 s of spoken intro and a 0.4 s pause, then 10 s of notes from 18.57 s, then a 0.4 s pause and 1.98 s of spoken outro, 30.95 s in total."
+- henon_sweep: "Timing: the WAV holds 19.93 s of spoken intro and a 0.4 s pause, then 120 s of notes from 20.33 s, then a 0.4 s pause and 4.64 s of spoken outro, 145.37 s in total."
+- henon_reverse: "Timing: the WAV holds 18.49 s of spoken intro and a 0.4 s pause, then 7.92 s of notes from 18.89 s, then a 0.4 s pause and 2.27 s of spoken outro, 29.48 s in total."
+- pendulum experiment baseline: "Timing: the WAV holds 0 s of spoken intro and a 0 s pause, then 10 s of notes from 0 s, then a 0 s pause and 0 s of spoken outro, 10 s in total."
+- pendulum experiment long_pendulum: "Timing: the WAV holds 0 s of spoken intro and a 0 s pause, then 15 s of notes from 0 s, then a 0 s pause and 0 s of spoken outro, 15 s in total."
+- pendulum experiment short_pendulum: "Timing: the WAV holds 0 s of spoken intro and a 0 s pause, then 8 s of notes from 0 s, then a 0 s pause and 0 s of spoken outro, 8 s in total."
+- pendulum experiment large_angle: "Timing: the WAV holds 0 s of spoken intro and a 0 s pause, then 12 s of notes from 0 s, then a 0 s pause and 0 s of spoken outro, 12 s in total."
+- pendulum experiment moon_gravity: "Timing: the WAV holds 0 s of spoken intro and a 0 s pause, then 25 s of notes from 0 s, then a 0 s pause and 0 s of spoken outro, 25 s in total."
+- pendulum experiment pushed: "Timing: the WAV holds 0 s of spoken intro and a 0 s pause, then 10 s of notes from 0 s, then a 0 s pause and 0 s of spoken outro, 10 s in total."
+- lorenz preset classic: "Timing: the WAV holds 0 s of spoken intro and a 0 s pause, then 40 s of notes from 0 s, then a 0 s pause and 0 s of spoken outro, 40 s in total."
+- lorenz preset butterfly: "Timing: the WAV holds 0 s of spoken intro and a 0 s pause, then 30 s of notes from 0 s, then a 0 s pause and 0 s of spoken outro, 30 s in total."
+- lorenz preset stable: "Timing: the WAV holds 0 s of spoken intro and a 0 s pause, then 30 s of notes from 0 s, then a 0 s pause and 0 s of spoken outro, 30 s in total."
+- lorenz preset wild: "Timing: the WAV holds 0 s of spoken intro and a 0 s pause, then 20 s of notes from 0 s, then a 0 s pause and 0 s of spoken outro, 20 s in total."
+- lorenz preset slow: "Timing: the WAV holds 0 s of spoken intro and a 0 s pause, then 60 s of notes from 0 s, then a 0 s pause and 0 s of spoken outro, 60 s in total."
+- lorenz preset rho9996: "Timing: the WAV holds 0 s of spoken intro and a 0 s pause, then 120 s of notes from 0 s, then a 0 s pause and 0 s of spoken outro, 120 s in total."
+
+## Correctness checks (printed in this session)
+- pendulum_simple: "Checks: 1[PASS] 2[PASS]"
+- pendulum_simple: "1. Exact period (elliptic integral) vs measured, at 10/45/90/150 deg: max rel error 2.7739*^-9  (exact, any amplitude, tight tolerance)"
+- pendulum_simple: "2. Energy conservation (10 sample points): relative drift 1.0307651*^-8  (exact, tight tolerance)"
+- pendulum_double: "Checks: 3[PASS] 4[PASS]"
+- pendulum_double: "3. Energy conservation (10 sample points): relative drift 1.7657799*^-8  (exact, tight tolerance)"
+- pendulum_double: "4. Chaos sensitivity (independent test at theta1_0=130. deg, NOT this run's own angle1_deg): divergence ratio 566411.x over 20. s  (qualitative, generous >=100x threshold)"
+- lorenz_lorenz: "Checks: 1[PASS] 2[PASS] 3[PASS] 4[PASS]"
+- lorenz_lorenz: "1. Constant phase-space divergence: -13.67 everywhere (max deviation 0.)  (exact, tight tolerance)"
+- lorenz_lorenz: "2. Equilibria satisfy f=0: origin + C+/C- = (8.485,8.485,27.) and its mirror (max residual 1.42109*^-14)  (exact, tight tolerance)"
+- lorenz_lorenz: "3. Largest Lyapunov exponent: 0.9203 vs benchmark 0.905  (empirical comparison, generous tolerance)"
+- lorenz_lorenz: "4. Trajectory boundedness: no overflow/NaN, all coordinates finite  (sanity)"
+- lorenz_rossler: "Checks: 1[PASS] 2[PASS] 3[PASS] 4[PASS]"
+- lorenz_rossler: "1. Divergence formula nabla.f = a+x-c (NOT constant, unlike Lorenz): max deviation 8.88178*^-16  (exact, tight tolerance)"
+- lorenz_rossler: "2. Both equilibria satisfy f=0 (max residual 1.18794*^-14)  (exact, tight tolerance)"
+- lorenz_rossler: "3. Largest Lyapunov exponent: 0.06464 vs benchmark 0.07  (empirical comparison, generous tolerance)"
+- lorenz_rossler: "4. Trajectory boundedness: no overflow/NaN, all coordinates finite  (sanity)"
+- lorenz_preset_stable: "Checks 1 to 3 run at the canonical sigma = 10, rho = 28, beta = 8/3, not at the preset's parameters; check 4 uses this run's trajectory."
+- lorenz_preset_stable: "Checks: 1[PASS] 2[PASS] 3[PASS] 4[PASS]"
+- lorenz_preset_stable: "1. Constant phase-space divergence: -13.67 everywhere (max deviation 0.)  (exact, tight tolerance)"
+- lorenz_preset_stable: "2. Equilibria satisfy f=0: origin + C+/C- = (8.485,8.485,27.) and its mirror (max residual 1.42109*^-14)  (exact, tight tolerance)"
+- lorenz_preset_stable: "3. Largest Lyapunov exponent: 0.927 vs benchmark 0.905  (empirical comparison, generous tolerance)"
+- lorenz_preset_stable: "4. Trajectory boundedness: no overflow/NaN, all coordinates finite  (sanity)"
+- henon_attractor: "Checks: 1[PASS] 2[PASS] 3[PASS] 4[PASS]"
+- henon_attractor: "1. Constant Jacobian determinant: max|det - (-b)| = 5.55*^-17  (exact relation, tight tolerance)"
+- henon_attractor: "2. Lyapunov exponent sum: -1.20397 vs log(b) = -1.20397  (exact relation, tight tolerance)"
+- henon_attractor: "3. Largest Lyapunov exponent: 0.419425 vs benchmark ~0.42  (empirical comparison, generous tolerance)"
+- henon_attractor: "4. Inverse map exactness: max round-trip error = 4.58*^-16  (exact relation, tight tolerance)"
+- henon: the same four check lines print in sweep and reverse: yes
+- lorenz: the check lines of the six presets are identical to each other: yes
+- lorenz default-mode check lines identical to before (STATE_supporting_apps.md): yes
+
+## Tests and experiment scripts
+- pendulum_tests: `wolframscript -file pendulum/tests/test_model.wl` -> "Results: 18 passed, 0 failed." (exit 0)
+- lorenz_tests: `wolframscript -file lorenz/tests/test_model.wl` -> "Results: 34 passed, 0 failed." (exit 0)
+- henon_tests: `wolframscript -file henon/tests/test_model.wl` -> "Results: 44 passed, 0 failed." (exit 0)
+- stemcore_gifsync: `wolframscript -file stem-core/tests/test_gifsync.wl` -> "Results: 31 passed, 0 failed." (exit 0)
+- pendulum/experiments.wl completed: yes (6 experiments, exit 0)
+- henon/experiments.wl completed: yes (7 experiments, exit 0)
+- lorenz/experiment.wl completed: yes (exit 0)
+
+## Findings
+- Lorenz loudness is only partly fixed. Discarding the 5 s transient removed the 0.53-0.62 s start-up peak, and lorenz mode rose from -25.01 to -21.58 LUFS (app meter), but six of the eight lorenz runs are still held below -17 by the 0.97 peak ceiling (peak -0.26 dBFS): lorenz mode -21.58, classic -23.61, butterfly -19.70, wild -21.71, slow -18.89, rho9996 -26.41 LUFS (app meter).
+- Why they stay limited: the sonification itself has a wide short-term dynamic range. 1 s RMS levels span about 30-50 dB within a run (lorenz mode -63 to -15 dBFS), and crest factors are 25-30 dB, because volume follows speed (-24 to 0 dB) and pitch follows y up to 1200 Hz. The loudest moments are fast passages at the top of the pitch range (lorenz mode: 13.41 s and 37.97 s near 1200 Hz), so the gain needed for -17 LUFS would clip and NormalizeToLoudness's ceiling (stem-core/src/synth.wl:131) cuts it back.
+- Not changed here, because it would change the sound mapping: a limiter or compressor before normalisation, a narrower volume range, or a lower pitch ceiling would let these reach -17. Rossler (-17.00) and the stable preset (-16.95) reach the target.
+- The two meters disagree on these sparse, dynamic files. stem-core MeasureIntegratedLoudness (used by the normalisation and the app's line) and pyloudnorm differ by 0.6-0.7 LU for rossler and stable, and by 2.1 LU for slow (-18.89 vs -21.00). By pyloudnorm, slow got quieter than before (-17.71 to -21.00), although the app meter reads -18.89. Dynamical's files agreed within 0.05 LU, apart from the extinction preset (another sparse file). The cause is not established; it is in stem-core.
+- With the transient discarded, the lorenz runs no longer include the climb from the start point onto the attractor. `--simulation.lorenz.transient_seconds=0` restores it.

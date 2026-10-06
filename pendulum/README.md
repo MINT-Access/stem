@@ -153,7 +153,13 @@ output/            — Output directory (not committed)
 as a self-contained announcement. Headings use `STEMHeading`; the six
 `PrintSummary` values (steps, max/min angle, initial/final/drift energy) use
 `STEMPrintN`; export confirmations use `STEMDescribeCSV`, `STEMDescribeGIF`,
-and `STEMDescribeWAV`. `STEMSay` is called at each pipeline phase (ODE solve,
+and `STEMDescribeWAV`, followed by the GIF/WAV sync sentence, the loudness
+line (`STEMLoudnessLine`: target, measured integrated LUFS and peak) and the
+Timing line (`STEMTimingLine`: intro, pause, notes, pause, outro and total;
+pendulum has no narration, so only the notes are non-zero). experiments.wl
+prints the same three lines for each experiment. The GIF's frame count
+comes from `GIFFramePlan` for the audio's duration, so GIF and WAV play for
+the same time (500 frames for 20 s; it used to be 501). `STEMSay` is called at each pipeline phase (ODE solve,
 animation, sonification) and as the final completion message with the
 platform-appropriate play command (`afplay` on macOS, `aplay` on Linux,
 `Start-Process wmplayer` on Windows).

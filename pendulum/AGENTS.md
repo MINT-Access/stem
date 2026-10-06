@@ -105,6 +105,17 @@ whole run, not discrete per-swing notes:
 - A motion trail shows the recent path of the bob.
 - `ExportAnimation[solution, params, file, frameRate, speedup]`
   accepts optional frameRate (default 25) and speedup (default 1.0).
+- **Frame count comes from `GIFFramePlan` for the audio's duration**
+  (500 frames of 4 cs for 20 s), and frame k shows the solution row
+  nearest t = (k - 1) × delay (`PendulumFrameSamples`). The solution holds
+  duration/dt + 1 samples (both t = 0 and t = duration), and the old
+  `solution[[1 ;; -1 ;; stride]]` kept both ends, so every GIF was one
+  frame (0.04 s) longer than its WAV (501 frames, 20.04 s for 20 s). The
+  CSV still exports every sample, including the final time.
+- Console: after the GIF/WAV sync sentence, main.wl and experiments.wl
+  print the stem-core loudness line (`STEMLoudnessLine`) and Timing line
+  (`STEMTimingLine`; no narration, so intro, pauses and outro are 0 s).
+  experiments.wl now also runs `SyncWAVToGIF` for each experiment.
 - Plot bounds (`TrajectoryPlotRange`), image dimensions (`FrameImageSize`),
   and marker sizes are all computed from the actual simulated trajectory,
   not hardcoded — see "Animation framing" below for why, and for a
