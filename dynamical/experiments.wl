@@ -2,7 +2,7 @@
 
 (* dynamical/experiments.wl — Curated preset runs for the logistic map.
    Each experiment calls the same pipeline as main.wl and writes its
-   outputs to dynamical/output/, including the prepended spoken intro. *)
+   outputs to dynamical/output/, including the spoken intro and outro. *)
 
 $projectRoot  = DirectoryName[$InputFileName];
 $stemCoreRoot = FileNameJoin[{$projectRoot, "..", "stem-core"}];
@@ -20,9 +20,8 @@ RunExperiment[name_String, overrides_Association] :=
   Module[{cfg, mode, rStart, rEnd, rSteps, rCfg, preset, nTransient, nAttractor,
           nIterations, noteDuration, x0, sr,
           outWAV, outGIF, outCSV,
-          rActual, presetDesc, sweepModel, sweepResult, iterateModel, iterateResult,
-          introText, introBuffer, pauseBuffer, finalLeft, finalRight, totalDurSec,
-          gifFrames, gifFps},
+          rActual, itX0, presetDesc, sweepModel, sweepResult, iterateModel, iterateResult,
+          timing, gifFrames, gifFps},
 
     Print[""];
     STEMHeading["Experiment: " <> name];
@@ -49,35 +48,25 @@ RunExperiment[name_String, overrides_Association] :=
 
       sweepModel  = SweepModel[rStart, rEnd, rSteps, x0, nTransient, nAttractor];
       sweepResult = SonifySweep[sweepModel, noteDuration, sr];
-      introText   = BuildSweepIntroText[rStart, rEnd];
-      introBuffer = BuildIntroBuffer[introText, sr];
-      introBuffer = If[Length[introBuffer] > 0, NormalizeBuffer[introBuffer, 0.95], introBuffer];
-      pauseBuffer = If[Length[introBuffer] > 0, ConstantArray[0.0, Round[sr * 0.4]], {}];
-      finalLeft   = Join[introBuffer, pauseBuffer, sweepResult["leftBuf"]];
-      finalRight  = Join[introBuffer, pauseBuffer, sweepResult["rightBuf"]];
-      EnsureDir[outWAV];
-      Export[outWAV, Sound[SampledSoundList[NormalizeToLoudness[{finalLeft, finalRight}, -17.0, 0.97, sr], sr]], "WAV"];
-      totalDurSec = N[Length[finalLeft]] / sr;
-      STEMDescribeWAV[outWAV, totalDurSec];
-      {gifFrames, gifFps} = AnimateSweepBifurcation[sweepModel, sweepResult["eventRs"], outGIF, totalDurSec];
+      timing = ExportNarratedWAV[outWAV, SpeakNarration[BuildSweepIntroText[rStart, rEnd], sr],
+        sweepResult["leftBuf"], sweepResult["rightBuf"], SpeakNarration[BuildSweepOutroText[rStart, rEnd], sr], sr];
+      STEMDescribeWAV[outWAV, timing["total"]];
+      {gifFrames, gifFps} = AnimateSweepBifurcation[sweepModel, sweepResult["eventRs"], outGIF,
+        <|"intro" -> timing["intro"], "stepDuration" -> $sweepNotesPerStep * noteDuration, "total" -> timing["total"]|>];
       STEMDescribeGIF[outGIF, gifFrames, gifFps];
       ExportSweepCSV[sweepResult, sweepModel["rValues"], outCSV],
 
       rActual    = PresetR[preset, rCfg];
+      itX0       = PresetX0[preset, x0];
       presetDesc = PresetDescription[preset];
-      iterateModel  = IterateModelData[rActual, x0, nIterations, preset];
+      iterateModel  = IterateModelData[rActual, itX0, nIterations, preset];
       iterateResult = SonifyIterate[iterateModel, noteDuration, sr];
-      introText   = BuildIterateIntroText[rActual, presetDesc, nIterations, x0];
-      introBuffer = BuildIntroBuffer[introText, sr];
-      introBuffer = If[Length[introBuffer] > 0, NormalizeBuffer[introBuffer, 0.95], introBuffer];
-      pauseBuffer = If[Length[introBuffer] > 0, ConstantArray[0.0, Round[sr * 0.4]], {}];
-      finalLeft   = Join[introBuffer, pauseBuffer, iterateResult["leftBuf"]];
-      finalRight  = Join[introBuffer, pauseBuffer, iterateResult["rightBuf"]];
-      EnsureDir[outWAV];
-      Export[outWAV, Sound[SampledSoundList[NormalizeToLoudness[{finalLeft, finalRight}, -17.0, 0.97, sr], sr]], "WAV"];
-      totalDurSec = N[Length[finalLeft]] / sr;
-      STEMDescribeWAV[outWAV, totalDurSec];
-      {gifFrames, gifFps} = AnimateIterateTimeSeries[iterateModel, outGIF, totalDurSec];
+      timing = ExportNarratedWAV[outWAV,
+        SpeakNarration[BuildIterateIntroText[rActual, presetDesc, nIterations, itX0], sr],
+        iterateResult["leftBuf"], iterateResult["rightBuf"], SpeakNarration[BuildIterateOutroText[rActual], sr], sr];
+      STEMDescribeWAV[outWAV, timing["total"]];
+      {gifFrames, gifFps} = AnimateIterateTimeSeries[iterateModel, outGIF,
+        <|"intro" -> timing["intro"], "noteDuration" -> noteDuration, "total" -> timing["total"]|>];
       STEMDescribeGIF[outGIF, gifFrames, gifFps];
       ExportIterateCSV[iterateResult, outCSV]
     ];
@@ -87,8 +76,16 @@ RunExperiment[name_String, overrides_Association] :=
 
 
 (* ── Experiments ──────────────────────────────────────────────────────
-   1-5: the recommended listening sequence (LISTENING_GUIDE.md) —
-   run in order to hear the complete route from order to chaos. *)
+   The recommended listening sequence (LISTENING_GUIDE.md) — run in
+   order to hear the complete route from extinction to chaos. *)
+
+RunExperiment["iterate_extinction", <|
+  "simulation" -> <| "mode" -> "iterate", "dynamical" -> <| "preset" -> "extinction" |> |>
+|>];
+
+RunExperiment["iterate_growth", <|
+  "simulation" -> <| "mode" -> "iterate", "dynamical" -> <| "preset" -> "growth" |> |>
+|>];
 
 RunExperiment["iterate_fixed_point", <|
   "simulation" -> <| "mode" -> "iterate", "dynamical" -> <| "preset" -> "fixed_point" |> |>

@@ -111,6 +111,8 @@ wolframscript -file lagrange/main.wl -- --simulation.mode=l1
 wolframscript -file lagrange/main.wl -- --simulation.lagrange.preset=earth_moon
 wolframscript -file dynamical/main.wl                                    # logistic map sweep (default)
 wolframscript -file dynamical/main.wl -- --simulation.mode=iterate
+wolframscript -file dynamical/main.wl -- --simulation.mode=iterate --simulation.dynamical.preset=extinction  # population dies out
+wolframscript -file dynamical/main.wl -- --simulation.mode=iterate --simulation.dynamical.preset=growth      # settles at 0.5
 wolframscript -file dynamical/main.wl -- --simulation.mode=lyapunov           # Lyapunov exponent vs. r
 wolframscript -file dynamical/main.wl -- --simulation.mode=divergence         # two nearby orbits separating
 wolframscript -file thermo/main.wl                                       # Maxwell-Boltzmann distribution (default)

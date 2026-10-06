@@ -1,0 +1,590 @@
+# dynamical/ narration, pacing and presets — verification (measured 2026-09-24)
+
+## Context
+- Repo HEAD: 68b80a1 (main); all changes uncommitted, as asked. wolframscript on Mac OS X ARM; speech from macOS say (SpeechSynthesize[] returns $Failed here).
+- Every value below comes from runs made after the last code change, in this session.
+- Durations from the files: WAV = Python wave frames / rate; GIF = sum of PIL frame durations. Loudness = pyloudnorm integrated LUFS (EBU R128); peak = max |sample| of the WAV in dBFS.
+- Sync difference = GIF duration minus WAV duration.
+- Intro, notes and outro lengths come from the app's own Timing line, computed from the buffer lengths that are joined into the WAV (intro speech + 0.4 s pause + notes + 0.4 s pause + outro speech = WAV length).
+- Narration text is quoted exactly as the app printed it before synthesising it ("Spoken intro:" / "Spoken outro:" lines).
+- Measurement script (session scratchpad, not in the repo): measure.py; run script: runall.sh.
+
+## Commands
+- sweep: `wolframscript -file dynamical/main.wl`
+- iterate: `wolframscript -file dynamical/main.wl -- --simulation.mode=iterate`
+- iterate_extinction: `wolframscript -file dynamical/main.wl -- --simulation.mode=iterate --simulation.dynamical.preset=extinction`
+- iterate_growth: `wolframscript -file dynamical/main.wl -- --simulation.mode=iterate --simulation.dynamical.preset=growth`
+- iterate_fixed_point: `wolframscript -file dynamical/main.wl -- --simulation.mode=iterate --simulation.dynamical.preset=fixed_point`
+- iterate_period2: `wolframscript -file dynamical/main.wl -- --simulation.mode=iterate --simulation.dynamical.preset=period2`
+- iterate_period4: `wolframscript -file dynamical/main.wl -- --simulation.mode=iterate --simulation.dynamical.preset=period4`
+- iterate_period3_window: `wolframscript -file dynamical/main.wl -- --simulation.mode=iterate --simulation.dynamical.preset=period3_window`
+- iterate_chaos: `wolframscript -file dynamical/main.wl -- --simulation.mode=iterate --simulation.dynamical.preset=chaos`
+- iterate_default_again: `wolframscript -file dynamical/main.wl -- --simulation.mode=iterate`
+- lyapunov: `wolframscript -file dynamical/main.wl -- --simulation.mode=lyapunov`
+- lyapunov_window: `wolframscript -file dynamical/main.wl -- --simulation.mode=lyapunov --simulation.dynamical.preset=lyapunov_window`
+- divergence: `wolframscript -file dynamical/main.wl -- --simulation.mode=divergence`
+- divergence_chaotic: `wolframscript -file dynamical/main.wl -- --simulation.mode=divergence --simulation.dynamical.preset=divergence_chaotic`
+- divergence_edge: `wolframscript -file dynamical/main.wl -- --simulation.mode=divergence --simulation.dynamical.preset=divergence_edge`
+- divergence_periodic: `wolframscript -file dynamical/main.wl -- --simulation.mode=divergence --simulation.dynamical.preset=divergence_periodic`
+- divergence_stable: `wolframscript -file dynamical/main.wl -- --simulation.mode=divergence --simulation.dynamical.preset=divergence_stable`
+- Tests: `wolframscript -file dynamical/tests/test_model.wl`
+- File measurements: `python3 measure.py` (scratchpad)
+
+## Summary
+- Runs: 17 main.wl runs, all exit code 0: yes
+- Part 1, divergence: intro 11.53 s of speech (slot 11.53 s, limit 12 s), notes 40.00 s, outro 8.88 s, WAV 63.1166 s
+- Part 1, divergence_chaotic: intro 11.53 s of speech (slot 11.53 s, limit 12 s), notes 40.00 s, outro 8.88 s, WAV 63.1166 s
+- Part 1, divergence_edge: intro 10.82 s of speech (slot 11.53 s, limit 12 s), notes 40.00 s, outro 10.78 s, WAV 63.1166 s
+- Part 1, divergence_periodic: intro 11.31 s of speech (slot 11.53 s, limit 12 s), notes 40.00 s, outro 9.67 s, WAV 63.1166 s
+- Part 1, divergence_stable: intro 11.32 s of speech (slot 11.53 s, limit 12 s), notes 40.00 s, outro 9.74 s, WAV 63.1166 s
+- Part 2, sweep: intro 14.37 s of speech (limit 15 s), notes 320.00 s, outro 3.11 s
+- Part 2, iterate: intro 10.46 s of speech (limit 15 s), notes 24.08 s, outro 10.87 s
+- Part 2, iterate_extinction: intro 12.26 s of speech (limit 15 s), notes 24.08 s, outro 18.34 s
+- Part 2, iterate_growth: intro 13.32 s of speech (limit 15 s), notes 24.08 s, outro 11.37 s
+- Part 2, iterate_fixed_point: intro 12.78 s of speech (limit 15 s), notes 24.08 s, outro 10.96 s
+- Part 2, iterate_period2: intro 13.43 s of speech (limit 15 s), notes 24.08 s, outro 10.62 s
+- Part 2, iterate_period4: intro 13.29 s of speech (limit 15 s), notes 24.08 s, outro 10.88 s
+- Part 2, iterate_period3_window: intro 14.18 s of speech (limit 15 s), notes 24.08 s, outro 10.80 s
+- Part 2, iterate_chaos: intro 13.34 s of speech (limit 15 s), notes 24.08 s, outro 11.10 s
+- Part 2, iterate_default_again: intro 10.46 s of speech (limit 15 s), notes 24.08 s, outro 10.87 s
+- Part 3, lyapunov: intro 38.70 s, notes 120.00 s, outro 24.94 s
+- Part 3, lyapunov_window: intro 38.66 s, notes 40.00 s, outro 25.71 s
+- Part 1, periodic preset (x0 = 0.513), fitted slope against lambda: "The fitted slope is -0.9164 per iteration over iterations 0 to 14, the predicted Lyapunov exponent is -0.9163, and their ratio is 1.0001." (before, from x0 = 0.3 and 150 iterations: -0.3997 against -0.9163, ratio 0.436)
+- Part 1, new saturation marker: "The voices are the left orbit, the right orbit and the separation tone in the centre; the saturation marker (1320 Hz) sounds 6 s into the notes."
+- Part 5, speech cache in a divergence run: "Speech synthesis: 15 sentences requested so far in this run, 9 synthesised and 6 taken from the cache." (the code before this change synthesised 8 whole texts per run, 4 intros and 4 outros, already de-duplicated)
+- Part 3, lyapunov outro: "End of the Lyapunov sweep from r equals 2.5 to 4. The exponent first rose above zero at r equals 3.570, where chaos begins. The widest windows of order were from r equals 3.626 to 3.634, period 6; from 3.739 to 3.744, period 5; and from 3.829 to 3.848, period 3."
+- Part 4: "The onset of chaos: the Lyapunov exponent first crosses zero upward at r = 3.570, heard 124.71 s into the audio."
+- Part 4: "A window of order runs from r = 3.589 to r = 3.590, 0.0003 wide in r and 0.03 s long in the audio from 126.24 s, and its period was not identified."
+- Part 4: "A window of order runs from r = 3.605 to r = 3.606, 0.0018 wide in r and 0.15 s long in the audio from 127.46 s, and its period was not identified."
+- Part 4: "A window of order runs from r = 3.626 to r = 3.634, 0.0074 wide in r and 0.6 s long in the audio from 129.18 s, and it is the period-6 window."
+- Part 4: "A window of order runs from r = 3.739 to r = 3.744, 0.0048 wide in r and 0.38 s long in the audio from 138.21 s, and it is the period-5 window."
+- Part 4: "A window of order runs from r = 3.829 to r = 3.848, 0.0196 wide in r and 1.57 s long in the audio from 145.4 s, and it is the period-3 window."
+- Part 4: "A window of order runs from r = 3.853 to r = 3.854, 0.0006 wide in r and 0.05 s long in the audio from 147.37 s, and its period was not identified."
+- Part 4: "A window of order runs from r = 3.905 to r = 3.906, 0.0009 wide in r and 0.07 s long in the audio from 151.53 s, and it is the period-5 window."
+- Part 5, narration-convention warnings over all runs: 0
+- Largest |GIF minus WAV| over all runs: 0.215 s
+- Loudness range over all runs (pyloudnorm): -17.82 to -17.02 LUFS
+
+## Findings to know before the talk
+- Divergence iterations default to 119 (changed from 120 after the first report): 120 notes, x_0 to x_119, at 1/3 s each, exactly 40 s.
+- The lyapunov windows computed from the run are 3.626-3.634, 3.739-3.744 and 3.829-3.848; the brief quoted 3.628-3.634 and 3.828-3.849. The differences are within one r step of the 750-step sweep (0.002).
+- iterate_extinction loudness: pyloudnorm measures the WAV at -17.82 LUFS; the app loudness line (stem-core MeasureIntegratedLoudness on the re-imported WAV) says -16.34 LUFS; the same meter gave -17.00 on the buffer before export, although the exported samples equal the buffer within one 16-bit step in both channels (checked). Cause not established. Not fixed here (stem-core).
+- The other 16 files measure -17.05 to -17.02 LUFS (pyloudnorm) against the -17 target.
+- In the settled presets (extinction, growth, fixed_point) the notes are about 8.5 to 9.5 LU quieter than the speech (see "Loudness by part"): iterate volume follows the year-to-year change, which falls to the 0.25 volume floor once the population settles. This predates this change and is unchanged.
+- The lyapunov intro is about 39 s and its outro about 25 s; the brief set no limit for them, and the two added intro sentences take about 12 s.
+- The extinction outro is about 18 s: for r < 1 it has to explain that 1 - 1/r is negative and that zero is the attracting fixed point.
+- growth starts from x0 = 0.1, set in the preset: its fixed point is exactly 0.5, the default x0, so from 0.5 nothing would settle.
+- The divergence speech cache synthesises 9 sentences per run (1 shared intro sentence, 4 case sentences, 4 outros), against 8 whole texts before: splitting into sentences saves the three repeats of the shared opening, about 17 s of synthesised speech, but not calls, because every other sentence differs between presets.
+
+## sweep
+- Exit code: 0; wall time 65 s
+- WAV: dynamical/output/sweep_audio.wav
+- WAV duration (file): 338.2852 s
+- GIF duration (file): 338.50 s, 677 frames of 0.50 s
+- Sync difference GIF minus WAV: +0.2148 s
+- App sync line: "GIF/WAV sync: the GIF has 677 frames of 0.5 s each and plays for 338.5 s, the WAV plays for 338.285 s, and the GIF is 0.215 s longer than the WAV."
+- Loudness (pyloudnorm): -17.05 LUFS integrated; peak -1.13 dBFS
+- App loudness line: "Loudness: the WAV was normalised to -17 LUFS and measures -17 LUFS integrated, with a peak of -1.13 dBFS."
+- App timing line: "Timing: the WAV holds 14.37 s of spoken intro and a 0.4 s pause, then 320 s of notes from 14.77 s, then a 0.4 s pause and 3.11 s of spoken outro, 338.29 s in total."
+- Intro length: 14.37 s of speech; first note at 14.77 s
+- Notes length: 320 s
+- Outro length: 3.11 s of speech
+- Parts add up to the WAV file (app total printed to 0.01 s): yes (338.29 s printed, 338.2852 s in the file)
+- Loudness by part (pyloudnorm): intro speech -13.3 LUFS, notes -17.4 LUFS
+- Narration, intro: "The logistic map gives next year's population from this year's. The population x is a fraction of the maximum; r is the growth rate. As r rises from 2.5 to 4, the rhythm doubles, then turns chaotic, with a brief return to order."
+- Narration, outro: "End of the sweep from r equals 2.5 to 4."
+- Speech synthesis: 4 sentences requested so far in this run, 4 synthesised and 0 taken from the cache.
+- Narration convention warnings printed: none
+- Console: "The sweep runs r from 2.5 to 4 in 500 steps, with 200 transient and 100 recorded iterations at each step."
+- Console: "Each sweep note lasts 0.08 s, and 8 notes are played at each r step."
+- Console: "The sweep covered r from 2.5 to 4 in 500 steps."
+- Console: "The 660 Hz marker for the first period-doubling bifurcation, where one note becomes two, sounds at r = 3, 121.01 s into the audio."
+- Console: "The 440 Hz marker for the onset of chaos, beyond which long-term prediction is impossible, sounds at r = 3.5699, 242.61 s into the audio."
+- Console: "The 528 Hz marker for the period-3 window, a brief return to order inside the chaos, sounds at r = 3.8284, 297.65 s into the audio."
+
+## iterate
+- Exit code: 0; wall time 17 s
+- WAV: dynamical/output/iterate_audio.wav
+- WAV duration (file): 46.2121 s
+- GIF duration (file): 46.19 s, 149 frames of 0.31 s
+- Sync difference GIF minus WAV: -0.0221 s
+- App sync line: "GIF/WAV sync: the GIF has 149 frames of 0.31 s each and plays for 46.19 s, the WAV plays for 46.212 s, and the GIF is 0.022 s shorter than the WAV."
+- Loudness (pyloudnorm): -17.03 LUFS integrated; peak -4.79 dBFS
+- App loudness line: "Loudness: the WAV was normalised to -17 LUFS and measures -17 LUFS integrated, with a peak of -4.79 dBFS."
+- App timing line: "Timing: the WAV holds 10.46 s of spoken intro and a 0.4 s pause, then 24.08 s of notes from 10.86 s, then a 0.4 s pause and 10.87 s of spoken outro, 46.21 s in total."
+- Intro length: 10.46 s of speech; first note at 10.86 s
+- Notes length: 24.08 s
+- Outro length: 10.87 s of speech
+- Parts add up to the WAV file (app total printed to 0.01 s): yes (46.21 s printed, 46.2121 s in the file)
+- Loudness by part (pyloudnorm): intro speech -16.6 LUFS, notes -17.3 LUFS
+- Narration, intro: "The logistic map gives next year's population from this year's. The population x is a fraction of the maximum, and r, the growth rate, is 3.8. Each note is one year."
+- Narration, outro: "The fixed point is 0.737. There the slope, 2 minus r in size, is 1.80, above one, so the fixed point repels. End of the iteration."
+- Speech synthesis: 6 sentences requested so far in this run, 6 synthesised and 0 taken from the cache.
+- Narration convention warnings printed: none
+- Console: "The map is iterated 300 times at r = 3.8, starting from x0 = 0.5."
+- Console: "Each iteration is one note of 0.08 s."
+- Console: "Over 300 iterations at r = 3.8 the population x ranged from 0.1805 to 0.95."
+- Console: "The last 40 iterations at r = 3.8 take 40 distinct values when rounded to 0.001."
+- Console: "At r = 3.8 the fixed point x* = 1 - 1/r is 0.7368 and |f'(x*)| = |2 - r| = 1.8, above 1, so it repels."
+
+## iterate_extinction
+- Exit code: 0; wall time 18 s
+- WAV (copied aside after the run, since every iterate preset writes iterate_audio.wav): iterate_extinction.wav
+- WAV duration (file): 55.4777 s
+- GIF duration (file): 55.50 s, 150 frames of 0.37 s
+- Sync difference GIF minus WAV: +0.0223 s
+- App sync line: "GIF/WAV sync: the GIF has 150 frames of 0.37 s each and plays for 55.5 s, the WAV plays for 55.478 s, and the GIF is 0.022 s longer than the WAV."
+- Loudness (pyloudnorm): -17.82 LUFS integrated; peak -3.85 dBFS
+- App loudness line: "Loudness: the WAV was normalised to -17 LUFS and measures -16.34 LUFS integrated, with a peak of -3.84 dBFS."
+- App timing line: "Timing: the WAV holds 12.26 s of spoken intro and a 0.4 s pause, then 24.08 s of notes from 12.66 s, then a 0.4 s pause and 18.34 s of spoken outro, 55.48 s in total."
+- Intro length: 12.26 s of speech; first note at 12.66 s
+- Notes length: 24.08 s
+- Outro length: 18.34 s of speech
+- Parts add up to the WAV file (app total printed to 0.01 s): yes (55.48 s printed, 55.4777 s in the file)
+- Loudness by part (pyloudnorm): intro speech -15.6 LUFS, notes -25.1 LUFS
+- Narration, intro: "The logistic map gives next year's population from this year's. The population x is a fraction of the maximum, and r, the growth rate, is 0.8. The population dies out. Each note is one year."
+- Narration, outro: "The fixed point is minus 0.250, which is not a population. There the slope, 2 minus r in size, is 1.20, above one, so it repels. At zero the slope is r, 0.80, below one, so the population dies out. End of the iteration."
+- Speech synthesis: 8 sentences requested so far in this run, 8 synthesised and 0 taken from the cache.
+- Narration convention warnings printed: none
+- Console: "The map is iterated 300 times at r = 0.8 (preset extinction), starting from x0 = 0.5."
+- Console: "Each iteration is one note of 0.08 s."
+- Console: "Over 300 iterations at r = 0.8 the population x ranged from 1.004*^-30 to 0.5."
+- Console: "The last 40 iterations at r = 0.8 take 1 distinct value when rounded to 0.001."
+- Console: "At r = 0.8 the fixed point x* = 1 - 1/r is -0.25 and |f'(x*)| = |2 - r| = 1.2, above 1, so it repels; x* is negative, and the fixed point x = 0 has |f'(0)| = r = 0.8, below 1, so it attracts."
+
+## iterate_growth
+- Exit code: 0; wall time 20 s
+- WAV (copied aside after the run, since every iterate preset writes iterate_audio.wav): iterate_growth.wav
+- WAV duration (file): 49.5705 s
+- GIF duration (file): 49.50 s, 150 frames of 0.33 s
+- Sync difference GIF minus WAV: -0.0705 s
+- App sync line: "GIF/WAV sync: the GIF has 150 frames of 0.33 s each and plays for 49.5 s, the WAV plays for 49.57 s, and the GIF is 0.07 s shorter than the WAV."
+- Loudness (pyloudnorm): -17.05 LUFS integrated; peak -2.96 dBFS
+- App loudness line: "Loudness: the WAV was normalised to -17 LUFS and measures -17 LUFS integrated, with a peak of -2.96 dBFS."
+- App timing line: "Timing: the WAV holds 13.32 s of spoken intro and a 0.4 s pause, then 24.08 s of notes from 13.72 s, then a 0.4 s pause and 11.37 s of spoken outro, 49.57 s in total."
+- Intro length: 13.32 s of speech; first note at 13.72 s
+- Notes length: 24.08 s
+- Outro length: 11.37 s of speech
+- Parts add up to the WAV file (app total printed to 0.01 s): yes (49.57 s printed, 49.5705 s in the file)
+- Loudness by part (pyloudnorm): intro speech -14.6 LUFS, notes -23.1 LUFS
+- Narration, intro: "The logistic map gives next year's population from this year's. The population x is a fraction of the maximum, and r, the growth rate, is 2. The population grows, then settles at a stable level. Each note is one year."
+- Narration, outro: "The fixed point is 0.500. There the slope, 2 minus r in size, is 0.00, below one, so the fixed point attracts. End of the iteration."
+- Speech synthesis: 7 sentences requested so far in this run, 7 synthesised and 0 taken from the cache.
+- Narration convention warnings printed: none
+- Console: "The map is iterated 300 times at r = 2 (preset growth), starting from x0 = 0.1."
+- Console: "Each iteration is one note of 0.08 s."
+- Console: "Over 300 iterations at r = 2 the population x ranged from 0.1 to 0.5."
+- Console: "The last 40 iterations at r = 2 take 1 distinct value when rounded to 0.001."
+- Console: "At r = 2 the fixed point x* = 1 - 1/r is 0.5 and |f'(x*)| = |2 - r| = 0, below 1, so it attracts."
+
+## iterate_fixed_point
+- Exit code: 0; wall time 17 s
+- WAV (copied aside after the run, since every iterate preset writes iterate_audio.wav): iterate_fixed_point.wav
+- WAV duration (file): 48.6184 s
+- GIF duration (file): 48.64 s, 152 frames of 0.32 s
+- Sync difference GIF minus WAV: +0.0216 s
+- App sync line: "GIF/WAV sync: the GIF has 152 frames of 0.32 s each and plays for 48.64 s, the WAV plays for 48.618 s, and the GIF is 0.022 s longer than the WAV."
+- Loudness (pyloudnorm): -17.05 LUFS integrated; peak -2.92 dBFS
+- App loudness line: "Loudness: the WAV was normalised to -17 LUFS and measures -17 LUFS integrated, with a peak of -2.92 dBFS."
+- App timing line: "Timing: the WAV holds 12.78 s of spoken intro and a 0.4 s pause, then 24.08 s of notes from 13.18 s, then a 0.4 s pause and 10.96 s of spoken outro, 48.62 s in total."
+- Intro length: 12.78 s of speech; first note at 13.18 s
+- Notes length: 24.08 s
+- Outro length: 10.96 s of speech
+- Parts add up to the WAV file (app total printed to 0.01 s): yes (48.62 s printed, 48.6184 s in the file)
+- Loudness by part (pyloudnorm): intro speech -14.4 LUFS, notes -22.9 LUFS
+- Narration, intro: "The logistic map gives next year's population from this year's. The population x is a fraction of the maximum, and r, the growth rate, is 2.8. The population settles to one value. Each note is one year."
+- Narration, outro: "The fixed point is 0.643. There the slope, 2 minus r in size, is 0.80, below one, so the fixed point attracts. End of the iteration."
+- Speech synthesis: 7 sentences requested so far in this run, 7 synthesised and 0 taken from the cache.
+- Narration convention warnings printed: none
+- Console: "The map is iterated 300 times at r = 2.8 (preset fixed_point), starting from x0 = 0.5."
+- Console: "Each iteration is one note of 0.08 s."
+- Console: "Over 300 iterations at r = 2.8 the population x ranged from 0.5 to 0.7."
+- Console: "The last 40 iterations at r = 2.8 take 1 distinct value when rounded to 0.001."
+- Console: "At r = 2.8 the fixed point x* = 1 - 1/r is 0.6429 and |f'(x*)| = |2 - r| = 0.8, below 1, so it attracts."
+
+## iterate_period2
+- Exit code: 0; wall time 17 s
+- WAV (copied aside after the run, since every iterate preset writes iterate_audio.wav): iterate_period2.wav
+- WAV duration (file): 48.9319 s
+- GIF duration (file): 48.84 s, 148 frames of 0.33 s
+- Sync difference GIF minus WAV: -0.0919 s
+- App sync line: "GIF/WAV sync: the GIF has 148 frames of 0.33 s each and plays for 48.84 s, the WAV plays for 48.932 s, and the GIF is 0.092 s shorter than the WAV."
+- Loudness (pyloudnorm): -17.02 LUFS integrated; peak -6.73 dBFS
+- App loudness line: "Loudness: the WAV was normalised to -17 LUFS and measures -17 LUFS integrated, with a peak of -6.73 dBFS."
+- App timing line: "Timing: the WAV holds 13.43 s of spoken intro and a 0.4 s pause, then 24.08 s of notes from 13.83 s, then a 0.4 s pause and 10.62 s of spoken outro, 48.93 s in total."
+- Intro length: 13.43 s of speech; first note at 13.83 s
+- Notes length: 24.08 s
+- Outro length: 10.62 s of speech
+- Parts add up to the WAV file (app total printed to 0.01 s): yes (48.93 s printed, 48.9319 s in the file)
+- Loudness by part (pyloudnorm): intro speech -18.4 LUFS, notes -15.9 LUFS
+- Narration, intro: "The logistic map gives next year's population from this year's. The population x is a fraction of the maximum, and r, the growth rate, is 3.2. The population alternates between two values. Each note is one year."
+- Narration, outro: "The fixed point is 0.688. There the slope, 2 minus r in size, is 1.20, above one, so the fixed point repels. End of the iteration."
+- Speech synthesis: 7 sentences requested so far in this run, 7 synthesised and 0 taken from the cache.
+- Narration convention warnings printed: none
+- Console: "The map is iterated 300 times at r = 3.2 (preset period2), starting from x0 = 0.5."
+- Console: "Each iteration is one note of 0.08 s."
+- Console: "Over 300 iterations at r = 3.2 the population x ranged from 0.5 to 0.8."
+- Console: "The last 40 iterations at r = 3.2 take 2 distinct values when rounded to 0.001."
+- Console: "At r = 3.2 the fixed point x* = 1 - 1/r is 0.6875 and |f'(x*)| = |2 - r| = 1.2, above 1, so it repels."
+
+## iterate_period4
+- Exit code: 0; wall time 19 s
+- WAV (copied aside after the run, since every iterate preset writes iterate_audio.wav): iterate_period4.wav
+- WAV duration (file): 49.0480 s
+- GIF duration (file): 49.17 s, 149 frames of 0.33 s
+- Sync difference GIF minus WAV: +0.1220 s
+- App sync line: "GIF/WAV sync: the GIF has 149 frames of 0.33 s each and plays for 49.17 s, the WAV plays for 49.048 s, and the GIF is 0.122 s longer than the WAV."
+- Loudness (pyloudnorm): -17.03 LUFS integrated; peak -6.17 dBFS
+- App loudness line: "Loudness: the WAV was normalised to -17 LUFS and measures -17 LUFS integrated, with a peak of -6.17 dBFS."
+- App timing line: "Timing: the WAV holds 13.29 s of spoken intro and a 0.4 s pause, then 24.08 s of notes from 13.69 s, then a 0.4 s pause and 10.88 s of spoken outro, 49.05 s in total."
+- Intro length: 13.29 s of speech; first note at 13.69 s
+- Notes length: 24.08 s
+- Outro length: 10.88 s of speech
+- Parts add up to the WAV file (app total printed to 0.01 s): yes (49.05 s printed, 49.0480 s in the file)
+- Loudness by part (pyloudnorm): intro speech -18.0 LUFS, notes -16.2 LUFS
+- Narration, intro: "The logistic map gives next year's population from this year's. The population x is a fraction of the maximum, and r, the growth rate, is 3.5. The population cycles through four values. Each note is one year."
+- Narration, outro: "The fixed point is 0.714. There the slope, 2 minus r in size, is 1.50, above one, so the fixed point repels. End of the iteration."
+- Speech synthesis: 7 sentences requested so far in this run, 7 synthesised and 0 taken from the cache.
+- Narration convention warnings printed: none
+- Console: "The map is iterated 300 times at r = 3.5 (preset period4), starting from x0 = 0.5."
+- Console: "Each iteration is one note of 0.08 s."
+- Console: "Over 300 iterations at r = 3.5 the population x ranged from 0.3828 to 0.875."
+- Console: "The last 40 iterations at r = 3.5 take 4 distinct values when rounded to 0.001."
+- Console: "At r = 3.5 the fixed point x* = 1 - 1/r is 0.7143 and |f'(x*)| = |2 - r| = 1.5, above 1, so it repels."
+
+## iterate_period3_window
+- Exit code: 0; wall time 17 s
+- WAV (copied aside after the run, since every iterate preset writes iterate_audio.wav): iterate_period3_window.wav
+- WAV duration (file): 49.8617 s
+- GIF duration (file): 49.83 s, 151 frames of 0.33 s
+- Sync difference GIF minus WAV: -0.0317 s
+- App sync line: "GIF/WAV sync: the GIF has 151 frames of 0.33 s each and plays for 49.83 s, the WAV plays for 49.862 s, and the GIF is 0.032 s shorter than the WAV."
+- Loudness (pyloudnorm): -17.03 LUFS integrated; peak -5.37 dBFS
+- App loudness line: "Loudness: the WAV was normalised to -17 LUFS and measures -17 LUFS integrated, with a peak of -5.37 dBFS."
+- App timing line: "Timing: the WAV holds 14.18 s of spoken intro and a 0.4 s pause, then 24.08 s of notes from 14.58 s, then a 0.4 s pause and 10.8 s of spoken outro, 49.86 s in total."
+- Intro length: 14.18 s of speech; first note at 14.58 s
+- Notes length: 24.08 s
+- Outro length: 10.8 s of speech
+- Parts add up to the WAV file (app total printed to 0.01 s): yes (49.86 s printed, 49.8617 s in the file)
+- Loudness by part (pyloudnorm): intro speech -17.1 LUFS, notes -16.8 LUFS
+- Narration, intro: "The logistic map gives next year's population from this year's. The population x is a fraction of the maximum, and r, the growth rate, is 3.83. Three values repeat, an island of order in the chaos. Each note is one year."
+- Narration, outro: "The fixed point is 0.739. There the slope, 2 minus r in size, is 1.83, above one, so the fixed point repels. End of the iteration."
+- Speech synthesis: 7 sentences requested so far in this run, 7 synthesised and 0 taken from the cache.
+- Narration convention warnings printed: none
+- Console: "The map is iterated 300 times at r = 3.83 (preset period3_window), starting from x0 = 0.5."
+- Console: "Each iteration is one note of 0.08 s."
+- Console: "Over 300 iterations at r = 3.83 the population x ranged from 0.1559 to 0.9575."
+- Console: "The last 40 iterations at r = 3.83 take 3 distinct values when rounded to 0.001."
+- Console: "At r = 3.83 the fixed point x* = 1 - 1/r is 0.7389 and |f'(x*)| = |2 - r| = 1.83, above 1, so it repels."
+
+## iterate_chaos
+- Exit code: 0; wall time 19 s
+- WAV (copied aside after the run, since every iterate preset writes iterate_audio.wav): iterate_chaos.wav
+- WAV duration (file): 49.3245 s
+- GIF duration (file): 49.17 s, 149 frames of 0.33 s
+- Sync difference GIF minus WAV: -0.1545 s
+- App sync line: "GIF/WAV sync: the GIF has 149 frames of 0.33 s each and plays for 49.17 s, the WAV plays for 49.324 s, and the GIF is 0.154 s shorter than the WAV."
+- Loudness (pyloudnorm): -17.03 LUFS integrated; peak -4.09 dBFS
+- App loudness line: "Loudness: the WAV was normalised to -17 LUFS and measures -17 LUFS integrated, with a peak of -4.09 dBFS."
+- App timing line: "Timing: the WAV holds 13.34 s of spoken intro and a 0.4 s pause, then 24.08 s of notes from 13.74 s, then a 0.4 s pause and 11.1 s of spoken outro, 49.32 s in total."
+- Intro length: 13.34 s of speech; first note at 13.74 s
+- Notes length: 24.08 s
+- Outro length: 11.1 s of speech
+- Parts add up to the WAV file (app total printed to 0.01 s): yes (49.32 s printed, 49.3245 s in the file)
+- Loudness by part (pyloudnorm): intro speech -16.2 LUFS, notes -17.9 LUFS
+- Narration, intro: "The logistic map gives next year's population from this year's. The population x is a fraction of the maximum, and r, the growth rate, is 4. This is full chaos: the population never repeats. Each note is one year."
+- Narration, outro: "The fixed point is 0.750. There the slope, 2 minus r in size, is 2.00, above one, so the fixed point repels. End of the iteration."
+- Speech synthesis: 7 sentences requested so far in this run, 7 synthesised and 0 taken from the cache.
+- Narration convention warnings printed: none
+- Console: "The map is iterated 300 times at r = 4 (preset chaos), starting from x0 = 0.5."
+- Console: "Each iteration is one note of 0.08 s."
+- Console: "Over 300 iterations at r = 4 the population x ranged from 1.6*^-11 to 1.."
+- Console: "The last 40 iterations at r = 4 take 38 distinct values when rounded to 0.001."
+- Console: "At r = 4 the fixed point x* = 1 - 1/r is 0.75 and |f'(x*)| = |2 - r| = 2, above 1, so it repels."
+
+## iterate_default_again
+- Exit code: 0; wall time 16 s
+- WAV: dynamical/output/iterate_audio.wav
+- WAV duration (file): 46.2121 s
+- GIF duration (file): 46.19 s, 149 frames of 0.31 s
+- Sync difference GIF minus WAV: -0.0221 s
+- App sync line: "GIF/WAV sync: the GIF has 149 frames of 0.31 s each and plays for 46.19 s, the WAV plays for 46.212 s, and the GIF is 0.022 s shorter than the WAV."
+- Loudness (pyloudnorm): -17.03 LUFS integrated; peak -4.79 dBFS
+- App loudness line: "Loudness: the WAV was normalised to -17 LUFS and measures -17 LUFS integrated, with a peak of -4.79 dBFS."
+- App timing line: "Timing: the WAV holds 10.46 s of spoken intro and a 0.4 s pause, then 24.08 s of notes from 10.86 s, then a 0.4 s pause and 10.87 s of spoken outro, 46.21 s in total."
+- Intro length: 10.46 s of speech; first note at 10.86 s
+- Notes length: 24.08 s
+- Outro length: 10.87 s of speech
+- Parts add up to the WAV file (app total printed to 0.01 s): yes (46.21 s printed, 46.2121 s in the file)
+- Loudness by part (pyloudnorm): intro speech -16.6 LUFS, notes -17.3 LUFS
+- Narration, intro: "The logistic map gives next year's population from this year's. The population x is a fraction of the maximum, and r, the growth rate, is 3.8. Each note is one year."
+- Narration, outro: "The fixed point is 0.737. There the slope, 2 minus r in size, is 1.80, above one, so the fixed point repels. End of the iteration."
+- Speech synthesis: 6 sentences requested so far in this run, 6 synthesised and 0 taken from the cache.
+- Narration convention warnings printed: none
+- Console: "The map is iterated 300 times at r = 3.8, starting from x0 = 0.5."
+- Console: "Each iteration is one note of 0.08 s."
+- Console: "Over 300 iterations at r = 3.8 the population x ranged from 0.1805 to 0.95."
+- Console: "The last 40 iterations at r = 3.8 take 40 distinct values when rounded to 0.001."
+- Console: "At r = 3.8 the fixed point x* = 1 - 1/r is 0.7368 and |f'(x*)| = |2 - r| = 1.8, above 1, so it repels."
+
+## lyapunov
+- Exit code: 0; wall time 62 s
+- WAV: dynamical/output/lyapunov_audio.wav
+- WAV duration (file): 184.4342 s
+- GIF duration (file): 184.50 s, 369 frames of 0.50 s
+- Sync difference GIF minus WAV: +0.0658 s
+- App sync line: "GIF/WAV sync: the GIF has 369 frames of 0.5 s each and plays for 184.5 s, the WAV plays for 184.434 s, and the GIF is 0.066 s longer than the WAV."
+- Loudness (pyloudnorm): -17.04 LUFS integrated; peak -8.70 dBFS
+- App loudness line: "Loudness: the WAV was normalised to -17 LUFS and measures -17 LUFS integrated, with a peak of -8.7 dBFS."
+- App timing line: "Timing: the WAV holds 38.7 s of spoken intro and a 0.4 s pause, then 120 s of notes from 39.1 s, then a 0.4 s pause and 24.94 s of spoken outro, 184.43 s in total."
+- Intro length: 38.7 s of speech; first note at 39.1 s
+- Notes length: 120 s
+- Outro length: 24.94 s of speech
+- Parts add up to the WAV file (app total printed to 0.01 s): yes (184.43 s printed, 184.4342 s in the file)
+- Loudness by part (pyloudnorm): intro speech -21.6 LUFS, notes -15.8 LUFS
+- Narration, intro: "Lyapunov exponent of the logistic map, r from 2.5 to 4. The steady tone is zero. The moving tone is the Lyapunov exponent. Above the steady tone the orbit is chaotic, and nearby starting points separate exponentially. Below it they converge. On the way up, the moving tone comes up to the steady tone and falls away again at each period doubling, at r equals 3, 3.449 and 3.544, because the exponent is exactly zero at a bifurcation. Each later dip below the steady tone is a window of order inside the chaos. Beating between the two tones means a crossing is near. Short high tones mark the bifurcation points."
+- Narration, outro: "End of the Lyapunov sweep from r equals 2.5 to 4. The exponent first rose above zero at r equals 3.570, where chaos begins. The widest windows of order were from r equals 3.626 to 3.634, period 6; from 3.739 to 3.744, period 5; and from 3.829 to 3.848, period 3."
+- Speech synthesis: 12 sentences requested so far in this run, 12 synthesised and 0 taken from the cache.
+- Narration convention warnings printed: none
+- Console: "The Lyapunov sweep runs r from 2.5 to 4 in 750 steps over 120 s."
+- Console: "At each r step, 1000 transient iterations are discarded and the Lyapunov exponent is the mean of Log|r (1 - 2x)| over the next 10000 iterations, floored at -0.5."
+- Console: "The reference tone for lambda = 0 is 220 Hz, and the lambda tone moves 1 octave per unit of lambda."
+- Console: "The lambda tone runs from 155.6 to 355.7 Hz; its A-weighting equal-loudness gain runs from -3.86 to 3.34 dB relative to the reference frequency."
+- Console: "The first period-doubling bifurcation marker (660 Hz) sounds at r = 3, 79.1 s into the audio."
+- Console: "The period-4 bifurcation marker (880 Hz) sounds at r = 3.449, 115.02 s into the audio."
+- Console: "The onset of chaos marker (440 Hz) sounds at r = 3.5699, 124.69 s into the audio."
+- Console: "The period-3 window marker (528 Hz) sounds at r = 3.8284, 145.37 s into the audio."
+- Console: "The onset of chaos: the Lyapunov exponent first crosses zero upward at r = 3.570, heard 124.71 s into the audio."
+- Console: "A window of order runs from r = 3.589 to r = 3.590, 0.0003 wide in r and 0.03 s long in the audio from 126.24 s, and its period was not identified."
+- Console: "A window of order runs from r = 3.605 to r = 3.606, 0.0018 wide in r and 0.15 s long in the audio from 127.46 s, and its period was not identified."
+- Console: "A window of order runs from r = 3.626 to r = 3.634, 0.0074 wide in r and 0.6 s long in the audio from 129.18 s, and it is the period-6 window."
+- Console: "A window of order runs from r = 3.739 to r = 3.744, 0.0048 wide in r and 0.38 s long in the audio from 138.21 s, and it is the period-5 window."
+- Console: "A window of order runs from r = 3.829 to r = 3.848, 0.0196 wide in r and 1.57 s long in the audio from 145.4 s, and it is the period-3 window."
+- Console: "A window of order runs from r = 3.853 to r = 3.854, 0.0006 wide in r and 0.05 s long in the audio from 147.37 s, and its period was not identified."
+- Console: "A window of order runs from r = 3.905 to r = 3.906, 0.0009 wide in r and 0.07 s long in the audio from 151.53 s, and it is the period-5 window."
+- Console: "The minimum Lyapunov exponent is -0.5 (the floor), first reached at r = 2.500."
+- Console: "The maximum Lyapunov exponent is 0.693, reached at r = 4.000."
+- Console: "144 of 750 r steps sit at the Lyapunov floor of -0.5, where the exponent was clipped."
+
+## lyapunov_window
+- Exit code: 0; wall time 45 s
+- WAV: dynamical/output/lyapunov_window_audio.wav
+- WAV duration (file): 105.1656 s
+- GIF duration (file): 105.00 s, 300 frames of 0.35 s
+- Sync difference GIF minus WAV: -0.1656 s
+- App sync line: "GIF/WAV sync: the GIF has 300 frames of 0.35 s each and plays for 105 s, the WAV plays for 105.166 s, and the GIF is 0.166 s shorter than the WAV."
+- Loudness (pyloudnorm): -17.04 LUFS integrated; peak -6.60 dBFS
+- App loudness line: "Loudness: the WAV was normalised to -17 LUFS and measures -17 LUFS integrated, with a peak of -6.6 dBFS."
+- App timing line: "Timing: the WAV holds 38.66 s of spoken intro and a 0.4 s pause, then 40 s of notes from 39.06 s, then a 0.4 s pause and 25.71 s of spoken outro, 105.17 s in total."
+- Intro length: 38.66 s of speech; first note at 39.06 s
+- Notes length: 40 s
+- Outro length: 25.71 s of speech
+- Parts add up to the WAV file (app total printed to 0.01 s): yes (105.17 s printed, 105.1656 s in the file)
+- Loudness by part (pyloudnorm): intro speech -19.6 LUFS, notes -14.7 LUFS
+- Narration, intro: "Lyapunov exponent of the logistic map, r from 3.4 to 3.9. The steady tone is zero. The moving tone is the Lyapunov exponent. Above the steady tone the orbit is chaotic, and nearby starting points separate exponentially. Below it they converge. On the way up, the moving tone comes up to the steady tone and falls away again at each period doubling, at r equals 3.449 and 3.544, because the exponent is exactly zero at a bifurcation. Each later dip below the steady tone is a window of order inside the chaos. Beating between the two tones means a crossing is near. Short high tones mark the bifurcation points."
+- Narration, outro: "End of the Lyapunov sweep from r equals 3.4 to 3.9. The exponent first rose above zero at r equals 3.570, where chaos begins. The widest windows of order were from r equals 3.627 to 3.633, period 6; from 3.738 to 3.743, period 5; and from 3.829 to 3.849, period 3."
+- Speech synthesis: 12 sentences requested so far in this run, 12 synthesised and 0 taken from the cache.
+- Narration convention warnings printed: none
+- Console: "The Lyapunov sweep runs r from 3.4 to 3.9 in 500 steps over 40 s (preset lyapunov_window)."
+- Console: "At each r step, 1000 transient iterations are discarded and the Lyapunov exponent is the mean of Log|r (1 - 2x)| over the next 10000 iterations, floored at -0.5."
+- Console: "The reference tone for lambda = 0 is 220 Hz, and the lambda tone moves 1 octave per unit of lambda."
+- Console: "The lambda tone runs from 155.6 to 313.3 Hz; its A-weighting equal-loudness gain runs from -2.93 to 3.34 dB relative to the reference frequency."
+- Console: "The period-4 bifurcation marker (880 Hz) sounds at r = 3.449, 42.98 s into the audio."
+- Console: "The onset of chaos marker (440 Hz) sounds at r = 3.5699, 52.65 s into the audio."
+- Console: "The period-3 window marker (528 Hz) sounds at r = 3.8284, 73.33 s into the audio."
+- Console: "The onset of chaos: the Lyapunov exponent first crosses zero upward at r = 3.570, heard 52.66 s into the audio."
+- Console: "A window of order runs from r = 3.582 to r = 3.583, 0.0013 wide in r and 0.11 s long in the audio from 53.61 s, and its period was not identified."
+- Console: "A window of order runs from r = 3.605 to r = 3.606, 0.0015 wide in r and 0.12 s long in the audio from 55.45 s, and its period was not identified."
+- Console: "A window of order runs from r = 3.627 to r = 3.633, 0.0062 wide in r and 0.5 s long in the audio from 57.19 s, and it is the period-6 window."
+- Console: "A window of order runs from r = 3.662 to r = 3.663, 0.0009 wide in r and 0.07 s long in the audio from 60.03 s, and its period was not identified."
+- Console: "A window of order runs from r = 3.703 to r = 3.703, 0 wide in r and 0 s long in the audio from 63.27 s, and its period was not identified."
+- Console: "A window of order runs from r = 3.738 to r = 3.743, 0.005 wide in r and 0.4 s long in the audio from 66.11 s, and it is the period-5 window."
+- Console: "A window of order runs from r = 3.801 to r = 3.801, 0.0004 wide in r and 0.03 s long in the audio from 71.11 s, and its period was not identified."
+- Console: "A window of order runs from r = 3.829 to r = 3.849, 0.0206 wide in r and 1.65 s long in the audio from 73.34 s, and it is the period-3 window."
+- Console: "A window of order runs from r = 3.853 to r = 3.854, 0.0011 wide in r and 0.09 s long in the audio from 75.33 s, and its period was not identified."
+- Console: "The minimum Lyapunov exponent is -0.5 (the floor), first reached at r = 3.492."
+- Console: "The maximum Lyapunov exponent is 0.51, reached at r = 3.898."
+- Console: "16 of 500 r steps sit at the Lyapunov floor of -0.5, where the exponent was clipped."
+
+## divergence
+- Exit code: 0; wall time 50 s
+- WAV: dynamical/output/divergence_audio.wav
+- WAV duration (file): 63.1166 s
+- GIF duration (file): 63.21 s, 301 frames of 0.21 s
+- Sync difference GIF minus WAV: +0.0934 s
+- App sync line: "GIF/WAV sync: the GIF has 301 frames of 0.21 s each and plays for 63.21 s, the WAV plays for 63.117 s, and the GIF is 0.093 s longer than the WAV."
+- Loudness (pyloudnorm): -17.04 LUFS integrated; peak -1.80 dBFS
+- App loudness line: "Loudness: the WAV was normalised to -17 LUFS and measures -17 LUFS integrated, with a peak of -1.8 dBFS."
+- App timing line: "Timing: the WAV holds 11.53 s of spoken intro and a 0.4 s pause, then 40 s of notes from 11.93 s, then a 0.4 s pause and 8.88 s of spoken outro padded to 10.78 s, 63.12 s in total."
+- Intro length: 11.53 s of speech; first note at 11.93 s
+- Notes length: 40 s
+- Outro length: 8.88 s of speech, padded to a 10.78 s slot
+- Parts add up to the WAV file (app total printed to 0.01 s): yes (63.12 s printed, 63.1166 s in the file)
+- Loudness by part (pyloudnorm): intro speech -17.9 LUFS, notes -16.6 LUFS
+- Narration, intro: "Two populations start one part in a million apart, one in each ear; the middle tone is their distance. The chaotic case, r equals 4: the tone climbs to a high marker at iteration 18."
+- Narration, outro: "End of the chaotic case: the separation passed one tenth at iteration 18, and the Lyapunov exponent predicted iteration 16.6."
+- Speech synthesis: 15 sentences requested so far in this run, 9 synthesised and 6 taken from the cache.
+- Speech is padded to the longest intro (11.53 s) and outro (10.78 s) of this run and the four presets.
+- Narration convention warnings printed: none
+- Console: "The two orbits run at r = 4, the chaotic case."
+- Console: "The orbits start at x0 = 0.3 and x0 + delta, with delta = 1.*^-6; 119 iterations at 3 per second (0.333 s each) give 40 s of notes for x_0 to x_119, and the separation saturates at 0.1."
+- Console: "The predicted Lyapunov exponent at r = 4 (LyapunovExponent, 1000 transient and 10000 averaged iterations) is 0.6931."
+- Console: "The voices are the left orbit, the right orbit and the separation tone in the centre; the saturation marker (1320 Hz) sounds 6 s into the notes."
+- Console: "The separation first exceeded 0.1 at iteration 18; the Lyapunov exponent predicts iteration 16.6 (Log[0.1/delta]/lambda)."
+- Console: "The fitted slope is 0.6709 per iteration over iterations 0 to 18, the predicted Lyapunov exponent is 0.6931, and their ratio is 0.9679."
+- Console: "The maximum separation reached is 0.985, at iteration 50."
+- Console: "The note mapping's resolution is 0.0667 (pitch bin 0.0667 in x, volume bin 0.0667 in step size); the two orbits first get different notes at iteration 15, where the separation is 0.0264."
+
+## divergence_chaotic
+- Exit code: 0; wall time 48 s
+- WAV: dynamical/output/divergence_chaotic_audio.wav
+- WAV duration (file): 63.1166 s
+- GIF duration (file): 63.21 s, 301 frames of 0.21 s
+- Sync difference GIF minus WAV: +0.0934 s
+- App sync line: "GIF/WAV sync: the GIF has 301 frames of 0.21 s each and plays for 63.21 s, the WAV plays for 63.117 s, and the GIF is 0.093 s longer than the WAV."
+- Loudness (pyloudnorm): -17.04 LUFS integrated; peak -1.80 dBFS
+- App loudness line: "Loudness: the WAV was normalised to -17 LUFS and measures -17 LUFS integrated, with a peak of -1.8 dBFS."
+- App timing line: "Timing: the WAV holds 11.53 s of spoken intro and a 0.4 s pause, then 40 s of notes from 11.93 s, then a 0.4 s pause and 8.88 s of spoken outro padded to 10.78 s, 63.12 s in total."
+- Intro length: 11.53 s of speech; first note at 11.93 s
+- Notes length: 40 s
+- Outro length: 8.88 s of speech, padded to a 10.78 s slot
+- Parts add up to the WAV file (app total printed to 0.01 s): yes (63.12 s printed, 63.1166 s in the file)
+- Loudness by part (pyloudnorm): intro speech -17.9 LUFS, notes -16.6 LUFS
+- Narration, intro: "Two populations start one part in a million apart, one in each ear; the middle tone is their distance. The chaotic case, r equals 4: the tone climbs to a high marker at iteration 18."
+- Narration, outro: "End of the chaotic case: the separation passed one tenth at iteration 18, and the Lyapunov exponent predicted iteration 16.6."
+- Speech synthesis: 15 sentences requested so far in this run, 9 synthesised and 6 taken from the cache.
+- Speech is padded to the longest intro (11.53 s) and outro (10.78 s) of this run and the four presets.
+- Narration convention warnings printed: none
+- Console: "The two orbits run at r = 4, the chaotic case (preset divergence_chaotic)."
+- Console: "The orbits start at x0 = 0.3 and x0 + delta, with delta = 1.*^-6; 119 iterations at 3 per second (0.333 s each) give 40 s of notes for x_0 to x_119, and the separation saturates at 0.1."
+- Console: "The predicted Lyapunov exponent at r = 4 (LyapunovExponent, 1000 transient and 10000 averaged iterations) is 0.6931."
+- Console: "The voices are the left orbit, the right orbit and the separation tone in the centre; the saturation marker (1320 Hz) sounds 6 s into the notes."
+- Console: "The separation first exceeded 0.1 at iteration 18; the Lyapunov exponent predicts iteration 16.6 (Log[0.1/delta]/lambda)."
+- Console: "The fitted slope is 0.6709 per iteration over iterations 0 to 18, the predicted Lyapunov exponent is 0.6931, and their ratio is 0.9679."
+- Console: "The maximum separation reached is 0.985, at iteration 50."
+- Console: "The note mapping's resolution is 0.0667 (pitch bin 0.0667 in x, volume bin 0.0667 in step size); the two orbits first get different notes at iteration 15, where the separation is 0.0264."
+
+## divergence_edge
+- Exit code: 0; wall time 47 s
+- WAV: dynamical/output/divergence_edge_audio.wav
+- WAV duration (file): 63.1166 s
+- GIF duration (file): 63.21 s, 301 frames of 0.21 s
+- Sync difference GIF minus WAV: +0.0934 s
+- App sync line: "GIF/WAV sync: the GIF has 301 frames of 0.21 s each and plays for 63.21 s, the WAV plays for 63.117 s, and the GIF is 0.093 s longer than the WAV."
+- Loudness (pyloudnorm): -17.04 LUFS integrated; peak -5.91 dBFS
+- App loudness line: "Loudness: the WAV was normalised to -17 LUFS and measures -17 LUFS integrated, with a peak of -5.91 dBFS."
+- App timing line: "Timing: the WAV holds 10.82 s of spoken intro padded to 11.53 s and a 0.4 s pause, then 40 s of notes from 11.93 s, then a 0.4 s pause and 10.78 s of spoken outro, 63.12 s in total."
+- Intro length: 10.82 s of speech, padded to a 11.53 s slot; first note at 11.93 s
+- Notes length: 40 s
+- Outro length: 10.78 s of speech
+- Parts add up to the WAV file (app total printed to 0.01 s): yes (63.12 s printed, 63.1166 s in the file)
+- Loudness by part (pyloudnorm): intro speech -19.1 LUFS, notes -16.3 LUFS
+- Narration, intro: "Two populations start one part in a million apart, one in each ear; the middle tone is their distance. The edge of chaos, r equals 3.57: the tone barely rises."
+- Narration, outro: "End of the edge of chaos: the separation reached only 9.1 times ten to the minus 6, as the small Lyapunov exponent, 0.011, predicted."
+- Speech synthesis: 15 sentences requested so far in this run, 9 synthesised and 6 taken from the cache.
+- Speech is padded to the longest intro (11.53 s) and outro (10.78 s) of this run and the four presets.
+- Narration convention warnings printed: none
+- Console: "The two orbits run at r = 3.57, the edge case (preset divergence_edge)."
+- Console: "The orbits start at x0 = 0.3 and x0 + delta, with delta = 1.*^-6; 119 iterations at 3 per second (0.333 s each) give 40 s of notes for x_0 to x_119, and the separation saturates at 0.1."
+- Console: "The predicted Lyapunov exponent at r = 3.57 (LyapunovExponent, 1000 transient and 10000 averaged iterations) is 0.01076."
+- Console: "The voices are the left orbit, the right orbit and the separation tone in the centre; the separation never saturates, so no saturation marker sounds."
+- Console: "The separation never exceeded 0.1 in 119 iterations; the final separation is 9.1*^-6."
+- Console: "The fitted slope is 0.01277 per iteration over iterations 0 to 119, the predicted Lyapunov exponent is 0.01076, and their ratio is 1.1875."
+- Console: "The maximum separation reached is 0.000259, at iteration 110."
+- Console: "The note mapping's resolution is 0.0367 (pitch bin 0.0667 in x, volume bin 0.0367 in step size); the two orbits get the same note at every iteration, so the left and right channels are identical throughout."
+
+## divergence_periodic
+- Exit code: 0; wall time 45 s
+- WAV: dynamical/output/divergence_periodic_audio.wav
+- WAV duration (file): 63.1166 s
+- GIF duration (file): 63.21 s, 301 frames of 0.21 s
+- Sync difference GIF minus WAV: +0.0934 s
+- App sync line: "GIF/WAV sync: the GIF has 301 frames of 0.21 s each and plays for 63.21 s, the WAV plays for 63.117 s, and the GIF is 0.093 s longer than the WAV."
+- Loudness (pyloudnorm): -17.04 LUFS integrated; peak -6.48 dBFS
+- App loudness line: "Loudness: the WAV was normalised to -17 LUFS and measures -17 LUFS integrated, with a peak of -6.48 dBFS."
+- App timing line: "Timing: the WAV holds 11.31 s of spoken intro padded to 11.53 s and a 0.4 s pause, then 40 s of notes from 11.93 s, then a 0.4 s pause and 9.67 s of spoken outro padded to 10.78 s, 63.12 s in total."
+- Intro length: 11.31 s of speech, padded to a 11.53 s slot; first note at 11.93 s
+- Notes length: 40 s
+- Outro length: 9.67 s of speech, padded to a 10.78 s slot
+- Parts add up to the WAV file (app total printed to 0.01 s): yes (63.12 s printed, 63.1166 s in the file)
+- Loudness by part (pyloudnorm): intro speech -19.9 LUFS, notes -16.1 LUFS
+- Narration, intro: "Two populations start one part in a million apart, one in each ear; the middle tone is their distance. A period-2 case, r equals 3.2: the tone falls as both join the cycle."
+- Narration, outro: "End of the periodic case: the separation shrank to zero by iteration 25, as the Lyapunov exponent, minus 0.92, predicted."
+- Speech synthesis: 15 sentences requested so far in this run, 9 synthesised and 6 taken from the cache.
+- Speech is padded to the longest intro (11.53 s) and outro (10.78 s) of this run and the four presets.
+- Narration convention warnings printed: none
+- Console: "The two orbits run at r = 3.2, the periodic case (preset divergence_periodic)."
+- Console: "The orbits start at x0 = 0.513 and x0 + delta, with delta = 1.*^-6; 119 iterations at 3 per second (0.333 s each) give 40 s of notes for x_0 to x_119, and the separation saturates at 0.1."
+- Console: "The predicted Lyapunov exponent at r = 3.2 (LyapunovExponent, 1000 transient and 10000 averaged iterations) is -0.9163."
+- Console: "The voices are the left orbit, the right orbit and the separation tone in the centre; the separation never saturates, so no saturation marker sounds."
+- Console: "The separation never exceeded 0.1 in 119 iterations; the final separation is exactly 0, reached at iteration 25."
+- Console: "The fitted slope is -0.9164 per iteration over iterations 0 to 14, the predicted Lyapunov exponent is -0.9163, and their ratio is 1.0001."
+- Console: "The maximum separation reached is 1.*^-6, at iteration 0."
+- Console: "The note mapping's resolution is 0.0191 (pitch bin 0.0667 in x, volume bin 0.0191 in step size); the two orbits get the same note at every iteration, so the left and right channels are identical throughout."
+
+## divergence_stable
+- Exit code: 0; wall time 56 s
+- WAV: dynamical/output/divergence_stable_audio.wav
+- WAV duration (file): 63.1166 s
+- GIF duration (file): 63.21 s, 301 frames of 0.21 s
+- Sync difference GIF minus WAV: +0.0934 s
+- App sync line: "GIF/WAV sync: the GIF has 301 frames of 0.21 s each and plays for 63.21 s, the WAV plays for 63.117 s, and the GIF is 0.093 s longer than the WAV."
+- Loudness (pyloudnorm): -17.05 LUFS integrated; peak -2.19 dBFS
+- App loudness line: "Loudness: the WAV was normalised to -17 LUFS and measures -17 LUFS integrated, with a peak of -2.19 dBFS."
+- App timing line: "Timing: the WAV holds 11.32 s of spoken intro padded to 11.53 s and a 0.4 s pause, then 40 s of notes from 11.93 s, then a 0.4 s pause and 9.74 s of spoken outro padded to 10.78 s, 63.12 s in total."
+- Intro length: 11.32 s of speech, padded to a 11.53 s slot; first note at 11.93 s
+- Notes length: 40 s
+- Outro length: 9.74 s of speech, padded to a 10.78 s slot
+- Parts add up to the WAV file (app total printed to 0.01 s): yes (63.12 s printed, 63.1166 s in the file)
+- Loudness by part (pyloudnorm): intro speech -15.3 LUFS, notes -18.1 LUFS
+- Narration, intro: "Two populations start one part in a million apart, one in each ear; the middle tone is their distance. The stable case, r equals 2.8: the tone falls as both settle to one value."
+- Narration, outro: "End of the stable case: the separation shrank to zero by iteration 102, as the Lyapunov exponent, minus 0.22, predicted."
+- Speech synthesis: 15 sentences requested so far in this run, 9 synthesised and 6 taken from the cache.
+- Speech is padded to the longest intro (11.53 s) and outro (10.78 s) of this run and the four presets.
+- Narration convention warnings printed: none
+- Console: "The two orbits run at r = 2.8, the stable case (preset divergence_stable)."
+- Console: "The orbits start at x0 = 0.3 and x0 + delta, with delta = 1.*^-6; 119 iterations at 3 per second (0.333 s each) give 40 s of notes for x_0 to x_119, and the separation saturates at 0.1."
+- Console: "The predicted Lyapunov exponent at r = 2.8 (LyapunovExponent, 1000 transient and 10000 averaged iterations) is -0.2231."
+- Console: "The voices are the left orbit, the right orbit and the separation tone in the centre; the separation never saturates, so no saturation marker sounds."
+- Console: "The separation never exceeded 0.1 in 119 iterations; the final separation is exactly 0, reached at iteration 102."
+- Console: "The fitted slope is -0.2245 per iteration over iterations 0 to 61, the predicted Lyapunov exponent is -0.2231, and their ratio is 1.0061."
+- Console: "The maximum separation reached is 1.12*^-6, at iteration 1."
+- Console: "The note mapping's resolution is 0.0192 (pitch bin 0.0667 in x, volume bin 0.0192 in step size); the two orbits get the same note at every iteration, so the left and right channels are identical throughout."
+
+## Correctness checks, before and after
+- Before: run of `--simulation.mode=divergence --simulation.dynamical.preset=divergence_periodic` on the unchanged code, at the start of this session
+- Before: "Checks: 1[PASS] 2[PASS] 3[PASS] 4[PASS] 5[PASS] 6[PASS]"
+- Before: "1. Feigenbaum ratio: 4.7514  (delta = 4.6692, 1.761% error)"
+- Before: "2. Fixed point (r=2.8): analytic 0.642857  numeric 0.642857"
+- Before: "3. Period-2 (r=3.2): 2 distinct values, sum 1.3125 (expected 1.3125)"
+- Before: "4. Lyapunov (r=4.0): 0.693116  (log 2 = 0.693147, 0.004498% error)"
+- Before: "5a. [PASS] At r = 2.8 the Lyapunov exponent is -0.223144 and the fixed-point value Log[0.8] is -0.223144; they differ by 5.55*^-16, within the tolerance of 0.01."
+- Before: "5b. [PASS] At r = 3.2 the Lyapunov exponent is -0.916291 and the closed-form period-2 value 0.5 Log|f'(x1) f'(x2)| is -0.916291; they differ by 1.11*^-16, within the tolerance of 0.01."
+- Before: "5c. [PASS] At r = 3.835 the Lyapunov exponent is -0.309518, and inside the period-3 window it must be negative; it is."
+- Before: "5d. [PASS] At r = 4 the Lyapunov exponent is 0.693076 and the fully chaotic value Log[2] is 0.693147; they differ by 0.0000714, within the tolerance of 0.01."
+- Before: "6a. [PASS] At r = 4 two orbits started 1.*^-6 apart separate with a fitted slope of 0.6709 per iteration (iterations 0 to 18) and LyapunovExponent predicts 0.6931; they differ by 3.2 percent, within the tolerance of 25 percent."
+- Before: "6b. [PASS] At r = 2.8 two orbits started 1.*^-6 apart converge with a fitted slope of -0.2245 per iteration (iterations 0 to 61) and LyapunovExponent predicts -0.2231; they differ by 0.6 percent, within the tolerance of 25 percent."
+- After: "Checks: 1[PASS] 2[PASS] 3[PASS] 4[PASS] 5[PASS] 6[PASS]"
+- After: "1. Feigenbaum ratio: 4.7514  (delta = 4.6692, 1.761% error)"
+- After: "2. Fixed point (r=2.8): analytic 0.642857  numeric 0.642857"
+- After: "3. Period-2 (r=3.2): 2 distinct values, sum 1.3125 (expected 1.3125)"
+- After: "4. Lyapunov (r=4.0): 0.693116  (log 2 = 0.693147, 0.004498% error)"
+- After: "5a. [PASS] At r = 2.8 the Lyapunov exponent is -0.223144 and the fixed-point value Log[0.8] is -0.223144; they differ by 5.55*^-16, within the tolerance of 0.01."
+- After: "5b. [PASS] At r = 3.2 the Lyapunov exponent is -0.916291 and the closed-form period-2 value 0.5 Log|f'(x1) f'(x2)| is -0.916291; they differ by 1.11*^-16, within the tolerance of 0.01."
+- After: "5c. [PASS] At r = 3.835 the Lyapunov exponent is -0.309518, and inside the period-3 window it must be negative; it is."
+- After: "5d. [PASS] At r = 4 the Lyapunov exponent is 0.693076 and the fully chaotic value Log[2] is 0.693147; they differ by 0.0000714, within the tolerance of 0.01."
+- After: "6a. [PASS] At r = 4 two orbits started 1.*^-6 apart separate with a fitted slope of 0.6709 per iteration (iterations 0 to 18) and LyapunovExponent predicts 0.6931; they differ by 3.2 percent, within the tolerance of 25 percent."
+- After: "6b. [PASS] At r = 2.8 two orbits started 1.*^-6 apart converge with a fitted slope of -0.2245 per iteration (iterations 0 to 61) and LyapunovExponent predicts -0.2231; they differ by 0.6 percent, within the tolerance of 25 percent."
+- Check lines identical to the before lines in all 17 runs after the change: yes
+
+## Unit tests
+- Command: `wolframscript -file dynamical/tests/test_model.wl`
+- Result: "Results: 102 passed, 0 failed."
+- Exit code: 0
+- Failing tests: none
+- Tests before this change: 77; new tests: 25
+
+## experiments.wl (updated to the new narration and GIF timing)
+- Command: `wolframscript -file dynamical/experiments.wl`
+- Exit code: 0 (run before the change to 119 iterations; experiments.wl has no divergence runs)
+- Experiments completed: 11 of 11 (iterate_extinction and iterate_growth added), no error messages in the log

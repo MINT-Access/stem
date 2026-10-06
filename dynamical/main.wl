@@ -12,6 +12,8 @@
      wolframscript -file main.wl [-- [--key=value ...]]
      wolframscript -file main.wl -- --config-dump
      wolframscript -file main.wl -- --simulation.mode=iterate
+     wolframscript -file main.wl -- --simulation.mode=iterate --simulation.dynamical.preset=extinction
+     wolframscript -file main.wl -- --simulation.mode=iterate --simulation.dynamical.preset=growth
      wolframscript -file main.wl -- --simulation.dynamical.preset=fixed_point
      wolframscript -file main.wl -- --simulation.dynamical.preset=period2
      wolframscript -file main.wl -- --simulation.dynamical.preset=period4
@@ -33,7 +35,9 @@
                            accent tones mark the first period-doubling,
                            the onset of chaos, and the period-3 window
      iterate            -- fixes r (or a named preset) and sonifies the
-                           map's actual time evolution over n_iterations
+                           map's actual time evolution over n_iterations;
+                           presets extinction, growth, fixed_point,
+                           period2, period4, period3_window, chaos
      lyapunov           -- sweeps r and sonifies the Lyapunov exponent
                            lambda(r) as a gliding tone against a steady
                            reference tone at lambda = 0, with marker
@@ -42,7 +46,11 @@
                            panned hard left and right, plus a centre tone
                            whose pitch tracks Log10 of their separation;
                            presets divergence_chaotic / _edge / _periodic /
-                           _stable
+                           _stable, 119 iterations at 3 per second (40 s of notes)
+
+   Every mode has a spoken intro and a spoken outro (the audible end
+   marker); speech is synthesised a sentence at a time and cached for the
+   run (speech.wl).
 
    Outputs (dynamical/output/):
      sweep_audio.wav / sweep.gif / sweep_data.csv
@@ -136,44 +144,43 @@ Which[
     outGIF = FileNameJoin[{$outDir, "sweep.gif"}];
     outCSV = FileNameJoin[{$outDir, "sweep_data.csv"}];
 
-    Print["  r: ", FmtN[rStart, 4], " -> ", FmtN[rEnd, 4],
-          "  (", rSteps, " steps, ", nTransient, " transient + ",
-          nAttractor, " attractor iterations per step)"];
-    Print["  Note duration: ", FmtN[noteDuration * 1000, 4], " ms"];
+    Print["  The sweep runs r from ", FmtDec[rStart, 4], " to ", FmtDec[rEnd, 4], " in ", rSteps,
+          " steps, with ", nTransient, " transient and ", nAttractor, " recorded iterations at each step."];
+    Print["  Each sweep note lasts ", FmtDec[noteDuration], " s, and ", $sweepNotesPerStep,
+          " notes are played at each r step."];
     Print[""];
 
     Print["[2/5] Sweeping r and recording attractors..."];
-    STEMSay["Sweeping r from " <> ToString[NumberForm[rStart,{3,2}]] <>
-            " to " <> ToString[NumberForm[rEnd,{3,2}]]];
+    STEMSay["Sweeping r from " <> FmtDec[rStart, 2] <> " to " <> FmtDec[rEnd, 2] <> "."];
     sweepModel = SweepModel[rStart, rEnd, rSteps, x0, nTransient, nAttractor];
-    Print["  Recorded ", rSteps, " r-values."];
+    Print["  The attractor was recorded at ", rSteps, " values of r."];
     Print[""];
 
     Print["[3/5] Sonifying sweep..."];
     STEMSay["Sonifying the sweep. Listen for the rhythm doubling into chaos."];
     sweepResult = SonifySweep[sweepModel, noteDuration, sr];
+
+    introText = BuildSweepIntroText[rStart, rEnd];
+    outroText = BuildSweepOutroText[rStart, rEnd];
+    introBuffer = SpeakNarration[introText, sr];
+    outroBuffer = SpeakNarration[outroText, sr];
+    PrintNarration[introText, outroText];
+    timing = ExportNarratedWAV[outWAV, introBuffer, sweepResult["leftBuf"], sweepResult["rightBuf"], outroBuffer, sr];
     Print[""];
-
-    introText   = BuildSweepIntroText[rStart, rEnd];
-    Print["  Spoken intro: ", introText];
-    introBuffer = BuildIntroBuffer[introText, sr];
-    introBuffer = If[Length[introBuffer] > 0, NormalizeBuffer[introBuffer, 0.95], introBuffer];
-    pauseBuffer = If[Length[introBuffer] > 0, ConstantArray[0.0, Round[sr * 0.4]], {}];
-
-    finalLeft  = Join[introBuffer, pauseBuffer, sweepResult["leftBuf"]];
-    finalRight = Join[introBuffer, pauseBuffer, sweepResult["rightBuf"]];
-    EnsureDir[outWAV];
-    Export[outWAV, Sound[SampledSoundList[NormalizeToLoudness[{finalLeft, finalRight}, -17.0, 0.97, sr], sr]], "WAV"];
-    totalDurSec = N[Length[finalLeft]] / sr;
+    totalDurSec = timing["total"];
     STEMDescribeWAV[outWAV, totalDurSec];
-    PrintSweepSummary[sweepModel, sweepResult["eventRs"]];
+    PrintTimingLine[timing];
+    PrintSweepSummary[sweepModel, sweepResult, timing["intro"]];
     Print[""];
 
     Print["[4/5] Rendering bifurcation diagram animation..."];
-    STEMSay["Rendering the bifurcation diagram"];
-    {$gifFrames, $gifFps} = AnimateSweepBifurcation[sweepModel, sweepResult["eventRs"], outGIF, totalDurSec];
+    STEMSay["Rendering the bifurcation diagram."];
+    {$gifFrames, $gifFps} = AnimateSweepBifurcation[sweepModel, sweepResult["eventRs"], outGIF,
+      <|"intro" -> timing["intro"], "stepDuration" -> $sweepNotesPerStep * noteDuration,
+        "total" -> totalDurSec|>];
     STEMDescribeGIF[outGIF, $gifFrames, $gifFps];
     SyncWAVToGIF[outGIF, outWAV];
+    PrintLoudnessLine[outWAV, -17.0];
     Print[""];
 
     Print["[5/5] Exporting data table..."];
@@ -182,9 +189,8 @@ Which[
 
     STEMHeading["Done"];
     STEMSay[
-      "Sweep complete. r ranged from " <> ToString[NumberForm[rStart,{3,2}]] <>
-      " to " <> ToString[NumberForm[rEnd,{3,2}]] <> ". " <>
-      "Total duration: " <> ToString[NumberForm[totalDurSec, {5,1}]] <> " seconds. " <>
+      "Sweep complete, with r from " <> FmtDec[rStart, 2] <> " to " <> FmtDec[rEnd, 2] <>
+      ". The total duration is " <> FmtDec[totalDurSec, 1] <> " seconds. " <>
       "Play audio: " <> STEMPlayCmd[outWAV]
     ],
 
@@ -195,45 +201,44 @@ Which[
     outGIF = FileNameJoin[{$outDir, "iterate.gif"}];
     outCSV = FileNameJoin[{$outDir, "iterate_data.csv"}];
 
-    rActual = PresetR[preset, rCfg];
+    rActual  = PresetR[preset, rCfg];
+    itX0     = PresetX0[preset, x0];
     presetDesc = PresetDescription[preset];
 
-    Print["  r: ", FmtN[rActual, 6],
-      If[preset =!= "", "  (preset: " <> preset <> ")", ""]];
-    Print["  Iterations: ", nIterations, "   x0: ", FmtN[x0, 4]];
-    Print["  Note duration: ", FmtN[noteDuration * 1000, 4], " ms"];
+    Print["  The map is iterated ", nIterations, " times at r = ", FmtDec[rActual, 4],
+          If[preset =!= "", " (preset " <> preset <> ")", ""], ", starting from x0 = ", FmtDec[itX0, 4], "."];
+    Print["  Each iteration is one note of ", FmtDec[noteDuration], " s."];
     Print[""];
 
     Print["[2/5] Iterating the map..."];
-    STEMSay["Iterating the logistic map at r equals " <> ToString[NumberForm[rActual,{5,4}]]];
-    iterateModel = IterateModelData[rActual, x0, nIterations, preset];
+    STEMSay["Iterating the logistic map at r equals " <> FmtDec[rActual, 4] <> "."];
+    iterateModel = IterateModelData[rActual, itX0, nIterations, preset];
     Print[""];
 
     Print["[3/5] Sonifying iteration..."];
-    STEMSay["Sonifying the iteration"];
+    STEMSay["Sonifying the iteration."];
     iterateResult = SonifyIterate[iterateModel, noteDuration, sr];
+
+    introText = BuildIterateIntroText[rActual, presetDesc, nIterations, itX0];
+    outroText = BuildIterateOutroText[rActual];
+    introBuffer = SpeakNarration[introText, sr];
+    outroBuffer = SpeakNarration[outroText, sr];
+    PrintNarration[introText, outroText];
+    timing = ExportNarratedWAV[outWAV, introBuffer, iterateResult["leftBuf"], iterateResult["rightBuf"], outroBuffer, sr];
     Print[""];
-
-    introText   = BuildIterateIntroText[rActual, presetDesc, nIterations, x0];
-    Print["  Spoken intro: ", introText];
-    introBuffer = BuildIntroBuffer[introText, sr];
-    introBuffer = If[Length[introBuffer] > 0, NormalizeBuffer[introBuffer, 0.95], introBuffer];
-    pauseBuffer = If[Length[introBuffer] > 0, ConstantArray[0.0, Round[sr * 0.4]], {}];
-
-    finalLeft  = Join[introBuffer, pauseBuffer, iterateResult["leftBuf"]];
-    finalRight = Join[introBuffer, pauseBuffer, iterateResult["rightBuf"]];
-    EnsureDir[outWAV];
-    Export[outWAV, Sound[SampledSoundList[NormalizeToLoudness[{finalLeft, finalRight}, -17.0, 0.97, sr], sr]], "WAV"];
-    totalDurSec = N[Length[finalLeft]] / sr;
+    totalDurSec = timing["total"];
     STEMDescribeWAV[outWAV, totalDurSec];
+    PrintTimingLine[timing];
     PrintIterateSummary[iterateModel];
     Print[""];
 
     Print["[4/5] Rendering time-series animation..."];
-    STEMSay["Rendering the time series"];
-    {$gifFrames, $gifFps} = AnimateIterateTimeSeries[iterateModel, outGIF, totalDurSec];
+    STEMSay["Rendering the time series."];
+    {$gifFrames, $gifFps} = AnimateIterateTimeSeries[iterateModel, outGIF,
+      <|"intro" -> timing["intro"], "noteDuration" -> noteDuration, "total" -> totalDurSec|>];
     STEMDescribeGIF[outGIF, $gifFrames, $gifFps];
     SyncWAVToGIF[outGIF, outWAV];
+    PrintLoudnessLine[outWAV, -17.0];
     Print[""];
 
     Print["[5/5] Exporting data table..."];
@@ -242,9 +247,9 @@ Which[
 
     STEMHeading["Done"];
     STEMSay[
-      "Iteration complete. r equals " <> ToString[NumberForm[rActual,{5,4}]] <>
-      If[presetDesc =!= "", ". " <> presetDesc <> ".", "."] <>
-      " Play audio: " <> STEMPlayCmd[outWAV]
+      "Iteration complete at r equals " <> FmtDec[rActual, 4] <> ". " <>
+      If[presetDesc =!= "", presetDesc <> " ", ""] <>
+      "Play audio: " <> STEMPlayCmd[outWAV]
     ],
 
   (* ===== Lyapunov mode ===== *)
@@ -271,67 +276,62 @@ Which[
         lyName  = preset,
       preset =!= "",
         Print["  Preset \"", preset, "\" is not a lyapunov-mode preset and is ignored; ",
-              "lyapunov-mode presets: ", StringRiffle[Keys[$lyapunovPresets], ", "], "."]
+              "the lyapunov-mode presets are ", StringRiffle[Keys[$lyapunovPresets], ", "], "."]
     ];
 
     outWAV = FileNameJoin[{$outDir, lyName <> "_audio.wav"}];
     outGIF = FileNameJoin[{$outDir, lyName <> ".gif"}];
     outCSV = FileNameJoin[{$outDir, lyName <> "_data.csv"}];
 
-    Print["  r: ", FmtN[lyRMin, 4], " -> ", FmtN[lyRMax, 4], "  (", lySteps, " steps over ",
-          FmtDec[lyDur], " s", If[lyName =!= "lyapunov", ", preset: " <> lyName, ""], ")"];
-    Print["  Each step: ", lyTrans, " transient iterations discarded, then the mean of ",
-          "Log|r (1 - 2x)| over ", lyAverage, " iterations, floored at ", FmtDec[lyFloor], "."];
-    Print["  Reference tone ", FmtDec[lyRefHz], " Hz; the lambda tone moves ",
+    Print["  The Lyapunov sweep runs r from ", FmtDec[lyRMin, 4], " to ", FmtDec[lyRMax, 4], " in ",
+          lySteps, " steps over ", FmtDec[lyDur], " s",
+          If[lyName =!= "lyapunov", " (preset " <> lyName <> ")", ""], "."];
+    Print["  At each r step, ", lyTrans, " transient iterations are discarded and the Lyapunov exponent ",
+          "is the mean of Log|r (1 - 2x)| over the next ", lyAverage, " iterations, floored at ",
+          FmtDec[lyFloor], "."];
+    Print["  The reference tone for lambda = 0 is ", FmtDec[lyRefHz], " Hz, and the lambda tone moves ",
           FmtDec[lyOctaves], " octave per unit of lambda."];
     Print[""];
 
     Print["[2/5] Computing the Lyapunov exponent at each r..."];
-    STEMSay["Computing the Lyapunov exponent at each r"];
+    STEMSay["Computing the Lyapunov exponent at each r."];
     lySweep     = LyapunovSweep[lyRMin, lyRMax, lySteps, x0, lyTrans, lyAverage, lyFloor];
     lyBif       = AttractorPoints[x0, #, lyTrans, nAttractor] & /@ lySweep[[All, 1]];
     lyCrossings = LyapunovZeroCrossings[lySweep];
-    Print["  Computed lambda at ", lySteps, " r values."];
+    lyWindows   = LyapunovWindows[lyCrossings];
+    Print["  The Lyapunov exponent was computed at ", lySteps, " values of r."];
     Print[""];
 
     Print["[3/5] Sonifying the Lyapunov exponent..."];
-    STEMSay["Sonifying the Lyapunov exponent"];
+    STEMSay["Sonifying the Lyapunov exponent."];
     lyResult = SonifyLyapunov[lySweep, lyDur, lyRefHz, lyOctaves, sr];
     Print["  The lambda tone runs from ", FmtDec[lyResult["toneHzRange"][[1]], 1], " to ",
-          FmtDec[lyResult["toneHzRange"][[2]], 1], " Hz; A-weighting equal-loudness gain from ",
+          FmtDec[lyResult["toneHzRange"][[2]], 1], " Hz; its A-weighting equal-loudness gain runs from ",
           FmtDec[lyResult["gainRangeDB"][[1]], 2], " to ", FmtDec[lyResult["gainRangeDB"][[2]], 2],
           " dB relative to the reference frequency."];
-    Scan[Print["  Marker: ", #["label"], " at r = ", FmtDec[#["r"], 4], ", ",
-               FmtDec[#["freq"]], " Hz, ", FmtDec[#["time"], 2], " s into the sweep."] &,
-         lyResult["markers"]];
 
     lyFirstUp = SelectFirst[lyCrossings, #["direction"] === "upward" &, Missing[]];
     lyFirstUp = If[AssociationQ[lyFirstUp], lyFirstUp["r"], Missing[]];
-    introText = BuildLyapunovIntroText[lyRMin, lyRMax];
-    outroText = BuildLyapunovOutroText[lyRMin, lyRMax, lyFirstUp];
-    Print["  Spoken intro: ", introText];
-    Print["  Spoken outro: ", outroText];
-    introBuffer = BuildIntroBuffer[introText, sr];
-    outroBuffer = BuildIntroBuffer[outroText, sr];
-    introBuffer = If[Length[introBuffer] > 0, NormalizeBuffer[introBuffer, 0.95], introBuffer];
-    outroBuffer = If[Length[outroBuffer] > 0, NormalizeBuffer[outroBuffer, 0.95], outroBuffer];
-    pauseBuffer = ConstantArray[0.0, Round[sr * 0.4]];
-    introPart = If[Length[introBuffer] > 0, Join[introBuffer, pauseBuffer], {}];
-    outroPart = If[Length[outroBuffer] > 0, Join[pauseBuffer, outroBuffer], {}];
-    lyIntroSec = N[Length[introPart]] / sr;
+    introText = BuildLyapunovIntroText[lyRMin, lyRMax, PeriodDoublingRs[]];
+    outroText = BuildLyapunovOutroText[lyRMin, lyRMax, lyFirstUp, lyWindows];
+    introBuffer = SpeakNarration[introText, sr];
+    outroBuffer = SpeakNarration[outroText, sr];
+    PrintNarration[introText, outroText];
+    timing = ExportNarratedWAV[outWAV, introBuffer, lyResult["leftBuf"], lyResult["rightBuf"], outroBuffer, sr];
+    lyIntroSec = timing["intro"];
+    Scan[Print["  The ", #["label"], " marker (", FmtDec[#["freq"]], " Hz) sounds at r = ",
+               FmtDec[#["r"], 4], ", ", FmtDec[lyIntroSec + #["time"], 2], " s into the audio."] &,
+         lyResult["markers"]];
     Print[""];
 
-    finalLeft  = Join[introPart, lyResult["leftBuf"],  outroPart];
-    finalRight = Join[introPart, lyResult["rightBuf"], outroPart];
-    EnsureDir[outWAV];
-    Export[outWAV, Sound[SampledSoundList[NormalizeToLoudness[{finalLeft, finalRight}, -17.0, 0.97, sr], sr]], "WAV"];
-    totalDurSec = N[Length[finalLeft]] / sr;
+    totalDurSec = timing["total"];
     STEMDescribeWAV[outWAV, totalDurSec];
-    PrintLyapunovSummary[lySweep, lyCrossings, lyFloor, lyDur, lyIntroSec];
+    PrintTimingLine[timing];
+    PrintLyapunovSummary[lySweep, lyCrossings, lyWindows, lyFloor, lyDur, lyIntroSec];
     Print[""];
 
     Print["[4/5] Rendering bifurcation diagram and Lyapunov exponent animation..."];
-    STEMSay["Rendering the bifurcation diagram and the Lyapunov exponent"];
+    STEMSay["Rendering the bifurcation diagram and the Lyapunov exponent."];
     {$gifFrames, $gifFps} = AnimateLyapunov[lySweep, lyBif, lyResult["markers"], lyFloor,
       <|"intro" -> lyIntroSec, "sweep" -> lyDur, "total" -> totalDurSec|>, outGIF];
     STEMDescribeGIF[outGIF, $gifFrames, $gifFps];
@@ -340,14 +340,13 @@ Which[
     Print[""];
 
     Print["[5/5] Exporting data table..."];
-    ExportLyapunovCSV[lySweep, lyFloor, lyDur, lyIntroSec, lyRefHz, lyOctaves, outCSV];
+    ExportLyapunovCSV[lySweep, lyFloor, lyDur, lyIntroSec, lyRefHz, lyOctaves, lyCrossings, outCSV];
     Print[""];
 
     STEMHeading["Done"];
     STEMSay[
-      "Lyapunov sweep complete. r ranged from " <> ToString[NumberForm[lyRMin,{3,2}]] <>
-      " to " <> ToString[NumberForm[lyRMax,{3,2}]] <> ". " <>
-      "Total duration: " <> ToString[NumberForm[totalDurSec, {5,1}]] <> " seconds. " <>
+      "Lyapunov sweep complete, with r from " <> FmtDec[lyRMin, 2] <> " to " <> FmtDec[lyRMax, 2] <>
+      ". The total duration is " <> FmtDec[totalDurSec, 1] <> " seconds. " <>
       "Play audio: " <> STEMPlayCmd[outWAV]
     ],
 
@@ -359,20 +358,22 @@ Which[
     dvR       = dvNum @ dvCfg["r", 4.0];
     dvX0      = dvNum @ dvCfg["x0", 0.3];
     dvDelta   = dvNum @ dvCfg["delta", 10^-6];
-    dvN       =         dvCfg["iterations", 150];
+    dvN       =         dvCfg["iterations", 119];
     dvSat     = dvNum @ dvCfg["saturation", 0.1];
     dvVoice3  = TrueQ @ dvCfg["separation_voice", True];
-    dvNoteDur = dvNum @ dvCfg["note_duration", 0.08];
+    dvIPS     = dvNum @ dvCfg["iterations_per_second", 3];
+    dvNoteDur = 1.0 / dvIPS;
 
     dvName = "divergence"; dvCase = Missing[];
     Which[
       KeyExistsQ[$divergencePresets, preset],
-        dvR = N @ $divergencePresets[preset]["r"];
+        dvR    = N @ $divergencePresets[preset]["r"];
+        dvX0   = N @ Lookup[$divergencePresets[preset], "x0", dvX0];
         dvCase = $divergencePresets[preset]["case"];
         dvName = preset,
       preset =!= "",
         Print["  Preset \"", preset, "\" is not a divergence-mode preset and is ignored; ",
-              "divergence-mode presets: ", StringRiffle[Keys[$divergencePresets], ", "], "."]
+              "the divergence-mode presets are ", StringRiffle[Keys[$divergencePresets], ", "], "."]
     ];
 
     outWAV = FileNameJoin[{$outDir, dvName <> "_audio.wav"}];
@@ -380,59 +381,60 @@ Which[
     outCSV = FileNameJoin[{$outDir, dvName <> "_data.csv"}];
 
     Print["[2/5] Iterating two orbits started delta apart..."];
-    STEMSay["Iterating two nearby orbits"];
+    STEMSay["Iterating two nearby orbits."];
     dvOrbits = DivergenceOrbits[dvR, dvX0, dvDelta, dvN];
     dvFit    = DivergenceFit[dvOrbits["separation"], dvSat];
     dvLambda = LyapunovExponent[dvR, dvX0, 1000, 10000, -100.0];
     dvPred   = DivergencePredictedSaturation[dvLambda, dvDelta, dvSat];
     If[MissingQ[dvCase], dvCase = DivergenceCase[dvR, dvLambda]];
-    Print["  r: ", FmtN[dvR, 4], "  (", dvCase, If[dvName =!= "divergence", ", preset: " <> dvName, ""], ")"];
-    Print["  Orbits start at x0 = ", FmtN[dvX0, 4], " and x0 + delta, delta = ", FmtN[dvDelta, 3],
-          "; ", dvN, " iterations of ", FmtDec[dvNoteDur], " s each; saturation at ", FmtDec[dvSat], "."];
-    Print["  Predicted lambda (LyapunovExponent, 1000 transient + 10000 averaged iterations): ",
-          FmtN[dvLambda, 4], "."];
+    Print["  The two orbits run at r = ", FmtDec[dvR, 4], ", the ", dvCase, " case",
+          If[dvName =!= "divergence", " (preset " <> dvName <> ")", ""], "."];
+    Print["  The orbits start at x0 = ", FmtDec[dvX0, 4], " and x0 + delta, with delta = ", FmtN[dvDelta, 3],
+          "; ", dvN, " iterations at ", FmtDec[dvIPS], " per second (", FmtDec[dvNoteDur], " s each) give ",
+          FmtDec[(dvN + 1) * dvNoteDur, 2], " s of notes for x_0 to x_", dvN,
+          ", and the separation saturates at ", FmtDec[dvSat], "."];
+    Print["  The predicted Lyapunov exponent at r = ", FmtDec[dvR, 4], " (LyapunovExponent, 1000 transient ",
+          "and 10000 averaged iterations) is ", FmtN[dvLambda, 4], "."];
     Print[""];
 
     Print["[3/5] Sonifying the two orbits and their separation..."];
-    STEMSay["Sonifying the two orbits and their separation"];
+    STEMSay["Sonifying the two orbits and their separation."];
     dvResult = SonifyDivergence[dvOrbits, dvNoteDur, dvSat, dvVoice3, sr];
-    Print["  Voices: left orbit, right orbit", If[dvVoice3, ", separation tone in the centre", " (separation voice off)"],
+    Print["  The voices are the left orbit, the right orbit",
+          If[dvVoice3, " and the separation tone in the centre", " (the separation voice is off)"],
           If[NumericQ[dvResult["markerTime"]],
-            "; saturation marker (440 Hz) at " <> FmtDec[dvResult["markerTime"], 2] <> " s into the sonified part.", "."]];
+            "; the saturation marker (" <> FmtDec[$divergenceSaturationMarker["freq"]] <> " Hz) sounds " <>
+              FmtDec[dvResult["markerTime"], 2] <> " s into the notes.",
+            "; the separation never saturates, so no saturation marker sounds."]];
 
     (* Spoken intro and outro, padded to the longest of this run's and the
-       four presets' texts, so the presets render to the same length. *)
+       four presets' texts, so the presets render to the same length. Each
+       preset's narration uses its own x0. SpeakNarration caches sentences,
+       so a sentence shared by several texts is synthesised once. *)
     dvNarr   = DivergenceNarration[dvR, dvCase, dvX0, dvDelta, dvN, dvSat];
     dvTexts  = DeleteDuplicates @ Join[{dvNarr},
-      KeyValueMap[DivergenceNarration[#2["r"], #2["case"], dvX0, dvDelta, dvN, dvSat] &, $divergencePresets]];
-    dvSpeech = AssociationMap[
-      Function[t, With[{b = BuildIntroBuffer[t, sr]}, If[Length[b] > 0, NormalizeBuffer[b, 0.95], b]]],
-      DeleteDuplicates[Flatten[{#["intro"], #["outro"]} & /@ dvTexts]]];
-    dvIntroSlot = Max[Length[dvSpeech[#["intro"]]] & /@ dvTexts];
-    dvOutroSlot = Max[Length[dvSpeech[#["outro"]]] & /@ dvTexts];
-    Print["  Spoken intro: ", dvNarr["intro"]];
-    Print["  Spoken outro: ", dvNarr["outro"]];
+      KeyValueMap[DivergenceNarration[#2["r"], #2["case"], N @ Lookup[#2, "x0", dvNum @ dvCfg["x0", 0.3]],
+                                      dvDelta, dvN, dvSat] &, $divergencePresets]];
+    dvIntroBuf  = SpeakNarration[dvNarr["intro"], sr];
+    dvOutroBuf  = SpeakNarration[dvNarr["outro"], sr];
+    dvIntroSlot = Max[Length[SpeakNarration[#["intro"], sr]] & /@ dvTexts];
+    dvOutroSlot = Max[Length[SpeakNarration[#["outro"], sr]] & /@ dvTexts];
+    PrintNarration[dvNarr["intro"], dvNarr["outro"]];
     Print["  Speech is padded to the longest intro (", FmtDec[dvIntroSlot / N[sr], 2],
           " s) and outro (", FmtDec[dvOutroSlot / N[sr], 2], " s) of this run and the four presets."];
-    pauseBuffer = ConstantArray[0.0, Round[sr * 0.4]];
-    introPart = If[dvIntroSlot > 0,
-      Join[PadRight[dvSpeech[dvNarr["intro"]], dvIntroSlot, 0.0], pauseBuffer], {}];
-    outroPart = If[dvOutroSlot > 0,
-      Join[pauseBuffer, PadRight[dvSpeech[dvNarr["outro"]], dvOutroSlot, 0.0]], {}];
-    dvIntroSec = N[Length[introPart]] / sr;
+    timing = ExportNarratedWAV[outWAV, dvIntroBuf, dvResult["leftBuf"], dvResult["rightBuf"],
+      dvOutroBuf, sr, dvIntroSlot, dvOutroSlot];
+    dvIntroSec = timing["intro"];
     Print[""];
 
-    finalLeft  = Join[introPart, dvResult["leftBuf"],  outroPart];
-    finalRight = Join[introPart, dvResult["rightBuf"], outroPart];
-    EnsureDir[outWAV];
-    Export[outWAV, Sound[SampledSoundList[NormalizeToLoudness[{finalLeft, finalRight}, -17.0, 0.97, sr], sr]], "WAV"];
-    totalDurSec = N[Length[finalLeft]] / sr;
+    totalDurSec = timing["total"];
     STEMDescribeWAV[outWAV, totalDurSec];
+    PrintTimingLine[timing];
     PrintDivergenceSummary[dvOrbits, dvFit, dvLambda, dvPred, dvSat, dvResult["mapping"]];
     Print[""];
 
     Print["[4/5] Rendering the orbits and separation animation..."];
-    STEMSay["Rendering the two orbits and their separation"];
+    STEMSay["Rendering the two orbits and their separation."];
     {$gifFrames, $gifFps} = AnimateDivergence[dvOrbits, dvFit, dvLambda, dvSat,
       <|"intro" -> dvIntroSec, "noteDuration" -> dvNoteDur, "total" -> totalDurSec|>, outGIF];
     STEMDescribeGIF[outGIF, $gifFrames, $gifFps];
@@ -446,8 +448,8 @@ Which[
 
     STEMHeading["Done"];
     STEMSay[
-      "Divergence complete, r equals " <> ToString[NumberForm[dvR, {3,2}]] <> ", the " <> dvCase <>
-      " case. Total duration: " <> ToString[NumberForm[totalDurSec, {5,1}]] <> " seconds. " <>
+      "Divergence complete at r equals " <> FmtDec[dvR, 2] <> ", the " <> dvCase <>
+      " case. The total duration is " <> FmtDec[totalDurSec, 1] <> " seconds. " <>
       "Play audio: " <> STEMPlayCmd[outWAV]
     ],
 

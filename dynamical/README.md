@@ -93,6 +93,8 @@ wolframscript -file main.wl
 wolframscript -file main.wl -- --simulation.mode=iterate
 
 # Named presets (the recommended listening sequence — see LISTENING_GUIDE.md)
+wolframscript -file main.wl -- --simulation.mode=iterate --simulation.dynamical.preset=extinction
+wolframscript -file main.wl -- --simulation.mode=iterate --simulation.dynamical.preset=growth
 wolframscript -file main.wl -- --simulation.dynamical.preset=fixed_point
 wolframscript -file main.wl -- --simulation.dynamical.preset=period2
 wolframscript -file main.wl -- --simulation.dynamical.preset=period4
@@ -119,6 +121,14 @@ wolframscript -file main.wl -- --config-dump
 ```
 
 ## Modes
+
+Every mode's WAV is a spoken intro, the sonification, and a short spoken
+outro that marks the end. For a talk the logistic map is a
+bug-population model: the sweep and iterate intros say that the map gives
+next year's population from this year's, that x is the population as a
+fraction of the maximum, and that r is the growth rate. Every narration
+sentence starts with a capital letter and ends with a full stop (checked
+by the tests), and each distinct sentence is synthesised once per run.
 
 ### sweep (default)
 
@@ -160,8 +170,14 @@ approach to the eventual attractor — you literally hear the system
 settle from an arbitrary starting point into its long-term behaviour.
 
 **Best for:** building a clear, isolated sense of what one specific r
-value sounds like, especially via the five presets (see
-LISTENING_GUIDE.md for the full recommended sequence).
+value sounds like, especially via the seven presets (see
+LISTENING_GUIDE.md for the full recommended sequence): `extinction`
+(r = 0.8, the population dies out), `growth` (r = 2.0 from x0 = 0.1, it
+grows and settles), `fixed_point` (2.8), `period2` (3.2), `period4` (3.5),
+`period3_window` (3.830) and `chaos` (4.0). The spoken outro states the
+fixed point x* = 1 − 1/r and whether it attracts or repels, from
+|f′(x*)| = |2 − r| below or above one, computed for the r being played
+(for r < 1 it adds that zero attracts, with slope r).
 
 ```sh
 wolframscript -file main.wl -- --simulation.mode=iterate --simulation.dynamical.preset=chaos
@@ -211,10 +227,18 @@ inside the range:
 440, 528, 660 and 880 Hz form a just-intoned A minor triad with its
 octave, so the new period-4 marker belongs to the same chord.
 
-A spoken intro says what the two tones mean; a short spoken outro
-names the r where λ first rose above zero. The console prints every
-zero crossing with its r and the time it is heard, the minimum and
-maximum λ with their r, and how many steps sit at the floor.
+A spoken intro says what the two tones mean, that the λ tone comes up to
+the reference and falls away again at each period doubling inside the
+range (r = 3, 3.449 and 3.544, where λ is exactly zero), and that each
+later dip below the reference is a window of order. The spoken outro
+names the r where λ first rose above zero and the three widest windows
+in the range with their period, all computed from the run. The console
+prints the onset of chaos (the first upward crossing), then one sentence
+per window of order (a downward crossing followed by an upward one): its
+two r values, its width in r and in audio seconds, and its period when it
+opens within 0.005 of a known window (period 3 at 3.828, 5 at 3.739 and
+3.906, 6 at 3.626), otherwise that the period was not identified. Every
+crossing is in the CSV (`crossing`, `crossing_r`).
 
 The preset `lyapunov_window` (r 3.40 to 3.90, 500 steps, 40 s) matches
 `prototype_lyapunov.wl`, the listening prototype this mode was built
@@ -233,18 +257,21 @@ wolframscript -file main.wl -- --simulation.mode=lyapunov
 
 Sensitive dependence on initial conditions: two orbits at the same r
 (default 4.0), started at `x0` (0.3) and `x0 + delta` (1e-6), iterated
-`iterations` (150) times at iterate mode's tempo (`note_duration`,
-0.08 s). The first orbit plays hard left, the second hard right, each
+`iterations` (119) times at `iterations_per_second` (3), so the 120 notes
+x_0 … x_119 play for exactly 40 s. The first orbit plays hard left, the second hard right, each
 with iterate mode's note mapping (volume shared-normalised and quantised
 to 16 levels so identical notes give identical samples); a centred,
 sustained odd-harmonic tone tracks Log10 of their separation, from 220 Hz
 at delta to 880 Hz at 1, so exponential growth is a steady rise whose
-slope is the Lyapunov exponent. A 440 Hz marker sounds once when the
-separation first exceeds `saturation` (0.1). The console compares the
+slope is the Lyapunov exponent. A 1320 Hz marker (3 × 440 Hz, used by no
+other event) sounds once when the separation first exceeds `saturation`
+(0.1). The spoken intro is at most 12 s: one shared sentence and one
+sentence for the case. The console compares the
 saturation iteration with the prediction Log[saturation/delta]/λ and the
 fitted slope with λ from `LyapunovExponent`. Presets for a talk sequence,
 all rendered to the same length: `divergence_chaotic` (r 4.0),
-`divergence_edge` (3.57), `divergence_periodic` (3.2), `divergence_stable`
+`divergence_edge` (3.57), `divergence_periodic` (3.2, starting on the
+2-cycle at x0 = 0.513, where the fitted slope matches λ), `divergence_stable`
 (2.8). `separation_voice: false` gives a stereo-only rendering.
 
 ## Sonification mapping (sweep and iterate modes)
@@ -286,15 +313,15 @@ Every run prints six physical/mathematical correctness checks:
 
 | File | Description |
 |------|-------------|
-| `output/sweep_audio.wav` | Spoken intro + sweep sonification (16-bit PCM, 44100 Hz, stereo) |
+| `output/sweep_audio.wav` | Spoken intro + sweep sonification + spoken outro (16-bit PCM, 44100 Hz, stereo) |
 | `output/sweep.gif` | Progressive bifurcation diagram animation |
 | `output/sweep_data.csv` | Per-note table: r, iteration_index, x_n, pitch_hz, pan, volume, event_label |
-| `output/iterate_audio.wav` | Spoken intro + iteration sonification (16-bit PCM, 44100 Hz, stereo) |
+| `output/iterate_audio.wav` | Spoken intro + iteration sonification + spoken outro (16-bit PCM, 44100 Hz, stereo) |
 | `output/iterate.gif` | x_n vs. n time-series animation |
 | `output/iterate_data.csv` | Per-iteration table: n, x_n, pitch_hz, pan, volume |
 | `output/lyapunov_audio.wav` | Spoken intro + λ tone, reference tone and markers + spoken outro (stereo) |
 | `output/lyapunov.gif` | Bifurcation diagram over λ(r), shared r axis, moving cursor with r and λ printed |
-| `output/lyapunov_data.csv` | Per-step table: r, lambda, at_floor, sweep_time_s, audio_time_s, lambda_tone_hz |
+| `output/lyapunov_data.csv` | Per-step table: r, lambda, at_floor, sweep_time_s, audio_time_s, lambda_tone_hz, crossing, crossing_r (a zero crossing, on the row of the step before it) |
 | `output/lyapunov_window_*` | The same three files for the `lyapunov_window` preset |
 | `output/divergence_audio.wav` | Spoken intro + two orbits (L/R) and separation tone (centre) + spoken outro |
 | `output/divergence.gif` | Two orbits above log10 separation with fit, λ prediction and saturation line; cursor |
@@ -310,11 +337,11 @@ Every run prints six physical/mathematical correctness checks:
 | `simulation.dynamical.r_end` | `4.0` | Sweep end r (sweep mode) |
 | `simulation.dynamical.r_steps` | `500` | Number of r values sampled (sweep mode) |
 | `simulation.dynamical.r` | `3.8` | Fixed r value (iterate mode, used when `preset` is empty) |
-| `simulation.dynamical.preset` | `""` | Named preset: `fixed_point`, `period2`, `period4`, `period3_window`, `chaos` (iterate mode); `lyapunov_window` (lyapunov mode); `divergence_chaotic`, `divergence_edge`, `divergence_periodic`, `divergence_stable` (divergence mode) |
+| `simulation.dynamical.preset` | `""` | Named preset: `extinction`, `growth`, `fixed_point`, `period2`, `period4`, `period3_window`, `chaos` (iterate mode); `lyapunov_window` (lyapunov mode); `divergence_chaotic`, `divergence_edge`, `divergence_periodic`, `divergence_stable` (divergence mode) |
 | `simulation.dynamical.n_transient` | `200` | Transient iterations discarded before recording the attractor (sweep mode) |
 | `simulation.dynamical.n_attractor` | `100` | Attractor iterations recorded per r-step (sweep mode) |
 | `simulation.dynamical.n_iterations` | `300` | Total iterations (iterate mode) |
-| `simulation.dynamical.note_duration` | `0.08` | Seconds per note, both modes |
+| `simulation.dynamical.note_duration` | `0.08` | Seconds per note, sweep and iterate modes |
 | `simulation.dynamical.x0` | `0.5` | Initial population fraction |
 | `simulation.dynamical.lyapunov.r_min` | `2.5` | Sweep start r (lyapunov mode) |
 | `simulation.dynamical.lyapunov.r_max` | `4.0` | Sweep end r |
@@ -328,10 +355,10 @@ Every run prints six physical/mathematical correctness checks:
 | `simulation.dynamical.divergence.r` | `4.0` | r for both orbits (divergence mode) |
 | `simulation.dynamical.divergence.x0` | `0.3` | Start of the first orbit |
 | `simulation.dynamical.divergence.delta` | `1.0e-6` | Offset of the second orbit's start |
-| `simulation.dynamical.divergence.iterations` | `150` | Iterations of each orbit |
+| `simulation.dynamical.divergence.iterations` | `119` | Iterations of each orbit |
+| `simulation.dynamical.divergence.iterations_per_second` | `3` | Tempo: notes per second (each note lasts 1 / this) |
 | `simulation.dynamical.divergence.saturation` | `0.1` | Separation that counts as saturated (fit range end, marker) |
 | `simulation.dynamical.divergence.separation_voice` | `true` | Centre separation tone on/off |
-| `simulation.dynamical.divergence.note_duration` | `0.08` | Seconds per iteration, as iterate mode |
 
 ## Performance notes
 
@@ -342,8 +369,9 @@ are discarded; 8 is enough to make any periodicity up to period-8
 clearly audible as a repeating cycle, while keeping the default
 500-step sweep to a manageable ~5.3 minutes rather than the ~66 minutes
 a literal one-note-per-attractor-point mapping would produce). Iterate
-mode audio duration is simply `n_iterations * note_duration` (~24s at
-the defaults). Lyapunov mode's sweep lasts exactly `duration_seconds`;
+mode's notes last `(n_iterations + 1) * note_duration` (24.08 s at the
+defaults), plus the spoken intro and outro. Divergence mode's notes last
+`(iterations + 1) / iterations_per_second` (40 s at the defaults). Lyapunov mode's sweep lasts exactly `duration_seconds`;
 at the defaults the WAV is about 154 s with the intro and outro, and a
 run takes under a minute.
 
@@ -352,7 +380,7 @@ run takes under a minute.
 ```
 dynamical/
   main.wl              — Entry point (thin orchestrator)
-  experiments.wl        — 9 curated preset invocations
+  experiments.wl        — 11 curated preset invocations
   prototype_lyapunov.wl — Listening prototype for lyapunov mode (variants A/B/C; B was chosen), kept as a record
   config.json           — App defaults
   LISTENING_GUIDE.md     — Recommended listening sequence and pitch/event reference
@@ -364,9 +392,9 @@ dynamical/
     sonify.wl            — Discrete event-driven note synthesis (SynthesizeDiscreteNotes,
                           OverlayEvent), SonifySweep, SonifyIterate, SonifyLyapunov
                           (continuous λ and reference tones, A-weighting compensation)
-    speech.wl             — Spoken intro synthesis (SpeechSynthesize -> platform TTS ->
-                          text-only fallback), BuildSweepIntroText, BuildIterateIntroText,
-                          BuildLyapunovIntroText, BuildLyapunovOutroText
+    speech.wl             — Spoken intro/outro synthesis (SpeechSynthesize -> platform TTS ->
+                          text-only fallback), per-sentence cache (SpeakNarration),
+                          narration text for all four modes, NarrationConventionIssues
     animate.wl             — AnimateSweepBifurcation, AnimateIterateTimeSeries, AnimateLyapunov
     output.wl              — ExportSweepCSV, ExportIterateCSV, ExportLyapunovCSV,
                           correctness-check printing, PrintLyapunovSummary, PrintLoudnessLine
@@ -383,7 +411,9 @@ dynamical/
 Step numbers `[1/5]` through `[5/5]` mark each pipeline stage. Export
 confirmations use `STEMDescribeWAV`, `STEMDescribeGIF`, and
 `STEMDescribeCSV`. Set `STEM_SPEAK=1` for spoken stage announcements in
-addition to the intro and event narration:
+addition to the intro and outro narration. Every console sentence stands
+on its own (it names the r or mode it is about), so a screen reader can
+jump between lines:
 
 ```sh
 STEM_SPEAK=1 wolframscript -file main.wl

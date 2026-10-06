@@ -31,10 +31,10 @@
         "r": 4.0,
         "x0": 0.3,
         "delta": 1.0e-6,
-        "iterations": 150,
+        "iterations": 119,
+        "iterations_per_second": 3,
         "saturation": 0.1,
-        "separation_voice": true,
-        "note_duration": 0.08
+        "separation_voice": true
       }
     }
   }

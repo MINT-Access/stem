@@ -7,6 +7,7 @@ $stemCoreRoot = FileNameJoin[{$projectRoot, "..", "stem-core"}];
 Get[FileNameJoin[{$stemCoreRoot, "init.wl"}]];
 Get[FileNameJoin[{$projectRoot, "src", "model.wl"}]];
 Get[FileNameJoin[{$projectRoot, "src", "sonify.wl"}]];
+Get[FileNameJoin[{$projectRoot, "src", "speech.wl"}]];
 
 passed = 0; failed = 0;
 AssertTrue[label_String, condition_] :=
@@ -98,6 +99,32 @@ AssertTrue["preset description is non-empty for known preset",
   StringLength[PresetDescription["chaos"]] > 0];
 AssertTrue["preset description is empty for unknown preset",
   PresetDescription["nonexistent"] === ""];
+AssertTrue["extinction preset resolves to r=0.8", PresetR["extinction", 999] === 0.8];
+AssertTrue["growth preset resolves to r=2.0, starting from x0=0.1",
+  PresetR["growth", 999] === 2.0 && PresetX0["growth", 0.5] === 0.1];
+AssertTrue["presets without their own x0 use the configured x0", PresetX0["period2", 0.37] === 0.37];
+AssertTrue["extinction: the population dies out (x_300 < 1e-20)",
+  Last[IterateTrajectory[0.5, 0.8, 300]] < 10^-20];
+AssertTrue["growth: the population settles at 1 - 1/r = 0.5 (last 40 within 1e-9)",
+  Max[Abs[IterateTrajectory[0.1, 2.0, 300][[-40 ;;]] - 0.5]] < 10^-9];
+Print[""];
+
+(* ── Fixed-point stability, |f'(x_star)| = |2 - r| ──────────────────── *)
+Print["-- FixedPointStability --"];
+Module[{fp},
+  fp = FixedPointStability[2.8];
+  AssertTrue["r = 2.8: x* = 0.642857, |2 - r| = 0.8, attracts",
+    Abs[fp["xStar"] - 0.642857] < 10^-6 && Abs[fp["slope"] - 0.8] < 10^-12 && fp["verdict"] === "attracts"];
+  AssertTrue["|2 - r| equals |f'(x*)| = |r (1 - 2 x*)| at r = 3.83",
+    With[{f = FixedPointStability[3.83]}, Abs[f["slope"] - Abs[3.83 (1 - 2 f["xStar"])]] < 10^-12]];
+  AssertTrue["r = 3.2 and r = 4: the fixed point repels",
+    FixedPointStability[3.2]["verdict"] === "repels" && FixedPointStability[4.0]["verdict"] === "repels"];
+  AssertTrue["r = 2: slope 0, attracts (superstable)",
+    FixedPointStability[2.0]["slope"] == 0 && FixedPointStability[2.0]["verdict"] === "attracts"];
+  fp = FixedPointStability[0.8];
+  AssertTrue["r = 0.8: x* = -0.25 repels (|2 - r| = 1.2), zero attracts (|f'(0)| = 0.8)",
+    Abs[fp["xStar"] + 0.25] < 10^-12 && fp["verdict"] === "repels" && fp["zeroVerdict"] === "attracts"];
+];
 Print[""];
 
 (* ── SweepModel / IterateModelData shape ─────────────────────────── *)
@@ -156,6 +183,18 @@ Module[{cr = LyapunovZeroCrossings[{{1.0, -1.0}, {2.0, 1.0}, {3.0, 3.0}, {4.0, -
   AssertTrue["crossings are placed by linear interpolation (r = 1.5 and 3.75)",
     Abs[cr[[1, "r"]] - 1.5] < 10^-12 && Abs[cr[[2, "r"]] - 3.75] < 10^-12];
 ];
+Module[{cr, w},
+  cr = {<|"r" -> 3.57, "direction" -> "upward"|>, <|"r" -> 3.628, "direction" -> "downward"|>,
+        <|"r" -> 3.634, "direction" -> "upward"|>, <|"r" -> 3.70, "direction" -> "downward"|>,
+        <|"r" -> 3.701, "direction" -> "upward"|>, <|"r" -> 3.83, "direction" -> "downward"|>};
+  w = LyapunovWindows[cr];
+  AssertTrue["LyapunovWindows pairs each downward crossing with the next upward one (2 windows)",
+    Length[w] === 2 && Abs[w[[1, "width"]] - 0.006] < 10^-12];
+  AssertTrue["a window within 0.005 of a known start gets its period (3.628 -> 6)", w[[1, "period"]] === 6];
+  AssertTrue["a window far from every known start has no period (3.70)", MissingQ[w[[2, "period"]]]];
+];
+AssertTrue["PeriodDoublingRs gives 3, 3.449 and 3.544",
+  Max[Abs[PeriodDoublingRs[] - {3.0, 3.44949, 3.54409}]] < 10^-4];
 AssertTrue["lyapunov_window preset: r 3.40 to 3.90, 500 steps, 40 s",
   Lookup[$lyapunovPresets["lyapunov_window"], {"r_min", "r_max", "steps", "duration_seconds"}] ===
     {3.40, 3.90, 500, 40.0}];
@@ -230,8 +269,20 @@ AssertTrue["DivergenceCheck[] (check 6) passes", DivergenceCheck[]["pass"]];
 AssertTrue["the classifier agrees with the four presets' cases",
   AllTrue[Values[$divergencePresets],
     DivergenceCase[#["r"], LyapunovExponent[#["r"], 0.3, 1000, 10000, -100.0]] === #["case"] &]];
-AssertTrue["presets set only r and the case, so all four render to the same length",
-  AllTrue[Values[$divergencePresets], Sort[Keys[#]] === {"case", "r"} &]];
+AssertTrue["presets set only r, the case and optionally x0, so all four play the same number of notes",
+  AllTrue[Values[$divergencePresets], SubsetQ[{"case", "r", "x0"}, Keys[#]] &]];
+AssertTrue["divergence_periodic starts on the 2-cycle: x0 = 0.513 within 1e-4 of ((r+1) - Sqrt[(r+1)(r-3)])/2r",
+  Abs[$divergencePresets["divergence_periodic"]["x0"] - (4.2 - Sqrt[4.2 * 0.2]) / 6.4] < 10^-4];
+Module[{orb = DivergenceOrbits[3.2, 0.513, 10^-6, 120], fit, lam},
+  fit = DivergenceFit[orb["separation"], 0.1];
+  lam = LyapunovExponent[3.2, 0.513, 1000, 10000, -100.0];
+  AssertTrue["from the 2-cycle the fitted slope matches lambda within 1 percent (was 0.44 of it from 0.3)",
+    Abs[fit["slope"] / lam - 1] < 0.01];
+];
+AssertTrue["the saturation marker (1320 Hz) is not used by any other marker",
+  !MemberQ[Join[LyapunovMarkers[][[All, "freq"]], {660.0, 440.0, 528.0}], $divergenceSaturationMarker["freq"]]];
+AssertTrue["the saturation marker is in the family: 1320 / 440 = 3",
+  $divergenceSaturationMarker["freq"] / 440.0 == 3];
 AssertTrue["separation pitch: delta -> 220 Hz, 1 -> 880 Hz, 0 -> 55 Hz (floor 1e-12)",
   Max[Abs[DivergenceSeparationHz[{10^-6, 1.0, 0.0}, 10^-6] - {220., 880., 55.}]] < 10^-9];
 Module[{m},
@@ -250,6 +301,42 @@ Module[{orb = DivergenceOrbits[4.0, 0.3, 10^-6, 40], res},
   res = SonifyDivergence[orb, 0.05, 0.1, False, 8000];
   AssertTrue["saturation marker at nSat * note_duration (18 * 0.05 s)", Abs[res["markerTime"] - 0.9] < 10^-12];
   AssertTrue["buffers last (n + 1) * note_duration", Length[res["leftBuf"]] === Round[41 * 0.05 * 8000] + 1];
+];
+Print[""];
+
+(* ── Narration conventions (text only, no speech synthesis) ─────────── *)
+Print["-- Narration --"];
+AssertTrue["NarrationSentences splits at sentence ends, not inside 3.449",
+  NarrationSentences["At r equals 3.449 it doubles. Then 3.544."] === {"At r equals 3.449 it doubles.", "Then 3.544."}];
+AssertTrue["NarrationConventionIssues flags a lower-case start and a missing full stop",
+  NarrationConventionIssues["Fine. a fragment. Also fine. No stop"] === {"a fragment.", "No stop"}];
+Module[{texts, divTexts, windows},
+  windows = {<|"rStart" -> 3.628, "rEnd" -> 3.634, "width" -> 0.006, "period" -> 6|>,
+             <|"rStart" -> 3.7, "rEnd" -> 3.701, "width" -> 0.001, "period" -> Missing[]|>};
+  divTexts = Flatten @ KeyValueMap[
+    With[{d = DivergenceNarration[#2["r"], #2["case"], Lookup[#2, "x0", 0.3], 10^-6, 120, 0.1]},
+      {d["intro"], d["outro"]}] &, $divergencePresets];
+  texts = Join[
+    {BuildSweepIntroText[2.5, 4.0], BuildSweepOutroText[2.5, 4.0]},
+    Flatten[{BuildIterateIntroText[PresetR[#, 3.8], PresetDescription[#], 300, PresetX0[#, 0.5]],
+             BuildIterateOutroText[PresetR[#, 3.8]]} & /@ Prepend[Keys[$dynamicalPresets], ""]],
+    {BuildLyapunovIntroText[2.5, 4.0, PeriodDoublingRs[]], BuildLyapunovIntroText[3.4, 3.9, PeriodDoublingRs[]],
+     BuildLyapunovOutroText[2.5, 4.0, 3.57, windows], BuildLyapunovOutroText[2.5, 4.0, Missing[], {}]},
+    divTexts];
+  AssertTrue["every narration sentence of every mode and preset starts with a capital and ends with a full stop (" <>
+      ToString[Length[texts]] <> " texts)",
+    AllTrue[texts, NarrationConventionIssues[#] === {} &]];
+  AssertTrue["sweep, iterate, lyapunov and divergence outros are spoken end markers (start with or contain \"End of the\")",
+    AllTrue[{BuildSweepOutroText[2.5, 4.0], BuildIterateOutroText[2.8], BuildLyapunovOutroText[2.5, 4.0, 3.57, windows]},
+      StringContainsQ[#, "End of the"] &] && AllTrue[divTexts[[2 ;; ;; 2]], StringStartsQ[#, "End of the"] &]];
+  AssertTrue["the iterate outro states the fixed point and the attract/repel verdict, computed (r = 2.8 and 3.2)",
+    StringContainsQ[BuildIterateOutroText[2.8], "0.643" ~~ __ ~~ "0.80, below one" ~~ __ ~~ "attracts"] &&
+    StringContainsQ[BuildIterateOutroText[3.2], "0.688" ~~ __ ~~ "1.20, above one" ~~ __ ~~ "repels"]];
+  AssertTrue["the lyapunov intro names only the doublings inside the range (3.40 to 3.90: 3.449 and 3.544)",
+    StringContainsQ[BuildLyapunovIntroText[3.4, 3.9, PeriodDoublingRs[]], "at r equals 3.449 and 3.544,"]];
+  AssertTrue["the lyapunov outro names windows with their period, or says it was not identified",
+    StringContainsQ[BuildLyapunovOutroText[2.5, 4.0, 3.57, windows], "3.628 to 3.634, period 6"] &&
+    StringContainsQ[BuildLyapunovOutroText[2.5, 4.0, 3.57, windows], "period not identified"]];
 ];
 Print[""];
 

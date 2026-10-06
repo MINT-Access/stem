@@ -156,12 +156,19 @@ steady reference tone at λ = 0: above it the orbit is chaotic, below it
 periodic, and beating between the two marks a zero crossing.
 `divergence` mode plays two orbits started 1e-6 apart in the left and
 right ears plus a centred tone tracking Log10 of their separation, whose
-rate of rise is the Lyapunov exponent.
+rate of rise is the Lyapunov exponent. Every mode has a spoken intro and a
+spoken outro (the end marker); sweep and iterate narration frames the map
+as a population model (x = fraction of the maximum population, r = growth
+rate, next year's population from this year's), and iterate outros state
+the fixed point and whether it attracts or repels (|2 − r| below or above
+one).
 
 **Run:**
 ```sh
 wolframscript -file dynamical/main.wl                                       # sweep mode, r 2.5→4.0
 wolframscript -file dynamical/main.wl -- --simulation.mode=iterate          # iterate at r=3.8
+wolframscript -file dynamical/main.wl -- --simulation.mode=iterate --simulation.dynamical.preset=extinction
+wolframscript -file dynamical/main.wl -- --simulation.mode=iterate --simulation.dynamical.preset=growth
 wolframscript -file dynamical/main.wl -- --simulation.dynamical.preset=fixed_point
 wolframscript -file dynamical/main.wl -- --simulation.dynamical.preset=period2
 wolframscript -file dynamical/main.wl -- --simulation.dynamical.preset=period4
@@ -175,7 +182,8 @@ wolframscript -file dynamical/main.wl -- --simulation.mode=divergence        # t
 wolframscript -file dynamical/main.wl -- --simulation.mode=divergence --simulation.dynamical.preset=divergence_edge
 ```
 
-Named presets (`iterate` mode): `fixed_point` (r=2.8), `period2` (r=3.2),
+Named presets (`iterate` mode): `extinction` (r=0.8), `growth` (r=2.0,
+x0=0.1), `fixed_point` (r=2.8), `period2` (r=3.2),
 `period4` (r=3.5), `period3_window` (r=3.830), `chaos` (r=4.0). The
 `period3_window` preset uses r=3.830 rather than the textbook-cited 3.8284 —
 that value is the window's exact tangent-bifurcation opening edge, where
@@ -185,7 +193,7 @@ within the default `n_iterations`. Named preset (`lyapunov` mode):
 listening prototype `dynamical/prototype_lyapunov.wl`). Named presets
 (`divergence` mode, same length, for playing in sequence):
 `divergence_chaotic` (r=4.0), `divergence_edge` (3.57),
-`divergence_periodic` (3.2), `divergence_stable` (2.8).
+`divergence_periodic` (3.2, x0=0.513 on the 2-cycle), `divergence_stable` (2.8).
 
 **Key config keys (`dynamical/config.json`):**
 
@@ -200,7 +208,7 @@ listening prototype `dynamical/prototype_lyapunov.wl`). Named presets
 | `simulation.dynamical.n_transient` | `200` | Transient iterations discarded before recording the attractor (sweep mode) |
 | `simulation.dynamical.n_attractor` | `100` | Attractor iterations recorded per r-step (sweep mode) |
 | `simulation.dynamical.n_iterations` | `300` | Total iterations (iterate mode) |
-| `simulation.dynamical.note_duration` | `0.08` | Seconds per note, both modes |
+| `simulation.dynamical.note_duration` | `0.08` | Seconds per note, sweep and iterate modes |
 | `simulation.dynamical.x0` | `0.5` | Initial population fraction |
 | `simulation.dynamical.lyapunov.r_min` / `.r_max` | `2.5` / `4.0` | Sweep range (lyapunov mode) |
 | `simulation.dynamical.lyapunov.steps` | `750` | Number of r values |
@@ -211,24 +219,24 @@ listening prototype `dynamical/prototype_lyapunov.wl`). Named presets
 | `simulation.dynamical.lyapunov.transient` | `1000` | Iterations discarded per r |
 | `simulation.dynamical.lyapunov.average_iterations` | `10000` | Iterations averaged per r |
 | `simulation.dynamical.divergence.r` / `.x0` / `.delta` | `4.0` / `0.3` / `1.0e-6` | The two orbits start at x0 and x0 + delta (divergence mode) |
-| `simulation.dynamical.divergence.iterations` | `150` | Iterations per orbit |
+| `simulation.dynamical.divergence.iterations` | `119` | Iterations per orbit |
+| `simulation.dynamical.divergence.iterations_per_second` | `3` | Tempo; 120 notes (x_0 … x_119) play for 40 s |
 | `simulation.dynamical.divergence.saturation` | `0.1` | Separation that counts as saturated |
 | `simulation.dynamical.divergence.separation_voice` | `true` | Centre separation tone on/off |
-| `simulation.dynamical.divergence.note_duration` | `0.08` | Seconds per iteration |
 
 **Output files:**
 
 | File | Description |
 |------|-------------|
-| `output/sweep_audio.wav` | Spoken intro + sweep sonification (stereo) |
+| `output/sweep_audio.wav` | Spoken intro + sweep sonification + spoken outro (stereo) |
 | `output/sweep.gif` | Progressive bifurcation diagram animation with r cursor |
 | `output/sweep_data.csv` | r, iteration_index, x_n, pitch_hz, pan, volume, event_label |
-| `output/iterate_audio.wav` | Spoken intro + iteration sonification (stereo) |
+| `output/iterate_audio.wav` | Spoken intro + iteration sonification + spoken outro with the fixed point's stability (stereo) |
 | `output/iterate.gif` | x_n vs. n time-series animation |
 | `output/iterate_data.csv` | n, x_n, pitch_hz, pan, volume |
 | `output/lyapunov_audio.wav` | Spoken intro + λ tone, reference tone, markers + spoken outro (stereo) |
 | `output/lyapunov.gif` | Bifurcation diagram above λ(r), shared r axis, moving cursor with r and λ |
-| `output/lyapunov_data.csv` | r, lambda, at_floor, sweep_time_s, audio_time_s, lambda_tone_hz |
+| `output/lyapunov_data.csv` | r, lambda, at_floor, sweep_time_s, audio_time_s, lambda_tone_hz, crossing, crossing_r |
 | `output/divergence_audio.wav` | Spoken intro + orbit x (left), orbit y (right), separation tone (centre) + spoken outro |
 | `output/divergence.gif` | Two orbits above log10 separation, fit and λ prediction, cursor |
 | `output/divergence_data.csv` | n, x_n, y_n, separation, log10_separation, in_fit, note_start_s, pitches, volumes |

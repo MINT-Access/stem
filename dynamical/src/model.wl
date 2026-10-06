@@ -55,17 +55,27 @@ SafeX0[x0_?NumericQ] := If[Abs[x0 - 0.5] < 10^-6, x0 + 10^-6, x0];
 (* ── Named presets (iterate mode) ────────────────────────────────── *)
 
 $dynamicalPresets = <|
+  "extinction" -> <|
+    "r" -> 0.8,
+    "desc" -> "The population dies out."
+  |>,
+  (* growth starts from x0 = 0.1: its fixed point 1 - 1/r is exactly 0.5,
+     the default x0, so from 0.5 there would be nothing to hear settling. *)
+  "growth" -> <|
+    "r" -> 2.0, "x0" -> 0.1,
+    "desc" -> "The population grows, then settles at a stable level."
+  |>,
   "fixed_point" -> <|
     "r" -> 2.8,
-    "desc" -> "a stable fixed point; the population settles to one value"
+    "desc" -> "The population settles to one value."
   |>,
   "period2" -> <|
     "r" -> 3.2,
-    "desc" -> "a period-2 cycle; the population alternates between two values"
+    "desc" -> "The population alternates between two values."
   |>,
   "period4" -> <|
     "r" -> 3.5,
-    "desc" -> "a period-4 cycle; two period-doublings have occurred"
+    "desc" -> "The population cycles through four values."
   |>,
   (* r = 3.8284 is the textbook-cited value for the period-3 window, but
      it is the window's exact tangent-bifurcation opening edge, where
@@ -77,11 +87,11 @@ $dynamicalPresets = <|
      clean three-note cycle within the default n_iterations budget. *)
   "period3_window" -> <|
     "r" -> 3.830,
-    "desc" -> "the period-3 window; a surprising island of order inside the chaotic region"
+    "desc" -> "Three values repeat, an island of order in the chaos."
   |>,
   "chaos" -> <|
     "r" -> 4.0,
-    "desc" -> "full chaos; the sequence never repeats"
+    "desc" -> "This is full chaos: the population never repeats."
   |>
 |>;
 
@@ -95,10 +105,32 @@ PresetR[preset_String, rDefault_?NumericQ] :=
     rDefault
   ];
 
+(* PresetX0 — the preset's own x0 if it has one, else x0Default. *)
+PresetX0[preset_String, x0Default_?NumericQ] :=
+  If[KeyExistsQ[$dynamicalPresets, preset],
+    Lookup[$dynamicalPresets[preset], "x0", x0Default],
+    x0Default
+  ];
+
 PresetDescription[preset_String] :=
   If[KeyExistsQ[$dynamicalPresets, preset],
     $dynamicalPresets[preset]["desc"],
     ""
+  ];
+
+(* FixedPointStability
+   The nonzero fixed point x_star = 1 - 1/r and the stability criterion
+   |f'(x_star)| = |r (1 - 2 x_star)| = |2 - r|: below 1 it attracts, above 1 it
+   repels. For r < 1, x_star is negative, not a population; the fixed point
+   that then attracts is x = 0, where |f'(0)| = r. Returns
+   <|"xStar", "slope" (|2 - r|), "verdict" ("attracts", "repels" or
+   "neutral"), "zeroSlope" (r), "zeroVerdict"|>. *)
+FixedPointStability[r_?NumericQ] :=
+  Module[{verdict},
+    verdict[s_] := Which[s < 1, "attracts", s > 1, "repels", True, "neutral"];
+    <|"xStar" -> 1.0 - 1.0 / r, "slope" -> Abs[2.0 - r],
+      "verdict" -> verdict[Abs[2.0 - r]],
+      "zeroSlope" -> Abs[N[r]], "zeroVerdict" -> verdict[Abs[N[r]]]|>
   ];
 
 
@@ -255,6 +287,29 @@ LyapunovZeroCrossings[sweep_List] :=
         "index" -> #|> &,
       idx]
   ];
+
+(* ── Periodic windows (lyapunov mode) ────────────────────────────────
+   A window of order is a downward zero crossing of lambda followed
+   directly by an upward one. $lyapunovKnownWindows lists where the
+   widest windows in 3.5 < r < 4 open, {r, period}; a window whose
+   downward crossing lies within `tolerance` (0.005) of one of them gets
+   that period, any other window gets Missing[]. *)
+$lyapunovKnownWindows = {{3.626, 6}, {3.739, 5}, {3.828, 3}, {3.906, 5}};
+
+LyapunovWindows[crossings_List, Optional[tolerance_?NumericQ, 0.005]] :=
+  Module[{pairs, period},
+    pairs = Select[Partition[crossings, 2, 1],
+      #[[1, "direction"]] === "downward" && #[[2, "direction"]] === "upward" &];
+    period[r_] := SelectFirst[$lyapunovKnownWindows, Abs[#[[1]] - r] <= tolerance &,
+                              {None, Missing["NotIdentified"]}][[2]];
+    Map[<|"rStart" -> #[[1, "r"]], "rEnd" -> #[[2, "r"]], "width" -> #[[2, "r"]] - #[[1, "r"]],
+          "period" -> period[#[[1, "r"]]]|> &, pairs]
+  ];
+
+(* PeriodDoublingRs — r1, r2, r3 (period 2, 4 and 8 born), from the same
+   BifurcationPoint root-finder as check 1. *)
+PeriodDoublingRs[] :=
+  {BifurcationPoint[1, 2.9][[2]], BifurcationPoint[2, 3.449][[2]], BifurcationPoint[4, 3.544][[2]]};
 
 (* Period2LyapunovExact
    Closed-form lambda of the period-2 cycle: the two cycle points are
@@ -429,14 +484,20 @@ DivergenceCheck[Optional[x0_?NumericQ, 0.3], Optional[delta_?NumericQ, 10^-6],
   ];
 
 (* ── Named presets (divergence mode) ────────────────────────────────
-   The four cases of a talk sequence. Each sets only r (and the case, so
-   the narration does not depend on the classifier); x0, delta,
-   iterations, saturation and tempo come from simulation.dynamical.
-   divergence, so all four render to the same length. *)
+   The four cases of a talk sequence. Each sets r and the case (so the
+   narration does not depend on the classifier), and optionally x0;
+   delta, iterations, saturation and tempo come from simulation.
+   dynamical.divergence, so all four play the same number of notes and
+   main.wl pads their speech to the same length.
+   divergence_periodic starts at x0 = 0.513, on the 2-cycle at r = 3.2
+   (its points are ((r+1) -+ Sqrt[(r+1)(r-3)]) / 2r = 0.51304 and
+   0.79946). From the default x0 = 0.3 the orbit first lingers near the
+   unstable fixed point (|f'| = 1.2) and the fitted slope is -0.40
+   against lambda = -0.92; from the cycle it is -0.9164 (measured). *)
 $divergencePresets = <|
   "divergence_chaotic"  -> <|"r" -> 4.0,  "case" -> "chaotic"|>,
   "divergence_edge"     -> <|"r" -> 3.57, "case" -> "edge"|>,
-  "divergence_periodic" -> <|"r" -> 3.2,  "case" -> "periodic"|>,
+  "divergence_periodic" -> <|"r" -> 3.2,  "case" -> "periodic", "x0" -> 0.513|>,
   "divergence_stable"   -> <|"r" -> 2.8,  "case" -> "stable"|>
 |>;
 

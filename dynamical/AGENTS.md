@@ -11,8 +11,8 @@ a rewrite.
 
 | Mode | r | Time axis | Output |
 |------|---|-----------|--------|
-| `sweep` | swept r_start -> r_end | r-step index (attractor recorded at each r) | Stereo WAV; progressive bifurcation-diagram GIF |
-| `iterate` | fixed (or named preset) | iteration index n | Stereo WAV; x_n vs n time-series GIF |
+| `sweep` | swept r_start -> r_end | r-step index (attractor recorded at each r) | Stereo WAV (intro + notes + outro); progressive bifurcation-diagram GIF |
+| `iterate` | fixed (or named preset) | iteration index n | Stereo WAV (intro + notes + outro); x_n vs n time-series GIF |
 | `lyapunov` | swept r_min -> r_max | seconds, r linear in time | Stereo WAV (λ tone vs. λ = 0 reference, markers, intro + outro); two-panel bifurcation / λ(r) GIF with cursor |
 | `divergence` | fixed (or preset) | iteration index n | Stereo WAV (orbit x0 hard left, orbit x0 + δ hard right, separation tone centre, intro + outro); two-panel orbits / log10 separation GIF with cursor |
 
@@ -228,26 +228,85 @@ experiment. Things to know before changing it:
   — at iteration 42 for r = 3.2 and 102 for r = 2.8 — so the floor is
   needed for the pitch and for the fit (`Log[0.]` is `Indeterminate`).
   `separation_voice: false` drops voice 3 for a stereo-only rendering;
-  the saturation marker (sweep mode's 440 Hz chaos-onset accent, once,
-  at the first n above saturation) stays, since it is centred and keeps
-  the channels identical where they should be.
-- **The four presets render to the same length** (60.21 s at the
-  defaults, measured): presets set only r, and main.wl builds the intro
-  and outro text of the current run *and* all four presets
-  (`DivergenceNarration`), synthesises them, and pads the spoken intro
-  and outro to the longest. This costs about ten TTS calls per run.
+  the saturation marker stays, since it is centred and keeps the
+  channels identical where they should be.
+- **Saturation marker: 1320 Hz, 0.12 s** (`$divergenceSaturationMarker`),
+  once, at the first n above saturation. It is the marker family's
+  3 × 440 Hz (the triad's fifth an octave above the 660 Hz marker) and
+  no other event in the app uses it; it sits above every orbit note (the
+  scale tops out at 1046.5 Hz) and above the separation tone's
+  fundamental (at most 880 Hz). It used to reuse the 440 Hz chaos-onset
+  accent, which made the same sound mean two different things.
+- **Tempo**: `iterations_per_second` (default 3) sets the note length,
+  1 / iterations_per_second; `iterations` defaults to 119, so the 120 notes
+  x_0 … x_119 play for exactly 120 / 3 = 40 s (the notes include x_0, so
+  n iterations give n + 1 notes). The old `note_duration` key
+  (0.08 s) is gone.
+- **The four presets render to the same length**: presets set r, the
+  case and optionally x0, and main.wl builds the intro and outro text of
+  the current run *and* all four presets (`DivergenceNarration`, each
+  with its own x0), synthesises them, and pads the spoken intro and outro
+  to the longest. Speech goes through `SpeakNarration`, which caches
+  each sentence for the run, so the shared opening sentence is
+  synthesised once, not once per preset. The intro is at most 12 s of
+  speech: one shared sentence plus one case sentence.
 - **Finite-time exponents**: check 6 allows 25 percent because one pair
   of orbits over a few dozen iterations gives a finite-time exponent.
-  The periodic preset shows how far off that can be: from x0 = 0.3 at
-  r = 3.2 the orbit first lingers near the unstable fixed point
-  (|f′| = 1.2), and the fit gives −0.40 against λ = −0.92 (ratio 0.44).
-  This is correct behaviour, and why check 6 uses r = 4 and r = 2.8.
+  From x0 = 0.3 at r = 3.2 the orbit first lingers near the unstable
+  fixed point (|f′| = 1.2), and the fit gives −0.40 against λ = −0.92
+  (ratio 0.44). This is correct behaviour, and why check 6 uses r = 4 and
+  r = 2.8. The `divergence_periodic` preset therefore starts at
+  x0 = 0.513, on the 2-cycle (0.51304), where the fit gives −0.9164
+  against −0.9163 (ratio 1.0001).
 - **Edge preset (r = 3.57)**: λ from x0 = 0.3 is +0.011, so the predicted
-  saturation is ~1070 iterations; within 150 the separation only grows
-  from 1e-6 to 3e-4.
+  saturation is ~1070 iterations; within 119 the separation only grows
+  from 1e-6 to 9.1e-6 at the last iterate (it peaks higher on the way).
 - **GIF** covers the whole WAV like lyapunov mode's (cursor at n = 0
   during the intro, at the last n during the outro) and shares its
   renderer, `RenderTwoPanelFrame`.
+
+### 9. Narration: population framing, intros, outros, sentence cache
+
+Every mode's WAV is spoken intro, 0.4 s pause, notes, 0.4 s pause,
+spoken outro (`ExportNarratedWAV` in output.wl, which also returns the
+timing that `PrintTimingLine` prints). The rules, for any new text:
+
+- **Every sentence starts with a capital letter and ends with a full
+  stop.** Never begin a sentence with "r" or a digit ("Here r is 2.8.",
+  not "r equals 2.8."). `NarrationConventionIssues` checks this; main.wl
+  prints a `[WARNING]` line for a failing sentence, and the tests run it
+  over every mode and preset's text.
+- **Every mode has an outro**, the audible end marker: "End of the
+  sweep …", "… End of the iteration.", "End of the Lyapunov sweep …",
+  "End of the chaotic case: …".
+- **The talk frames the map as a bug-population model.** Sweep and
+  iterate intros say that the map gives next year's population from this
+  year's, that x is the fraction of the maximum population and r the
+  growth rate. Both stay under 15 s of speech; the divergence intro stays
+  at or under 12 s. Measured lengths are in VERIFICATION_narration.md;
+  re-measure after a wording change (macOS `say` runs at about 2.5 words
+  per second).
+- **Iterate outros state the fixed point x* = 1 − 1/r and its stability
+  from |f′(x*)| = |2 − r|** (`FixedPointStability`, `FixedPointSentences`
+  — computed, never typed in): the number, below or above one, attracts
+  or repels. For r < 1 (the `extinction` preset) x* is negative, so the
+  outro also gives the slope r at x = 0, which is what attracts.
+- **Lyapunov intro and outro are computed from the run**: the intro names
+  the period doublings inside the range (`PeriodDoublingRs`, the same
+  root-finder as check 1); the outro names the three widest windows
+  (`LyapunovWindows`), with a period when the window opens within 0.005
+  of a known one (`$lyapunovKnownWindows`), else "period not identified".
+- **Sentence cache**: `SpeakNarration` splits text into sentences and
+  synthesises each distinct sentence once per run
+  (`$dynamicalSpeechCache`), joining them with 0.2 s of silence, about
+  the pause `say` leaves between sentences. main.wl prints how many
+  sentences were requested, synthesised and reused.
+- **Sweep and iterate GIFs follow the lyapunov timing contract**: the
+  picture waits at the start during the intro, moves with the notes and
+  rests at the end during the outro (`timing` Association with
+  "intro", "stepDuration"/"noteDuration", "total"). Before the outros
+  were added, the frames were spread evenly over the whole WAV, intro
+  included, so the diagram ran ahead of the sound.
 
 ## Project structure
 
@@ -255,12 +314,14 @@ experiment. Things to know before changing it:
 dynamical/
   main.wl              — thin orchestrator: config, correctness checks, mode dispatch
   config.json            — default simulation parameters
-  experiments.wl          — 9 curated preset invocations (RunExperiment)
+  experiments.wl          — 11 curated preset invocations (RunExperiment)
   prototype_lyapunov.wl    — listening prototype for lyapunov mode (record only; see decision 5)
   LISTENING_GUIDE.md       — user-facing recommended listening sequence
   AGENTS.md                — this file
   src/
-    model.wl              — LogisticMap, SafeX0, $dynamicalPresets, PresetR/PresetDescription,
+    model.wl              — LogisticMap, SafeX0, $dynamicalPresets, PresetR/PresetX0/PresetDescription,
+                            FixedPointStability, LyapunovWindows ($lyapunovKnownWindows),
+                            PeriodDoublingRs,
                             IterateTrajectory, AttractorPoints, BifurcationPoint,
                             FeigenbaumCheck, FixedPointCheck, Period2Check,
                             LyapunovCheck, SweepEventRValues, SweepModel, IterateModelData,
@@ -275,10 +336,12 @@ dynamical/
                             LyapunovLoudnessGain, LyapunovHarmonicClearance,
                             LyapunovTimeOfR, SonifyLyapunov,
                             DivergenceSeparationHz, DivergenceNoteMapping,
-                            DivergenceNoteBuffer, SonifyDivergence
+                            DivergenceNoteBuffer, SonifyDivergence ($divergenceSaturationMarker)
     speech.wl                — ResampleLinear, DynamicalSpeakToBufferPlatform, BuildIntroBuffer,
-                            BuildSweepIntroText, BuildIterateIntroText,
-                            BuildLyapunovIntroText, BuildLyapunovOutroText,
+                            sentence cache (NarrationSentences, SpeakSentence, SpeakNarration),
+                            NarrationConventionIssues, SpokenDec/SpokenFixed/SpokenList,
+                            BuildSweepIntroText/OutroText, BuildIterateIntroText/OutroText,
+                            FixedPointSentences, BuildLyapunovIntroText, BuildLyapunovOutroText,
                             SpokenSmall, DivergenceNarration
     animate.wl                — RenderSweepFrame/AnimateSweepBifurcation,
                             RenderIterateFrame/AnimateIterateTimeSeries,
@@ -289,11 +352,13 @@ dynamical/
                             PrintCorrectnessChecks, PrintSweepSummary, PrintIterateSummary,
                             PrintLyapunovCurveCheck, ExportLyapunovCSV, PrintLyapunovSummary,
                             PrintLoudnessLine, PrintDivergenceCheck,
-                            ExportDivergenceCSV, PrintDivergenceSummary
+                            ExportDivergenceCSV, PrintDivergenceSummary,
+                            ExportNarratedWAV, PrintTimingLine, PrintNarration
   tests/
     test_model.wl            — unit tests (fixed point, period-2, Feigenbaum, Lyapunov, presets,
                               lyapunov mode incl. the config-driven false-unison guard,
-                              divergence mode incl. left/right buffer identity)
+                              divergence mode incl. left/right buffer identity,
+                              fixed-point stability, windows, narration conventions)
   output/                     — generated files (gitignored)
 ```
 
@@ -302,6 +367,8 @@ dynamical/
 ```sh
 wolframscript -file dynamical/main.wl                                              # sweep, defaults
 wolframscript -file dynamical/main.wl -- --simulation.mode=iterate                  # iterate at r=3.8
+wolframscript -file dynamical/main.wl -- --simulation.mode=iterate --simulation.dynamical.preset=extinction
+wolframscript -file dynamical/main.wl -- --simulation.mode=iterate --simulation.dynamical.preset=growth
 wolframscript -file dynamical/main.wl -- --simulation.dynamical.preset=fixed_point
 wolframscript -file dynamical/main.wl -- --simulation.dynamical.preset=period2
 wolframscript -file dynamical/main.wl -- --simulation.dynamical.preset=period4
@@ -341,9 +408,9 @@ config.json + CLI args
         |                                    |
      SonifySweep -> {leftBuf,rightBuf,...}  SonifyIterate -> {leftBuf,rightBuf,...}
         |                                    |
-   BuildSweepIntroText/BuildIntroBuffer    BuildIterateIntroText/BuildIntroBuffer
-        |                                    |
-   Join[intro, pause, channel] per channel, single final WAV export (main.wl)
+   BuildSweepIntroText/OutroText           BuildIterateIntroText/OutroText
+        |      SpeakNarration (sentence cache)       |
+   ExportNarratedWAV: [intro, pause, notes, pause, outro] -> -17 LUFS -> WAV
         |                                    |
    AnimateSweepBifurcation -> GIF          AnimateIterateTimeSeries -> GIF
    ExportSweepCSV -> CSV                   ExportIterateCSV -> CSV
@@ -357,9 +424,10 @@ Lyapunov mode:
         |                          LyapunovZeroCrossings
    SonifyLyapunov -> {leftBuf, rightBuf, markers}
         |
-   Join[intro, pause, sweep, pause, outro] -> NormalizeToLoudness(-17 LUFS) -> WAV
+   ExportNarratedWAV: [intro, pause, sweep, pause, outro] -> -17 LUFS -> WAV
         |
-   PrintLyapunovSummary (crossings, min/max, floor count)
+   LyapunovWindows (down/up crossing pairs, period by known start)
+   PrintLyapunovSummary (onset of chaos, windows, min/max, floor count)
    AnimateLyapunov -> GIF (covers the whole WAV); SyncWAVToGIF; PrintLoudnessLine
    ExportLyapunovCSV -> CSV
 ```
@@ -372,16 +440,16 @@ Divergence mode:
    SonifyDivergence -> {leftBuf (orbit x), rightBuf (orbit y), + centre separation tone, marker}
         |
    DivergenceNarration for this run and the 4 presets -> speech padded to the longest
-   Join[intro, pause, notes, pause, outro] -> NormalizeToLoudness(-17 LUFS) -> WAV
+   ExportNarratedWAV: [intro, pause, notes, pause, outro] -> -17 LUFS -> WAV
         |
    PrintDivergenceSummary; AnimateDivergence -> GIF; SyncWAVToGIF; PrintLoudnessLine
    ExportDivergenceCSV -> CSV
 ```
 
 `SonifySweep`/`SonifyIterate` return buffers, not exported files — same
-pattern as the images/ enhancement, so main.wl can prepend the spoken
-intro before a single final export and the reported `STEMDescribeWAV`
-duration includes the intro.
+pattern as the images/ enhancement, so main.wl can add the spoken intro
+and outro before a single final export and the reported `STEMDescribeWAV`
+duration includes them.
 
 ## Model/result Association shapes
 
@@ -400,6 +468,7 @@ duration includes the intro.
 | `"rVals"`, `"iterIdx"` | The r-value and local iteration index each note came from (for CSV) |
 | `"eventRs"` | `<\|"first_bifurcation"->.., "chaos_onset"->.., "period3_window"->..\|>` |
 | `"eventStepIndices"` | Which r-step index each *in-range* event landed on (used for CSV `event_label`; an event outside `[r_start, r_end]` is simply absent from this Association — see pitfall 3 below) |
+| `"eventFreqs"`, `"eventTimes"` | Each event's accent frequency, and (in-range events only) its time in seconds from the first note; main.wl adds the intro to print when it is heard |
 
 `IterateModelData[r, x0, nIterations, preset]` returns `"r"`, `"x0"`,
 `"nIterations"`, `"preset"`, `"trajectory"` (length `nIterations + 1`,
@@ -412,6 +481,10 @@ a plain list `{{r, lambda}, ...}` (steps rows, r ascending, lambda >= floor).
 `"leftBuf"`, `"rightBuf"`, `"nSamples"` (= Round[duration * sr]),
 `"markers"` (the in-range markers, each with its `"time"` in seconds into
 the sweep), `"gainRangeDB"` and `"toneHzRange"` (for the console line).
+`LyapunovWindows[crossings]` returns `<|"rStart", "rEnd", "width",
+"period" (Integer or Missing[])|>` per downward crossing directly followed
+by an upward one. The lyapunov CSV records every crossing in its
+`crossing` / `crossing_r` columns, on the row of the step before it.
 
 ## Common pitfalls
 
@@ -471,6 +544,11 @@ before the audio was even a fraction done.
 and frame rate were literal constants disconnected from the
 sonification's true length, rather than derived from it.
 
+(Superseded by design decision 9: both functions now take a `timing`
+Association and hold the picture during the intro and outro; the frame
+count and rate still come from the same render-budget logic, now in
+stem-core `GIFFramePlan`.)
+
 **The fix.** `AnimateSweepBifurcation` and `AnimateIterateTimeSeries`
 now take a required `targetDuration_?NumericQ` argument — callers pass
 `totalDurSec` (the same WAV-length value already computed and passed
@@ -527,7 +605,9 @@ inherent centisecond duration quantization, not a code error.
 `speech.wl`'s three-tier fallback (`SpeechSynthesize[]` -> platform TTS
 -> text-only `STEMSay`) duplicates the pattern in
 `images/src/speech.wl`, which itself duplicates logic from
-`signal/src/sonify.wl`'s `SpeakToBuffer`. `SpeechSynthesize[]` was
+`signal/src/sonify.wl`'s `SpeakToBuffer`. On top of it, this app's
+`SpeakNarration` synthesises one sentence at a time and caches each
+distinct sentence for the run (design decision 9). `SpeechSynthesize[]` was
 observed to return `$Failed` in this development environment — the
 platform-native TTS tier (macOS `say`/`afconvert`) is what actually
 produces audio in practice. This is one of many independent copies of

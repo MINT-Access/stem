@@ -118,81 +118,183 @@ PrintLyapunovCurveCheck[chk_Association] :=
   ];
 
 
-(* PrintSweepSummary *)
-PrintSweepSummary[sweepModel_Association, eventRs_Association] :=
-  Module[{rValues},
-    rValues = sweepModel["rValues"];
+(* PrintSweepSummary
+   One self-contained sentence per line: the range, then each marker
+   with its r and the time it is heard. introSec is the time before the
+   first note in the WAV. *)
+PrintSweepSummary[sweepModel_Association, sweepResult_Association, introSec_?NumericQ] :=
+  Module[{rValues = sweepModel["rValues"], what},
+    what = <|"first_bifurcation" -> "the first period-doubling bifurcation, where one note becomes two",
+             "chaos_onset" -> "the onset of chaos, beyond which long-term prediction is impossible",
+             "period3_window" -> "the period-3 window, a brief return to order inside the chaos"|>;
     STEMSection["Sweep Summary"];
-    STEMPrintN["r range", First[rValues], "", 4];
-    Print["  r_end: ", FmtN[Last[rValues], 4]];
-    STEMPrintN["r steps", Length[rValues]];
-    Print["  First bifurcation r:  ", FmtN[eventRs["first_bifurcation"], 5]];
-    Print["  Chaos onset r:        ", FmtN[eventRs["chaos_onset"], 5]];
-    Print["  Period-3 window r:    ", FmtN[eventRs["period3_window"], 5]];
+    Print["  The sweep covered r from ", FmtDec[First[rValues], 4], " to ", FmtDec[Last[rValues], 4],
+          " in ", Length[rValues], " steps."];
+    If[sweepResult["eventTimes"] === <||>,
+      Print["  No sweep marker falls inside this r range."]];
+    KeyValueMap[
+      Print["  The ", FmtDec[sweepResult["eventFreqs"][#1]], " Hz marker for ", what[#1],
+            ", sounds at r = ", FmtDec[sweepResult["eventRs"][#1], 4], ", ",
+            FmtDec[introSec + #2, 2], " s into the audio."] &,
+      sweepResult["eventTimes"]];
   ];
 
 
-(* PrintIterateSummary *)
+(* PrintIterateSummary
+   One self-contained sentence per line, including the fixed point and
+   its stability (FixedPointStability). *)
 PrintIterateSummary[iterateModel_Association] :=
-  Module[{traj, distinct},
+  Module[{traj, distinct, fp, r},
     traj = iterateModel["trajectory"];
+    r    = iterateModel["r"];
+    fp   = FixedPointStability[r];
     STEMSection["Iterate Summary"];
-    Print["  r: ", FmtN[iterateModel["r"], 6]];
-    STEMPrintN["Iterations", iterateModel["nIterations"]];
-    Print["  x range: [", FmtN[Min[traj], 4], ", ", FmtN[Max[traj], 4], "]"];
+    Print["  Over ", iterateModel["nIterations"], " iterations at r = ", FmtDec[r, 4],
+          " the population x ranged from ", FmtN[Min[traj], 4], " to ", FmtN[Max[traj], 4], "."];
     distinct = Length[DeleteDuplicates[Round[traj[[-40 ;;]], 0.001]]];
-    Print["  Distinct values in last 40 (rounded): ", distinct];
+    Print["  The last 40 iterations at r = ", FmtDec[r, 4], " take ", distinct,
+          If[distinct === 1, " distinct value", " distinct values"], " when rounded to 0.001."];
+    Print["  At r = ", FmtDec[r, 4], " the fixed point x* = 1 - 1/r is ", FmtDec[fp["xStar"], 4],
+          " and |f'(x*)| = |2 - r| = ", FmtDec[fp["slope"], 4], ", ",
+          Which[fp["slope"] < 1, "below 1, so it attracts", fp["slope"] > 1, "above 1, so it repels",
+                True, "exactly 1, so the first-order test is inconclusive"],
+          If[fp["xStar"] < 0,
+            "; x* is negative, and the fixed point x = 0 has |f'(0)| = r = " <> FmtDec[fp["zeroSlope"], 4] <>
+              If[fp["zeroSlope"] < 1, ", below 1, so it attracts.", ", not below 1, so it does not attract."],
+            "."]];
+  ];
+
+
+(* ── Narrated WAV (all modes) ──────────────────────────────────────── *)
+
+$dynamicalSpeechPause = 0.4;   (* s of silence between speech and notes *)
+
+(* ExportNarratedWAV
+   Joins intro speech, a pause, the notes, a pause and outro speech,
+   normalises to targetLUFS and writes the WAV. Speech buffers are padded
+   with silence to introSlot / outroSlot samples when those are larger
+   (divergence mode pads its presets to the same length); a missing
+   speech buffer drops its pause too. Returns the timing of the parts in
+   seconds: <|"introSpeech", "intro" (speech slot + pause, i.e. the time
+   of the first note), "notes", "outro" (pause + speech slot),
+   "outroSpeech", "total"|>. *)
+ExportNarratedWAV[outWAV_String, introBuf_List, leftBuf_List, rightBuf_List, outroBuf_List,
+                  sr_Integer, Optional[introSlot_Integer, 0], Optional[outroSlot_Integer, 0],
+                  Optional[targetLUFS_?NumericQ, -17.0]] :=
+  Module[{pause = ConstantArray[0.0, Round[sr * $dynamicalSpeechPause]], introPart, outroPart,
+          left, right},
+    introPart = If[Length[introBuf] > 0,
+      Join[PadRight[introBuf, Max[introSlot, Length[introBuf]], 0.0], pause], {}];
+    outroPart = If[Length[outroBuf] > 0,
+      Join[pause, PadRight[outroBuf, Max[outroSlot, Length[outroBuf]], 0.0]], {}];
+    left  = Join[introPart, leftBuf,  outroPart];
+    right = Join[introPart, rightBuf, outroPart];
+    EnsureDir[outWAV];
+    Export[outWAV, Sound[SampledSoundList[NormalizeToLoudness[{left, right}, targetLUFS, 0.97, sr], sr]], "WAV"];
+    <|"introSpeech" -> N[Length[introBuf]] / sr, "intro" -> N[Length[introPart]] / sr,
+      "notes" -> N[Length[leftBuf]] / sr, "outro" -> N[Length[outroPart]] / sr,
+      "outroSpeech" -> N[Length[outroBuf]] / sr, "total" -> N[Length[left]] / sr|>
+  ];
+
+(* PrintTimingLine — where the parts of the WAV lie, one sentence. *)
+PrintTimingLine[t_Association] :=
+  Module[{p = $dynamicalSpeechPause, introSlot, outroSlot, padded},
+    introSlot = If[t["intro"] > 0, t["intro"] - p, 0.0];
+    outroSlot = If[t["outro"] > 0, t["outro"] - p, 0.0];
+    padded[slot_, speech_] := If[slot > speech + 10^-9, " padded to " <> FmtDec[slot, 2] <> " s", ""];
+    Print["  Timing: the WAV holds ", FmtDec[t["introSpeech"], 2], " s of spoken intro",
+          padded[introSlot, t["introSpeech"]], " and a ", FmtDec[p, 1], " s pause, then ",
+          FmtDec[t["notes"], 2], " s of notes from ", FmtDec[t["intro"], 2], " s, then a ",
+          FmtDec[p, 1], " s pause and ", FmtDec[t["outroSpeech"], 2], " s of spoken outro",
+          padded[outroSlot, t["outroSpeech"]], ", ", FmtDec[t["total"], 2], " s in total."]
+  ];
+
+(* PrintNarration — the spoken text, the TTS cache counts, and a warning
+   for any sentence that breaks the capital-letter / full-stop rule. *)
+PrintNarration[introText_String, outroText_String] :=
+  Module[{issues = Join[NarrationConventionIssues[introText], NarrationConventionIssues[outroText]]},
+    Print["  Spoken intro: ", introText];
+    Print["  Spoken outro: ", outroText];
+    Print["  Speech synthesis: ", $dynamicalSpeechRequests, " sentences requested so far in this run, ",
+          $dynamicalSpeechCalls, " synthesised and ", $dynamicalSpeechRequests - $dynamicalSpeechCalls,
+          " taken from the cache."];
+    Scan[Print["  [WARNING] This narration sentence does not start with a capital letter ",
+               "and end with a full stop: \"", #, "\""] &, issues];
   ];
 
 
 (* ── Lyapunov mode ─────────────────────────────────────────────────── *)
 
 (* ExportLyapunovCSV
-   Columns: r, lambda, at_floor, sweep_time_s, audio_time_s, lambda_tone_hz *)
+   Columns: r, lambda, at_floor, sweep_time_s, audio_time_s, lambda_tone_hz,
+   crossing, crossing_r. A zero crossing (LyapunovZeroCrossings) lies
+   between two steps; it is recorded on the row of the step before it:
+   crossing is "upward" or "downward" and crossing_r its interpolated r.
+   Both are empty on other rows. *)
 ExportLyapunovCSV[sweep_List, floor_?NumericQ, durSec_?NumericQ, introSec_?NumericQ,
-                  refHz_?NumericQ, octavesPerUnit_?NumericQ, outCSV_String] :=
-  Module[{rMin = sweep[[1, 1]], rMax = sweep[[-1, 1]], rows},
-    rows = Map[
-      Function[{row},
-        With[{t = LyapunovTimeOfR[row[[1]], rMin, rMax, durSec]},
+                  refHz_?NumericQ, octavesPerUnit_?NumericQ, crossings_List, outCSV_String] :=
+  Module[{rMin = sweep[[1, 1]], rMax = sweep[[-1, 1]], byIndex, rows},
+    byIndex = Association[#["index"] -> # & /@ crossings];
+    rows = MapIndexed[
+      Function[{row, idx},
+        With[{t = LyapunovTimeOfR[row[[1]], rMin, rMax, durSec], c = Lookup[byIndex, idx[[1]], None]},
           {row[[1]], row[[2]], If[row[[2]] <= floor, 1, 0], t, introSec + t,
-           LyapunovToneHz[row[[2]], refHz, octavesPerUnit]}]],
+           LyapunovToneHz[row[[2]], refHz, octavesPerUnit],
+           If[c === None, "", c["direction"]], If[c === None, "", c["r"]]}]],
       sweep];
-    ExportCSV[Join[{{"r", "lambda", "at_floor", "sweep_time_s", "audio_time_s", "lambda_tone_hz"}}, rows],
-              outCSV];
-    STEMDescribeCSV[outCSV, Length[rows], 6]
+    ExportCSV[Join[{{"r", "lambda", "at_floor", "sweep_time_s", "audio_time_s", "lambda_tone_hz",
+                     "crossing", "crossing_r"}}, rows], outCSV];
+    STEMDescribeCSV[outCSV, Length[rows], 8]
   ];
 
 (* PrintLyapunovSummary
-   One sentence per line: every zero crossing with its r and audio time,
-   the minimum and maximum lambda with their r, and the number of steps
-   at the floor. introSec is the time before the sweep starts in the WAV. *)
-PrintLyapunovSummary[sweep_List, crossings_List, floor_?NumericQ,
+   One sentence per line: the first upward zero crossing as the onset of
+   chaos, then each window of order (LyapunovWindows: a downward crossing
+   followed by an upward one) with its r values, its width in r and in
+   audio seconds and its period, any downward crossing left without an
+   upward one, the minimum and maximum lambda, and the number of steps at
+   the floor. introSec is the time before the sweep starts in the WAV.
+   Every crossing is also in the CSV (crossing, crossing_r). *)
+PrintLyapunovSummary[sweep_List, crossings_List, windows_List, floor_?NumericQ,
                      durSec_?NumericQ, introSec_?NumericQ] :=
-  Module[{rs = sweep[[All, 1]], lams = sweep[[All, 2]], rMin, rMax, t,
-          iMin, iMax, nFloor},
+  Module[{rs = sweep[[All, 1]], lams = sweep[[All, 2]], rMin, rMax, tOf, r3,
+          firstUp, lastC, iMin, iMax, nFloor},
     rMin = First[rs]; rMax = Last[rs];
+    tOf[r_] := introSec + LyapunovTimeOfR[r, rMin, rMax, durSec];
+    r3[r_] := ToString[NumberForm[r, {5, 3}], OutputForm];
     STEMSection["Lyapunov Summary"];
-    If[crossings === {},
-      Print["  The Lyapunov exponent does not cross zero between r = ", FmtDec[rMin, 3],
-            " and r = ", FmtDec[rMax, 3], "."]];
+    firstUp = SelectFirst[crossings, #["direction"] === "upward" &, None];
+    If[firstUp === None,
+      Print["  The Lyapunov exponent never rises above zero between r = ", FmtDec[rMin, 3],
+            " and r = ", FmtDec[rMax, 3], ", so this range has no onset of chaos."],
+      Print["  The onset of chaos: the Lyapunov exponent first crosses zero upward at r = ",
+            r3[firstUp["r"]], ", heard ", FmtDec[tOf[firstUp["r"]], 2], " s into the audio."]];
+    If[windows === {},
+      Print["  There is no window of order (a downward zero crossing followed by an upward one) ",
+            "between r = ", FmtDec[rMin, 3], " and r = ", FmtDec[rMax, 3], "."]];
     Scan[
-      Function[c,
-        t = LyapunovTimeOfR[c["r"], rMin, rMax, durSec];
-        Print["  The Lyapunov exponent crosses zero ", c["direction"], " at r = ",
-              ToString[NumberForm[c["r"], {5, 3}], OutputForm], ", heard ",
-              FmtDec[introSec + t, 2], " s into the audio (", FmtDec[t, 2],
-              " s into the sweep)."]],
-      crossings];
+      Print["  A window of order runs from r = ", r3[#["rStart"]], " to r = ", r3[#["rEnd"]],
+            ", ", FmtDec[#["width"], 4], " wide in r and ",
+            FmtDec[#["width"] / (rMax - rMin) * durSec, 2], " s long in the audio from ",
+            FmtDec[tOf[#["rStart"]], 2], " s, ",
+            If[IntegerQ[#["period"]],
+              "and it is the period-" <> ToString[#["period"]] <> " window.",
+              "and its period was not identified."]] &,
+      windows];
+    lastC = If[crossings === {}, None, Last[crossings]];
+    If[AssociationQ[lastC] && lastC["direction"] === "downward",
+      Print["  The Lyapunov exponent crosses zero downward at r = ", r3[lastC["r"]],
+            ", heard ", FmtDec[tOf[lastC["r"]], 2], " s into the audio, and is still below zero at r = ",
+            FmtDec[rMax, 3], ", the end of the range."]];
     iMin = First[Ordering[lams, 1]];
     iMax = First[Ordering[lams, -1]];
     nFloor = Count[lams, l_ /; l <= floor];
     Print["  The minimum Lyapunov exponent is ", FmtDec[lams[[iMin]], 3],
           If[lams[[iMin]] <= floor, " (the floor), first reached", ", reached"],
-          " at r = ", ToString[NumberForm[rs[[iMin]], {5, 3}], OutputForm], "."];
+          " at r = ", r3[rs[[iMin]]], "."];
     Print["  The maximum Lyapunov exponent is ", FmtDec[lams[[iMax]], 3],
-          ", reached at r = ", ToString[NumberForm[rs[[iMax]], {5, 3}], OutputForm], "."];
-    Print["  ", nFloor, " of ", Length[lams], " r steps sit at the floor of ",
+          ", reached at r = ", r3[rs[[iMax]]], "."];
+    Print["  ", nFloor, " of ", Length[lams], " r steps sit at the Lyapunov floor of ",
           FmtDec[floor, 3], ", where the exponent was clipped."];
   ];
 
@@ -252,7 +354,7 @@ PrintDivergenceSummary[orbits_Association, fit_Association, lambda_?NumericQ,
           "the separation shrinks and never saturates."]]];
     Print["  The fitted slope is ", FmtN[fit["slope"], 4], " per iteration over iterations 0 to ",
           fit["nEnd"], ", the predicted Lyapunov exponent is ", FmtN[lambda, 4],
-          ", and their ratio is ", FmtN[fit["slope"] / lambda, 3], "."];
+          ", and their ratio is ", FmtDec[fit["slope"] / lambda, 4], "."];
     iMax = First[Ordering[sep, -1]];
     Print["  The maximum separation reached is ", FmtN[sep[[iMax]], 3], ", at iteration ", iMax - 1, "."];
     Print["  The note mapping's resolution is ", FmtN[mapping["resolution"], 3],

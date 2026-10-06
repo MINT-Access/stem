@@ -43,40 +43,32 @@ RenderSweepFrame[rValues_List, attractors_List, upToStep_Integer, eventRVals_Lis
   ];
 
 (* AnimateSweepBifurcation
-   Builds frames and writes an animated GIF whose PLAYBACK DURATION
-   matches targetDuration — the same total WAV duration (spoken intro +
-   pause + sonified sweep) main.wl/experiments.wl compute as totalDurSec
-   right before calling this, so the bifurcation-diagram animation and
-   its sonification stay in sync instead of the GIF racing through the
-   whole sweep in a few seconds while a 500-step sweep's audio plays for
-   over a minute.
-
-   nFrames is a RENDER BUDGET, not a literal frame count: frameRate is
-   solved as nFrames/targetDuration and then clamped to
-   [2, 30] fps (stem-core GIFFramePlan) so a short run doesn't demand a
-   strobing frame rate and a long one doesn't demand an implausibly slow
-   one — the frame COUNT is what flexes at the clamp boundary (recomputed
-   as Round[frameRate * targetDuration]) so actual playback duration
-   equals targetDuration to within half a frame delay.
-
+   The GIF covers the whole WAV, with the same timing contract as
+   AnimateLyapunov: during the spoken intro the diagram waits at the first
+   r step, during the notes it advances one r step per stepDuration
+   (8 notes x note_duration), and during the outro it rests at the last
+   step. Frame i shows the step heard at the middle of its display
+   interval. timing holds "intro" (seconds before the first note, pause
+   included), "stepDuration" and "total" (the WAV's duration). Frame
+   delay and count come from GIFFramePlan; nFrames is a render budget.
    Returns {actualNFrames, frameRate} so callers can report what was
    actually rendered via STEMDescribeGIF. *)
 AnimateSweepBifurcation[sweepModel_Association, eventRs_Association,
-                        outGIF_String, targetDuration_?NumericQ,
+                        outGIF_String, timing_Association,
                         Optional[nFrames_Integer, 150]] :=
-  Module[{plan, rValues, attractors, nSteps, indices, frames, eventRVals,
+  Module[{plan, rValues, attractors, nSteps, times, indices, frames, eventRVals,
           frameRate, actualNFrames},
     rValues    = sweepModel["rValues"];
     attractors = sweepModel["attractors"];
     nSteps     = Length[rValues];
     eventRVals = Values[eventRs];
 
-    plan      = GIFFramePlan[targetDuration, nFrames / targetDuration];
+    plan      = GIFFramePlan[timing["total"], nFrames / timing["total"]];
     frameRate = plan["FrameRate"];
     actualNFrames = plan["FrameCount"];
 
-    indices = Round[Subdivide[1, nSteps, actualNFrames - 1]];
-    indices = Max[1, #] & /@ indices;
+    times   = (Range[actualNFrames] - 0.5) * plan["FrameDelay"];
+    indices = Clip[Floor[(times - timing["intro"]) / timing["stepDuration"]] + 1, {1, nSteps}];
 
     Print["  Rendering ", Length[indices], " bifurcation-diagram frames at ",
           FmtDec[frameRate], " fps (", FmtDec[plan["FrameDelay"]], " s per frame, ",
@@ -95,7 +87,7 @@ AnimateSweepBifurcation[sweepModel_Association, eventRs_Association,
 RenderIterateFrame[trajectory_List, upToN_Integer, r_?NumericQ, preset_String] :=
   Module[{pts, title},
     pts   = Table[{i - 1, trajectory[[i]]}, {i, upToN}];
-    title = "Logistic Map: r = " <> ToString[NumberForm[r, {5, 4}]] <>
+    title = "Logistic Map: r = " <> FmtDec[r, 4] <>
             If[preset =!= "", "  (" <> preset <> ")", ""];
     Graphics[
       {
@@ -113,26 +105,24 @@ RenderIterateFrame[trajectory_List, upToN_Integer, r_?NumericQ, preset_String] :
   ];
 
 (* AnimateIterateTimeSeries
-   Same duration-sync contract as AnimateSweepBifurcation (see its
-   docstring): targetDuration should be the total WAV duration (spoken
-   intro + pause + sonified iteration) computed just before this call,
-   nFrames is a render budget, and frameRate is solved and clamped to
-   [2, 30] fps (stem-core GIFFramePlan) so playback duration always
-   equals targetDuration to within half a frame delay. Returns {actualNFrames, frameRate}. *)
+   Same timing contract as AnimateSweepBifurcation: the series waits at
+   its first point during the intro, adds one point per note during the
+   notes and rests complete during the outro. timing holds "intro",
+   "noteDuration" and "total". Returns {actualNFrames, frameRate}. *)
 AnimateIterateTimeSeries[iterateModel_Association, outGIF_String,
-                         targetDuration_?NumericQ, Optional[nFrames_Integer, 150]] :=
-  Module[{plan, trajectory, n, r, preset, indices, frames, frameRate, actualNFrames},
+                         timing_Association, Optional[nFrames_Integer, 150]] :=
+  Module[{plan, trajectory, n, r, preset, times, indices, frames, frameRate, actualNFrames},
     trajectory = iterateModel["trajectory"];
     n       = Length[trajectory];
     r       = iterateModel["r"];
     preset  = iterateModel["preset"];
 
-    plan      = GIFFramePlan[targetDuration, nFrames / targetDuration];
+    plan      = GIFFramePlan[timing["total"], nFrames / timing["total"]];
     frameRate = plan["FrameRate"];
     actualNFrames = plan["FrameCount"];
 
-    indices = Round[Subdivide[2, n, actualNFrames - 1]];
-    indices = Max[2, #] & /@ indices;
+    times   = (Range[actualNFrames] - 0.5) * plan["FrameDelay"];
+    indices = Clip[Floor[(times - timing["intro"]) / timing["noteDuration"]] + 1, {1, n}];
 
     Print["  Rendering ", Length[indices], " time-series frames at ",
           FmtDec[frameRate], " fps (", FmtDec[plan["FrameDelay"]], " s per frame, ",

@@ -164,18 +164,7 @@ SonifySweep[sweepModel_Association, noteDuration_?NumericQ, sr_Integer] :=
             eventStepIndices[label] = stepIdx;
             eventTime = stepStartTimes[[stepIdx]];
             {leftBuf, rightBuf} = OverlayEvent[leftBuf, rightBuf,
-              eventFreqs[label], eventDurs[label], 0.7, eventTime, sr];
-            Switch[label,
-              "first_bifurcation",
-                STEMPrintN["First period-doubling bifurcation reached at r", eventR, "", 4];
-                STEMSay["First period-doubling bifurcation. One note becomes two."],
-              "chaos_onset",
-                STEMPrintN["Onset of chaos reached at r", eventR, "", 4];
-                STEMSay["Onset of chaos. Long-term prediction is now impossible."],
-              "period3_window",
-                STEMPrintN["Period-3 window reached at r", eventR, "", 4];
-                STEMSay["Period-3 window. A brief return to order inside the chaos."]
-            ]
+              eventFreqs[label], eventDurs[label], 0.7, eventTime, sr]
           ]
         ]
       ],
@@ -186,7 +175,9 @@ SonifySweep[sweepModel_Association, noteDuration_?NumericQ, sr_Integer] :=
       "leftBuf" -> leftBuf, "rightBuf" -> rightBuf, "nSamples" -> nSamples,
       "xVals" -> xVals, "times" -> times, "speeds" -> speeds,
       "rVals" -> allPoints[[All, "r"]], "iterIdx" -> allPoints[[All, "iterIdx"]],
-      "eventRs" -> eventRs, "eventStepIndices" -> eventStepIndices, "sr" -> sr
+      "eventRs" -> eventRs, "eventStepIndices" -> eventStepIndices,
+      "eventFreqs" -> eventFreqs, "eventTimes" -> Map[stepStartTimes[[#]] &, eventStepIndices],
+      "sr" -> sr
     |>
   ];
 
@@ -366,6 +357,8 @@ SonifyLyapunov[sweep_List, durSec_?NumericQ, refHz_?NumericQ,
      voice 1 (hard left)  orbit started at x0
      voice 2 (hard right) orbit started at x0 + delta
      voice 3 (centre)     the separation |x_n - y_n|, a continuous tone
+     marker (centre)      $divergenceSaturationMarker, 1320 Hz, once, when
+                          the separation first exceeds `saturation`
    Voices 1 and 2 use iterate mode's note mapping (ScaleLookup pitch on
    PitchScale3Octaves, StemSynthNote with harmonics {1, 0.25} and decay
    0.35, one note of note_duration per iterate, volume 0.25 + 0.70 *
@@ -401,6 +394,16 @@ $divergenceSepAmp         = 0.3;
 $divergenceVolumeLevels   = 16;
 $divergenceNoteHarmonics  = {1.0, 0.25};   (* as SynthesizeDiscreteNotes *)
 $divergenceNoteDecay      = 0.35;           (* as SynthesizeDiscreteNotes *)
+
+(* $divergenceSaturationMarker
+   A member of the marker family (440 : 528 : 660 : 880 = the just A minor
+   triad with its octave, LyapunovMarkers) that no other event in the app
+   uses: 1320 Hz = 3 x 440, the triad's fifth an octave above the 660 Hz
+   marker. It lies above every orbit note (the scale tops out at C6,
+   1046.5 Hz) and above the separation tone's fundamental (at most
+   880 Hz), so it cannot be mistaken for either. Until the narration
+   rework it reused the 440 Hz chaos-onset accent. *)
+$divergenceSaturationMarker = <|"freq" -> 1320.0, "dur" -> 0.12|>;
 
 (* DivergenceSeparationHz — voice 3's pitch for a separation (or list). *)
 DivergenceSeparationHz[sep_, delta_?NumericQ] :=
@@ -479,11 +482,12 @@ SonifyDivergence[orbits_Association, noteDuration_?NumericQ, saturation_?Numeric
       left  += Sqrt[0.5] * sepTone;
       right += Sqrt[0.5] * sepTone];
 
-    (* Saturation marker: the chaos-onset accent (440 Hz, 0.12 s), once. *)
+    (* Saturation marker, once, at the first n above saturation. *)
     nSat = DivergenceFit[sep, saturation]["nSat"];
     If[IntegerQ[nSat],
       markerTime = nSat * noteDuration;
-      {left, right} = OverlayEvent[left, right, 440.0, 0.12, 0.7, markerTime, sr]];
+      {left, right} = OverlayEvent[left, right, $divergenceSaturationMarker["freq"],
+        $divergenceSaturationMarker["dur"], 0.7, markerTime, sr]];
 
     <|"leftBuf" -> left, "rightBuf" -> right, "nSamples" -> nSamples,
       "noteSamples" -> Round[noteDuration * sr], "mapping" -> mapping,
