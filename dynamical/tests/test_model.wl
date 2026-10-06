@@ -60,18 +60,28 @@ Module[{r = 3.2, attractor, distinct, sum, expected},
 ];
 Print[""];
 
-(* ── Feigenbaum check ─────────────────────────────────────────────── *)
-Print["-- Feigenbaum constant check --"];
-Module[{fc},
+(* ── Feigenbaum check (check 1: bisection for r1 .. r5) ───────────── *)
+Print["-- Feigenbaum convergence check --"];
+Module[{fc, rs},
   fc = FeigenbaumCheck[];
-  Print["  r1 = ", FmtN[fc["r1"], 6], "   r2 = ", FmtN[fc["r2"], 6],
-        "   r3 = ", FmtN[fc["r3"], 6]];
-  Print["  ratio = ", FmtN[fc["ratio"], 6], "   delta = ", FmtN[$FeigenbaumConstant, 6],
-        "   error = ", FmtN[fc["relError"] * 100, 4], "%"];
-  AssertTrue["r1 is close to the known value 3.0", Abs[fc["r1"] - 3.0] < 0.01];
-  AssertTrue["r2 is close to the known value 3.449", Abs[fc["r2"] - 3.449] < 0.01];
-  AssertTrue["r3 is close to the known value 3.544", Abs[fc["r3"] - 3.544] < 0.01];
-  AssertTrue["ratio within 5% of the Feigenbaum constant", fc["pass"]];
+  rs = fc["rs"];
+  Print["  r1..r5 = ", NumberForm[rs, {9, 7}], "   deltas = ", NumberForm[fc["deltas"], {6, 5}]];
+  AssertTrue["r1 .. r5 are all resolved", TrueQ[fc["resolved"]] && Length[rs] === 5];
+  AssertTrue["r1 = 3 within 1e-7", Abs[rs[[1]] - 3] < 10^-7];
+  AssertTrue["r2 = 1 + Sqrt[6] within 1e-7 (exact period-4 onset)", Abs[rs[[2]] - (1 + Sqrt[6.])] < 10^-7];
+  AssertTrue["r3, r4, r5 match 3.544090, 3.564407, 3.568759 within 1e-6",
+    Max[Abs[rs[[3 ;; 5]] - {3.544090, 3.564407, 3.568759}]] < 10^-6];
+  AssertTrue["every point bisected to a half-width below 1e-7", fc["maxHalfWidth"] < 10^-7];
+  AssertTrue["the periods born are 2, 4, 8, 16, 32", fc["points"][[All, "periodBorn"]] === {2, 4, 8, 16, 32}];
+  AssertTrue["delta_1 = 4.7514, delta_2 = 4.6563, delta_3 = 4.6682 (to 1e-4)",
+    Max[Abs[fc["deltas"] - {4.75145, 4.65625, 4.66824}]] < 10^-4];
+  AssertTrue["the differences from the constant shrink at every step", fc["monotone"]];
+  AssertTrue["delta_3 within 0.5 percent of the constant (check 1 passes)", fc["pass"]];
+  AssertTrue["the old single-ratio criterion would not tell delta_1 from the limit: delta_1 is 1.8 percent off",
+    Abs[fc["deltas"][[1]] / $FeigenbaumConstant - 1] > 0.015];
+  AssertTrue["at r just below r3 the period-4 cycle is stable, just above it is not",
+    With[{x = CycleNewton[rs[[3]] - 10^-6, 4, Nest[LogisticMap[#, rs[[3]] - 10^-6] &, 0.3, 50000]]},
+      -1 < CycleMultiplier[rs[[3]] - 10^-6, 4, x] < 0]];
 ];
 Print[""];
 
@@ -195,6 +205,9 @@ Module[{cr, w},
 ];
 AssertTrue["PeriodDoublingRs gives 3, 3.449 and 3.544",
   Max[Abs[PeriodDoublingRs[] - {3.0, 3.44949, 3.54409}]] < 10^-4];
+AssertTrue["a window between adjacent crossings spans one r step",
+  LyapunovWindows[{<|"r" -> 3.589, "direction" -> "downward", "index" -> 30|>,
+                   <|"r" -> 3.5893, "direction" -> "upward", "index" -> 31|>}][[1, "steps"]] === 1];
 AssertTrue["lyapunov_window preset: r 3.40 to 3.90, 500 steps, 40 s",
   Lookup[$lyapunovPresets["lyapunov_window"], {"r_min", "r_max", "steps", "duration_seconds"}] ===
     {3.40, 3.90, 500, 40.0}];
@@ -326,17 +339,29 @@ Module[{texts, divTexts, windows},
   AssertTrue["every narration sentence of every mode and preset starts with a capital and ends with a full stop (" <>
       ToString[Length[texts]] <> " texts)",
     AllTrue[texts, NarrationConventionIssues[#] === {} &]];
-  AssertTrue["sweep, iterate, lyapunov and divergence outros are spoken end markers (start with or contain \"End of the\")",
-    AllTrue[{BuildSweepOutroText[2.5, 4.0], BuildIterateOutroText[2.8], BuildLyapunovOutroText[2.5, 4.0, 3.57, windows]},
-      StringContainsQ[#, "End of the"] &] && AllTrue[divTexts[[2 ;; ;; 2]], StringStartsQ[#, "End of the"] &]];
+  AssertTrue["sweep, iterate, lyapunov and divergence outros are spoken end markers (they say \"End\")",
+    AllTrue[{BuildSweepOutroText[2.5, 4.0], BuildIterateOutroText[2.8]}, StringContainsQ[#, "End of the"] &] &&
+    StringStartsQ[BuildLyapunovOutroText[2.5, 4.0, 3.57, windows], "End: "] &&
+    AllTrue[divTexts[[2 ;; ;; 2]], StringStartsQ[#, "End of the"] &]];
   AssertTrue["the iterate outro states the fixed point and the attract/repel verdict, computed (r = 2.8 and 3.2)",
     StringContainsQ[BuildIterateOutroText[2.8], "0.643" ~~ __ ~~ "0.80, below one" ~~ __ ~~ "attracts"] &&
     StringContainsQ[BuildIterateOutroText[3.2], "0.688" ~~ __ ~~ "1.20, above one" ~~ __ ~~ "repels"]];
   AssertTrue["the lyapunov intro names only the doublings inside the range (3.40 to 3.90: 3.449 and 3.544)",
-    StringContainsQ[BuildLyapunovIntroText[3.4, 3.9, PeriodDoublingRs[]], "at r equals 3.449 and 3.544,"]];
+    StringContainsQ[BuildLyapunovIntroText[3.4, 3.9, PeriodDoublingRs[]], "each doubling: 3.449 and 3.544."]];
+  AssertTrue["the lyapunov intro states the r range once and the outro does not repeat it",
+    StringCount[BuildLyapunovIntroText[2.5, 4.0, PeriodDoublingRs[]], "2.5 to 4"] === 1 &&
+    !StringContainsQ[BuildLyapunovOutroText[2.5, 4.0, 3.57, windows], "2.5"]];
+  AssertTrue["the lyapunov intro keeps every fact: tones, chaos side, doublings, windows, beating, markers",
+    AllTrue[{"steady tone is zero", "moving tone the Lyapunov exponent", "chaos above, order below",
+             "3, 3.449 and 3.544", "windows of order", "Beating means a crossing", "short high tones mark bifurcations"},
+      StringContainsQ[BuildLyapunovIntroText[2.5, 4.0, PeriodDoublingRs[]], #] &]];
+  AssertTrue["the edge outro says the separation never exceeded one tenth and gives its maximum",
+    With[{o = DivergenceNarration[3.57, "edge", 0.3, 10^-6, 119, 0.1]["outro"]},
+      StringContainsQ[o, "never exceeded one tenth; its maximum was 2.6 times ten to the minus 4"]]];
   AssertTrue["the lyapunov outro names windows with their period, or says it was not identified",
-    StringContainsQ[BuildLyapunovOutroText[2.5, 4.0, 3.57, windows], "3.628 to 3.634, period 6"] &&
-    StringContainsQ[BuildLyapunovOutroText[2.5, 4.0, 3.57, windows], "period not identified"]];
+    BuildLyapunovOutroText[2.5, 4.0, 3.5699, windows] ===
+      "End: chaos from 3.57; widest windows period 6 from 3.628 to 3.634 and unidentified period from 3.7 to 3.701." &&
+    BuildLyapunovOutroText[2.5, 4.0, 3.5699, Most[windows]] === "End: chaos from 3.57; the only window period 6 from 3.628 to 3.634."];
 ];
 Print[""];
 

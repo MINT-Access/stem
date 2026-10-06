@@ -29,7 +29,8 @@ famous sequences of transitions in mathematics:
 | r ~ 3.0 | First period-doubling bifurcation — the population alternates between two values |
 | r ~ 3.449 | Period 4 (two doublings) |
 | r ~ 3.544 | Period 8 |
-| r ~ 3.5644 | Feigenbaum accumulation point — onset of chaos |
+| r ~ 3.5644, 3.5688 | Period 16, period 32 |
+| r ~ 3.5699 | Feigenbaum accumulation point — onset of chaos |
 | r > 3.57 | Mostly chaotic, with periodic windows |
 | r ~ 3.83 | The period-3 window — a sudden return to order inside the chaos |
 | r = 4 | Fully chaotic, ergodic on [0,1] |
@@ -56,10 +57,11 @@ the map's other details. Discovering this universality (Feigenbaum,
 1975-1978) was one of the founding results of chaos theory: wildly
 different systems (fluid convection, population models, electronic
 oscillators) all approach chaos via period-doubling at the same
-universal rate. This app locates the first three bifurcation points
-numerically (via root-finding on the map's stability conditions, not by
-hardcoding known values) and verifies the ratio directly — see
-"Correctness checks" below.
+universal rate. This app locates the first five bifurcation points
+numerically (bisection on the cycle's stability, not hardcoded values)
+and shows the ratios of successive intervals approaching the constant:
+4.7514, 4.6563, 4.6682 — no finite ratio equals it. See "Correctness
+checks" below.
 
 ## The period-3 window and Li-Yorke's theorem
 
@@ -174,7 +176,10 @@ value sounds like, especially via the seven presets (see
 LISTENING_GUIDE.md for the full recommended sequence): `extinction`
 (r = 0.8, the population dies out), `growth` (r = 2.0 from x0 = 0.1, it
 grows and settles), `fixed_point` (2.8), `period2` (3.2), `period4` (3.5),
-`period3_window` (3.830) and `chaos` (4.0). The spoken outro states the
+`period3_window` (3.830) and `chaos` (4.0). Each preset writes its own
+files, `iterate_<preset>_audio.wav`, `iterate_<preset>.gif` and
+`iterate_<preset>_data.csv`; without a preset they are `iterate_audio.wav`,
+`iterate.gif` and `iterate_data.csv`. The spoken outro states the
 fixed point x* = 1 − 1/r and whether it attracts or repels, from
 |f′(x*)| = |2 − r| below or above one, computed for the r being played
 (for r < 1 it adds that zero attracts, with slope r).
@@ -227,18 +232,23 @@ inside the range:
 440, 528, 660 and 880 Hz form a just-intoned A minor triad with its
 octave, so the new period-4 marker belongs to the same chord.
 
-A spoken intro says what the two tones mean, that the λ tone comes up to
-the reference and falls away again at each period doubling inside the
-range (r = 3, 3.449 and 3.544, where λ is exactly zero), and that each
-later dip below the reference is a window of order. The spoken outro
-names the r where λ first rose above zero and the three widest windows
-in the range with their period, all computed from the run. The console
-prints the onset of chaos (the first upward crossing), then one sentence
-per window of order (a downward crossing followed by an upward one): its
-two r values, its width in r and in audio seconds, and its period when it
-opens within 0.005 of a known window (period 3 at 3.828, 5 at 3.739 and
-3.906, 6 at 3.626), otherwise that the period was not identified. Every
-crossing is in the CSV (`crossing`, `crossing_r`).
+A spoken intro (19.8 s) says the range, what the two tones mean and
+which side is chaotic, that the λ tone touches zero at each period
+doubling inside the range (r = 3, 3.449 and 3.544), that later dips are
+windows of order, that beating means a crossing and that short high
+tones mark bifurcations. A one-sentence spoken outro (14.8 s) gives the
+end marker, the r where λ first rose above zero and the three widest
+windows in the range with their period, all computed from the run. The
+console prints the onset of chaos (the first upward crossing), then one
+sentence per window of order (a downward crossing followed by an upward
+one): its two r values, its width in r and in audio seconds, and its
+period when it opens within 0.005 of a known window (period 3 at 3.828,
+5 at 3.739 and 3.906, 6 at 3.626), otherwise that the period was not
+identified; a window below zero at only one r step is reported as
+spanning a single step, with the grid spacing as its width bound. Every
+crossing is in the CSV (`crossing`, `crossing_r`), as are the five
+period-doubling points (`bifurcation_period_born`, `bifurcation_r`),
+which the animation marks with small green ticks above the top panel.
 
 The preset `lyapunov_window` (r 3.40 to 3.90, 500 steps, 40 s) matches
 `prototype_lyapunov.wl`, the listening prototype this mode was built
@@ -287,10 +297,15 @@ all rendered to the same length: `divergence_chaotic` (r 4.0),
 
 Every run prints six physical/mathematical correctness checks:
 
-1. **Feigenbaum constant**: the first three period-doubling bifurcation
-   points are located numerically (via `FindRoot` on the map's
-   stability conditions — not hardcoded), and the ratio of successive
-   intervals is verified to be within 5% of δ ≈ 4.669.
+1. **Feigenbaum convergence**: the period-doubling points r1 … r5
+   (periods 2, 4, 8, 16, 32 born) are located by bisection on the
+   cycle's multiplier reaching −1 (where the Lyapunov exponent touches
+   zero from below), each to a half-width below 1e-12 in r: 3, 3.4494897,
+   3.5440904, 3.5644073, 3.5687594. The three interval ratios δ1, δ2, δ3
+   are 4.7514, 4.6563 and 4.6682, which differ from δ = 4.669201609 by
+   +0.082, −0.013 and −0.00096. The check passes when δ3 is within 0.5 %
+   of δ and the differences shrink at every step. (It used to compute
+   only δ1 and accept it within 5 %, which says little: δ1 is 1.8 % off.)
 2. **Fixed point** (r=2.8): the long-term iterate is verified to match
    the analytic fixed point x* = 1 - 1/r.
 3. **Period-2** (r=3.2): the long-term attractor is verified to have
@@ -316,12 +331,12 @@ Every run prints six physical/mathematical correctness checks:
 | `output/sweep_audio.wav` | Spoken intro + sweep sonification + spoken outro (16-bit PCM, 44100 Hz, stereo) |
 | `output/sweep.gif` | Progressive bifurcation diagram animation |
 | `output/sweep_data.csv` | Per-note table: r, iteration_index, x_n, pitch_hz, pan, volume, event_label |
-| `output/iterate_audio.wav` | Spoken intro + iteration sonification + spoken outro (16-bit PCM, 44100 Hz, stereo) |
-| `output/iterate.gif` | x_n vs. n time-series animation |
+| `output/iterate_audio.wav` | Spoken intro + iteration sonification + spoken outro (16-bit PCM, 44100 Hz, stereo); `iterate_<preset>_audio.wav` with a preset |
+| `output/iterate.gif` | x_n vs. n time-series animation; `iterate_<preset>.gif` with a preset |
 | `output/iterate_data.csv` | Per-iteration table: n, x_n, pitch_hz, pan, volume |
 | `output/lyapunov_audio.wav` | Spoken intro + λ tone, reference tone and markers + spoken outro (stereo) |
 | `output/lyapunov.gif` | Bifurcation diagram over λ(r), shared r axis, moving cursor with r and λ printed |
-| `output/lyapunov_data.csv` | Per-step table: r, lambda, at_floor, sweep_time_s, audio_time_s, lambda_tone_hz, crossing, crossing_r (a zero crossing, on the row of the step before it) |
+| `output/lyapunov_data.csv` | Per-step table: r, lambda, at_floor, sweep_time_s, audio_time_s, lambda_tone_hz, crossing, crossing_r (a zero crossing, on the row of the step before it), bifurcation_period_born, bifurcation_r (check 1's r1 … r5, the same way) |
 | `output/lyapunov_window_*` | The same three files for the `lyapunov_window` preset |
 | `output/divergence_audio.wav` | Spoken intro + two orbits (L/R) and separation tone (centre) + spoken outro |
 | `output/divergence.gif` | Two orbits above log10 separation with fit, λ prediction and saturation line; cursor |

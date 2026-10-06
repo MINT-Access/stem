@@ -231,12 +231,12 @@ listening prototype `dynamical/prototype_lyapunov.wl`). Named presets
 | `output/sweep_audio.wav` | Spoken intro + sweep sonification + spoken outro (stereo) |
 | `output/sweep.gif` | Progressive bifurcation diagram animation with r cursor |
 | `output/sweep_data.csv` | r, iteration_index, x_n, pitch_hz, pan, volume, event_label |
-| `output/iterate_audio.wav` | Spoken intro + iteration sonification + spoken outro with the fixed point's stability (stereo) |
-| `output/iterate.gif` | x_n vs. n time-series animation |
+| `output/iterate_audio.wav` | Spoken intro + iteration sonification + spoken outro with the fixed point's stability (stereo); `iterate_<preset>_audio.wav` with a preset |
+| `output/iterate.gif` | x_n vs. n time-series animation; `iterate_<preset>.gif` with a preset |
 | `output/iterate_data.csv` | n, x_n, pitch_hz, pan, volume |
 | `output/lyapunov_audio.wav` | Spoken intro + λ tone, reference tone, markers + spoken outro (stereo) |
 | `output/lyapunov.gif` | Bifurcation diagram above λ(r), shared r axis, moving cursor with r and λ |
-| `output/lyapunov_data.csv` | r, lambda, at_floor, sweep_time_s, audio_time_s, lambda_tone_hz, crossing, crossing_r |
+| `output/lyapunov_data.csv` | r, lambda, at_floor, sweep_time_s, audio_time_s, lambda_tone_hz, crossing, crossing_r, bifurcation_period_born, bifurcation_r |
 | `output/divergence_audio.wav` | Spoken intro + orbit x (left), orbit y (right), separation tone (centre) + spoken outro |
 | `output/divergence.gif` | Two orbits above log10 separation, fit and λ prediction, cursor |
 | `output/divergence_data.csv` | n, x_n, y_n, separation, log10_separation, in_fit, note_start_s, pitches, volumes |
@@ -251,9 +251,12 @@ listening prototype `dynamical/prototype_lyapunov.wl`). Named presets
   period-doubling bifurcation (660 Hz, r≈3.0, located numerically), the
   onset of chaos (440 Hz, r≈3.57), and the period-3 window (528 Hz, r≈3.83).
 - Six correctness checks run on every invocation, printed as
-  `Checks: 1[PASS] 2[PASS] 3[PASS] 4[PASS] 5[PASS] 6[PASS]`: the Feigenbaum constant
-  (bifurcation points located via `FindRoot` on the map's stability
-  conditions, not hardcoded — ratio verified within 5% of δ≈4.669), the
+  `Checks: 1[PASS] 2[PASS] 3[PASS] 4[PASS] 5[PASS] 6[PASS]`: Feigenbaum convergence
+  (period-doubling points r1 … r5 located by bisection on the cycle's
+  multiplier reaching −1, to better than 1e-12 in r; the interval ratios
+  δ1, δ2, δ3 = 4.7514, 4.6563, 4.6682 approach δ = 4.669201609, and the
+  check passes when δ3 is within 0.5 % and the differences shrink at
+  every step), the
   analytic fixed point x*=1−1/r at r=2.8, the period-2 sum formula
   (r+1)/r at r=3.2, and the Lyapunov exponent at r=4.0 (verified within
   5% of log 2 ≈ 0.693), and check 5, the λ(r) curve lyapunov mode

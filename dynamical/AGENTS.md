@@ -292,10 +292,21 @@ timing that `PrintTimingLine` prints). The rules, for any new text:
   or repels. For r < 1 (the `extinction` preset) x* is negative, so the
   outro also gives the slope r at x = 0, which is what attracts.
 - **Lyapunov intro and outro are computed from the run**: the intro names
-  the period doublings inside the range (`PeriodDoublingRs`, the same
-  root-finder as check 1); the outro names the three widest windows
-  (`LyapunovWindows`), with a period when the window opens within 0.005
-  of a known one (`$lyapunovKnownWindows`), else "period not identified".
+  the period doublings r1 … r3 inside the range (check 1's bisection);
+  the outro names the three widest windows (`LyapunovWindows`), with a
+  period when the window opens within 0.005 of a known one
+  (`$lyapunovKnownWindows`), else "unidentified period". The intro is at
+  most 20 s (measured 19.8 s) and says the r range; the outro is one
+  sentence of at most 15 s (measured 14.77 s, 14.83 s for lyapunov_window) and does not repeat it. Six
+  three-decimal window bounds alone take about 9 s with macOS `say`, so
+  the outro wording is deliberately terse ("End: chaos from 3.57; widest
+  windows period 6 from …"); re-measure if you add anything.
+- **Iterate presets write preset-named files** (`iterate_<preset>_audio.wav`,
+  `.gif`, `_data.csv`), like the lyapunov and divergence presets; the
+  default run keeps `iterate_audio.wav` / `iterate.gif` /
+  `iterate_data.csv`. demo.wl expects `iterate_period3_window_*`.
+  experiments.wl names its iterate experiments `iterate_<preset>` too, so
+  it writes the same file names as main.wl with that preset.
 - **Sentence cache**: `SpeakNarration` splits text into sentences and
   synthesises each distinct sentence once per run
   (`$dynamicalSpeechCache`), joining them with 0.2 s of silence, about
@@ -307,6 +318,49 @@ timing that `PrintTimingLine` prints). The rules, for any new text:
   "intro", "stepDuration"/"noteDuration", "total"). Before the outros
   were added, the frames were spread evenly over the whole WAV, intro
   included, so the diagram ran ahead of the sound.
+
+### 10. Check 1: Feigenbaum convergence, not a single ratio
+
+Check 1 used to compute only δ1 = (r2 − r1)/(r3 − r2) = 4.7514 and
+accept it within 5 % of δ = 4.6692, which cannot tell a converging
+sequence from a coincidence (δ1 is 1.8 % off). It now locates r1 … r5
+(periods 2, 4, 8, 16, 32 born) by bisection on the multiplier of the
+period-p cycle, p = 2^(k−1), reaching −1 — where the cycle loses
+stability and the Lyapunov exponent touches zero from below
+(`PeriodDoublingPoints`, `BifurcationBisection`, `CycleNewton`,
+`CycleFollow`, `CycleMultiplier` in model.wl). Details:
+
+- **Brackets**: r1 in [2.5, 3.5], r2 in [3.25, 3.5], r_k (k ≥ 3) in
+  r_(k−1) + d/8 … r_(k−1) + d/3 with d the previous interval. Both ends
+  are checked (|μ| < 1 at the lower end, μ < −1 at the upper), so a
+  bracket that misses fails loudly (`Missing["BadBracket", …]`) instead
+  of returning a wrong r.
+- **Staying on the right cycle**: Newton on f^p(x) = x needs a seed on
+  the period-p cycle. The seed comes from iterating the map at the lower
+  bracket, where that cycle is the attractor, and is carried to each new
+  r in small steps (`CycleFollow`). Seeding Newton from far away lands on
+  a lower-period orbit (observed during development: at r = 4 it found
+  the fixed point, μ = 4, instead of the 2-cycle, μ = −4); a result of
+  period p/2 is rejected (`Missing["LowerPeriod"]`).
+- **Precision**: machine doubles. Near r_k, μ ≈ −1, so Newton's
+  denominator is ≈ −2 and well conditioned. Newton stops when its step
+  stagnates and accepts the point if |f^p(x) − x| < 1e-12; an absolute
+  1e-15 target is not reachable for p = 8 and made the search fail.
+  Arbitrary precision (40 digits) was tried and is far too slow, because
+  significance arithmetic erodes precision until the tolerance is never
+  met. Bisection runs to a half-width below 1e-12 (the spec asked for at
+  least 1e-7); r1 = 3 and r2 = 1 + √6 are reproduced to 1e-12.
+- **Measured**: r1 … r5 = 3, 3.4494897, 3.5440904, 3.5644073, 3.5687594;
+  δ1, δ2, δ3 = 4.75145, 4.65625, 4.66824, differences +0.0822, −0.0130,
+  −0.00096. r6 = 3.5696916 and r7 = 3.5698913 also resolve (δ4 = 4.66874,
+  δ5 = 4.66913), so r5 is comfortably within reach.
+- **Pass rule**: δ3 within 0.5 % of δ (it is 0.021 % off) and
+  |δ_k − δ| strictly decreasing. The ratios alternate about δ, so the
+  differences, not the ratios, are monotonic.
+- **Uses**: the same five points give the lyapunov intro's r1 … r3, the
+  green ticks above the lyapunov animation's top panel and the CSV's
+  `bifurcation_period_born` / `bifurcation_r` columns. `BifurcationPoint`
+  (FindRoot) remains only for the sweep's first-bifurcation marker.
 
 ## Project structure
 
@@ -321,7 +375,8 @@ dynamical/
   src/
     model.wl              — LogisticMap, SafeX0, $dynamicalPresets, PresetR/PresetX0/PresetDescription,
                             FixedPointStability, LyapunovWindows ($lyapunovKnownWindows),
-                            PeriodDoublingRs,
+                            PeriodDoublingRs, PeriodDoublingPoints, BifurcationBisection,
+                            CycleNewton, CycleFollow, CycleMultiplier,
                             IterateTrajectory, AttractorPoints, BifurcationPoint,
                             FeigenbaumCheck, FixedPointCheck, Period2Check,
                             LyapunovCheck, SweepEventRValues, SweepModel, IterateModelData,
@@ -482,9 +537,17 @@ a plain list `{{r, lambda}, ...}` (steps rows, r ascending, lambda >= floor).
 `"markers"` (the in-range markers, each with its `"time"` in seconds into
 the sweep), `"gainRangeDB"` and `"toneHzRange"` (for the console line).
 `LyapunovWindows[crossings]` returns `<|"rStart", "rEnd", "width",
-"period" (Integer or Missing[])|>` per downward crossing directly followed
-by an upward one. The lyapunov CSV records every crossing in its
-`crossing` / `crossing_r` columns, on the row of the step before it.
+"period" (Integer or Missing[]), "downIndex", "steps"|>` per downward
+crossing directly followed by an upward one; "steps" is the number of
+sweep steps below zero (1: the window spans a single r step, and the
+console says so instead of printing a width that rounds to zero). The
+lyapunov CSV records every crossing in its `crossing` / `crossing_r`
+columns, and check 1's r1 … r5 in `bifurcation_period_born` /
+`bifurcation_r`, each on the row of the step before it.
+`FeigenbaumCheck[]` returns `"points"` (the `PeriodDoublingPoints`
+Associations: r, halfWidth, bisections, periodBorn), `"rs"`, `"deltas"`,
+`"diffs"`, `"relError"` (of δ3), `"monotone"`, `"maxHalfWidth"`,
+`"resolved"` and `"pass"`.
 
 ## Common pitfalls
 

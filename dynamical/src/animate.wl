@@ -191,14 +191,19 @@ LyapunovBackground[sweep_List, bifPoints_List, markerRs_List, floor_?NumericQ, y
    LyapunovPanelOpts panels (lyapunov and divergence modes): the
    background, a red cursor at data value xVal through both panels, and a
    line of text in the top padding, leftText left-aligned and rightText
-   right-aligned. *)
+   right-aligned. topTicks are data values marked with short ticks just
+   above the top panel's frame, below the text (lyapunov mode: the
+   period-doubling points r1 .. r5). *)
 RenderTwoPanelFrame[bg_Image, xVal_?NumericQ, xMin_?NumericQ, xMax_?NumericQ,
-                    leftText_, rightText_] :=
+                    leftText_, rightText_, Optional[topTicks_List, {}]] :=
   Module[{w = $lyapunovPanelW, h = $lyapunovPanelH, l, rt, b, t, xPix},
     {{l, rt}, {b, t}} = $lyapunovPadding;
     xPix = l + (xVal - xMin) / (xMax - xMin) * (w - l - rt);
     Graphics[
       {Inset[bg, {0, 0}, {0, 0}, {w, 2 h}],
+       {$lyapunovDoublingTickColor, AbsoluteThickness[1.5],
+        Line[{{#, 2 h - t + 1}, {#, 2 h - t + 7}}] & /@
+          (l + (Select[topTicks, xMin <= # <= xMax &] - xMin) / (xMax - xMin) * (w - l - rt))},
        {Red, AbsoluteThickness[2],
         Line[{{xPix, h + b}, {xPix, 2 h - t}}], Line[{{xPix, b}, {xPix, h - t}}]},
        Text[leftText, {l, 2 h - t / 2}, {-1, 0}],
@@ -208,13 +213,19 @@ RenderTwoPanelFrame[bg_Image, xVal_?NumericQ, xMin_?NumericQ, xMax_?NumericQ,
     ]
   ];
 
-(* RenderLyapunovFrame — background plus cursor at r and the r/lambda text. *)
-RenderLyapunovFrame[bg_Image, r_?NumericQ, lambda_?NumericQ, rMin_?NumericQ, rMax_?NumericQ] :=
+$lyapunovDoublingTickColor = RGBColor[0.45, 1.0, 0.55];
+
+(* RenderLyapunovFrame — background plus cursor at r, the r/lambda text,
+   and green ticks above the top panel at the period-doubling points
+   doublingRs (r1 .. r5, PeriodDoublingRs[5]); r3, r4 and r5 lie within
+   0.025 of each other, so they crowd together at the accumulation. *)
+RenderLyapunovFrame[bg_Image, r_?NumericQ, lambda_?NumericQ, rMin_?NumericQ, rMax_?NumericQ,
+                    Optional[doublingRs_List, {}]] :=
   RenderTwoPanelFrame[bg, r, rMin, rMax,
     Style["Logistic map: bifurcation diagram and Lyapunov exponent", White, 12],
     Style["r = " <> ToString[NumberForm[r, {4, 2}]] <> "    \[Lambda] = " <>
           ToString[NumberForm[lambda, {3, 2}, NumberSigns -> {"\[Minus]", ""}]],
-          Yellow, Bold, 13]];
+          Yellow, Bold, 13], doublingRs];
 
 (* AnimateLyapunov
    The GIF covers the whole WAV, so the two can start together: during
@@ -224,9 +235,11 @@ RenderLyapunovFrame[bg_Image, r_?NumericQ, lambda_?NumericQ, rMin_?NumericQ, rMa
    "intro" (seconds before the sweep starts, pause included), "sweep"
    (the sweep's duration) and "total" (the WAV's duration). Frame delay
    and count come from GIFFramePlan; nFrames is a render budget.
+   doublingRs are drawn as ticks above the top panel.
    Returns {frameCount, frameRate}. *)
 AnimateLyapunov[sweep_List, bifPoints_List, markers_List, floor_?NumericQ,
-                timing_Association, outGIF_String, Optional[nFrames_Integer, 300]] :=
+                timing_Association, outGIF_String, Optional[doublingRs_List, {}],
+                Optional[nFrames_Integer, 300]] :=
   Module[{rs = sweep[[All, 1]], lams = sweep[[All, 2]], rMin, rMax, yRange, bg, lamOf,
           plan, delay, times, rAt, frames},
     rMin = First[rs]; rMax = Last[rs];
@@ -241,7 +254,7 @@ AnimateLyapunov[sweep_List, bifPoints_List, markers_List, floor_?NumericQ,
 
     Print["  Rendering ", plan["FrameCount"], " frames at ", FmtDec[plan["FrameRate"]],
           " fps (", FmtDec[delay], " s per frame, ", FmtDec[plan["GIFDuration"]], " s in total)."];
-    frames = RenderLyapunovFrame[bg, #, lamOf[#], rMin, rMax] & /@ rAt;
+    frames = RenderLyapunovFrame[bg, #, lamOf[#], rMin, rMax, doublingRs] & /@ rAt;
 
     ExportGIF[frames, outGIF, plan];
     {plan["FrameCount"], plan["FrameRate"]}

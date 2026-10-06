@@ -236,48 +236,50 @@ BuildIterateOutroText[r_?NumericQ] :=
 (* ── Lyapunov narration ──────────────────────────────────────────────── *)
 
 (* BuildLyapunovIntroText
-   Says what is heard before the sweep starts. doublingRs are the
-   period-doubling r values (PeriodDoublingRs[]); only those inside the
-   range are named. *)
+   Says what is heard before the sweep starts, in at most 20 s of speech
+   (measured 19.8 s with macOS say):
+   what the two tones are, which side is chaotic, the touching at each
+   period doubling (doublingRs, PeriodDoublingRs[]; only those inside
+   the range are named), that later dips are windows of order, that
+   beating announces a crossing and that short high tones mark
+   bifurcations. The r range is said here and not again in the outro. *)
 BuildLyapunovIntroText[rMin_?NumericQ, rMax_?NumericQ, doublingRs_List] :=
   Module[{inRange = Select[doublingRs, rMin <= # <= rMax &]},
-    "Lyapunov exponent of the logistic map, r from " <> SpokenDec[rMin, 2] <>
-    " to " <> SpokenDec[rMax, 2] <> ". The steady tone is zero. " <>
-    "The moving tone is the Lyapunov exponent. Above the steady tone the orbit is chaotic, " <>
-    "and nearby starting points separate exponentially. Below it they converge. " <>
+    "Here r runs from " <> SpokenDec[rMin, 2] <> " to " <> SpokenDec[rMax, 2] <> ". " <>
+    "The steady tone is zero, the moving tone the Lyapunov exponent: chaos above, order below. " <>
     If[inRange =!= {},
-      "On the way up, the moving tone comes up to the steady tone and falls away again at " <>
-        If[Length[inRange] > 1, "each period doubling, at r equals ", "a period doubling, at r equals "] <>
-        SpokenList[SpokenDec[#, 3] & /@ inRange] <>
-        ", because the exponent is exactly zero at a bifurcation. ",
+      "It touches zero at " <> If[Length[inRange] > 1, "each doubling: ", "a doubling: "] <>
+        SpokenList[SpokenDec[#, 3] & /@ inRange] <> ". ",
       ""] <>
-    "Each later dip below the steady tone is a window of order inside the chaos. " <>
-    "Beating between the two tones means a crossing is near. " <>
-    "Short high tones mark the bifurcation points."
+    "Later dips are windows of order. " <>
+    "Beating means a crossing; short high tones mark bifurcations."
   ];
 
 (* BuildLyapunovOutroText
-   firstUp is the r of the first upward zero crossing, or Missing[] when
-   the range has none; windows is LyapunovWindows output. The widest
-   (at most three) windows are named in ascending r. *)
+   One sentence, at most 15 s of speech: the end marker, where the
+   exponent first rose above zero (firstUp, or Missing[] when the range
+   has none) and the widest (at most three) windows from LyapunovWindows
+   in ascending r, each with its period. "period" is said once when every
+   named window's period was identified. rMin and rMax are not spoken
+   (the intro says the range). Measured with macOS say: three windows at
+   three decimals take 14.8 s; the six window bounds alone take about
+   9 s, so the wording is terse. *)
 BuildLyapunovOutroText[rMin_?NumericQ, rMax_?NumericQ, firstUp_, windows_List] :=
-  Module[{widest, phrase},
+  Module[{widest, allId, item},
     widest = SortBy[Take[ReverseSortBy[windows, #["width"] &], UpTo[3]], #["rStart"] &];
-    phrase[w_, first_] :=
-      If[first, "from r equals ", "from "] <> SpokenDec[w["rStart"], 3] <> " to " <>
-      SpokenDec[w["rEnd"], 3] <> ", " <>
-      If[IntegerQ[w["period"]], "period " <> ToString[w["period"]], "period not identified"];
-    "End of the Lyapunov sweep from r equals " <> SpokenDec[rMin, 2] <>
-    " to " <> SpokenDec[rMax, 2] <> ". " <>
-    If[NumericQ[firstUp],
-      "The exponent first rose above zero at r equals " <> SpokenFixed[firstUp, 3] <> ", where chaos begins. ",
-      "The exponent did not rise above zero in this range. "] <>
+    allId  = AllTrue[widest, IntegerQ[#["period"]] &];
+    item[w_, first_] :=
+      If[IntegerQ[w["period"]],
+        If[first || !allId, "period ", ""] <> ToString[w["period"]],
+        "unidentified period"] <>
+      " from " <> SpokenDec[w["rStart"], 3] <> " to " <> SpokenDec[w["rEnd"], 3];
+    "End: " <>
+    If[NumericQ[firstUp], "chaos from " <> SpokenDec[firstUp, 3], "the exponent never rose above zero"] <>
     Switch[Length[widest],
-      0, "There was no window of order in this range.",
-      1, "The only window of order was " <> phrase[widest[[1]], True] <> ".",
-      _, "The widest windows of order were " <>
-           StringRiffle[MapIndexed[phrase[#1, #2[[1]] === 1] &, Most[widest]], "; "] <>
-           "; and " <> phrase[Last[widest], False] <> "."]
+      0, ", and no window of order.",
+      1, "; the only window " <> item[widest[[1]], True] <> ".",
+      _, "; widest windows " <> StringRiffle[MapIndexed[item[#1, #2[[1]] === 1] &, Most[widest]], ", "] <>
+           " and " <> item[Last[widest], False] <> "."]
   ];
 
 
@@ -336,11 +338,12 @@ DivergenceNarration[r_?NumericQ, case_String, x0_?NumericQ, delta_?NumericQ,
       "the separation passed " <> satTxt <> " at iteration " <> ToString[fit["nSat"]] <>
         ", and the Lyapunov exponent predicted iteration " <> SpokenFixed[pred, 1] <> ".",
       If[IntegerQ[nZero],
-        "the separation shrank to zero by iteration " <> ToString[nZero - 1],
-        "the separation reached only " <> SpokenSmall[Last[orb["separation"]]]] <>
-        If[NumericQ[pred],
-          ", as the small Lyapunov exponent, " <> SpokenFixed[lam, 3] <> ", predicted.",
-          ", as the Lyapunov exponent, " <> SpokenFixed[lam, 2] <> ", predicted."]];
+        "the separation shrank to zero by iteration " <> ToString[nZero - 1] <>
+          ", as the Lyapunov exponent, " <> SpokenFixed[lam, 2] <> ", predicted.",
+        "the separation never exceeded " <> satTxt <> "; its maximum was " <>
+          SpokenSmall[Max[orb["separation"]]] <>
+          If[NumericQ[pred], ", because the Lyapunov exponent, " <> SpokenFixed[lam, 3] <> ", is so small.",
+             ", and the Lyapunov exponent, " <> SpokenFixed[lam, 2] <> ", predicted no growth."]]];
     <|"intro" ->
         "Two populations start " <> deltaTxt <> " apart, one in each ear; the middle tone is " <>
         "their distance. " <> caseTxt,

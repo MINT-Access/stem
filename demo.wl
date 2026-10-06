@@ -86,9 +86,9 @@ $demoApps = {
     "preset"    -> "logistic map iterate, r=3.830 (period-3 window)",
     "cliArgs"   -> {"main.wl", "--", "--simulation.mode=iterate",
                     "--simulation.dynamical.preset=period3_window"},
-    "expected"  -> {"output/iterate_audio.wav",
-                    "output/iterate.gif",
-                    "output/iterate_data.csv"},
+    "expected"  -> {"output/iterate_period3_window_audio.wav",
+                    "output/iterate_period3_window.gif",
+                    "output/iterate_period3_window_data.csv"},
     "listenFor" -> "A clean, repeating three-note rhythm \[LongDash] the period-3 window, a " <>
                    "surprising island of order inside the chaotic region, heard here by " <>
                    "iterating the map at a single fixed r rather than sweeping through it"

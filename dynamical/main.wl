@@ -55,6 +55,8 @@
    Outputs (dynamical/output/):
      sweep_audio.wav / sweep.gif / sweep_data.csv
      iterate_audio.wav / iterate.gif / iterate_data.csv
+       (with a preset: iterate_<preset>_audio.wav / iterate_<preset>.gif /
+        iterate_<preset>_data.csv)
      lyapunov_audio.wav / lyapunov.gif / lyapunov_data.csv
        (with a preset: <preset>_audio.wav / <preset>.gif / <preset>_data.csv)
      divergence_audio.wav / divergence.gif / divergence_data.csv
@@ -121,9 +123,7 @@ $lyapunov   = LyapunovCheck[];
 $lyapCurve  = LyapunovCurveCheck[];
 $divChk     = DivergenceCheck[];
 PrintCorrectnessChecks[$feigenbaum, $fixedPt, $period2Chk, $lyapunov, $lyapCurve, $divChk];
-Print["    1. Feigenbaum ratio: ", FmtN[$feigenbaum["ratio"], 5],
-      "  (delta = ", FmtN[$FeigenbaumConstant, 6], ", ",
-      FmtN[$feigenbaum["relError"] * 100, 4], "% error)"];
+PrintFeigenbaumCheck[$feigenbaum];
 Print["    2. Fixed point (r=2.8): analytic ", FmtN[$fixedPt["analytic"], 6],
       "  numeric ", FmtN[$fixedPt["numeric"], 6]];
 Print["    3. Period-2 (r=3.2): ", $period2Chk["nDistinct"], " distinct values, sum ",
@@ -197,9 +197,17 @@ Which[
   (* ===== Iterate mode ===== *)
   mode === "iterate",
 
-    outWAV = FileNameJoin[{$outDir, "iterate_audio.wav"}];
-    outGIF = FileNameJoin[{$outDir, "iterate.gif"}];
-    outCSV = FileNameJoin[{$outDir, "iterate_data.csv"}];
+    (* A named preset writes iterate_<preset>_audio.wav / .gif / _data.csv,
+       as the lyapunov and divergence presets do, so running several
+       presets in a row keeps every file; the default run keeps
+       iterate_audio.wav / iterate.gif / iterate_data.csv. *)
+    itName = If[KeyExistsQ[$dynamicalPresets, preset], "iterate_" <> preset, "iterate"];
+    If[preset =!= "" && !KeyExistsQ[$dynamicalPresets, preset],
+      Print["  Preset \"", preset, "\" is not an iterate-mode preset and is ignored; ",
+            "the iterate-mode presets are ", StringRiffle[Keys[$dynamicalPresets], ", "], "."]];
+    outWAV = FileNameJoin[{$outDir, itName <> "_audio.wav"}];
+    outGIF = FileNameJoin[{$outDir, itName <> ".gif"}];
+    outCSV = FileNameJoin[{$outDir, itName <> "_data.csv"}];
 
     rActual  = PresetR[preset, rCfg];
     itX0     = PresetX0[preset, x0];
@@ -299,6 +307,7 @@ Which[
     lyBif       = AttractorPoints[x0, #, lyTrans, nAttractor] & /@ lySweep[[All, 1]];
     lyCrossings = LyapunovZeroCrossings[lySweep];
     lyWindows   = LyapunovWindows[lyCrossings];
+    lyDoublings = Select[$feigenbaum["points"], AssociationQ];   (* r1 .. r5, from check 1 *)
     Print["  The Lyapunov exponent was computed at ", lySteps, " values of r."];
     Print[""];
 
@@ -312,7 +321,7 @@ Which[
 
     lyFirstUp = SelectFirst[lyCrossings, #["direction"] === "upward" &, Missing[]];
     lyFirstUp = If[AssociationQ[lyFirstUp], lyFirstUp["r"], Missing[]];
-    introText = BuildLyapunovIntroText[lyRMin, lyRMax, PeriodDoublingRs[]];
+    introText = BuildLyapunovIntroText[lyRMin, lyRMax, Take[lyDoublings[[All, "r"]], UpTo[3]]];
     outroText = BuildLyapunovOutroText[lyRMin, lyRMax, lyFirstUp, lyWindows];
     introBuffer = SpeakNarration[introText, sr];
     outroBuffer = SpeakNarration[outroText, sr];
@@ -333,14 +342,14 @@ Which[
     Print["[4/5] Rendering bifurcation diagram and Lyapunov exponent animation..."];
     STEMSay["Rendering the bifurcation diagram and the Lyapunov exponent."];
     {$gifFrames, $gifFps} = AnimateLyapunov[lySweep, lyBif, lyResult["markers"], lyFloor,
-      <|"intro" -> lyIntroSec, "sweep" -> lyDur, "total" -> totalDurSec|>, outGIF];
+      <|"intro" -> lyIntroSec, "sweep" -> lyDur, "total" -> totalDurSec|>, outGIF, lyDoublings[[All, "r"]]];
     STEMDescribeGIF[outGIF, $gifFrames, $gifFps];
     SyncWAVToGIF[outGIF, outWAV];
     PrintLoudnessLine[outWAV, -17.0];
     Print[""];
 
     Print["[5/5] Exporting data table..."];
-    ExportLyapunovCSV[lySweep, lyFloor, lyDur, lyIntroSec, lyRefHz, lyOctaves, lyCrossings, outCSV];
+    ExportLyapunovCSV[lySweep, lyFloor, lyDur, lyIntroSec, lyRefHz, lyOctaves, lyCrossings, outCSV, lyDoublings];
     Print[""];
 
     STEMHeading["Done"];

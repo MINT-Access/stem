@@ -88,6 +88,35 @@ PrintCorrectnessChecks[feigenbaum_Association, fixedPoint_Association,
     If[divergence["pass"],    "6[PASS]", "6[FAIL]"]
   ];
 
+(* PrintFeigenbaumCheck
+   Check 1, one self-contained sentence per line: the five bisected
+   period-doubling points, then each ratio delta_k with its difference
+   from the constant, then the verdict. *)
+PrintFeigenbaumCheck[chk_Association] :=
+  Module[{d = $FeigenbaumConstant, dTxt = "4.669201609", pts = chk["points"], side},
+    If[!TrueQ[chk["resolved"]],
+      Print["    1. [FAIL] The period-doubling points r1 to r5 could not all be located; the search stopped at ",
+            ToString[Select[pts, !AssociationQ[#] &]], "."];
+      Return[Null]];
+    Print["    1a. The period-doubling points, located by bisection where the cycle's multiplier reaches -1 ",
+          "(each to a half-width below ", FmtN[chk["maxHalfWidth"], 2], " in r), are ",
+          StringRiffle[MapIndexed["r" <> ToString[#2[[1]]] <> " = " <> ToString[NumberForm[#1["r"], {9, 7}], OutputForm] <>
+            " (period " <> ToString[#1["periodBorn"]] <> " born)" &, pts], ", "], "."];
+    side[x_] := If[x > 0, " above ", " below "];
+    MapIndexed[
+      Print["    1", FromCharacterCode[97 + #2[[1]]], ". delta_", #2[[1]], " = (r", #2[[1]] + 1, " - r", #2[[1]],
+            ") / (r", #2[[1]] + 2, " - r", #2[[1]] + 1, ") = ", ToString[NumberForm[#1, {6, 5}], OutputForm],
+            ", which is ", FmtN[Abs[#1 - d], 3], side[#1 - d], dTxt, " (", FmtN[100 Abs[#1 - d] / d, 3], " percent)."] &,
+      chk["deltas"]];
+    Print["    1e. ", If[chk["pass"], "[PASS] ", "[FAIL] "], "The differences from the Feigenbaum constant ",
+          If[chk["monotone"], "shrink at every step", "do not shrink at every step"], " (",
+          StringRiffle[FmtN[Abs[#], 3] & /@ chk["diffs"], ", "], "), so the ratios ",
+          If[chk["monotone"], "approach", "do not steadily approach"], " the constant, and delta_3 is ",
+          FmtN[100 chk["relError"], 3], " percent from it, ", If[chk["relError"] < chk["tolerance"], "within", "outside"],
+          " the tolerance of ", FmtDec[100 chk["tolerance"], 2], " percent. The constant itself is the limit of ",
+          "these ratios; no finite ratio equals it."];
+  ];
+
 (* PrintDivergenceCheck — check 6, one self-contained sentence per r. *)
 PrintDivergenceCheck[chk_Association] :=
   MapIndexed[
@@ -227,24 +256,34 @@ PrintNarration[introText_String, outroText_String] :=
 
 (* ExportLyapunovCSV
    Columns: r, lambda, at_floor, sweep_time_s, audio_time_s, lambda_tone_hz,
-   crossing, crossing_r. A zero crossing (LyapunovZeroCrossings) lies
-   between two steps; it is recorded on the row of the step before it:
-   crossing is "upward" or "downward" and crossing_r its interpolated r.
-   Both are empty on other rows. *)
+   crossing, crossing_r, bifurcation_period_born, bifurcation_r. A zero
+   crossing (LyapunovZeroCrossings) lies between two steps; it is recorded
+   on the row of the step before it: crossing is "upward" or "downward"
+   and crossing_r its interpolated r. The period-doubling points r1 .. r5
+   (check 1's bisection) are recorded the same way: the period born and r
+   (9 decimals), several joined by ";" if they share a step. Empty on
+   other rows. *)
 ExportLyapunovCSV[sweep_List, floor_?NumericQ, durSec_?NumericQ, introSec_?NumericQ,
-                  refHz_?NumericQ, octavesPerUnit_?NumericQ, crossings_List, outCSV_String] :=
-  Module[{rMin = sweep[[1, 1]], rMax = sweep[[-1, 1]], byIndex, rows},
+                  refHz_?NumericQ, octavesPerUnit_?NumericQ, crossings_List, outCSV_String,
+                  Optional[doublings_List, {}]] :=
+  Module[{rMin = sweep[[1, 1]], rMax = sweep[[-1, 1]], rs = sweep[[All, 1]], byIndex, bifByIndex, rows},
     byIndex = Association[#["index"] -> # & /@ crossings];
+    (* each in-range period-doubling point on the row of the step before it *)
+    bifByIndex = GroupBy[Select[doublings, rMin <= #["r"] < rMax &],
+      Function[d, Max[1, Length[Select[rs, # <= d["r"] &]]]]];
     rows = MapIndexed[
       Function[{row, idx},
-        With[{t = LyapunovTimeOfR[row[[1]], rMin, rMax, durSec], c = Lookup[byIndex, idx[[1]], None]},
+        With[{t = LyapunovTimeOfR[row[[1]], rMin, rMax, durSec], c = Lookup[byIndex, idx[[1]], None],
+              bs = Lookup[bifByIndex, idx[[1]], {}]},
           {row[[1]], row[[2]], If[row[[2]] <= floor, 1, 0], t, introSec + t,
            LyapunovToneHz[row[[2]], refHz, octavesPerUnit],
-           If[c === None, "", c["direction"]], If[c === None, "", c["r"]]}]],
+           If[c === None, "", c["direction"]], If[c === None, "", c["r"]],
+           StringRiffle[ToString /@ bs[[All, "periodBorn"]], ";"],
+           StringRiffle[ToString[NumberForm[#, {10, 9}], OutputForm] & /@ bs[[All, "r"]], ";"]}]],
       sweep];
     ExportCSV[Join[{{"r", "lambda", "at_floor", "sweep_time_s", "audio_time_s", "lambda_tone_hz",
-                     "crossing", "crossing_r"}}, rows], outCSV];
-    STEMDescribeCSV[outCSV, Length[rows], 8]
+                     "crossing", "crossing_r", "bifurcation_period_born", "bifurcation_r"}}, rows], outCSV];
+    STEMDescribeCSV[outCSV, Length[rows], 10]
   ];
 
 (* PrintLyapunovSummary
@@ -273,13 +312,20 @@ PrintLyapunovSummary[sweep_List, crossings_List, windows_List, floor_?NumericQ,
       Print["  There is no window of order (a downward zero crossing followed by an upward one) ",
             "between r = ", FmtDec[rMin, 3], " and r = ", FmtDec[rMax, 3], "."]];
     Scan[
-      Print["  A window of order runs from r = ", r3[#["rStart"]], " to r = ", r3[#["rEnd"]],
-            ", ", FmtDec[#["width"], 4], " wide in r and ",
-            FmtDec[#["width"] / (rMax - rMin) * durSec, 2], " s long in the audio from ",
-            FmtDec[tOf[#["rStart"]], 2], " s, ",
-            If[IntegerQ[#["period"]],
-              "and it is the period-" <> ToString[#["period"]] <> " window.",
-              "and its period was not identified."]] &,
+      Function[w, Print["  ",
+        If[w["steps"] === 1,
+          "A window of order at r = " <> r3[rs[[w["downIndex"] + 1]]] <>
+            " spans a single r step of the sweep: the exponent is below zero only at that step" <>
+            ", so its width is less than the grid spacing of " <> FmtDec[(rMax - rMin) / (Length[rs] - 1), 4] <>
+            " in r and " <> FmtDec[durSec / (Length[rs] - 1), 2] <> " s in the audio; it is heard from " <>
+            FmtDec[tOf[w["rStart"]], 2] <> " s, ",
+          "A window of order runs from r = " <> r3[w["rStart"]] <> " to r = " <> r3[w["rEnd"]] <>
+            ", " <> FmtDec[w["width"], 4] <> " wide in r and " <>
+            FmtDec[w["width"] / (rMax - rMin) * durSec, 2] <> " s long in the audio from " <>
+            FmtDec[tOf[w["rStart"]], 2] <> " s, "] <>
+        If[IntegerQ[w["period"]],
+          "and it is the period-" <> ToString[w["period"]] <> " window.",
+          "and its period was not identified."]]],
       windows];
     lastC = If[crossings === {}, None, Last[crossings]];
     If[AssociationQ[lastC] && lastC["direction"] === "downward",

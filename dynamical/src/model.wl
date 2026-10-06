@@ -11,7 +11,9 @@
      r ~ 3.0          first period-doubling bifurcation (period 2)
      r ~ 3.449        period 4
      r ~ 3.544        period 8
-     r ~ 3.5644       Feigenbaum accumulation point (onset of chaos)
+     r ~ 3.5644       period 16
+     r ~ 3.5688       period 32
+     r ~ 3.5699       Feigenbaum accumulation point (onset of chaos)
      r > 3.57         mostly chaotic, with periodic windows
      r ~ 3.8284       period-3 window (Li-Yorke: "period 3 implies chaos")
      r = 4            fully chaotic, ergodic on [0,1]
@@ -166,7 +168,9 @@ AttractorPoints[x0_?NumericQ, r_?NumericQ, nTransient_Integer, nAttractor_Intege
   ];
 
 
-(* ── Bifurcation point finder (Feigenbaum check) ─────────────────────
+(* ── Bifurcation point finder (sweep markers) ────────────────────────
+   Used for the sweep mode's first-bifurcation marker
+   (SweepEventRValues). Check 1 uses the bisection below instead.
    The r value at which the fixed point of the nFold-times-iterated
    map loses stability (derivative = -1) is exactly the r value at
    which the next period-doubling is born:
@@ -188,22 +192,103 @@ BifurcationPoint[nFold_Integer, rGuess_?NumericQ, Optional[xGuess_?NumericQ, 0.5
 
 $FeigenbaumConstant = 4.66920160910299;
 
-(* FeigenbaumCheck
-   Locates r1, r2, r3 numerically and verifies the ratio of successive
-   bifurcation intervals is within tolerance (default 5%) of delta. *)
-FeigenbaumCheck[Optional[tolerance_?NumericQ, 0.05]] :=
-  Module[{r1sol, r2sol, r3sol, r1, r2, r3, ratio, relErr},
-    r1sol = BifurcationPoint[1, 2.9];
-    r2sol = BifurcationPoint[2, 3.449];
-    r3sol = BifurcationPoint[4, 3.544];
-    r1 = r1sol[[2]]; r2 = r2sol[[2]]; r3 = r3sol[[2]];
-    ratio  = (r2 - r1) / (r3 - r2);
-    relErr = Abs[ratio - $FeigenbaumConstant] / $FeigenbaumConstant;
-    <|
-      "r1" -> r1, "r2" -> r2, "r3" -> r3,
-      "ratio" -> ratio, "relError" -> relErr,
-      "pass" -> (relErr < tolerance)
-    |>
+(* ── Period-doubling points by bisection (check 1) ───────────────────
+   r_k is where the cycle of period p = 2^(k-1) loses stability and the
+   cycle of period 2p is born: the cycle's multiplier
+   mu = Product[f'(x_i)] = Product[r (1 - 2 x_i)] over the p cycle points
+   passes through -1 (equivalently, the Lyapunov exponent, Log|mu| / p,
+   touches zero from below). For each k:
+     - the bracket [a, b] has mu(a) in (-1, 1) (stable) and mu(b) < -1;
+       r1 uses [2.5, 3.5], r2 [3.25, 3.5], and r_k for k >= 3 uses
+       r_(k-1) + d/8 to r_(k-1) + d/3 with d = r_(k-1) - r_(k-2); both ends
+       are checked, so the brackets only have to be generous, and any
+       ratio between 2.7 and 8 for d / (r_k - r_(k-1)) would still be
+       caught by them;
+     - the cycle at a comes from iterating the map (it is stable there)
+       and is followed to each new r by Newton steps on f^p(x) = x in
+       small r increments (CycleFollow), so Newton stays on the same
+       cycle; a cycle that falls onto a point of period p/2 or a Newton
+       step that fails stops the search with Missing[];
+     - bisection on Sign[mu + 1] until the bracket's half-width is below
+       tol (default 1e-12 in r).
+   Machine precision is enough: near r_k the multiplier is about -1, so
+   Newton's denominator f^p'(x) - 1 is about -2, and f^p(x) - x is
+   resolved to about 1e-15 for p <= 64 (measured: r1 to r7 all found,
+   r1 = 3 within 5e-13, r2 = 1 + Sqrt[6] within 3e-13). *)
+
+CycleNewton[r_?NumericQ, p_Integer, seed_?NumericQ] :=
+  Module[{x = N[seed], orbit, fx, d, step = 1., k = 0},
+    While[k < 50 && Abs[step] > 10^-15,
+      orbit = NestList[LogisticMap[#, r] &, x, p];
+      fx = Last[orbit]; d = Times @@ (r (1 - 2 Most[orbit]));
+      step = (fx - x) / (d - 1); x = x - step; k++];
+    If[!NumericQ[x] || Abs[Nest[LogisticMap[#, r] &, x, p] - x] > 10^-12, Missing["NoConvergence"], x]
+  ];
+
+CycleMultiplier[r_?NumericQ, p_Integer, x_?NumericQ] :=
+  Times @@ (r (1 - 2 NestList[LogisticMap[#, r] &, x, p - 1]));
+
+CycleFollow[{r0_?NumericQ, x0_?NumericQ}, r1_?NumericQ, p_Integer, Optional[nSteps_Integer, 16]] :=
+  Module[{x = x0},
+    Do[x = CycleNewton[r0 + (r1 - r0) j / nSteps, p, x]; If[MissingQ[x], Return[x, Module]], {j, nSteps}];
+    If[p > 1 && Abs[Nest[LogisticMap[#, r1] &, x, p / 2] - x] < 10^-9, Missing["LowerPeriod"], x]
+  ];
+
+BifurcationBisection[p_Integer, {a0_?NumericQ, b0_?NumericQ}, Optional[tol_?NumericQ, 10^-12]] :=
+  Module[{a = N[a0], b = N[b0], xa, xb, m, xm, n = 0},
+    xa = CycleNewton[a, p, Nest[LogisticMap[#, a] &, 0.3, 20000]];
+    If[MissingQ[xa], Return[Missing["NoCycleAtLowerBracket", {p, a}]]];
+    xb = CycleFollow[{a, xa}, b, p];
+    If[MissingQ[xb] || !(-1 < CycleMultiplier[a, p, xa] < 1) || !(CycleMultiplier[b, p, xb] < -1),
+      Return[Missing["BadBracket", {p, a, b}]]];
+    While[b - a > 2 tol,
+      m = (a + b) / 2; xm = CycleFollow[{a, xa}, m, p, 4];
+      If[MissingQ[xm], Return[Missing["CycleLost", {p, m}], Module]];
+      If[CycleMultiplier[m, p, xm] > -1, a = m; xa = xm, b = m]; n++];
+    <|"r" -> (a + b) / 2, "halfWidth" -> (b - a) / 2, "bisections" -> n,
+      "periodBorn" -> 2 p, "cyclePoint" -> xa|>
+  ];
+
+(* PeriodDoublingPoints — r1 .. r_n as BifurcationBisection
+   Associations (r, halfWidth, bisections, periodBorn); stops early, with
+   the Missing[] as the last entry, if a search fails. *)
+PeriodDoublingPoints[Optional[n_Integer, 5], Optional[tol_?NumericQ, 10^-12]] :=
+  Module[{pts = {}, d, rl},
+    Do[
+      If[Length[pts] > 0 && !AssociationQ[Last[pts]], Break[]];
+      AppendTo[pts, Which[
+        k == 1, BifurcationBisection[1, {2.5, 3.5}, tol],
+        k == 2, BifurcationBisection[2, {3.25, 3.5}, tol],
+        True,
+          rl = pts[[-1, "r"]]; d = rl - pts[[-2, "r"]];
+          BifurcationBisection[2^(k - 1), {rl + d / 8, rl + d / 3}, tol]]],
+      {k, n}];
+    pts
+  ];
+
+(* FeigenbaumCheck — check 1.
+   delta_k = (r_(k+1) - r_k) / (r_(k+2) - r_(k+1)) for k = 1, 2, 3 from the
+   bisected r1 .. r5. Passes when delta_3 is within `tolerance` (default
+   0.5 percent) of the Feigenbaum constant and the ratios approach it
+   monotonically, i.e. |delta_k - delta| shrinks at every step (the ratios
+   alternate about the constant, so the differences, not the ratios,
+   are monotonic). The constant is the limit; no finite ratio equals it.
+   Measured: delta_1 = 4.7514, delta_2 = 4.6563, delta_3 = 4.6682. *)
+FeigenbaumCheck[Optional[tolerance_?NumericQ, 0.005]] :=
+  Module[{pts, rs, deltas, diffs, relErr, monotone, ok},
+    pts = PeriodDoublingPoints[5];
+    ok  = Length[pts] === 5 && AllTrue[pts, AssociationQ];
+    If[!ok, Return[<|"points" -> pts, "resolved" -> False, "pass" -> False|>]];
+    rs     = pts[[All, "r"]];
+    deltas = Table[(rs[[k + 1]] - rs[[k]]) / (rs[[k + 2]] - rs[[k + 1]]), {k, 3}];
+    diffs  = deltas - $FeigenbaumConstant;
+    relErr = Abs[Last[diffs]] / $FeigenbaumConstant;
+    monotone = And @@ Thread[Abs[Rest[diffs]] < Abs[Most[diffs]]];
+    <|"points" -> pts, "resolved" -> True, "rs" -> rs, "deltas" -> deltas, "diffs" -> diffs,
+      "r1" -> rs[[1]], "r2" -> rs[[2]], "r3" -> rs[[3]],
+      "relError" -> relErr, "tolerance" -> tolerance, "monotone" -> monotone,
+      "maxHalfWidth" -> Max[pts[[All, "halfWidth"]]],
+      "pass" -> (relErr < tolerance && monotone)|>
   ];
 
 
@@ -303,13 +388,17 @@ LyapunovWindows[crossings_List, Optional[tolerance_?NumericQ, 0.005]] :=
     period[r_] := SelectFirst[$lyapunovKnownWindows, Abs[#[[1]] - r] <= tolerance &,
                               {None, Missing["NotIdentified"]}][[2]];
     Map[<|"rStart" -> #[[1, "r"]], "rEnd" -> #[[2, "r"]], "width" -> #[[2, "r"]] - #[[1, "r"]],
-          "period" -> period[#[[1, "r"]]]|> &, pairs]
+          "period" -> period[#[[1, "r"]]],
+          "downIndex" -> Lookup[#[[1]], "index", Missing[]],
+          "steps" -> If[KeyExistsQ[#[[1]], "index"] && KeyExistsQ[#[[2]], "index"],
+                        #[[2, "index"]] - #[[1, "index"]], Missing[]]|> &, pairs]
   ];
 
-(* PeriodDoublingRs — r1, r2, r3 (period 2, 4 and 8 born), from the same
-   BifurcationPoint root-finder as check 1. *)
-PeriodDoublingRs[] :=
-  {BifurcationPoint[1, 2.9][[2]], BifurcationPoint[2, 3.449][[2]], BifurcationPoint[4, 3.544][[2]]};
+(* PeriodDoublingRs — r1 .. r_n (periods 2, 4, 8, ... born), from the
+   same bisection as check 1 (PeriodDoublingPoints). The lyapunov intro
+   names r1 to r3; the animation and the CSV mark r1 to r5. *)
+PeriodDoublingRs[Optional[n_Integer, 3]] :=
+  Select[PeriodDoublingPoints[n], AssociationQ][[All, "r"]];
 
 (* Period2LyapunovExact
    Closed-form lambda of the period-2 cycle: the two cycle points are

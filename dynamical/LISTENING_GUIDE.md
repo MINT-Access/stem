@@ -40,6 +40,12 @@ wolframscript -file main.wl -- --simulation.mode=iterate --simulation.dynamical.
 wolframscript -file main.wl -- --simulation.mode=iterate --simulation.dynamical.preset=chaos
 ```
 
+Each preset writes its own files, `output/iterate_<preset>_audio.wav`,
+`output/iterate_<preset>.gif` and `output/iterate_<preset>_data.csv`
+(for example `iterate_growth_audio.wav`), so you can render the whole
+sequence and play it back in order. Without a preset the files are
+`iterate_audio.wav`, `iterate.gif` and `iterate_data.csv`.
+
 Then listen to `sweep` mode, which traverses the full route from stable
 to chaotic in a single audio file:
 
@@ -98,7 +104,10 @@ audio, and its period when it opens within 0.005 of a known window
 (period 3 at 3.828, period 5 at 3.739 and 3.906, period 6 at 3.626). In
 the default sweep the period-3 window lasts 1.57 s of audio, the period-6
 window 0.6 s and the period-5 window 0.38 s; the other dips are narrower
-than 0.1 s. Every crossing is also in the CSV.
+than 0.1 s. A dip that is below zero at only one r step of the sweep is
+reported as spanning a single step, with the grid spacing as the bound
+on its width, rather than with a width of zero. Every crossing, and the
+five period-doubling points of check 1, are also in the CSV.
 
 The `lyapunov_window` preset zooms into r 3.40 to 3.90 over 40 s, where
 the crossings come thick and fast; it matches the listening prototype
@@ -139,8 +148,9 @@ wolframscript -file main.wl -- --simulation.mode=divergence --simulation.dynamic
    the notes; three iterations earlier, at iteration 15, the sound
    has already split into two, and from then on the two ears play unrelated notes.
 2. **`divergence_edge`** (r = 3.57): λ is almost zero (+0.011). The
-   middle tone creeps up only a little, from one part in a million to
-   about one part in a hundred thousand; the two ears stay together
+   middle tone creeps up only a little: the separation never exceeds one
+   tenth, and its maximum is 2.6 parts in ten thousand (at iteration
+   110), as the outro says; the two ears stay together
    throughout.
 3. **`divergence_periodic`** (r = 3.2, both populations starting on the
    2-cycle at 0.513): the middle tone falls steadily, at the rate λ
@@ -167,12 +177,39 @@ the two orbits, for pure stereo listening.
 ## The Feigenbaum constant
 
 The intervals between successive period-doublings shrink by a factor
-of approximately 4.669 each time. This number appears in any smooth
-one-dimensional map with a single hump — it is a universal constant
-of chaos, like pi is a universal constant of circles. The correctness
-checks that run every time you start this app locate the first three
-bifurcation points numerically and verify this ratio directly (see
-`--simulation.mode` output, "Correctness checks").
+that tends to 4.669201609… — the Feigenbaum constant. It appears in any
+smooth one-dimensional map with a single hump; it is a universal
+constant of chaos, like pi is a universal constant of circles.
+
+What this app actually computes (correctness check 1, printed every
+time you start it): the first five period-doubling points, where the
+period-2, 4, 8, 16 and 32 cycles are born, each located by bisection to
+better than 1e-12 in r:
+
+| | r | period born |
+|---|---|---|
+| r1 | 3.0000000 | 2 |
+| r2 | 3.4494897 | 4 |
+| r3 | 3.5440904 | 8 |
+| r4 | 3.5644073 | 16 |
+| r5 | 3.5687594 | 32 |
+
+and from them three ratios of successive intervals:
+
+| ratio | value | difference from 4.669201609 |
+|---|---|---|
+| δ1 = (r2 − r1)/(r3 − r2) | 4.75145 | +0.0822 (1.8 %) |
+| δ2 = (r3 − r2)/(r4 − r3) | 4.65625 | −0.0130 (0.28 %) |
+| δ3 = (r4 − r3)/(r5 − r4) | 4.66824 | −0.00096 (0.021 %) |
+
+The ratios do not equal the constant; they approach it, alternating
+above and below, each one closer than the last. The check passes when
+δ3 is within 0.5 % of the constant and the differences shrink at every
+step. The constant itself is the limit of this sequence. In the
+lyapunov animation the five points are the small green ticks above the
+top panel: r3, r4 and r5 crowd together within 0.025 of each other
+just before chaos begins at r ≈ 3.5699, which is what "shrinking by a
+factor of 4.669" looks like.
 
 ## A note on the period-3 window value
 
