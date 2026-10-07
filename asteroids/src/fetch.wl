@@ -28,6 +28,28 @@ If[!ValueQ[$NasaApiKey],
 $NeoWsBaseUrl = "https://api.nasa.gov/neo/rest/v1/feed";
 
 
+(* FetchURLText
+   GET a URL and return the response body as a byte string (one
+   character per UTF-8 byte, which is what ImportString[..., "JSON"]
+   expects), or $Failed. Uses the built-in URLRead; only if URLRead
+   cannot reach the server is curl tried, with a printed sentence. The
+   body is returned whatever the HTTP status, as curl -s did, so the
+   callers' checks for API error messages still see them. *)
+
+FetchURLText[url_String] :=
+  Module[{resp, bytes, r, host},
+    host  = Quiet[URLParse[url, "Domain"]];
+    resp  = Quiet[URLRead[HTTPRequest[url], TimeConstraint -> 30, Interactive -> False]];
+    bytes = If[Head[resp] === HTTPResponse, Quiet[resp["BodyByteArray"]], $Failed];
+    If[ByteArrayQ[bytes], Return[FromCharacterCode[Normal[bytes]]]];
+    If[Head[resp] === HTTPResponse, Return[""]];   (* reached, empty body *)
+    Print["  URLRead could not reach ", host,
+          ", so the request is being retried with curl."];
+    r = Quiet[RunProcess[{"curl", "-s", "--max-time", "30", url}]];
+    If[AssociationQ[r] && r["ExitCode"] === 0, r["StandardOutput"], $Failed]
+  ]
+
+
 (* FetchRawJson
    Fetches the raw JSON string from the NeoWs API for a date range.
    NeoWs allows at most 7 days per request. *)
@@ -40,9 +62,7 @@ FetchRawJson[startDate_String, endDate_String] :=
       "&api_key="    <> $NasaApiKey;
 
     Print["  Fetching: ", url];
-    With[{res = RunProcess[{"curl", "-s", "--max-time", "30", url}]},
-      response = If[res["ExitCode"] === 0, res["StandardOutput"], $Failed]
-    ];
+    response = FetchURLText[url];
 
     If[response === $Failed || StringLength[response] < 10,
       FetchError["Could not reach NASA API. Check your internet connection."];
@@ -227,9 +247,7 @@ FetchOrbitalElements[spkid_String, name_String] :=
     url = $SBDBBaseUrl <> "?des=" <> spkid <> "&full-prec=true";
     Print["  Fetching orbital elements for ", name, " (", spkid, ")..."];
 
-    With[{r = RunProcess[{"curl", "-s", "--max-time", "30", url}]},
-      response = If[r["ExitCode"] === 0, r["StandardOutput"], $Failed]
-    ];
+    response = FetchURLText[url];
 
     If[response === $Failed || StringLength[response] < 10,
       $OrbitalElementsCache[spkid] = $Failed;

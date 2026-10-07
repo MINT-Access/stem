@@ -74,7 +74,7 @@ AnimateRipple[model_Association, outDir_String, targetDuration_?NumericQ,
     STEMDescribeGIF[outGIFR, nFramesR, frameRateR];
 
     outPNGR = FileNameJoin[{outDir, "ripple.png"}];
-    Export[outPNGR,
+    ExportPNG[outPNGR,
       Plot3D[solR[x, y, tEnd],
         {x, -r, r}, {y, -r, r},
         RegionFunction -> Function[{xp, yp, z}, xp^2 + yp^2 <= (0.97*r)^2],
@@ -84,8 +84,7 @@ AnimateRipple[model_Association, outDir_String, targetDuration_?NumericQ,
         BoxRatios  -> {2, 2, 0.7},
         ImageSize  -> 400,
         Background -> Black,
-        ViewPoint  -> {2.0, -3.0, 1.5}],
-      "PNG"];
+        ViewPoint  -> {2.0, -3.0, 1.5}]];
     Print["  PNG: ", outPNGR]
   ];
 
@@ -151,6 +150,6 @@ AnimateInterference[model_Association, outDir_String, targetDuration_?NumericQ,
     STEMDescribeGIF[outGIFI, nFramesI, frameRateI];
 
     outPNGI = FileNameJoin[{outDir, "interference.png"}];
-    Export[outPNGI, Last[framesI], "PNG"];
+    ExportPNG[outPNGI, Last[framesI]];
     Print["  PNG: ", outPNGI]
   ];

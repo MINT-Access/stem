@@ -7,6 +7,30 @@ app's own output. Every app's primary, default output stays
 sonification-first — WAV, GIF, CSV — exactly as documented in each
 app's own README.
 
+## smoke_test.wl
+
+One command that checks an installation: every app's default mode, then
+`demo.wl`, all in one kernel (stem-core `STEMRunApp`; no child
+wolframscript). Writes a UTF-8 plain-text report
+`smoke_test_<SystemID>_<date>.txt` in the repository root (gitignored; pass
+`--out=<path>` to put it elsewhere): an environment block (version, system,
+encodings, SpeechSynthesize, which speech and network tools start, a
+non-ASCII probe line with its UTF-8 bytes, the pixel size of a test GIF),
+one line per app (status, seconds, WAV length, LUFS, peak, GIF length, GIF
+minus WAV, GIF pixels, whether the WAV opens with speech, first message),
+the pendulum frame-clipping check (a Wolfram port of
+`pendulum/tests/verify_animation_frames.py`), demo.wl's result, and every
+Wolfram message in full. Exit code 0 only if every app wrote a WAV.
+
+```sh
+wolframscript -file tools/smoke_test.wl              # all 32 apps + demo.wl (about 30 min)
+wolframscript -file tools/smoke_test.wl -- --quick   # 6 apps + demo.wl --quick (about 8 min)
+```
+
+On Windows PowerShell write the separator as `'--'`; see the root README.
+The report from the development Mac is kept in
+`docs/smoke_test_MacOSX-ARM64_2026-10-07.txt` for comparison.
+
 ## make_presentation_video.wl
 
 Generates a single presentation-ready MP4 (video + audio, muxed and

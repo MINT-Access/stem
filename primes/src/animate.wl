@@ -45,7 +45,7 @@ AnimateUlam[model_Association, cfg_Association, outDir_String] :=
 
     mainPath = FileNameJoin[{outDir, "ulam_spiral.png"}];
     EnsureDir[mainPath];
-    Export[mainPath, primePlot, "PNG"];
+    ExportPNG[mainPath, primePlot];
     Print["  Spiral PNG: ", mainPath];
 
     (* Single-frame GIF, held for the length of the row-scan audio
@@ -77,7 +77,7 @@ AnimateUlam[model_Association, cfg_Association, outDir_String] :=
     ];
 
     zoomPath = FileNameJoin[{outDir, "ulam_centre_zoom.png"}];
-    Export[zoomPath, zoomPlot, "PNG"];
+    ExportPNG[zoomPath, zoomPlot];
     Print["  Centre zoom PNG (31x31): ", zoomPath];
 
     (* Accessibility announcement *)

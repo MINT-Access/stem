@@ -58,7 +58,7 @@ support both conventions.
 Dump the active config without running the simulation:
 
 ```sh
-wolframscript -file <app>/main.wl -- --config-dump | python3 -m json.tool
+wolframscript -file <app>/main.wl -- --config-dump    # already indented JSON
 ```
 
 ---

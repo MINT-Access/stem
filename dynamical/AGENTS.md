@@ -667,17 +667,6 @@ inherent centisecond duration quantization, not a code error.
 
 ## Speech synthesis note
 
-`speech.wl`'s three-tier fallback (`SpeechSynthesize[]` -> platform TTS
--> text-only `STEMSay`) duplicates the pattern in
-`images/src/speech.wl`, which itself duplicates logic from
-`signal/src/sonify.wl`'s `SpeakToBuffer`. On top of it, this app's
-`SpeakNarration` synthesises one sentence at a time and caches each
-distinct sentence for the run (design decision 9). `SpeechSynthesize[]` was
-observed to return `$Failed` in this development environment — the
-platform-native TTS tier (macOS `say`/`afconvert`) is what actually
-produces audio in practice. This is one of many independent copies of
-this pattern scattered across the codebase, each app calling
-`SpeechSynthesize[]` directly rather than through a shared helper; a
-good candidate for stem-core consolidation in a future pass (explicitly
-out of scope here per this app's build spec, which excludes stem-core
-changes).
+Narration audio comes from stem-core's `STEMSpeakToBuffer` (`SpeechSynthesize[]`
+first, then the platform tool: `say`, `espeak-ng` or PowerShell; see
+`stem-core/AGENTS.md`); `speech.wl` holds only this app's narration text.

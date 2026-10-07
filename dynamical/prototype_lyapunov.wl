@@ -196,7 +196,7 @@ Module[{p = $params, sr, rs, lamRaw, lams, nS, lamS, phase, fade, lamVoiceA,
       {Red, PointSize[0.008], Point[{#["r"], 0} & /@ crossings]}
     },
     ImageSize -> {1100, 520}];
-  Export[pngPath, plot, "PNG"];
+  ExportPNG[pngPath, plot];
 
   (* Measure the written files *)
   files = AssociationMap[ReadWAV[paths[#]] &, Keys[mixes]];

@@ -95,7 +95,7 @@ ExportWalkPNG[walkTable_List, filePath_String, title_String:"Brownian Walk"] :=
     plotRange = ComputeWalkPlotRange[walkTable];
     frame = RenderWalkFrame[walkTable, Length[walkTable], plotRange, title];
     EnsureDir[filePath];
-    Export[filePath, frame, "PNG"];
+    ExportPNG[filePath, frame];
     filePath
   ];
 
@@ -135,7 +135,7 @@ ExportEnsemblePNG[ensembleModel_Association, filePath_String] :=
       FrameTicks -> True
     ];
     EnsureDir[filePath];
-    Export[filePath, frame, "PNG"];
+    ExportPNG[filePath, frame];
     filePath
   ];
 
@@ -174,6 +174,6 @@ ExportTemperaturePanel[tVals_List, walkTables_List, filePath_String] :=
 
     frame = GraphicsGrid[{panels}, Background -> GrayLevel[0.05], Spacings -> {5, 0}];
     EnsureDir[filePath];
-    Export[filePath, frame, "PNG"];
+    ExportPNG[filePath, frame];
     filePath
   ];

@@ -10,7 +10,8 @@ FetchPlanckSpectrum[lMaxFetch_Integer] :=
     raw, lines, dataLines, parsed, lVec, dlVec, keep
   },
     Print["  Fetching Planck 2018 TT spectrum from PLA..."];
-    raw = Quiet[URLFetch[url, "Content"]];
+    raw = Quiet[URLRead[HTTPRequest[url], TimeConstraint -> 60, Interactive -> False]];
+    raw = If[Head[raw] === HTTPResponse, Quiet[raw["Body"]], $Failed];
     If[!StringQ[raw] || StringLength[raw] < 200,
       Return[{}]
     ];
@@ -20,10 +21,10 @@ FetchPlanckSpectrum[lMaxFetch_Integer] :=
       StringLength[StringTrim[#]] > 0 &&
       !StringStartsQ[StringTrim[#], "#"] &];
     If[Length[dataLines] < 5, Return[{}]];
-    parsed = Quiet @ Map[
-      Function[line, ToExpression /@ StringSplit[StringTrim[line]]],
-      dataLines
-    ];
+    (* "Table" reads the file's 2.00000000e+00 notation; ToExpression,
+       used before, does not, so the Planck path always fell back. *)
+    parsed = Quiet @ ImportString[StringRiffle[dataLines, "\n"], "Table"];
+    If[!ListQ[parsed], Return[{}]];
     parsed = Select[parsed,
       ListQ[#] && Length[#] >= 2 &&
       NumericQ[#[[1]]] && NumericQ[#[[2]]] &];

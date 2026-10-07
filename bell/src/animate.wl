@@ -86,7 +86,7 @@ AnimateCorrelations[model_Association, outGif_String, outPng_String,
       PlotRange  -> {{-180, 180}, {-1.1, 1.1}},
       ImageSize  -> {620, 380}, AspectRatio -> 0.5
     ];
-    Export[outPng, staticPlt, "PNG"];
+    ExportPNG[outPng, staticPlt];
     Print["  PNG: ", outPng];
     {Length[frames], frameRate}
   ];
@@ -158,7 +158,7 @@ AnimateChsh[model_Association, outGif_String, outPng_String,
     ExportGIF[frames, outGif, plan];
 
     staticPlt = RenderChshFrame[model["S"], model, "S"];
-    Export[outPng, staticPlt, "PNG"];
+    ExportPNG[outPng, staticPlt];
     Print["  PNG: ", outPng];
     {Length[frames], frameRate}
   ];
@@ -189,6 +189,6 @@ ExportMeasurementPNG[model_Association, outPng_String] :=
       PlotRange  -> {{1, n}, {-1.1, 1.1}},
       ImageSize  -> {620, 380}, AspectRatio -> 0.5
     ];
-    Export[outPng, plt, "PNG"];
+    ExportPNG[outPng, plt];
     Print["  PNG: ", outPng]
   ];

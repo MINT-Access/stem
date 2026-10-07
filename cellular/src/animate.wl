@@ -96,7 +96,7 @@ AnimateCellular[grid3D_List, cfg_Association, outPath_String, targetDuration_?Nu
 
       pngPath = StringReplace[outPath, ".gif" -> "_spacetime.png"];
       EnsureDir[pngPath];
-      Export[pngPath, spacetimePlot, "PNG"];
+      ExportPNG[pngPath, spacetimePlot];
       Print["  Spacetime PNG — ", pngPath];
 
       plan = GIFFramePlan[Max[targetDuration, 0.1], 1.0 / Max[targetDuration, 0.1],

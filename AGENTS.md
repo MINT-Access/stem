@@ -151,7 +151,7 @@ Valid scales: `MinorPentatonic` `MajorPentatonic` `Major` `Minor` `WholeTone` `P
 Inspect any app's active config without running the simulation:
 
 ```sh
-wolframscript -file <app>/main.wl -- --config-dump | python3 -m json.tool
+wolframscript -file <app>/main.wl -- --config-dump    # already indented JSON
 ```
 
 Override any config key at runtime:
@@ -186,6 +186,11 @@ wolframscript -file stem-core/tests/test_loudness.wl
 wolframscript -file stem-core/tests/test_speech.wl
 ```
 
+`tools/smoke_test.wl` (`-- --quick` for a short run) runs every app's default
+mode and demo.wl in one kernel and writes `smoke_test_<SystemID>_<date>.txt`
+in the repo root (gitignored): environment, one line per app, the pendulum
+frame-clipping check, every Wolfram message. Use it first on a new machine.
+
 `cellular`, `signal`, `quantum`, `primes`, and `relativity` do not have test files. All existing test files exit 0 on success, 1 on failure.
 
 ---
@@ -208,7 +213,8 @@ After `Get[".../stem-core/init.wl"]` all of the following are available:
 | `ExportAudioBuffer[buffer, filePath, sr]` | synth | Write WAV (headless-safe) |
 | `ExportCSV[rows, filePath]` | export | Write CSV, create directory if needed |
 | `GIFFramePlan[audioDur, desiredFps, opts]` | export | Whole-centisecond frame delay + frame count for a GIF timed to audio |
-| `ExportGIF[frames, filePath, plan]` | export | Write looping animated GIF with the plan's delay |
+| `ExportGIF[frames, filePath, plan]` | export | Write looping animated GIF with the plan's delay, frames rasterised at 144 dpi |
+| `ExportPNG[filePath, expr]` / `STEMRasterize[expr]` | export | Write a PNG / rasterise at the fixed 144 dpi (`$STEMImageResolution`), so pixel sizes do not depend on the host's display scale |
 | `SyncWAVToGIF[gifPath, wavPath, opts]` | export | Measure both files, pad WAV if GIF is longer by > 1 frame delay, print the sync line |
 | `EnsureDir[filePath]` | utils | Create parent directory if absent |
 | `LogError[message, logPath]` | utils | Append timestamped error to log file |
@@ -226,6 +232,7 @@ After `Get[".../stem-core/init.wl"]` all of the following are available:
 | `$STEMSpeakEnabled` | accessibility | Boolean flag; `True` when `STEM_SPEAK=1` env var is set at load time |
 | `STEMSay[text]` | accessibility | Print text + optionally speak via `say` |
 | `STEMSpeakToBuffer[text, sr]` | speech | Narration PCM: SpeechSynthesize[] -> platform tool (UTF-8 text file) -> `{}` with one warning sentence |
+| `STEMRunApp[appDir, args, opts]` / `STEMRunExperiments[appDir, runs]` | runapp | Run a main.wl in this kernel (demo.wl's Block + Get pattern), record status, messages and new files; used by experiments.wl files and tools/smoke_test.wl |
 | `STEMSpeechAvailable[]` | speech | `True` when a speech tier can produce audio (`False` under `STEM_SPEECH_OFF=1`) |
 
 See `stem-core/AGENTS.md` for full parameter descriptions and constraints.
@@ -278,6 +285,13 @@ All code must run correctly via `wolframscript -file` with no display server.
   `SyncWAVToGIF[gifPath, wavPath]` in `main.wl` once both files exist. GIF
   delays are whole centiseconds, so a count computed from a non-round fps
   drifts from the audio; the plan derives the count from the rounded delay.
+- **Image resolution**: export PNGs with `ExportPNG[path, graphics]` and GIFs
+  with `ExportGIF`; both rasterise at 144 dpi so the pixel size is the same on
+  every platform. Never `Export` a `Graphics` to PNG or GIF directly, and give
+  any other `Rasterize` an explicit `ImageResolution` or `RasterSize`.
+- **Running several presets**: experiments.wl files list `{label, args}` runs
+  and call `STEMRunExperiments`; never start a child `wolframscript` with
+  `Run` or `RunProcess` (a second kernel licence, and unquoted paths).
 - **Text encoding**: `stem-core/init.wl` and every `main.wl` set
   `$CharacterEncoding = "UTF8"`, and every `Export` of `"Text"`/`"CSV"` and
   `Import` of JSON passes `CharacterEncoding -> "UTF8"`. That does not change

@@ -80,12 +80,19 @@ afplay signal/output/am_narrative_full.wav
 ## Inspecting the active configuration
 
 Any app can print its fully merged configuration as JSON and exit immediately
-without running the simulation. Pipe to `python3 -m json.tool` for indented
-output:
+without running the simulation. The JSON is already indented, so no
+formatter is needed:
 
 ```sh
-wolframscript -file pendulum/main.wl -- --config-dump | python3 -m json.tool
-wolframscript -file cellular/main.wl -- --config-dump | python3 -m json.tool
+# macOS / Linux
+wolframscript -file pendulum/main.wl -- --config-dump
+wolframscript -file cellular/main.wl -- --config-dump
+
+# Windows PowerShell
+wolframscript -file pendulum\main.wl '--' --config-dump
+
+:: Windows Command Prompt (cmd)
+wolframscript -file pendulum\main.wl -- --config-dump
 ```
 
 This lets you verify that `STEM_SPEAK`, voice, rate, and all other settings

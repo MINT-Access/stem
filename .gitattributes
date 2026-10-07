@@ -1,0 +1,12 @@
+# Line endings: source, config, docs and data check out with LF on every
+# platform (Git for Windows would otherwise convert them to CRLF).
+*.wl    text eol=lf
+*.json  text eol=lf
+*.md    text eol=lf
+*.csv   text eol=lf
+
+# Media is binary: never diffed, never converted.
+*.wav   binary
+*.gif   binary
+*.png   binary
+*.mp4   binary

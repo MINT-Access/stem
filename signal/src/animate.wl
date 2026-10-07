@@ -175,7 +175,7 @@ AnimateSignal[analysis_Association, cfg_Association, outDir_String] :=
     EnsureDir[waveformPath];
 
     Print["  Exporting waveform PNG..."];
-    Export[waveformPath,
+    ExportPNG[waveformPath,
       ListLinePlot[
         {PlotDecimate[clean, 3000], PlotDecimate[noisy, 3000]},
         DataRange  -> {0, dur},
@@ -184,16 +184,14 @@ AnimateSignal[analysis_Association, cfg_Association, outDir_String] :=
         Frame      -> True,
         FrameLabel -> {{"Amplitude", None}, {"Time (s)", None}},
         PlotLabel  -> "Waveform: clean (blue) + noisy (orange)",
-        ImageSize  -> {width, height}],
-      "PNG"];
+        ImageSize  -> {width, height}]];
 
     Print["  Exporting spectrum PNG..."];
-    Export[spectrumPath,
-      SpectrumPlot[analysis, maxFreqHz, ImageSize -> {width, height}],
-      "PNG"];
+    ExportPNG[spectrumPath,
+      SpectrumPlot[analysis, maxFreqHz, ImageSize -> {width, height}]];
 
     Print["  Exporting recovery PNG..."];
-    Export[recoveryPath,
+    ExportPNG[recoveryPath,
       ListLinePlot[
         {PlotDecimate[clean, 3000], PlotDecimate[recovered, 3000]},
         DataRange  -> {0, dur},
@@ -202,8 +200,7 @@ AnimateSignal[analysis_Association, cfg_Association, outDir_String] :=
         Frame      -> True,
         FrameLabel -> {{"Amplitude", None}, {"Time (s)", None}},
         PlotLabel  -> "Recovery: clean (blue) + recovered (green)",
-        ImageSize  -> {width, height}],
-      "PNG"];
+        ImageSize  -> {width, height}]];
 
     (* ── Animated GIF: nFrames frames, each a 3-panel view of one time window ── *)
     Print["  Rendering ", nFrames, " GIF frames at ", FmtDec[fps],

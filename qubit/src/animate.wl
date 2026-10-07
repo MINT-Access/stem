@@ -97,7 +97,7 @@ ExportGatesPNG[rPath_List, filePath_String, title_String:"Qubit Gate Sequence"] 
   Module[{frame},
     frame = RenderGatesFrame[rPath, Length[rPath], title];
     EnsureDir[filePath];
-    Export[filePath, frame, "PNG"];
+    ExportPNG[filePath, frame];
     filePath
   ];
 
@@ -121,7 +121,7 @@ ExportRabiPNG[tVals_List, p1Vals_List, Omega_?NumericQ, filePath_String] :=
       FrameTicks -> True
     ];
     EnsureDir[filePath];
-    Export[filePath, frame, "PNG"];
+    ExportPNG[filePath, frame];
     filePath
   ];
 
@@ -152,6 +152,6 @@ ExportMeasurementPNG[trialsResult_Association, filePath_String] :=
       FrameTicks -> True
     ];
     EnsureDir[filePath];
-    Export[filePath, frame, "PNG"];
+    ExportPNG[filePath, frame];
     filePath
   ];

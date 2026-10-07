@@ -325,10 +325,6 @@ Every run prints checks 1-3; `sweep` mode additionally prints check 4:
 
 ## Speech synthesis note
 
-`speech.wl`'s three-tier fallback (`SpeechSynthesize[]` -> platform TTS
--> text-only `STEMSay`) duplicates the pattern in `dynamical/`,
-`images/`, and `thermo/`'s `src/speech.wl`. This is one of many
-independent copies of this pattern scattered across the codebase — a
-strong candidate for stem-core consolidation in a future pass
-(explicitly out of scope here per this app's build spec, which
-excludes stem-core changes).
+Narration audio comes from stem-core's `STEMSpeakToBuffer` (`SpeechSynthesize[]`
+first, then the platform tool: `say`, `espeak-ng` or PowerShell; see
+`stem-core/AGENTS.md`); `speech.wl` holds only this app's narration text.

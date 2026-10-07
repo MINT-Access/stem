@@ -19,16 +19,16 @@ Get[FileNameJoin[{$stemCoreRoot, "init.wl"}]];
 ```
 
 `init.wl` resolves its own location from `$InputFileName`, sets `$stemCoreRoot`,
-sets `$CharacterEncoding = "UTF8"`, and loads the nine modules in dependency order:
+sets `$CharacterEncoding = "UTF8"`, and loads the ten modules in dependency order:
 
 ```
 utils.wl  →  scales.wl  →  synth.wl  →  export.wl  →  accessibility.wl
-  →  speech.wl  →  hilbert.wl  →  config.wl  →  sonification.wl
+  →  speech.wl  →  runapp.wl  →  hilbert.wl  →  config.wl  →  sonification.wl
 ```
 
 `synth.wl` and `export.wl` both call `EnsureDir` from `utils.wl`;
 `accessibility.wl` calls `FmtN`/`FmtDec` from `utils.wl`; `speech.wl` calls `STEMSay`
-from `accessibility.wl` and `FmtDec`. `config.wl` calls `DeepMerge`
+from `accessibility.wl` and `FmtDec`; `runapp.wl` calls `FmtDec`. `config.wl` calls `DeepMerge`
 internally. Nothing requires a later module, so the order is fixed and must not
 be changed.
 
@@ -221,13 +221,18 @@ themselves.
 Returns mono PCM samples (a list of reals, not normalised) of `text` spoken at
 `sampleRate`, or `{}` when no tier produced audio. Tiers:
 
-1. `SpeechSynthesize[text]` (all platforms).
+1. `SpeechSynthesize[text]` (all platforms). On the development Mac this is
+   the tier that produces every narration (Wolfram's voice, 22.05 kHz,
+   resampled to 44.1 kHz).
 2. The platform tool, given the text through a temporary UTF-8 file (never a
    command-line argument, so non-ASCII text survives every console code page):
    macOS `say -f <txt> -o <aiff>` then `afconvert -d LEI16 -f WAVE`; Linux
    `espeak-ng -b 1 -f <txt> -w <wav>`, then `espeak` with the same flags;
    Windows `powershell` with `System.Speech`, the text read by
-   `Get-Content -Raw -Encoding UTF8`.
+   `Get-Content -Raw -Encoding UTF8`. `say` and `espeak-ng` use the system's
+   default voice, which follows the system's spoken-content language (on the
+   development Mac a German voice), so this tier can read the English text
+   with a non-English voice.
 3. Nothing: prints one warning sentence naming the app (`$projectRoot`'s
    directory), the tiers tried and why each failed, and the narration lost
    (words, and seconds at 175 words per minute); then `STEMSay[text]`; returns
@@ -255,6 +260,34 @@ to its executable, so pointing one at a missing path forces it unavailable
 (`Block` both). `STEM_SPEECH_OFF=1` in the environment skips every tier, for an
 end-to-end run of the no-speech path. See `tests/test_speech.wl`.
 
+
+---
+
+### runapp.wl — Run an app's main.wl in this kernel
+
+The in-process pattern of `demo.wl`, for scripts that run several apps or
+presets: experiments.wl files and `tools/smoke_test.wl`. No child
+wolframscript is started, so there is no shell string to quote (paths with
+spaces work) and no second kernel licence.
+
+#### `STEMRunApp[appDir_String, args_List, opts]`
+`Block`s the app's top-level globals, sets `$ScriptCommandLine` to
+`{main.wl, "--", args...}`, catches `Exit[]`/`Quit[]`, and `Get`s the script.
+Options: `"TimeLimit"` (seconds, default `Infinity`), `"Silent"` (`True` sends
+the app's console to a temporary file returned as `"log"`), `"Script"`
+(default `"main.wl"`; `"demo.wl"` for the demo), `"RequireWAV"` (default
+`True`). Returns `<|"status", "seconds", "exitCode", "messages", "newFiles",
+"wavs", "log"|>`; `newFiles` are the files in `appDir/output` the run created
+or rewrote (compared with a snapshot taken before it). Status: `"OK"`,
+`"MESSAGES"` (audio written, Wolfram messages issued), `"FAIL"` (no new WAV,
+aborted, or `Exit[n]` with n not 0), `"TIMEOUT"`, `"EXIT0"` (ended with
+`Exit[0]` before writing audio, as `--config-dump` does).
+
+#### `STEMRunExperiments[appDir_String, runs_List]`
+`runs` is a list of `{label, args}`. Runs each with `STEMRunApp` (app output
+stays on the console) and prints one self-contained sentence per run, then a
+summary sentence. Returns 0 if every run is `OK`, `MESSAGES` or `EXIT0`,
+else 1; experiments.wl files end with `Exit[STEMRunExperiments[...]]`.
 ---
 
 ### scales.wl — Musical pitch mapping
@@ -455,11 +488,22 @@ plan = GIFFramePlan[32.5533, 150 / 32.5533];
 (* <|"FrameCount" -> 148, "DelayCentiseconds" -> 22, "GIFDuration" -> 32.56, ...|> *)
 ```
 
+#### `$STEMImageResolution`, `STEMRasterize[expr]`, `ExportPNG[filePath, expr]`
+Every GIF frame and PNG is rasterised at an explicit `$STEMImageResolution`
+(144 dpi), so a `Graphics` with `ImageSize -> w` is `2w` pixels wide on every
+platform. Without it the pixel size follows the host's backing scale (2x on a
+Retina Mac, typically 1x on Windows and Linux). On the Mac, 144 dpi gives
+exactly the pixels `Export` produced before (identical pixel data).
+`STEMRasterize` passes an `Image` through unchanged and rasterises anything
+else; `ExportPNG` rasterises, creates the directory and returns `filePath`.
+Apps must export PNGs with `ExportPNG`, never `Export[path, graphics, "PNG"]`.
+
 #### `ExportGIF[frames_List, filePath_String, plan_Association]`
 #### `ExportGIF[frames_List, filePath_String, frameRate_:25]`
 Exports a list of `Graphics` (or `GraphicsGrid`, or `Image`) objects as a
-looping animated GIF. Creates the output directory if needed. Returns
-`filePath`. `AnimationRepetitions -> Infinity` is always set.
+looping animated GIF, each frame through `STEMRasterize`. Creates the output
+directory if needed. Returns `filePath`. `AnimationRepetitions -> Infinity` is
+always set.
 
 The plan form writes every frame with the plan's whole-centisecond delay and
 prints a warning line if the frame list's length differs from the plan's count.
@@ -683,6 +727,7 @@ init.wl
  ├── export.wl         ← utils.wl  (EnsureDir)
  ├── accessibility.wl  ← utils.wl  (FmtN)
  ├── speech.wl         ← accessibility.wl (STEMSay), utils.wl (FmtDec)
+ ├── runapp.wl         ← utils.wl (FmtDec)
  ├── config.wl         ← (self-contained; calls DeepMerge internally)
  └── sonification.wl   ← scales.wl (ScaleLookup), synth.wl (ExportAudioBuffer)
 ```

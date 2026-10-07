@@ -196,7 +196,7 @@ AnimateRelativity[model_Association, cfg_Association, outDir_String] :=
   pngPath = FileNameJoin[{outDir, "chirp.png"}];
   EnsureDir[pngPath];
 
-  Export[pngPath,
+  ExportPNG[pngPath,
     GraphicsGrid[
       {{
         (* Full waveform *)
@@ -245,8 +245,7 @@ AnimateRelativity[model_Association, cfg_Association, outDir_String] :=
       Background -> GrayLevel[0.07],
       Spacings   -> 4,
       ImageSize  -> {width, height}
-    ],
-    "PNG"];
+    ]];
 
   Print["  Exported PNG: ", pngPath]
 ]
@@ -363,7 +362,7 @@ AnimateGeodesic[model_Association, cfg_Association, outDir_String] :=
   pngPath = FileNameJoin[{outDir, "geodesic.png"}];
   EnsureDir[pngPath];
 
-  Export[pngPath,
+  ExportPNG[pngPath,
     Graphics[
       {
         {GrayLevel[0.07], Rectangle[{-rMaxRs, -rMaxRs}, {rMaxRs, rMaxRs}]},
@@ -391,9 +390,7 @@ AnimateGeodesic[model_Association, cfg_Association, outDir_String] :=
           _,          "Schwarzschild geodesic"],
         White, 11],
       ImageSize -> {width, width}
-    ],
-    "PNG"
-  ];
+    ]];
 
   Print["  Exported PNG: ", pngPath]
 ]

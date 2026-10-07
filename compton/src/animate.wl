@@ -117,7 +117,7 @@ AnimateScatter[model_Association, outGif_String, outPng_String,
 
     frames = Table[ScatterDiagramGraphics[model, N[k] / actualNFrames], {k, actualNFrames}];
     ExportGIF[frames, outGif, plan];
-    Export[outPng, ScatterDiagramGraphics[model, 1.0], "PNG"];
+    ExportPNG[outPng, ScatterDiagramGraphics[model, 1.0]];
     Print["  PNG: ", outPng];
     {actualNFrames, frameRate}
   ];
@@ -164,7 +164,7 @@ AnimateSweep[model_Association, outGif_String, outPng_String,
       PlotRange  -> {{0, 180}, {0, 1.1 * Max[model["deltaLambdaArr"]]}},
       ImageSize  -> {600, 360}, AspectRatio -> 0.5
     ];
-    Export[outPng, staticPlt, "PNG"];
+    ExportPNG[outPng, staticPlt];
     Print["  PNG: ", outPng];
     {actualNFrames, frameRate}
   ];
@@ -221,7 +221,7 @@ AnimateEnergy[model_Association, outGif_String, outPng_String,
       PlotRange  -> {{Log10[model["EMinKev"]], Log10[model["EMaxKev"]]}, {0, 1.0}},
       ImageSize  -> {620, 380}, AspectRatio -> 0.5
     ];
-    Export[outPng, staticPlt, "PNG"];
+    ExportPNG[outPng, staticPlt];
     Print["  PNG: ", outPng];
     {actualNFrames, frameRate}
   ];
@@ -251,6 +251,6 @@ RenderDiscoveryStaticPNG[model_Association, outPng_String] :=
       PlotRange  -> {{0, 180}, {Min[thomsonLambda] - 0.3, Max[comptonLambda] + 0.3}},
       ImageSize  -> {600, 380}, AspectRatio -> 0.5
     ];
-    Export[outPng, plt, "PNG"];
+    ExportPNG[outPng, plt];
     Print["  PNG: ", outPng]
   ];

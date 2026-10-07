@@ -27,6 +27,6 @@ ExportImageData[model_Association, freqAssigned_List, outCSV_String] :=
 (* Write the processed source image as PNG (used as visual reference). *)
 ExportImagePNG[model_Association, outPNG_String] :=
   Module[{},
-    Export[outPNG, model["img"], "PNG"];
+    ExportPNG[outPNG, model["img"]];
     Print["  PNG: ", outPNG]
   ];

@@ -72,23 +72,32 @@ LoadSpectrum[sourceName_String, lMax_Integer] :=
   ];
 
 (* Run physical correctness checks 1-3 on the power spectrum.
-   Prints check results and returns an Association with peak detection data. *)
-CMBPhysicsChecks[lArr_List, dlArr_List] :=
-  Module[{nNeg, thresh, peakIdxs, peakLVals, peakDlVals, lPk1, found, mono},
+   Prints check results and returns an Association with peak detection data.
+   smoothSigma > 0 detects peaks on a Gaussian-smoothed copy (sigma in
+   multipoles): measured spectra (source=planck) are noisy at every l, and
+   unsmoothed local maxima there are noise, not acoustic peaks. The
+   analytic model is smooth and uses 0, which leaves it unchanged. *)
+CMBPhysicsChecks[lArr_List, dlArr_List, smoothSigma_Integer : 0] :=
+  Module[{nNeg, thresh, peakIdxs, peakLVals, peakDlVals, lPk1, found, mono, dlPk},
     (* Check 1: D_l >= 0 everywhere *)
     nNeg = Count[dlArr, _?(# < 0.0 &)];
     Print["  [", If[nNeg === 0, "PASS", "FAIL"], "] ",
           "D_l >= 0 for all l  (", nNeg, " negative values)"];
 
     (* Detect acoustic peaks: local maxima above 30% of global max *)
-    thresh   = 0.30 * Max[dlArr];
-    peakIdxs = Select[Range[2, Length[dlArr] - 1], Function[i,
-      dlArr[[i]] > dlArr[[i - 1]] &&
-      dlArr[[i]] > dlArr[[i + 1]] &&
-      dlArr[[i]] > thresh
+    dlPk = If[smoothSigma > 0,
+      Print["  Peaks are found on the spectrum smoothed with a Gaussian of sigma ",
+            smoothSigma, " multipoles, because measured data are noisy at every l."];
+      GaussianFilter[dlArr, {3 smoothSigma, smoothSigma}],
+      dlArr];
+    thresh   = 0.30 * Max[dlPk];
+    peakIdxs = Select[Range[2, Length[dlPk] - 1], Function[i,
+      dlPk[[i]] > dlPk[[i - 1]] &&
+      dlPk[[i]] > dlPk[[i + 1]] &&
+      dlPk[[i]] > thresh
     ]];
     peakLVals  = lArr[[peakIdxs]];
-    peakDlVals = dlArr[[peakIdxs]];
+    peakDlVals = dlPk[[peakIdxs]];
 
     (* Check 2: first acoustic peak l in [180, 260] *)
     lPk1  = If[Length[peakLVals] > 0, First[peakLVals], -1];

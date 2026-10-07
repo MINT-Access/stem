@@ -123,7 +123,7 @@ ExportAttractorPNG[trajectory_List, filePath_String, title_String:"Hénon Attrac
     plotRange = ComputeAttractorPlotRange[trajectory];
     frame = RenderAttractorFrame[trajectory, Length[trajectory], plotRange, title];
     EnsureDir[filePath];
-    Export[filePath, frame, "PNG"];
+    ExportPNG[filePath, frame];
     filePath
   ];
 
@@ -213,7 +213,7 @@ ExportSweepPNG[sweepModel_Association, landmarks_Association, filePath_String] :
     yRange     = ComputeSweepYRange[attractors];
     frame = RenderSweepFrame[aValues, attractors, nSteps, landmarks, yRange];
     EnsureDir[filePath];
-    Export[filePath, frame, "PNG"];
+    ExportPNG[filePath, frame];
     filePath
   ];
 
@@ -269,6 +269,6 @@ ExportReversePNG[reverseModel_Association, filePath_String] :=
       FrameTicks  -> None
     ];
     EnsureDir[filePath];
-    Export[filePath, frame, "PNG"];
+    ExportPNG[filePath, frame];
     filePath
   ];

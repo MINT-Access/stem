@@ -1,0 +1,356 @@
+# Portability fixes on the Mac: verification (measured 2026-10-07)
+
+## Context
+- Acts on docs/PORTABILITY_AUDIT.md B2, B3, D8, D9, D10, D11, V1, V2, V4, V5 and line endings. Repo HEAD 30cb4f8 (main); every change is uncommitted, as asked.
+- Machine: Wolfram 15.0.1 for Mac OS X ARM (64-bit), $SystemID MacOSX-ARM64, headless wolframscript.
+- Baseline = `git archive HEAD` unpacked to the scratchpad; after = the working tree. Sweep runner: `sweep.sh <repo> <outdir> [runs]` runs each `app|args` line of runs.txt (the same 109 runs as earlier rounds) as `wolframscript -file <app>/main.wl -- <args> < /dev/null` and copies every WAV, GIF, PNG and CSV the run wrote.
+
+## Speech tier order: a correction to earlier reports
+- During this task SpeechSynthesize["Test."] returned audio in fresh kernels (0.50 s, 22050 Hz). I first read this as a change of environment and asked whether the platform tool should come first; the answer was "platform tool first", chosen to keep macOS narration exactly as verified.
+- The first after-sweep with that order showed the premise was wrong: narrated WAVs got longer (henon attractor 1364860 -> 1480354 samples, outro 1.98 -> 2.52 s), because the narration in the baseline, in the previous round's sweep and in every earlier round comes from SpeechSynthesize[], not from say.
+- Evidence: the henon outro "This is the end of the Hénon attractor." is 87480 samples through SpeechSynthesize[] and 111054 samples through say; the baseline WAV holds a 1.98 s outro (87480 samples at 44.1 kHz) and the platform-first WAV 2.52 s.
+- `say` on this Mac uses the system default voice, Viktor (Enhanced), a German voice (say with no -v and say -v "Viktor (Enhanced)" give the same AIFF, md5 777df1f4e42b008517ccba09a49d35c2; com.apple.Accessibility SpokenContentDefaultVoiceSelectionsByLanguage lists com.apple.voice.enhanced.de-DE.Viktor). Platform-first would have read the English narration with a German voice.
+- So the stated intent (narration exactly as verified) is met by the original order. stem-core/src/speech.wl and stem-core/tests/test_speech.wl are back to HEAD exactly (git diff empty); SpeechSynthesize[] stays first. The narrated runs were swept again with that code (83 runs, `sweep.sh <repo> narr_after narr_runs.txt`) and replace the platform-first results below.
+- Consequences for earlier documents: the audit line "every narration on the Mac comes from tier 2 (say)" and the previous round's statement that the say -f path reproduces the narration to the sample were wrong; that comparison showed the helper reproduces the old narration exactly, but the narration came from SpeechSynthesize[]. The say -f path itself was checked separately then (12 byte-identical AIFF files, argument vs file) and holds.
+- README now says SpeechSynthesize[] produces every narration on the development Mac, and that the platform tool reads with the system default voice, so that must be an English voice where the fallback is used.
+
+## B2: demo.wl output sink
+- Change: the apps' console output in demo.wl goes to a file in $TemporaryDirectory (stem_demo_output_<pid>.txt, UTF-8), closed and deleted after the loop, on every platform. There is no /dev/null or NUL branch, so the Mac run executes exactly the code Windows will run; there is no Windows branch to force.
+- Added `--quick`: the first entry of pendulum, dynamical, cellular and henon.
+- Command: `wolframscript -file demo.wl -- --quick`
+- demo --quick: | pendulum    | double pendulum, chaotic initial angles      |   26.3 s |    26 |    PASS  |
+- demo --quick: | dynamical   | logistic map sweep, r 2.5 to 4.0, period-do… |   21.7 s |    64 |    PASS  |
+- demo --quick: | cellular    | Game of Life, R-pentomino (300 generations)  |    6.2 s |    34 |    PASS  |
+- demo --quick: | henon       | attractor mode, canonical a=1.4, b=0.3       |   29.0 s |    37 |    PASS  |
+- demo --quick: Total elapsed:  84.3 s
+- demo --quick: Passed:         4/4 runs (4 unique apps)
+- Sink files left in $TemporaryDirectory afterwards (FileNames["stem_demo_output_*"]): 0
+- Full demo.wl run inside the smoke test: see Part 4.
+
+## B3: experiments.wl run in-process
+- Change: lagrange, magnetic, resonance and scattering experiments.wl list `{label, args}` runs and call stem-core STEMRunExperiments, which runs each main.wl with STEMRunApp (Block on the app globals and $ScriptCommandLine, Get, Exit caught, messages recorded, new files found from a snapshot of output/) and prints one sentence per run. No shell string, no child kernel. The script exits 1 if a run fails.
+- Command: copy of the working tree at "<scratchpad>/p8/space test2/stem" (a path with a space); `wolframscript -file <app>/experiments.wl` from that directory.
+- [OK] Experiment 1 of 8 (lagrange, L4 libration, Sun-Jupiter (default)) finished in 8.8 s and wrote 4 files, including l4_audio.wav.
+- [OK] Experiment 2 of 8 (lagrange, L5 libration, Sun-Jupiter) finished in 5.9 s and wrote 4 files, including l5_audio.wav.
+- [OK] Experiment 3 of 8 (lagrange, L1 escape, Sun-Jupiter (default)) finished in 5.4 s and wrote 4 files, including l1_audio.wav.
+- [OK] Experiment 4 of 8 (lagrange, L4 libration, Earth-Moon system) finished in 6 s and wrote 4 files, including l4_audio.wav.
+- [OK] Experiment 5 of 8 (lagrange, L1 escape, Earth-Moon system) finished in 5.4 s and wrote 4 files, including l1_audio.wav.
+- [OK] Experiment 6 of 8 (lagrange, L4 libration, large perturbation) finished in 6.2 s and wrote 4 files, including l4_audio.wav.
+- [OK] Experiment 7 of 8 (lagrange, L4 libration, Sun-Jupiter, extended (12 periods)) finished in 7.9 s and wrote 4 files, including l4_audio.wav.
+- [OK] Experiment 8 of 8 (lagrange, L4 libration, Sun-Earth system) finished in 5.7 s and wrote 4 files, including l4_audio.wav.
+- lagrange experiments: 8 of 8 runs finished as expected.
+- [OK] Experiment 1 of 10 (magnetic, Cyclotron, default (pure circular orbit)) finished in 13.9 s and wrote 3 files, including cyclotron_audio.wav.
+- [OK] Experiment 2 of 10 (magnetic, Cyclotron, helix (v_parallel != 0)) finished in 106.2 s and wrote 3 files, including cyclotron_audio.wav.
+- [OK] Experiment 3 of 10 (magnetic, Cyclotron, stronger field) finished in 21.6 s and wrote 3 files, including cyclotron_audio.wav.
+- [OK] Experiment 4 of 10 (magnetic, E x B drift, default) finished in 48.3 s and wrote 3 files, including drift_audio.wav.
+- [OK] Experiment 5 of 10 (magnetic, E x B drift, faster) finished in 66.4 s and wrote 3 files, including drift_audio.wav.
+- [OK] Experiment 6 of 10 (magnetic, Magnetic mirror, default (trapped particle)) finished in 33.2 s and wrote 3 files, including mirror_audio.wav.
+- [OK] Experiment 7 of 10 (magnetic, Magnetic mirror, stronger (steeper gradient)) finished in 32.7 s and wrote 3 files, including mirror_audio.wav.
+- [OK] Experiment 8 of 10 (magnetic, Magnetic mirror, escaping particle) finished in 383.5 s and wrote 3 files, including mirror_audio.wav.
+- [OK] Experiment 9 of 10 (magnetic, Multi-particle chord, default) finished in 22.8 s and wrote 3 files, including multi_audio.wav.
+- [OK] Experiment 10 of 10 (magnetic, Multi-particle chord, higher base pitch) finished in 22.8 s and wrote 3 files, including multi_audio.wav.
+- magnetic experiments: 10 of 10 runs finished as expected.
+- [OK] Experiment 1 of 10 (resonance, Galilean, default (8 Ganymede periods)) finished in 22.6 s and wrote 3 files, including galilean_audio.wav.
+- [OK] Experiment 2 of 10 (resonance, Galilean, shorter (4 Ganymede periods)) finished in 18.5 s and wrote 3 files, including galilean_audio.wav.
+- [OK] Experiment 3 of 10 (resonance, Galilean, longer (16 Ganymede periods, more repetitions)) finished in 19 s and wrote 3 files, including galilean_audio.wav.
+- [OK] Experiment 4 of 10 (resonance, Kirkwood, default (5 resonance gaps, 0.05 AU width)) finished in 7.7 s and wrote 3 files, including kirkwood_audio.wav.
+- [OK] Experiment 5 of 10 (resonance, Kirkwood, narrower gaps (sharper silences)) finished in 7.5 s and wrote 3 files, including kirkwood_audio.wav.
+- [OK] Experiment 6 of 10 (resonance, Kirkwood, wider gaps (softer, broader dips)) finished in 7.6 s and wrote 3 files, including kirkwood_audio.wav.
+- [OK] Experiment 7 of 10 (resonance, Saturn, default (Cassini Division + Encke gap)) finished in 9.4 s and wrote 3 files, including saturn_audio.wav.
+- [OK] Experiment 8 of 10 (resonance, Saturn, finer resolution sweep) finished in 13.6 s and wrote 3 files, including saturn_audio.wav.
+- [OK] Experiment 9 of 10 (resonance, Kirkwood, finer resolution sweep) finished in 9.5 s and wrote 3 files, including kirkwood_audio.wav.
+- [EXIT0] Experiment 10 of 10 (resonance, Galilean, --config-dump (verify merged config)) ended with Exit[0] after 0 s without writing audio, which is expected for this run.
+- resonance experiments: 10 of 10 runs finished as expected.
+- [OK] Experiment 1 of 10 (scattering, Scatter, default (moderate, b=1.0, theta=90 deg)) finished in 31.2 s and wrote 3 files, including scatter_audio.wav.
+- [OK] Experiment 2 of 10 (scattering, Scatter, glancing (b=5.0, small deflection)) finished in 29.7 s and wrote 3 files, including scatter_audio.wav.
+- [OK] Experiment 3 of 10 (scattering, Scatter, near head-on (b=0.1, ~169 deg)) finished in 28.9 s and wrote 3 files, including scatter_audio.wav.
+- [OK] Experiment 4 of 10 (scattering, Scatter, perfect backscatter (b=0.0, 180 deg)) finished in 25 s and wrote 3 files, including scatter_audio.wav.
+- [OK] Experiment 5 of 10 (scattering, Scatter, custom impact parameter) finished in 26.8 s and wrote 3 files, including scatter_audio.wav.
+- [OK] Experiment 6 of 10 (scattering, Distribution, default (200 particles, b_max=8.0)) finished in 13.4 s and wrote 3 files, including distribution_audio.wav.
+- [OK] Experiment 7 of 10 (scattering, Distribution, larger beam) finished in 16.3 s and wrote 3 files, including distribution_audio.wav.
+- [OK] Experiment 8 of 10 (scattering, Distribution, wider beam (rarer backscatter events)) finished in 13.3 s and wrote 3 files, including distribution_audio.wav.
+- [OK] Experiment 9 of 10 (scattering, Discovery, default (Thomson vs Rutherford, 100 per model)) finished in 14.7 s and wrote 3 files, including discovery_audio.wav.
+- [OK] Experiment 10 of 10 (scattering, Discovery, wider beam (fewer but still present outliers)) finished in 14.4 s and wrote 3 files, including discovery_audio.wav.
+- scattering experiments: 10 of 10 runs finished as expected.
+- exit code: lagrange exit=0
+- exit code: magnetic exit=0
+- exit code: resonance exit=0
+- exit code: scattering exit=0
+- lagrange prints its own check 3 [FAIL] (bounded libration, max dist < 1.5) in two presets; the experiments.wl comment expects this near the edge of the stability region (large perturbation); the runs still write their audio.
+- First run of the new experiments (copy "space test"): all 38 runs exited 0, but run 2 listed run 1's l4_audio.wav as new (files modified within 1 s of the start counted) and resonance --config-dump was credited with a stale WAV. Fixed: new files are now found from a snapshot of output/ taken before each run, and an Exit[0] without audio is reported as EXIT0 (expected); the results above are from the fixed version.
+
+## D8: fonts
+- lagrange/src/animate.wl:20 and tools/src/video_pipeline.wl:186: "Helvetica" -> "Source Sans Pro"; bayes/src/animate.wl:167: "Courier" -> "Source Code Pro" (monospaced, for the flip sequence). Both families ship with Wolfram in SystemFiles/Fonts on every platform.
+- Command: `wolframscript -file render.wl <root> <old|new> <dir>` renders one lagrange frame (MakeLagrangeFrame), one bayes model frame (RenderModelFrame, 120 flips) and one video title band (BuildTitleBandImage, 1920x130) from the HEAD copy and from the working tree.
+- lagrange frame pixels: old 840x662, new 840x662; L4 label extent old 13x9 px, new 11x8 px
+- bayes model frame pixels: old 1200x811, new 1200x811; flip-sequence text extent old 400x156 px, new 400x194 px, inside its 360 px pane (y 533 to 727)
+- title band pixels: old 1920x130, new 1920x130; title text extent old 1170x51 px, new 1105x49 px
+- All three frames were inspected visually: labels legible, nothing clipped.
+
+## D9: explicit resolution for every GIF and PNG
+- Change: stem-core $STEMImageResolution = 144, STEMRasterize (Images pass through), ExportPNG; ExportGIF rasterises every frame; 51 PNG exports in 23 app files plus dynamical/prototype_lyapunov.wl use ExportPNG. The only other Rasterize without ImageResolution (tools title band) already sets RasterSize.
+- Probe (Graphics, ImageSize 100): Export PNG 200x200, Rasterize ImageResolution 144 200x200, plain Rasterize 200x200; PNG pixel data identical: True; GIF pixel data identical: True; default-size Graphics 720x719 both ways.
+- Sweep GIFs compared: 101; same pixel size: 101; same frame count: 98; byte-identical: 88
+- Sweep PNGs compared: 62; same pixel size: 62; identical pixels: 53; byte-identical files: 0 (PNG bytes differ because the file is now written from an Image)
+- Not changed: waves writes its GIFs from Image objects built on the simulation raster (ripple 60x60 px, interference 80x40 px, before and after); Images pass through STEMRasterize unchanged, so these stay small on every platform.
+- PNGs with different pixels: 082 am_recovery.png, 082 am_spectrum.png, 082 am_waveform.png, 083 chord_recovery.png, 083 chord_spectrum.png, 083 chord_waveform.png, 084 sweep_recovery.png, 084 sweep_spectrum.png, 084 sweep_waveform.png (signal adds unseeded noise; its CSVs differ too)
+- GIFs with a different frame count: 025 dynamical iterate.gif 150 -> 149 frames; 037 hydrogen orbitals.gif 214 -> 211 frames; 039 hydrogen transitions.gif 148 -> 149 frames (intro length; see Sweep)
+- 059 pendulum double_animation.gif: frames 500 -> 500, pixels 960x932 -> 960x932, duration 20.00 -> 20.00 s, byte-identical yes
+- 059 pendulum sync before: GIF/WAV sync: the GIF has 500 frames of 0.04 s each and plays for 20 s, the WAV plays for 20 s, and the GIF and the WAV have the same duration to the millisecond.
+- 059 pendulum sync after: GIF/WAV sync: the GIF has 500 frames of 0.04 s each and plays for 20 s, the WAV plays for 20 s, and the GIF and the WAV have the same duration to the millisecond.
+- 060 pendulum simple_animation.gif: frames 500 -> 500, pixels 960x648 -> 960x648, duration 20.00 -> 20.00 s, byte-identical yes
+- 060 pendulum sync before: GIF/WAV sync: the GIF has 500 frames of 0.04 s each and plays for 20 s, the WAV plays for 20 s, and the GIF and the WAV have the same duration to the millisecond.
+- 060 pendulum sync after: GIF/WAV sync: the GIF has 500 frames of 0.04 s each and plays for 20 s, the WAV plays for 20 s, and the GIF and the WAV have the same duration to the millisecond.
+- 053 mandelbrot mandelbrot_julia.gif: frames 156 -> 156, pixels 640x640 -> 640x640, duration 78.00 -> 78.00 s, byte-identical yes
+- 053 mandelbrot sync before: GIF/WAV sync: the GIF has 156 frames of 0.5 s each and plays for 78 s, the WAV plays for 77.895 s, and the GIF is 0.105 s longer than the WAV.
+- 053 mandelbrot sync after: GIF/WAV sync: the GIF has 156 frames of 0.5 s each and plays for 78 s, the WAV plays for 77.895 s, and the GIF is 0.105 s longer than the WAV.
+- 054 mandelbrot mandelbrot_mandelbrot.gif: frames 162 -> 162, pixels 640x640 -> 640x640, duration 81.00 -> 81.00 s, byte-identical yes
+- 054 mandelbrot sync before: GIF/WAV sync: the GIF has 162 frames of 0.5 s each and plays for 81 s, the WAV plays for 81.231 s, and the GIF is 0.231 s shorter than the WAV.
+- 054 mandelbrot sync after: GIF/WAV sync: the GIF has 162 frames of 0.5 s each and plays for 81 s, the WAV plays for 81.231 s, and the GIF is 0.231 s shorter than the WAV.
+- 055 mandelbrot mandelbrot_zoom.gif: frames 231 -> 231, pixels 640x640 -> 640x640, duration 115.50 -> 115.50 s, byte-identical yes
+- 055 mandelbrot sync before: GIF/WAV sync: the GIF has 231 frames of 0.5 s each and plays for 115.5 s, the WAV plays for 115.311 s, and the GIF is 0.189 s longer than the WAV.
+- 055 mandelbrot sync after: GIF/WAV sync: the GIF has 231 frames of 0.5 s each and plays for 115.5 s, the WAV plays for 115.311 s, and the GIF is 0.189 s longer than the WAV.
+- 024 dynamical divergence.gif: frames 296 -> 296, pixels 1440x1200 -> 1440x1200, duration 65.12 -> 65.12 s, byte-identical yes
+- 024 dynamical sync before: GIF/WAV sync: the GIF has 296 frames of 0.22 s each and plays for 65.12 s, the WAV plays for 65.021 s, and the GIF is 0.099 s longer than the WAV.
+- 024 dynamical sync after: GIF/WAV sync: the GIF has 296 frames of 0.22 s each and plays for 65.12 s, the WAV plays for 65.021 s, and the GIF is 0.099 s longer than the WAV.
+- 025 dynamical iterate.gif: frames 150 -> 149, pixels 1200x760 -> 1200x760, duration 46.50 -> 46.19 s, byte-identical no
+- 025 dynamical sync before: GIF/WAV sync: the GIF has 150 frames of 0.31 s each and plays for 46.5 s, the WAV plays for 46.636 s, and the GIF is 0.136 s shorter than the WAV.
+- 025 dynamical sync after: GIF/WAV sync: the GIF has 149 frames of 0.31 s each and plays for 46.19 s, the WAV plays for 46.212 s, and the GIF is 0.022 s shorter than the WAV.
+- 026 dynamical lyapunov.gif: frames 329 -> 329, pixels 1440x1200 -> 1440x1200, duration 164.50 -> 164.50 s, byte-identical yes
+- 026 dynamical sync before: GIF/WAV sync: the GIF has 329 frames of 0.5 s each and plays for 164.5 s, the WAV plays for 164.572 s, and the GIF is 0.072 s shorter than the WAV.
+- 026 dynamical sync after: GIF/WAV sync: the GIF has 329 frames of 0.5 s each and plays for 164.5 s, the WAV plays for 164.572 s, and the GIF is 0.072 s shorter than the WAV.
+- 027 dynamical sweep.gif: frames 677 -> 677, pixels 1200x840 -> 1200x840, duration 338.50 -> 338.50 s, byte-identical yes
+- 027 dynamical sync before: GIF/WAV sync: the GIF has 677 frames of 0.5 s each and plays for 338.5 s, the WAV plays for 338.285 s, and the GIF is 0.215 s longer than the WAV.
+- 027 dynamical sync after: GIF/WAV sync: the GIF has 677 frames of 0.5 s each and plays for 338.5 s, the WAV plays for 338.285 s, and the GIF is 0.215 s longer than the WAV.
+- 034 henon henon_attractor.gif: frames 147 -> 147, pixels 1400x560 -> 1400x560, duration 30.87 -> 30.87 s, byte-identical yes
+- 034 henon sync before: GIF/WAV sync: the GIF has 147 frames of 0.21 s each and plays for 30.87 s, the WAV plays for 30.949 s, and the GIF is 0.079 s shorter than the WAV.
+- 034 henon sync after: GIF/WAV sync: the GIF has 147 frames of 0.21 s each and plays for 30.87 s, the WAV plays for 30.949 s, and the GIF is 0.079 s shorter than the WAV.
+- 036 henon henon_sweep.gif: frames 291 -> 291, pixels 1400x840 -> 1400x840, duration 145.50 -> 145.50 s, byte-identical yes
+- 036 henon sync before: GIF/WAV sync: the GIF has 291 frames of 0.5 s each and plays for 145.5 s, the WAV plays for 145.373 s, and the GIF is 0.127 s longer than the WAV.
+- 036 henon sync after: GIF/WAV sync: the GIF has 291 frames of 0.5 s each and plays for 145.5 s, the WAV plays for 145.373 s, and the GIF is 0.127 s longer than the WAV.
+- 013 cellular life_rpentomino_animation.gif: frames 300 -> 300, pixels 960x960 -> 960x960, duration 18.00 -> 18.00 s, byte-identical yes
+- 013 cellular sync before: GIF/WAV sync: the GIF has 300 frames of 0.06 s each and plays for 18 s, the WAV plays for 18 s, and the GIF and the WAV have the same duration to the millisecond.
+- 013 cellular sync after: GIF/WAV sync: the GIF has 300 frames of 0.06 s each and plays for 18 s, the WAV plays for 18 s, and the GIF and the WAV have the same duration to the millisecond.
+- 014 cellular rule110_animation.gif: frames 1 -> 1, pixels 960x1600 -> 960x1600, duration 20.00 -> 20.00 s, byte-identical yes
+- 014 cellular sync before: GIF/WAV sync: the GIF has 1 frame of 20 s and plays for 20 s, the WAV plays for 20 s, and the GIF and the WAV have the same duration to the millisecond.
+- 014 cellular sync after: GIF/WAV sync: the GIF has 1 frame of 20 s and plays for 20 s, the WAV plays for 20 s, and the GIF and the WAV have the same duration to the millisecond.
+
+## D10: asteroids without curl
+- Change: asteroids/src/fetch.wl FetchURLText uses URLRead[HTTPRequest[url], TimeConstraint -> 30, Interactive -> False] and returns the body as a UTF-8 byte string (what ImportString[..., "JSON"] expects); only if URLRead gets no response is curl run, after the sentence "URLRead could not reach <host>, so the request is being retried with curl."
+- Command: `wolframscript -file fetch.wl` (JPL SBDB request for 433 Eros, compared after parsing as RawJSON with keys sorted, because the server orders JSON keys differently on every request; two curl calls also differ byte for byte)
+- URLRead length 2146, curl length 2146, parsed JSON equal: True
+-   URLRead could not reach ssd-api.jpl.nasa.gov, so the request is being retried with curl.
+- forced curl fallback: parsed JSON equal: True
+-   URLRead could not reach nonexistent.invalid, so the request is being retried with curl.
+- unreachable host returns: $Failed
+- asteroids default against the live NASA API in both sweeps: exit codes 0 and 0; WAV byte-identical: yes
+- after-sweep asteroids log: "Fetching" lines 38, curl fallback sentences 0
+- Not fixed: Wolfram's network layer prints "Connecting… | Elapsed time" and "Downloading…" lines to the console on a kernel's first connection. Measured with a fresh kernel and one URLRead to ssd-api.jpl.nasa.gov: Interactive -> False 73 progress lines; Interactive -> False inside Block[{$Output = {}}] 73; with PrintTemporary blocked 10. curl printed none. These lines reach the console of asteroids, cosmology planck and the smoke test, not any report or CSV.
+
+## D11: cosmology Planck data
+- Change: URLFetch -> URLRead[HTTPRequest[url], TimeConstraint -> 60, Interactive -> False]. The archive file (HTTP 200, 170547 characters) is identical to what URLFetch returned.
+- Found while verifying: the Planck path never worked. Its numbers are written 2.00000000e+00 and ToExpression does not read e-notation, so every row was dropped and the app always fell back to the simulated spectrum ("[WARNING] Planck fetch failed -- using simulated spectrum." with URLFetch too). Parsing now uses ImportString[..., "Table"].
+- Measured data are noisy at every l, so the local-maximum peak finder then reported a first peak at l = 62. CMBPhysicsChecks takes an optional smoothing sigma; main.wl and experiments.wl pass 15 multipoles for source=planck only (sigma 5: 7 peaks; 10: 4; 15: 224, 526, 819; 20: 223, 533, 817). The simulated default is unchanged (byte-identical in the sweep).
+- Command: `wolframscript -file cosmology/main.wl -- --simulation.cosmology.source=planck`
+- planck: Planck 2018 data: l = 2. to 2000.  (1999 points)
+- planck: D_l range: 143.48 μK^2  to  6651.8 μK^2
+- planck: [PASS] D_l >= 0 for all l  (0 negative values)
+- planck: Peaks are found on the spectrum smoothed with a Gaussian of sigma 15 multipoles, because measured data are noisy at every l.
+- planck: [PASS] First acoustic peak at l = 224  (expected 180 - 260)
+- planck: [PASS] Peak 1 amplitude > last detected peak (Silk damping)
+- planck: Peak 1: l = 224  (theta ~ 0.8 deg)  D_l = 5677.3 uK^2
+- planck: Peak 2: l = 526  (theta ~ 0.3 deg)  D_l = 2549.9 uK^2
+- planck: Peak 3: l = 819  (theta ~ 0.2 deg)  D_l = 2507.8 uK^2
+
+## Line endings (.gitattributes)
+- .gitattributes: *.wl *.json *.md *.csv text eol=lf; *.wav *.gif *.png *.mp4 binary.
+- `git ls-files --eol` before: 440 files, all i/lf w/lf; no WAV, GIF, PNG or MP4 is tracked.
+- Command: fresh `git clone`, copy .gitattributes, `git add .gitattributes && git add --renormalize . && git status --porcelain` -> one line, "A  .gitattributes"; nothing renormalised. In the clone, 404 files then carry attr/text and eol=lf.
+
+## Documentation (V4, V5, V1, B4 docs)
+- README: every run command of the quick start in bash, Windows PowerShell (separator written '--') and cmd (comments as REM, ^ continuation), generated from the bash block so the three stay in step; every playback command for macOS (afplay), Linux (aplay), PowerShell (Media.SoundPlayer PlaySync with $PWD) and cmd (start); demo --check-only and --quick, --config-dump and the config overrides in all three forms; STEM_SPEAK and NASA_API_KEY were given in three forms last round.
+- python3 -m json.tool removed from README, AGENTS.md, docs/APPS.md and stem-core/ACCESSIBILITY.md: --config-dump already prints indented JSON; README names `py -m json.tool` for Windows.
+- Badge "Wolfram Language 13+" -> "tested 15.0.1"; Prerequisites state the tested version and system.
+- pendulum/tests/verify_animation_frames.py documented as optional, with numpy/Pillow install commands for macOS, Linux and Windows, next to tools/smoke_test.wl.
+- Not checked on Windows: whether PowerShell 5.1 drops a bare -- (audit B4); the quoted form is documented.
+
+## Part 4: smoke test
+- Command: `wolframscript -file tools/smoke_test.wl` (full) and `-- --quick`; report written as UTF-8 to smoke_test_MacOSX-ARM64_<date>.txt in the repo root (gitignored); the full report is copied to docs/smoke_test_MacOSX-ARM64_2026-10-07.txt.
+- Frame-clipping port vs Python on pendulum/output/double_animation.gif: Python "[PASS] 500 frames, 960x932px, worst top=119 bottom=37 left=30 right=30"; Wolfram <|frames 500, size 960x932, worst top 119, bottom 37, left 30, right 30, violations 0|>; 135 s and 2.7 GB peak memory (GIF decoding).
+- smoke: STEM smoke test, 2026-10-07 18:27
+- smoke: == Environment ==
+- smoke: Wolfram version: 15.0.1 for Mac OS X ARM (64-bit) (July 2, 2026)
+- smoke: SystemID: MacOSX-ARM64, OperatingSystem: MacOSX
+- smoke: CharacterEncoding: UTF8, SystemCharacterEncoding: UTF-8
+- smoke: Repository: /Users/mintaccess/Projects/stem
+- smoke: SpeechSynthesize["Test."]: returns audio (0.5 s)
+- smoke: Speech tier available (STEMSpeechAvailable[]): True
+- smoke: Tool say: /usr/bin/say, starts (exit code 1)
+- smoke: Tool afconvert: /usr/bin/afconvert, starts (exit code 2)
+- smoke: Tool espeak-ng: not found
+- smoke: Tool espeak: not found
+- smoke: Tool powershell: not found
+- smoke: Tool curl: /opt/anaconda3/bin/curl, starts (exit code 0)
+- smoke: Network (URLRead to ssd-api.jpl.nasa.gov): HTTP 200
+- smoke: Probe: Hénon — λ × ☉
+- smoke: Probe UTF-8 bytes: 48 c3 a9 6e 6f 6e 20 e2 80 94 20 ce bb 20 c3 97 20 e2 98 89 (expect 48 c3 a9 6e 6f 6e 20 e2 80 94 20 ce bb 20 c3 97 20 e2 98 89)
+- smoke: GIF of a Graphics with ImageSize 100: ExportGIF (144 dpi) 200x200 px; plain Export (host scale) 200x200 px
+- smoke: == Apps (32, default mode each) ==
+- smoke: app | mode | status | seconds | WAV s | LUFS | peak dBFS | GIF s | GIF-WAV s | GIF px | intro | first message
+- smoke: asteroids | - | OK | 78.6 | 22.78 | -17 | -5.48 | 22.8 | 0.02 | 1000x1000 | no | -
+- smoke: bayes | coin | OK | 21.4 | 36.09 | -17 | -5.59 | 36 | -0.093 | 1200x800 | yes | -
+- smoke: bell | correlations | OK | 12.6 | 24 | -17 | -13 | 24 | 0 | 1200x760 | yes | -
+- smoke: blackbody | spectrum | OK | 20.3 | 42.54 | -17 | -4.25 | 42.56 | 0.02 | 1200x800 | yes | -
+- smoke: brownian | walk | OK | 52.1 | 38.07 | -17 | -3.98 | 38 | -0.071 | 960x960 | yes | -
+- smoke: cellular | life | OK | 6.2 | 18 | -17 | -7.57 | 18 | 0 | 960x960 | no | -
+- smoke: clt | sweep | OK | 4.9 | 23.78 | -17 | -1.2 | 6 | 0 | 1200x760 | yes | -
+- smoke: compton | scatter | OK | 7 | 39.11 | -17 | -5.14 | 39 | -0.115 | 920x920 | yes | -
+- smoke: cosmology | spectrum | OK | 2 | 49.95 | -17 | -4.96 | - | - | - | no | -
+- smoke: dynamical | sweep | OK | 63.3 | 338.29 | -17 | -1.13 | 338.5 | 0.215 | 1200x840 | yes | -
+- smoke: fluid | karman | OK | 7.1 | 45.65 | -17 | -5.79 | 45.6 | -0.046 | 1040x400 | yes | -
+- smoke: grover | search | OK | 11.3 | 18.67 | -17 | -5.54 | 18.72 | 0.053 | 1240x760 | yes | -
+- smoke: henon | attractor | OK | 30.4 | 30.95 | -17 | -1.62 | 30.87 | -0.079 | 1400x560 | yes | -
+- smoke: hydrogen | orbitals | OK | 16.5 | 105.61 | -17 | -9.13 | 105.5 | -0.106 | 640x640 | yes | -
+- smoke: images | brightness | OK | 7.7 | 98.93 | -17 | -10.01 | 99 | 0.075 | 512x512 | yes | -
+- smoke: lagrange | l4 | OK | 6.3 | 18.85 | -16.93 | -4.74 | 18.85 | 0 | 840x662 | no | -
+- smoke: lorenz | lorenz | OK | 49.7 | 40 | -17.02 | -1 | 39.96 | -0.04 | 1000x840 | no | -
+- smoke: magnetic | cyclotron | OK | 10.4 | 52.57 | -17 | -8.9 | 52.5 | -0.073 | 840x1092 | yes | -
+- smoke: mandelbrot | mandelbrot | OK | 11.8 | 81.23 | -17 | -11.04 | 81 | -0.231 | 640x640 | yes | -
+- smoke: montecarlo | sweep | OK | 27.3 | 81.41 | -19.47 | -0.26 | 81.5 | 0.086 | 840x1183 | yes | -
+- smoke: pendulum | double | OK | 24.9 | 20 | -17 | -4.52 | 20 | 0 | 960x932 | no | -
+- smoke: primes | ulam | OK | 1.2 | 10 | -17 | -1.13 | 10 | 0 | 1200x1200 | no | -
+- smoke: quantum | qho | OK | 42.1 | 12.55 | -17 | -11.09 | 12.55 | 0 | 1200x600 | no | -
+- smoke: quantum_statistics | spectrum | OK | 6.6 | 30.62 | -17 | -4.68 | 30.5 | -0.122 | 1240x760 | yes | -
+- smoke: quantum_tunnelling | barrier | OK | 6.4 | 47.23 | -17 | -4.77 | 2.58 | 0.03 | 1040x394 | yes | -
+- smoke: qubit | gates | OK | 23.9 | 24.5 | -17 | -4.22 | 24.49 | -0.014 | 1040x1040 | yes | -
+- smoke: relativity | chirp | OK | 33.3 | 28.96 (+3 more WAV) | -24.57 | -0.26 | 3.6 | 0.02 | 1600x800 | no | -
+- smoke: resonance | galilean | OK | 18.5 | 57.02 | -17 | -3.06 | 33 | 0 | 920x920 | yes | -
+- smoke: scattering | scatter | OK | 26.6 | 40.55 | -17 | -7.71 | 20.02 | 0.02 | 920x920 | yes | -
+- smoke: signal | chord | OK | 12 | 37.75 (+3 more WAV) | -17 | -4.48 | 3 | 0 | 1600x800 | yes | -
+- smoke: thermo | distribution | OK | 11 | 31.22 | -17 | -4.73 | 31.31 | 0.089 | 1200x800 | yes | -
+- smoke: waves | ripple | OK | 14.2 | 20 | -17 | -9.01 | 20.02 | 0.02 | 60x60 | no | -
+- smoke: == Pendulum frame clipping (margin >= 3 px on every frame) ==
+- smoke: [PASS] double_animation.gif: 500 frames, 960x932 px, worst margins top 119, bottom 37, left 30, right 30 px, 0 frames under the margin
+- smoke: == demo.wl ==
+- smoke: demo.wl | OK | 537 s | passed 33/33 | -
+- smoke: == Messages ==
+- smoke: none
+- smoke: Summary: 32 of 32 apps wrote a WAV; demo.wl OK.
+- smoke: exit=0
+
+## Regression sweep
+- Commands: `sweep.sh <HEAD copy> basesweep` (before, 109 runs) and `sweep.sh <repo> aftersweep` (after), with the 83 narrated runs taken from `sweep.sh <repo> narr_after narr_runs.txt` (see the speech correction).
+- Exit codes non-zero: before 0 of 109, after 0 of 109
+- WAV files compared: 124; byte-identical: 90
+- CSV files compared: 111; byte-identical: 104
+- GIF files compared: 101; byte-identical: 88
+- PNG files compared: 62; byte-identical: 0
+- Deterministic apps, every WAV byte-identical before and after: cellular (2), cosmology (2), relativity chirp (4) and geodesic (1), primes gaps (2), hydrogen spectrum chord/sweep (2), signal clean (3), asteroids (1), and all narrated runs not listed below.
+- Not byte-identical, and also not byte-identical between the previous round's final sweep and this baseline with unchanged code (unseeded randomness): lagrange l1/l4/l5, lorenz (2 modes, 6 presets), pendulum (2), primes ulam, quantum (2), waves (2).
+- Not byte-identical, CSV data also differ (random simulation input): montecarlo critical and sweep, signal noisy/recovered/narrative (3 modes), thermo ensemble, hydrogen transitions; scattering scatter (known nondeterministic in earlier rounds).
+- dynamical iterate (025) and hydrogen orbitals (037): after = previous round's final sweep, byte-identical (cmp); the baseline was the outlier (its intro 0.43 s and 1.2 s longer), the run-to-run intro variation recorded last round.
+- WAVs not byte-identical (34): 025 dynamical iterate_audio.wav, 037 hydrogen orbitals_audio.wav, 039 hydrogen transitions_audio.wav, 044 lagrange l1_audio.wav, 045 lagrange l4_audio.wav, 046 lagrange l5_audio.wav, 047 lorenz lorenz_audio.wav, 048 lorenz rossler_audio.wav, 056 montecarlo critical_audio.wav, 058 montecarlo sweep_audio.wav, 059 pendulum double_audio.wav, 060 pendulum simple_audio.wav, 062 primes ulam_audio.wav, 063 quantum box_audio.wav, 064 quantum qho_audio.wav, 081 scattering scatter_audio.wav, 082 signal am_narrative_full.wav, 082 signal am_noisy.wav, 082 signal am_recovered.wav, 083 signal chord_narrative_full.wav, 083 signal chord_noisy.wav, 083 signal chord_recovered.wav, 084 signal sweep_narrative_full.wav, 084 signal sweep_noisy.wav, 084 signal sweep_recovered.wav, 087 thermo ensemble_audio.wav, 089 waves interference_audio.wav, 090 waves ripple_audio.wav, 103 lorenz lorenz_audio_classic.wav, 104 lorenz lorenz_audio_butterfly.wav, 105 lorenz lorenz_audio_stable.wav, 106 lorenz lorenz_audio_wild.wav, 107 lorenz lorenz_audio_slow.wav, 108 lorenz lorenz_audio_rho9996.wav
+
+## Test suites
+- `wolframscript -file asteroids/tests/test_analyse.wl`: exit 0, 11 s; Results: 29 passed, 0 failed.
+- `wolframscript -file bayes/tests/test_model.wl`: exit 0, 48 s; Results: 23 passed, 0 failed.
+- `wolframscript -file bell/tests/test_model.wl`: exit 0, 4 s; Results: 35 passed, 0 failed.
+- `wolframscript -file blackbody/tests/test_model.wl`: exit 0, 16 s; Results: 23 passed, 0 failed.
+- `wolframscript -file brownian/tests/test_model.wl`: exit 0, 4 s; Results: 24 passed, 0 failed.
+- `wolframscript -file cellular/tests/test_model.wl`: exit 0, 3 s; Results: 16 passed, 0 failed.
+- `wolframscript -file clt/tests/test_model.wl`: exit 0, 4 s; Results: 23 passed, 0 failed.
+- `wolframscript -file compton/tests/test_model.wl`: exit 0, 10 s; Results: 25 passed, 0 failed.
+- `wolframscript -file cosmology/tests/test_model.wl`: exit 0, 3 s; Results: 27 passed, 0 failed.
+- `wolframscript -file dynamical/tests/test_model.wl`: exit 0, 4 s; Results: 114 passed, 0 failed.
+- `wolframscript -file fluid/tests/test_model.wl`: exit 0, 4 s; Results: 5 passed, 0 failed.
+- `wolframscript -file grover/tests/test_model.wl`: exit 0, 5 s; Results: 24 passed, 0 failed.
+- `wolframscript -file henon/tests/test_model.wl`: exit 0, 5 s; Results: 44 passed, 0 failed.
+- `wolframscript -file hydrogen/tests/test_model.wl`: exit 0, 5 s; Results: 23 passed, 0 failed.
+- `wolframscript -file images/tests/test_model.wl`: exit 0, 3 s; Results: 51 passed, 0 failed.
+- `wolframscript -file lagrange/tests/test_model.wl`: exit 0, 3 s; Passed: 43, Failed: 0
+- `wolframscript -file lorenz/tests/test_model.wl`: exit 0, 6 s; Results: 34 passed, 0 failed.
+- `wolframscript -file magnetic/tests/test_model.wl`: exit 0, 3 s; Passed: 18, Failed: 0
+- `wolframscript -file mandelbrot/tests/test_model.wl`: exit 0, 6 s; Results: 27 passed, 0 failed.
+- `wolframscript -file montecarlo/tests/test_model.wl`: exit 0, 3 s; Results: 19 passed, 0 failed.
+- `wolframscript -file pendulum/tests/test_model.wl`: exit 0, 6 s; Results: 18 passed, 0 failed.
+- `wolframscript -file primes/tests/test_model.wl`: exit 0, 17 s; Results: 17 passed, 0 failed.
+- `wolframscript -file quantum/tests/test_model.wl`: exit 0, 3 s; Results: 14 passed, 0 failed.
+- `wolframscript -file quantum_statistics/tests/test_model.wl`: exit 0, 3 s; Results: 26 passed, 0 failed.
+- `wolframscript -file quantum_tunnelling/tests/test_model.wl`: exit 0, 14 s; Results: 20 passed, 0 failed.
+- `wolframscript -file qubit/tests/test_model.wl`: exit 0, 6 s; Results: 33 passed, 0 failed.
+- `wolframscript -file relativity/tests/test_model.wl`: exit 0, 3 s; Results: 16 passed, 0 failed.
+- `wolframscript -file resonance/tests/test_model.wl`: exit 0, 35 s; Passed: 11, Failed: 0
+- `wolframscript -file scattering/tests/test_model.wl`: exit 0, 3 s; Passed: 7, Failed: 0
+- `wolframscript -file signal/tests/test_model.wl`: exit 0, 4 s; Results: 13 passed, 0 failed.
+- `wolframscript -file stem-core/tests/test_gifsync.wl`: exit 0, 5 s; Results: 31 passed, 0 failed.
+- `wolframscript -file stem-core/tests/test_loudness.wl`: exit 0, 9 s; Results: 31 passed, 0 failed.
+- `wolframscript -file stem-core/tests/test_speech.wl`: exit 0, 5 s; Results: 20 passed, 0 failed.
+- `wolframscript -file thermo/tests/test_model.wl`: exit 0, 3 s; Results: 28 passed, 0 failed.
+- `wolframscript -file waves/tests/test_model.wl`: exit 0, 17 s; Results: 23 passed, 0 failed.
+
+## Files changed
+- M .gitignore
+- M AGENTS.md
+- M README.md
+- M asteroids/src/fetch.wl
+- M bayes/AGENTS.md
+- M bayes/src/animate.wl
+- M bell/AGENTS.md
+- M bell/src/animate.wl
+- M blackbody/AGENTS.md
+- M blackbody/src/animate.wl
+- M brownian/AGENTS.md
+- M brownian/src/animate.wl
+- M cellular/src/animate.wl
+- M clt/AGENTS.md
+- M clt/src/animate.wl
+- M compton/AGENTS.md
+- M compton/src/animate.wl
+- M cosmology/experiments.wl
+- M cosmology/main.wl
+- M cosmology/src/animate.wl
+- M cosmology/src/fetch.wl
+- M cosmology/src/model.wl
+- M cosmology/src/output.wl
+- M demo.wl
+- M docs/APPS.md
+- M dynamical/AGENTS.md
+- M dynamical/prototype_lyapunov.wl
+- M grover/AGENTS.md
+- M grover/src/animate.wl
+- M henon/AGENTS.md
+- M henon/src/animate.wl
+- M hydrogen/src/animate.wl
+- M images/AGENTS.md
+- M images/src/output.wl
+- M lagrange/experiments.wl
+- M lagrange/src/animate.wl
+- M magnetic/experiments.wl
+- M mandelbrot/AGENTS.md
+- M mandelbrot/src/animate.wl
+- M montecarlo/AGENTS.md
+- M primes/src/animate.wl
+- M quantum/src/animate.wl
+- M quantum_statistics/AGENTS.md
+- M quantum_statistics/src/animate.wl
+- M quantum_tunnelling/AGENTS.md
+- M quantum_tunnelling/src/animate.wl
+- M qubit/AGENTS.md
+- M qubit/src/animate.wl
+- M relativity/src/animate.wl
+- M resonance/experiments.wl
+- M scattering/experiments.wl
+- M signal/src/animate.wl
+- M stem-core/ACCESSIBILITY.md
+- M stem-core/AGENTS.md
+- M stem-core/init.wl
+- M stem-core/src/export.wl
+- M thermo/AGENTS.md
+- M tools/README.md
+- M tools/src/video_pipeline.wl
+- M waves/src/animate.wl
+- ?? .gitattributes
+- ?? docs/VERIFICATION_portability_mac.md
+- ?? docs/smoke_test_MacOSX-ARM64_2026-10-07.txt
+- ?? stem-core/src/runapp.wl
+- ?? tools/smoke_test.wl

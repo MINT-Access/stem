@@ -114,7 +114,7 @@ AnimateBarrier[model_Association, outGif_String, outPng_String,
 
     frames = Table[BarrierDiagramGraphics[model, N[k] / actualNFrames], {k, actualNFrames}];
     ExportGIF[frames, outGif, plan];
-    Export[outPng, BarrierDiagramGraphics[model, 1.0], "PNG"];
+    ExportPNG[outPng, BarrierDiagramGraphics[model, 1.0]];
     Print["  PNG: ", outPng];
     {actualNFrames, frameRate}
   ];
@@ -162,7 +162,7 @@ AnimateSweep[model_Association, outGif_String, outPng_String,
                      {Log10[Min[model["TArr"]]] - 0.3, Log10[Max[model["TArr"]]] + 0.3}},
       AspectRatio -> 0.5, ImageSize -> {600, 360}
     ];
-    Export[outPng, staticPlt, "PNG"];
+    ExportPNG[outPng, staticPlt];
     Print["  PNG: ", outPng];
     {actualNFrames, frameRate}
   ];
@@ -212,7 +212,7 @@ AnimateEnergy[model_Association, outGif_String, outPng_String,
       PlotRange  -> {{model["EMin"], model["EMax"]}, {0, 1.05}},
       AspectRatio -> 0.5, ImageSize -> {620, 380}
     ];
-    Export[outPng, staticPlt, "PNG"];
+    ExportPNG[outPng, staticPlt];
     Print["  PNG: ", outPng];
     {actualNFrames, frameRate}
   ];

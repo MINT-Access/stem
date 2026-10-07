@@ -227,7 +227,8 @@ sonification duration to follow.
 
 The audio comes from stem-core's `STEMSpeakToBuffer[text, sr]`
 (`SpeechSynthesize[]`, then the platform tool given the text through a
-UTF-8 file, then `{}` with one warning sentence; see `stem-core/AGENTS.md`).
+UTF-8 file, then `{}` with one warning sentence;
+see `stem-core/AGENTS.md`).
 Callers must check for an empty buffer and skip the prepend rather than
 assume audio is always present.
 

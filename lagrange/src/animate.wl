@@ -17,7 +17,7 @@ MakeLagrangeFrame[xyAll_List, nShow_Integer, mu_?NumericQ,
       {RGBColor[1.0, 0.95, 0.15], Disk[{-mu, 0.0}, 0.07]},
       {RGBColor[0.9, 0.50, 0.10], Disk[{1-mu, 0.0}, 0.025]},
       {GrayLevel[0.6], PointSize[0.012], Point /@ Values[lpts]},
-      {White, FontFamily -> "Helvetica", FontSize -> 7,
+      {White, FontFamily -> "Source Sans Pro", FontSize -> 7,
        Text["L1", lpts["L1"] + {0.0,  0.08}],
        Text["L2", lpts["L2"] + {0.0,  0.08}],
        Text["L3", lpts["L3"] + {0.0, -0.10}],
@@ -78,7 +78,7 @@ AnimateLibration[model_Association, outDir_String,
     PlotRange  -> {{-1.65, 1.65}, {-1.30, 1.30}},
     ImageSize  -> 500, Frame -> False, Axes -> False];
     EnsureDir[pngPath];
-    Export[pngPath, pngGfx, "PNG"];
+    ExportPNG[pngPath, pngGfx];
     Print["  PNG: ", pngPath];
 
     plan      = GIFFramePlan[targetDuration, nFrameBudget / targetDuration];
@@ -135,7 +135,7 @@ AnimateEscape[model_Association, outDir_String,
     PlotRange  -> {{-1.65, 1.65}, {-1.30, 1.30}},
     ImageSize  -> 500, Frame -> False, Axes -> False];
     EnsureDir[pngPath];
-    Export[pngPath, pngGfx, "PNG"];
+    ExportPNG[pngPath, pngGfx];
     Print["  PNG: ", pngPath];
 
     plan      = GIFFramePlan[targetDuration, nFrameBudget / targetDuration];

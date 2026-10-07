@@ -92,7 +92,7 @@ AnimateSpectrum[model_Association, outGif_String, outPng_String,
       PlotRange  -> {{model["epsMin"], model["epsMax"]}, {yMin, yMax}},
       ImageSize  -> {640, 400}, AspectRatio -> 0.5
     ];
-    Export[outPng, staticPlt, "PNG"];
+    ExportPNG[outPng, staticPlt];
     Print["  PNG: ", outPng];
     {actualNFrames, frameRate}
   ];
@@ -157,7 +157,7 @@ AnimateTemperature[model_Association, outGif_String, outPng_String,
       PlotRange  -> {{Log10[model["TMin"]], Log10[model["TMax"]]}, {yMin, yMax}},
       ImageSize  -> {640, 400}, AspectRatio -> 0.5
     ];
-    Export[outPng, staticPlt, "PNG"];
+    ExportPNG[outPng, staticPlt];
     Print["  PNG: ", outPng];
     {actualNFrames, frameRate}
   ];
@@ -233,7 +233,7 @@ AnimateFermiSea[model_Association, outGif_String, outPng_String,
       PlotRange  -> {{model["epsMin"], model["epsMax"]}, {-0.05, 1.2}},
       ImageSize  -> {640, 400}, AspectRatio -> 0.5
     ];
-    Export[outPng, staticPlt, "PNG"];
+    ExportPNG[outPng, staticPlt];
     Print["  PNG: ", outPng];
     {actualNFrames, frameRate}
   ];

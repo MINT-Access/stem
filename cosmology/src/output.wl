@@ -35,7 +35,7 @@ ExportSkyData[skyModel_Association, outCSV_String, outPNG_String] :=
     freqHi    = skyModel["freqHi"];
 
     skyImg = Image[N[(mapT - Min[mapT]) / Max[Max[mapT] - Min[mapT], 1.0*^-10]]];
-    Export[outPNG, skyImg, "PNG"];
+    ExportPNG[outPNG, skyImg];
     Print["  PNG: ", outPNG];
 
     ExportCSV[

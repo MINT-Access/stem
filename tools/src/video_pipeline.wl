@@ -183,7 +183,7 @@ BuildTitleBandImage[title_String, targetW_Integer, titleBandH_Integer] :=
       {$TitleBandColor, Rectangle[{0, 0}, {targetW, titleBandH}],
        $TitleTextColor,
        Text[
-         Style[title, Bold, FontFamily -> "Helvetica",
+         Style[title, Bold, FontFamily -> "Source Sans Pro",
                FontSize -> Round[0.42 * titleBandH]],
          {targetW/2, titleBandH/2}
        ]},

@@ -1,0 +1,266 @@
+#!/usr/bin/env wolframscript
+
+(* ================================================================
+   tools/smoke_test.wl — one-command check that every app runs here
+
+   Usage (from anywhere; paths come from this file's location):
+     wolframscript -file tools/smoke_test.wl                 all apps + demo.wl
+     wolframscript -file tools/smoke_test.wl -- --quick      6 apps + demo.wl --quick
+     wolframscript -file tools/smoke_test.wl -- --out=<path> report path
+
+   What it does, in this one kernel (no child wolframscript):
+   1. An environment block: Wolfram version, system, encodings, whether
+      SpeechSynthesize[] works, which speech and network tools run, a
+      non-ASCII probe line, the pixel size of a test GIF export.
+   2. Every app's default mode (the mode in its config.json), each run
+      with stem-core STEMRunApp: console captured, messages recorded,
+      Exit[] caught, 600 s time limit, and the loop always continues.
+      For each run: status, seconds, WAV duration, integrated loudness
+      (BS.1770), peak, GIF duration, GIF minus WAV (from the app's own
+      sync sentence, which allows for spoken intros), GIF pixel size,
+      whether the WAV opens with speech, and the first message.
+   3. The pendulum frame-clipping check (pendulum/tests/
+      verify_animation_frames.py, here in Wolfram so Python is not needed).
+   4. demo.wl (with --quick under --quick).
+   The report is written as UTF-8 to smoke_test_<SystemID>_<date>.txt in
+   the repository root (or --out). Exit code 0 only if every app wrote a
+   WAV; 1 otherwise.
+   ================================================================ *)
+
+$CharacterEncoding = "UTF8";
+$smokeRoot = FileNameDrop[ExpandFileName[$InputFileName], -2];
+Get[FileNameJoin[{$smokeRoot, "stem-core", "init.wl"}]];
+
+$smokeArgs  = Select[Rest[$ScriptCommandLine], # =!= "--" &];
+$smokeQuick = MemberQ[$smokeArgs, "--quick"];
+$smokeOut   = With[{o = Select[$smokeArgs, StringStartsQ[#, "--out="] &]},
+  If[o =!= {}, StringDrop[First[o], 6],
+    FileNameJoin[{$smokeRoot, "smoke_test_" <> $SystemID <> "_" <>
+      DateString[{"Year", "-", "Month", "-", "Day"}] <> ".txt"}]]];
+$smokeQuickApps = {"pendulum", "dynamical", "henon", "images", "mandelbrot", "signal"};
+$smokeTimeLimit = 600;
+
+$report = {};
+out[s_String] := (AppendTo[$report, s]; Print[s]);
+fmt[x_?NumericQ, d_Integer] := FmtDec[x, d];
+fmt[_, _] := "-";
+
+
+(* ── Measurements ─────────────────────────────────────────────── *)
+
+(* GIF logical screen size from the header (bytes 7-10, little endian). *)
+GIFPixelSize[path_String] :=
+  Module[{b = BinaryReadList[path, "Byte", 10]},
+    If[Length[b] == 10, {b[[7]] + 256 b[[8]], b[[9]] + 256 b[[10]]}, Missing[]]];
+
+(* WAV facts: duration, loudness, peak, and whether it opens with speech:
+   at least 1 s of sound, then a silent stretch (|x| < 1e-3 on every
+   channel) of at least 0.35 s starting before 60 s, which is how the
+   narrated apps place their spoken intro before a 0.4 s pause. *)
+WAVFacts[path_String] :=
+  Module[{d, sr, m, nz, gaps, k, intro},
+    d  = Quiet[Import[path, "Data"]]; sr = Quiet[Import[path, "SampleRate"]];
+    If[!ListQ[d] || !NumericQ[sr], Return[<|"ok" -> False|>]];
+    If[VectorQ[d], d = {d}];
+    m  = Fold[(#1 + #2 + Abs[#1 - #2])/2 &, Abs[d]];   (* per-sample max over channels *)
+    nz = Flatten[Position[UnitStep[m - 10.^-3], 1]];
+    intro = False;
+    If[Length[nz] > 1 && First[nz] < sr,
+      gaps = Differences[nz];
+      k = SelectFirst[Range[Length[gaps]],
+            gaps[[#]] >= 0.35 sr && nz[[#]] >= sr && nz[[#]] <= 60 sr &, None];
+      intro = k =!= None];
+    <|"ok" -> True, "seconds" -> N[Length[First[d]] / sr],
+      "lufs" -> MeasureIntegratedLoudness[d, sr],
+      "peak" -> 20. Log10[Max[m]], "intro" -> intro|>
+  ];
+
+(* Frame-clipping check, ported from pendulum/tests/verify_animation_frames.py:
+   a pixel is content unless it is near-achromatic (max - min channel < 12)
+   and light (min channel > 120); the content bounding box must keep a
+   margin of at least 3 px from every edge on every frame. *)
+FrameClipCheck[path_String] :=
+  Module[{frames, w, h, worst, nViol = 0, nFrames},
+    frames  = Quiet[Import[path, "ImageList"]];
+    If[!ListQ[frames], Return[<|"ok" -> False|>]];
+    {w, h}  = ImageDimensions[First[frames]];
+    nFrames = Length[frames];
+    worst   = <|"top" -> Infinity, "bottom" -> Infinity, "left" -> Infinity, "right" -> Infinity|>;
+    Do[
+      Module[{a, r, g, b, hi, lo, content, rows, cols, margins},
+        a = ImageData[ColorConvert[RemoveAlphaChannel[f], "RGB"], "Byte"];
+        {r, g, b} = Transpose[a, {2, 3, 1}];
+        hi = (r + g + Abs[r - g])/2; hi = (hi + b + Abs[hi - b])/2;
+        lo = (r + g - Abs[r - g])/2; lo = (lo + b - Abs[lo - b])/2;
+        content = 1 - UnitStep[11 - (hi - lo)] UnitStep[lo - 121];
+        rows = Flatten[Position[Unitize[Total[content, {2}]], 1]];
+        cols = Flatten[Position[Unitize[Total[content]], 1]];
+        If[rows =!= {},
+          margins = <|"top" -> First[rows] - 1, "bottom" -> h - Last[rows],
+                      "left" -> First[cols] - 1, "right" -> w - Last[cols]|>;
+          worst = Merge[{worst, margins}, Min];
+          If[Min[Values[margins]] < 3, nViol++]]],
+      {f, frames}];
+    <|"ok" -> True, "frames" -> nFrames, "size" -> {w, h}, "worst" -> worst, "violations" -> nViol|>
+  ];
+
+(* GIF minus WAV in seconds from the app's own sync sentence (stem-core
+   SyncWAVToGIF), which pairs the right files and, for narrated apps,
+   compares the GIF with the WAV's part between intro and outro.
+   Missing[] if the app printed none. *)
+SyncFromLog[log_String] :=
+  Module[{l = StringCases[log, "GIF/WAV sync:" ~~ Except["\n"] ..]},
+    If[l === {}, Return[Missing[]]];
+    l = Last[l];
+    Which[
+      StringContainsQ[l, "same duration"], 0.,
+      True, With[{m = StringCases[l, "the GIF is " ~~ x : NumberString ~~ " s " ~~ w : ("longer" | "shorter") :>
+                    If[w === "longer", 1, -1] ToExpression[x]]},
+              If[m === {}, Missing[], N[Last[m]]]]]];
+
+DefaultMode[app_String] :=
+  Module[{c = Quiet[Import[FileNameJoin[{$smokeRoot, app, "config.json"}], "RawJSON",
+                           CharacterEncoding -> "UTF8"]]},
+    If[AssociationQ[c] && AssociationQ[c["simulation"]] && StringQ[c["simulation"]["mode"]],
+      c["simulation"]["mode"], "-"]];
+
+
+(* ── 1. Environment ───────────────────────────────────────────── *)
+
+out["STEM smoke test, " <> DateString[{"Year", "-", "Month", "-", "Day", " ", "Hour", ":", "Minute"}] <>
+    If[$smokeQuick, " (--quick)", ""]];
+out["== Environment =="];
+out["Wolfram version: " <> $Version];
+out["SystemID: " <> $SystemID <> ", OperatingSystem: " <> $OperatingSystem];
+out["CharacterEncoding: " <> ToString[$CharacterEncoding] <>
+    ", SystemCharacterEncoding: " <> ToString[$SystemCharacterEncoding]];
+out["Repository: " <> $smokeRoot];
+With[{a = TimeConstrained[Quiet[Check[SpeechSynthesize["Test."], $Failed]], 60, $TimedOut]},
+  out["SpeechSynthesize[\"Test.\"]: " <> If[AudioQ[a],
+    "returns audio (" <> fmt[QuantityMagnitude[Duration[a], "Seconds"], 2] <> " s)",
+    "no audio (" <> ToString[Head[a]] <> ")"]]];
+out["Speech tier available (STEMSpeechAvailable[]): " <> ToString[STEMSpeechAvailable[]]];
+Scan[
+  Function[tool,
+    Module[{p = STEMFindTool[tool], r},
+      out["Tool " <> tool <> ": " <> If[MissingQ[p], "not found",
+        r = Quiet[RunProcess[{p, "--version"}]];
+        p <> ", " <> If[AssociationQ[r], "starts (exit code " <> ToString[r["ExitCode"]] <> ")",
+                        "found but does not start"]]]]],
+  {"say", "afconvert", "espeak-ng", "espeak", "powershell", "curl"}];
+With[{r = Quiet[URLRead[HTTPRequest["https://ssd-api.jpl.nasa.gov/sbdb.api?des=433"],
+                        TimeConstraint -> 30, Interactive -> False]]},
+  out["Network (URLRead to ssd-api.jpl.nasa.gov): " <>
+      If[Head[r] === HTTPResponse, "HTTP " <> ToString[r["StatusCode"]], "no response"]]];
+With[{probe = "Probe: H\[EAcute]non \[LongDash] \[Lambda] \[Times] \:2609"},
+  out[probe];
+  out["Probe UTF-8 bytes: " <> StringRiffle[IntegerString[#, 16, 2] & /@
+        ToCharacterCode[StringDrop[probe, 7], "UTF8"], " "] <>
+      " (expect 48 c3 a9 6e 6f 6e 20 e2 80 94 20 ce bb 20 c3 97 20 e2 98 89)"]];
+Module[{g = Graphics[{Red, Disk[]}, ImageSize -> 100], p1, p2},
+  p1 = FileNameJoin[{$TemporaryDirectory, "stem_smoke_" <> ToString[$ProcessID] <> "_a.gif"}];
+  p2 = FileNameJoin[{$TemporaryDirectory, "stem_smoke_" <> ToString[$ProcessID] <> "_b.gif"}];
+  ExportGIF[{g, g}, p1, GIFFramePlan[0.2, 10]];
+  Export[p2, {g, g}, "GIF"];
+  out["GIF of a Graphics with ImageSize 100: ExportGIF (144 dpi) " <>
+      StringRiffle[ToString /@ GIFPixelSize[p1], "x"] <> " px; plain Export (host scale) " <>
+      StringRiffle[ToString /@ GIFPixelSize[p2], "x"] <> " px"];
+  Quiet[DeleteFile /@ {p1, p2}]];
+out[""];
+
+
+(* ── 2. Apps ──────────────────────────────────────────────────── *)
+
+$apps = Sort[FileNameTake[DirectoryName[#]] & /@
+          FileNames["main.wl", Select[FileNames["*", $smokeRoot], DirectoryQ]]];
+If[$smokeQuick, $apps = Select[$apps, MemberQ[$smokeQuickApps, #] &]];
+
+out["== Apps (" <> ToString[Length[$apps]] <> ", default mode each) =="];
+out["app | mode | status | seconds | WAV s | LUFS | peak dBFS | GIF s | GIF-WAV s | GIF px | intro | first message"];
+$results = <||>;
+Scan[
+  Function[app,
+    Module[{r, wav, gif, wf, gs, gp, line, more, sync},
+      Print["  running ", app, " ..."];
+      r = STEMRunApp[FileNameJoin[{$smokeRoot, app}], {},
+            "Silent" -> True, "TimeLimit" -> $smokeTimeLimit];
+      wav = If[r["wavs"] === {}, None,
+              First[MaximalBy[r["wavs"], Quiet[WAVDuration[#]] &]]];
+      gif = SelectFirst[r["newFiles"], StringEndsQ[#, ".gif", IgnoreCase -> True] &, None];
+      wf  = If[wav === None, <|"ok" -> False|>, WAVFacts[wav]];
+      gs  = If[gif === None, Missing[], Total[GIFFrameDelays[gif]]];
+      sync = SyncFromLog[r["log"]];
+      If[MissingQ[sync] && NumericQ[gs] && wf["ok"] && Length[r["wavs"]] == 1 &&
+         Count[r["newFiles"], f_ /; StringEndsQ[f, ".gif"]] == 1,
+        sync = gs - wf["seconds"]];
+      gp  = If[gif === None, Missing[], GIFPixelSize[gif]];
+      more = If[Length[r["wavs"]] > 1, " (+" <> ToString[Length[r["wavs"]] - 1] <> " more WAV)", ""];
+      line = StringRiffle[{
+        app, DefaultMode[app], r["status"], fmt[r["seconds"], 1],
+        If[wf["ok"], fmt[wf["seconds"], 2] <> more, "-"],
+        If[wf["ok"], fmt[wf["lufs"], 2], "-"],
+        If[wf["ok"], fmt[wf["peak"], 2], "-"],
+        fmt[gs, 2],
+        fmt[sync, 3],
+        If[ListQ[gp], StringRiffle[ToString /@ gp, "x"], "-"],
+        If[wf["ok"], If[wf["intro"], "yes", "no"], "-"],
+        If[r["messages"] === {}, "-", StringTake[First[r["messages"]], UpTo[160]]]}, " | "];
+      out[line];
+      $results[app] = Join[r, <|"wav" -> wav, "gif" -> gif|>]]],
+  $apps];
+out[""];
+
+
+(* ── 3. Pendulum frame-clipping check ─────────────────────────── *)
+
+out["== Pendulum frame clipping (margin >= 3 px on every frame) =="];
+If[KeyExistsQ[$results, "pendulum"],
+  Scan[
+    Function[g,
+      With[{c = FrameClipCheck[g]},
+        out[If[!c["ok"], "[FAIL] " <> FileNameTake[g] <> ": could not read the GIF",
+          If[c["violations"] == 0, "[PASS] ", "[FAIL] "] <> FileNameTake[g] <> ": " <>
+          ToString[c["frames"]] <> " frames, " <> StringRiffle[ToString /@ c["size"], "x"] <>
+          " px, worst margins top " <> ToString[c["worst"]["top"]] <> ", bottom " <>
+          ToString[c["worst"]["bottom"]] <> ", left " <> ToString[c["worst"]["left"]] <>
+          ", right " <> ToString[c["worst"]["right"]] <> " px, " <>
+          ToString[c["violations"]] <> " frames under the margin"]]]],
+    Select[$results["pendulum"]["newFiles"], StringEndsQ[#, ".gif"] &]],
+  out["pendulum was not run"]];
+out[""];
+
+
+(* ── 4. demo.wl ───────────────────────────────────────────────── *)
+
+out["== demo.wl" <> If[$smokeQuick, " --quick", ""] <> " =="];
+Module[{r, passed},
+  Print["  running demo.wl ..."];
+  r = STEMRunApp[$smokeRoot, If[$smokeQuick, {"--quick"}, {}], "Script" -> "demo.wl",
+        "RequireWAV" -> False, "Silent" -> True, "TimeLimit" -> 3 $smokeTimeLimit];
+  passed = StringCases[r["log"], "Passed:" ~~ Whitespace ~~ p : (DigitCharacter .. ~~ "/" ~~ DigitCharacter ..) :> p];
+  out["demo.wl | " <> r["status"] <> " | " <> fmt[r["seconds"], 1] <> " s | passed " <>
+      If[passed === {}, "?", First[passed]] <> " | " <>
+      If[r["messages"] === {}, "-", StringTake[First[r["messages"]], UpTo[160]]]];
+  $results["demo.wl"] = r];
+out[""];
+
+
+(* ── Messages in full ─────────────────────────────────────────── *)
+
+out["== Messages =="];
+KeyValueMap[
+  Function[{k, r},
+    If[r["messages"] =!= {},
+      out[k <> " (" <> ToString[Length[r["messages"]]] <> "):"];
+      Scan[out["  " <> #] &, r["messages"]]]],
+  $results];
+If[AllTrue[Values[$results], #["messages"] === {} &], out["none"]];
+out[""];
+
+$nNoWav = Count[KeyDrop[$results, "demo.wl"], r_ /; r["wavs"] === {}];
+out["Summary: " <> ToString[Length[$apps] - $nNoWav] <> " of " <> ToString[Length[$apps]] <>
+    " apps wrote a WAV; demo.wl " <> $results["demo.wl"]["status"] <> "."];
+
+Export[$smokeOut, StringRiffle[$report, "\n"] <> "\n", "Text", CharacterEncoding -> "UTF8"];
+Print["Report: ", $smokeOut];
+Exit[If[$nNoWav == 0 && Length[$apps] > 0, 0, 1]];

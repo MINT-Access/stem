@@ -114,7 +114,7 @@ AnimateQuantum[solution_Association, cfg_Association, outDir_String] :=
 
     pngPath = FileNameJoin[{outDir, mode <> "_density.png"}];
     EnsureDir[pngPath];
-    Export[pngPath,
+    ExportPNG[pngPath,
       GraphicsGrid[Partition[panels, 3],
         Background -> GrayLevel[0.08],
         ImageSize  -> 600]];

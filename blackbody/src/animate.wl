@@ -82,7 +82,7 @@ RenderSpectrumStaticPNG[T_?NumericQ, nuMin_?NumericQ, nuMax_?NumericQ, outPNG_St
       Background -> White,
       ImageSize  -> {600, 360}
     ];
-    Export[outPNG, plt, "PNG"];
+    ExportPNG[outPNG, plt];
     Print["  PNG: ", outPNG]
   ];
 
@@ -207,7 +207,7 @@ RenderTemperatureStaticPNG[Tmin_?NumericQ, Tmax_?NumericQ, nuMin_?NumericQ, nuMa
       Background -> White,
       ImageSize  -> {620, 380 + 14 * nCurves}
     ];
-    Export[outPNG, plt, "PNG"];
+    ExportPNG[outPNG, plt];
     Print["  PNG: ", outPNG]
   ];
 
@@ -314,6 +314,6 @@ RenderStarTourStaticPNG[order_List, presets_Association, nuMin_?NumericQ, nuMax_
       Background -> White,
       ImageSize  -> {640, 400 + 14 * Length[order]}
     ];
-    Export[outPNG, plt, "PNG"];
+    ExportPNG[outPNG, plt];
     Print["  PNG: ", outPNG]
   ];

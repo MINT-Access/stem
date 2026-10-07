@@ -33,7 +33,7 @@ RunExperiment[name_String, overrides_Association] :=
     outGIF = FileNameJoin[{$outDir, name <> ".gif"}];
 
     {lArr, dlArr, clArr} = LoadSpectrum[src, lMax];
-    checks = CMBPhysicsChecks[lArr, dlArr];
+    checks = CMBPhysicsChecks[lArr, dlArr, If[src === "planck", 15, 0]];
 
     Which[
       mode === "spectrum",

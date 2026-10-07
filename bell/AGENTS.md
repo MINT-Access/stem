@@ -387,8 +387,6 @@ always at fixed canonical parameters (the derived-optimal CHSH angles):
 
 ## Speech synthesis note
 
-`speech.wl`'s three-tier fallback (`SpeechSynthesize[]` -> platform TTS
--> text-only `STEMSay`) duplicates the pattern already used in
-`qubit/src/speech.wl` and every other app's `speech.wl` file — still
-out of scope for stem-core consolidation per every prior app's own
-build spec.
+Narration audio comes from stem-core's `STEMSpeakToBuffer` (`SpeechSynthesize[]`
+first, then the platform tool: `say`, `espeak-ng` or PowerShell; see
+`stem-core/AGENTS.md`); `speech.wl` holds only this app's narration text.

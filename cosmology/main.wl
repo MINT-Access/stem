@@ -113,7 +113,7 @@ Print[""];
 
 (* ── Physical correctness checks 1-3 (run in both modes) ────────── *)
 Print["-- Physical correctness checks --"];
-checks = CMBPhysicsChecks[lArr, dlArr];
+checks = CMBPhysicsChecks[lArr, dlArr, If[src === "planck", 15, 0]];
 Print[""];
 Do[
   With[{k = k0, li = checks["peakLVals"][[k0]], dli = checks["peakDlVals"][[k0]]},

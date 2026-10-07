@@ -39,7 +39,7 @@ AnimateSpectrum[lArr_List, dlArr_List, peakData_Association,
       ],
       Graphics[Flatten[accentPts]]
     ];
-    Export[outPNG, plt, "PNG"];
+    ExportPNG[outPNG, plt];
     Print["  PNG: ", outPNG]
   ];
 

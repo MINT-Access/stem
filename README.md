@@ -1,7 +1,7 @@
 # stem
 
 [![Version](https://img.shields.io/badge/version-1.5.1-blue.svg)](RELEASE_NOTES_v1.5.1.md)
-[![Wolfram Language](https://img.shields.io/badge/Wolfram_Language-13%2B-DD1100.svg)](https://www.wolfram.com/engine/)
+[![Wolfram Language](https://img.shields.io/badge/Wolfram_Language-tested_15.0.1-DD1100.svg)](https://www.wolfram.com/engine/)
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](LICENSE)
 
 A monorepo of Wolfram Language physics simulations, data projects, and signal
@@ -63,6 +63,10 @@ installer on all three platforms — no separate download needed.
 
 Activate the free licence when prompted (requires a Wolfram account).
 
+Tested with Wolfram Engine 15.0.1 on macOS (Apple silicon, `$SystemID`
+MacOSX-ARM64). Earlier versions and other platforms have not been tested
+yet; `tools/smoke_test.wl` (below) checks a new installation in one run.
+
 Verify your installation:
 
 ```sh
@@ -89,10 +93,11 @@ Twenty-two apps speak an intro (and often an outro) into their WAV files;
 tiers, the same on every platform (stem-core `STEMSpeakToBuffer`):
 
 1. `SpeechSynthesize[]`, Wolfram's built-in speech, is tried first on all
-   platforms. On many Wolfram Engine installs it is not available, so in
-   practice the platform tool below is what produces the narration.
-2. The platform text-to-speech tool, which is therefore **required** for
-   narration:
+   platforms. On the development Mac it produces every narration; on other
+   installs it may not work headless (it needs Wolfram's voice resources),
+   and then the platform tool takes over.
+2. The platform text-to-speech tool, which is **required** for narration
+   wherever `SpeechSynthesize[]` does not work:
 
 | Platform | Tool | Install |
 |---|---|---|
@@ -100,6 +105,9 @@ tiers, the same on every platform (stem-core `STEMSpeakToBuffer`):
 | Linux | `espeak-ng` (`espeak` is tried if it is missing) | `sudo apt install espeak-ng` · `sudo dnf install espeak-ng` |
 | Windows | PowerShell with System.Speech | Built into Windows 10/11 (Windows PowerShell 5.1) |
 
+   It speaks with the system's default voice, so set that to an English
+   voice (macOS: System Settings, Accessibility, Spoken Content) or the
+   English narration is read with another language's voice.
 3. If neither produces audio, the app prints one warning naming the app, the
    tiers tried and how many seconds of narration are missing, prints the
    text, and still writes a valid WAV without the speech (`signal` puts
@@ -137,7 +145,7 @@ export NASA_API_KEY=your_key_here
 # Windows PowerShell — for the current session
 $env:STEM_SPEAK = "1"
 $env:NASA_API_KEY = "your_key_here"
-wolframscript -file asteroids/main.wl
+wolframscript -file asteroids\main.wl
 
 # Windows PowerShell — persist for your user account (new windows only)
 [Environment]::SetEnvironmentVariable("NASA_API_KEY", "your_key_here", "User")
@@ -147,7 +155,7 @@ wolframscript -file asteroids/main.wl
 :: Windows Command Prompt (cmd) — for the current session
 set STEM_SPEAK=1
 set NASA_API_KEY=your_key_here
-wolframscript -file asteroids/main.wl
+wolframscript -file asteroids\main.wl
 
 :: Windows Command Prompt — persist for your user account (new windows only)
 setx NASA_API_KEY your_key_here
@@ -157,7 +165,18 @@ setx NASA_API_KEY your_key_here
 
 ## Quick start
 
-Run any project from the `stem/` root:
+Run any project from the `stem/` root. The commands below are for bash or
+zsh (macOS, Linux); the Windows forms follow, and differ in three ways:
+
+- **Windows PowerShell**: write the separator as `'--'` (quoted). Windows
+  PowerShell 5.1 can drop a bare `--` before it reaches a native program
+  such as wolframscript, and the app would then see no arguments. The
+  quoted form is passed through by every PowerShell version. Lines
+  continue with a backtick (`` ` ``) instead of `\`.
+- **Command Prompt (cmd)**: `#` is not a comment, so the comments are
+  removed (or turned into `REM` lines); lines continue with `^`.
+- **Paths** use `\` on Windows. Not yet run on a Windows machine
+  (docs/PORTABILITY_AUDIT.md, B4).
 
 ```sh
 # Physics simulations
@@ -334,16 +353,379 @@ wolframscript -file brownian/main.wl -- --simulation.mode=ensemble              
 wolframscript -file brownian/main.wl -- --simulation.mode=temperature          # Stokes-Einstein D(T) sweep
 ```
 
+<details><summary>Windows PowerShell</summary>
+
+```powershell
+# Physics simulations
+wolframscript -file pendulum\main.wl
+wolframscript -file lorenz\main.wl
+
+# Logistic map — period-doubling route to chaos
+wolframscript -file dynamical\main.wl   # sweep mode, r 2.5→4.0
+wolframscript -file dynamical\main.wl '--' --simulation.mode=iterate   # iterate at r=3.8
+wolframscript -file dynamical\main.wl '--' --simulation.dynamical.preset=period3_window
+
+# Hénon map — 2D invertible chaotic attractor
+wolframscript -file henon\main.wl   # attractor, canonical a=1.4,b=0.3
+wolframscript -file henon\main.wl '--' --simulation.mode=sweep   # period-doubling sweep, a 0.2→1.4
+wolframscript -file henon\main.wl '--' --simulation.mode=reverse   # forward/reversed/inverse-demo
+
+# Live NASA asteroid data
+wolframscript -file asteroids\main.wl   # last 7 days
+wolframscript -file asteroids\main.wl '--' 2026-01-01 2026-12-31   # full year
+wolframscript -file asteroids\main.wl '--' 2026-01-01 2026-06-25 Phrygian   # date range + scale
+wolframscript -file asteroids\main.wl '--' 2026-06-20 2026-06-26 --no-orbital-elements
+
+# Cellular automata
+wolframscript -file cellular\main.wl   # Game of Life, R-pentomino
+wolframscript -file cellular\main.wl '--' --simulation.mode=rule110
+
+# Signal processing
+wolframscript -file signal\main.wl   # chord (default)
+wolframscript -file signal\main.wl '--' --simulation.mode=sweep
+wolframscript -file signal\main.wl '--' --simulation.mode=am
+
+# Quantum mechanics
+wolframscript -file quantum\main.wl   # QHO coherent state
+wolframscript -file quantum\main.wl '--' --simulation.mode=box   # particle-in-a-box
+wolframscript -file quantum\main.wl '--' --simulation.qho.alpha=3.0   # larger coherent amplitude
+
+# Single qubit — Bloch sphere, gates, Rabi oscillation, measurement
+wolframscript -file qubit\main.wl   # gates, H-T-H-S-X from |0>
+wolframscript -file qubit\main.wl '--' --simulation.mode=rabi   # continuous Rabi oscillation
+wolframscript -file qubit\main.wl '--' --simulation.mode=measurement   # 2000 Born-rule measurements
+
+# Entanglement — Bell correlations, CHSH inequality, paired measurement
+wolframscript -file bell\main.wl   # correlations, binaural quantum vs classical
+wolframscript -file bell\main.wl '--' --simulation.mode=chsh   # CHSH gauge at derived-optimal angles
+wolframscript -file bell\main.wl '--' --simulation.mode=measurement   # 2000 paired Bell measurements
+
+# Grover's search algorithm — optimal stopping, classical vs quantum race, rotation geometry
+wolframscript -file grover\main.wl   # search, N=64, rise then fall past optimum
+wolframscript -file grover\main.wl '--' --simulation.mode=compare   # binaural classical vs quantum race
+wolframscript -file grover\main.wl '--' --simulation.mode=geometry   # continuous 2D rotation
+
+# Prime number patterns
+wolframscript -file primes\main.wl   # Ulam spiral (default)
+wolframscript -file primes\main.wl '--' --simulation.mode=gaps   # prime gap rhythm
+wolframscript -file primes\main.wl '--' --simulation.ulam.size=201   # larger spiral
+wolframscript -file primes\main.wl '--' --simulation.gaps.count=10000   # more primes
+
+# Gravitational waves — chirp mode
+wolframscript -file relativity\main.wl   # GW150914 (36+29 M☉)
+wolframscript -file relativity\main.wl '--' --simulation.chirp.preset gw170817
+wolframscript -file relativity\main.wl '--' --simulation.chirp.mass1_solar 50 --simulation.chirp.mass2_solar 50
+wolframscript -file relativity\main.wl '--' --sonification.chirp.time_stretch 8
+
+# Gravitational waves — geodesic mode (Schwarzschild black hole)
+wolframscript -file relativity\main.wl '--' --simulation.mode geodesic   # bound orbit (default)
+wolframscript -file relativity\main.wl '--' --simulation.mode geodesic --simulation.geodesic.orbit_type plunging
+wolframscript -file relativity\main.wl '--' --simulation.mode geodesic --simulation.geodesic.orbit_type photon
+
+# CMB power spectrum sonification
+wolframscript -file cosmology\main.wl   # spectrum mode, simulated ΛCDM
+wolframscript -file cosmology\main.wl '--' --simulation.mode=sky   # sky map via Hilbert traversal
+wolframscript -file cosmology\main.wl '--' --simulation.cosmology.source=planck   # real Planck 2018 data
+
+# 2D wave propagation (FEM)
+wolframscript -file waves\main.wl   # ripple mode (circular membrane)
+wolframscript -file waves\main.wl '--' --simulation.mode=interference   # two-source interference pattern
+wolframscript -file waves\main.wl '--' --simulation.waves.wave_speed=1.5   # faster propagation
+wolframscript -file waves\main.wl '--' --simulation.waves.source_frequency=3.0
+
+# Lagrange point orbits (CR3BP)
+wolframscript -file lagrange\main.wl   # L4 libration, Sun-Jupiter
+wolframscript -file lagrange\main.wl '--' --simulation.mode=l5   # L5 libration
+wolframscript -file lagrange\main.wl '--' --simulation.mode=l1   # L1 saddle-point escape
+wolframscript -file lagrange\main.wl '--' --simulation.lagrange.preset=earth_moon
+
+# 2D image sonification
+wolframscript -file images\main.wl   # brightness mode, Gaussian test image
+wolframscript -file images\main.wl '--' --simulation.mode=scan_horizontal   # pedagogical scan
+wolframscript -file images\main.wl '--' --simulation.mode=colour   # colour mode
+wolframscript -file images\main.wl '--' --simulation.mode=hsb   # full HSB stereo mode
+wolframscript -file images\main.wl '--' --simulation.images.test_image=temperature
+wolframscript -file images\main.wl '--' --simulation.images.brightness_scale=log
+
+# Mandelbrot and Julia sets — Hilbert curve traversal, self-similarity
+wolframscript -file mandelbrot\main.wl   # the classic set
+wolframscript -file mandelbrot\main.wl '--' --simulation.mode=julia   # fixed c, sweep z0
+wolframscript -file mandelbrot\main.wl '--' --simulation.mode=zoom   # 4 levels, seahorse valley
+
+# Statistical mechanics — Maxwell-Boltzmann distribution
+wolframscript -file thermo\main.wl   # distribution, helium, 100K→1000K
+wolframscript -file thermo\main.wl '--' --simulation.mode=ensemble   # particle ensemble at 300K
+wolframscript -file thermo\main.wl '--' --simulation.mode=cooling   # thermal cooling 1000K→50K
+wolframscript -file thermo\main.wl '--' --simulation.mode=equipartition   # monatomic vs diatomic
+
+# Quantum statistics — Bose-Einstein, Fermi-Dirac, Maxwell-Boltzmann
+wolframscript -file quantum_statistics\main.wl   # spectrum, three voices, T=300K
+wolframscript -file quantum_statistics\main.wl '--' --simulation.mode=temperature   # sweep T, fixed energy
+wolframscript -file quantum_statistics\main.wl '--' --simulation.mode=fermi_sea   # FD step, cold to warm
+
+# Monte Carlo — 2D Ising model
+wolframscript -file montecarlo\main.wl   # sweep, T 4.0→0.5
+wolframscript -file montecarlo\main.wl '--' --simulation.mode=critical   # at T_c
+wolframscript -file montecarlo\main.wl '--' --simulation.mode=quench   # instantaneous quench
+
+# Charged particles in a magnetic field
+wolframscript -file magnetic\main.wl   # cyclotron orbit
+wolframscript -file magnetic\main.wl '--' --simulation.mode=drift   # E×B drift
+wolframscript -file magnetic\main.wl '--' --simulation.mode=mirror   # magnetic mirror
+wolframscript -file magnetic\main.wl '--' --simulation.mode=multi   # proton+alpha+electron chord
+
+# Hydrogen atom — wave functions and emission spectrum
+wolframscript -file hydrogen\main.wl   # orbitals, 2p (210)
+wolframscript -file hydrogen\main.wl '--' --simulation.mode=spectrum   # emission spectrum
+wolframscript -file hydrogen\main.wl '--' --simulation.mode=transitions   # quantum cascade
+wolframscript -file hydrogen\main.wl '--' --simulation.hydrogen.orbital=320   # 3d orbital
+
+# Bayesian inference
+wolframscript -file bayes\main.wl   # coin, θ=0.7, 100 flips
+wolframscript -file bayes\main.wl '--' --simulation.mode=gaussian   # Gaussian mean
+wolframscript -file bayes\main.wl '--' --simulation.mode=model   # Bayes factor
+
+# Rutherford scattering
+wolframscript -file scattering\main.wl   # single trajectory b=1
+wolframscript -file scattering\main.wl '--' --simulation.scattering.preset=backscatter
+wolframscript -file scattering\main.wl '--' --simulation.mode=discovery   # Thomson vs Rutherford
+
+# Orbital resonances
+wolframscript -file resonance\main.wl   # Galilean 4:2:1
+wolframscript -file resonance\main.wl '--' --simulation.mode=kirkwood   # Kirkwood gaps
+wolframscript -file resonance\main.wl '--' --simulation.mode=saturn   # Cassini Division
+
+# Kármán vortex street
+wolframscript -file fluid\main.wl   # karman, Re=150
+wolframscript -file fluid\main.wl '--' --simulation.mode=strouhal   # Reynolds sweep
+wolframscript -file fluid\main.wl '--' --simulation.mode=flag   # flag flutter
+
+# Black body radiation
+wolframscript -file blackbody\main.wl   # spectrum, solar T=5778K
+wolframscript -file blackbody\main.wl '--' --simulation.mode=temperature   # 2500K -> 40000K sweep
+wolframscript -file blackbody\main.wl '--' --simulation.mode=star `
+                                          --simulation.blackbody.preset=all   # tour, red dwarf -> white dwarf
+
+# Compton scattering
+wolframscript -file compton\main.wl   # scatter, Compton's own 1923 values
+wolframscript -file compton\main.wl '--' --simulation.mode=sweep   # angle glissando, 0-180 deg
+wolframscript -file compton\main.wl '--' --simulation.mode=energy   # incident-energy sweep, 1keV-5MeV
+wolframscript -file compton\main.wl '--' --simulation.mode=discovery   # Thomson vs Compton, binaural
+
+# Quantum tunnelling
+wolframscript -file quantum_tunnelling\main.wl   # barrier, default preset (T~2.35%)
+wolframscript -file quantum_tunnelling\main.wl '--' --simulation.quantum_tunnelling.preset=stm
+wolframscript -file quantum_tunnelling\main.wl '--' --simulation.mode=sweep   # barrier-width sweep
+wolframscript -file quantum_tunnelling\main.wl '--' --simulation.mode=energy   # energy sweep, crosses V0
+
+# Central Limit Theorem
+wolframscript -file clt\main.wl   # sweep, uniform source
+wolframscript -file clt\main.wl '--' --simulation.clt.source=exponential
+wolframscript -file clt\main.wl '--' --simulation.mode=compare   # uniform vs exponential, binaural
+wolframscript -file clt\main.wl '--' --simulation.mode=dice   # sum of N fair dice
+
+# Brownian motion
+wolframscript -file brownian\main.wl   # single random walk
+wolframscript -file brownian\main.wl '--' --simulation.mode=ensemble   # 150-walker sqrt(t) glissando
+wolframscript -file brownian\main.wl '--' --simulation.mode=temperature   # Stokes-Einstein D(T) sweep
+```
+
+</details>
+
+<details><summary>Windows Command Prompt (cmd)</summary>
+
+```bat
+REM Physics simulations
+wolframscript -file pendulum\main.wl
+wolframscript -file lorenz\main.wl
+
+REM Logistic map — period-doubling route to chaos
+wolframscript -file dynamical\main.wl
+wolframscript -file dynamical\main.wl -- --simulation.mode=iterate
+wolframscript -file dynamical\main.wl -- --simulation.dynamical.preset=period3_window
+
+REM Hénon map — 2D invertible chaotic attractor
+wolframscript -file henon\main.wl
+wolframscript -file henon\main.wl -- --simulation.mode=sweep
+wolframscript -file henon\main.wl -- --simulation.mode=reverse
+
+REM Live NASA asteroid data
+wolframscript -file asteroids\main.wl
+wolframscript -file asteroids\main.wl -- 2026-01-01 2026-12-31
+wolframscript -file asteroids\main.wl -- 2026-01-01 2026-06-25 Phrygian
+wolframscript -file asteroids\main.wl -- 2026-06-20 2026-06-26 --no-orbital-elements
+
+REM Cellular automata
+wolframscript -file cellular\main.wl
+wolframscript -file cellular\main.wl -- --simulation.mode=rule110
+
+REM Signal processing
+wolframscript -file signal\main.wl
+wolframscript -file signal\main.wl -- --simulation.mode=sweep
+wolframscript -file signal\main.wl -- --simulation.mode=am
+
+REM Quantum mechanics
+wolframscript -file quantum\main.wl
+wolframscript -file quantum\main.wl -- --simulation.mode=box
+wolframscript -file quantum\main.wl -- --simulation.qho.alpha=3.0
+
+REM Single qubit — Bloch sphere, gates, Rabi oscillation, measurement
+wolframscript -file qubit\main.wl
+wolframscript -file qubit\main.wl -- --simulation.mode=rabi
+wolframscript -file qubit\main.wl -- --simulation.mode=measurement
+
+REM Entanglement — Bell correlations, CHSH inequality, paired measurement
+wolframscript -file bell\main.wl
+wolframscript -file bell\main.wl -- --simulation.mode=chsh
+wolframscript -file bell\main.wl -- --simulation.mode=measurement
+
+REM Grover's search algorithm — optimal stopping, classical vs quantum race, rotation geometry
+wolframscript -file grover\main.wl
+wolframscript -file grover\main.wl -- --simulation.mode=compare
+wolframscript -file grover\main.wl -- --simulation.mode=geometry
+
+REM Prime number patterns
+wolframscript -file primes\main.wl
+wolframscript -file primes\main.wl -- --simulation.mode=gaps
+wolframscript -file primes\main.wl -- --simulation.ulam.size=201
+wolframscript -file primes\main.wl -- --simulation.gaps.count=10000
+
+REM Gravitational waves — chirp mode
+wolframscript -file relativity\main.wl
+wolframscript -file relativity\main.wl -- --simulation.chirp.preset gw170817
+wolframscript -file relativity\main.wl -- --simulation.chirp.mass1_solar 50 --simulation.chirp.mass2_solar 50
+wolframscript -file relativity\main.wl -- --sonification.chirp.time_stretch 8
+
+REM Gravitational waves — geodesic mode (Schwarzschild black hole)
+wolframscript -file relativity\main.wl -- --simulation.mode geodesic
+wolframscript -file relativity\main.wl -- --simulation.mode geodesic --simulation.geodesic.orbit_type plunging
+wolframscript -file relativity\main.wl -- --simulation.mode geodesic --simulation.geodesic.orbit_type photon
+
+REM CMB power spectrum sonification
+wolframscript -file cosmology\main.wl
+wolframscript -file cosmology\main.wl -- --simulation.mode=sky
+wolframscript -file cosmology\main.wl -- --simulation.cosmology.source=planck
+
+REM 2D wave propagation (FEM)
+wolframscript -file waves\main.wl
+wolframscript -file waves\main.wl -- --simulation.mode=interference
+wolframscript -file waves\main.wl -- --simulation.waves.wave_speed=1.5
+wolframscript -file waves\main.wl -- --simulation.waves.source_frequency=3.0
+
+REM Lagrange point orbits (CR3BP)
+wolframscript -file lagrange\main.wl
+wolframscript -file lagrange\main.wl -- --simulation.mode=l5
+wolframscript -file lagrange\main.wl -- --simulation.mode=l1
+wolframscript -file lagrange\main.wl -- --simulation.lagrange.preset=earth_moon
+
+REM 2D image sonification
+wolframscript -file images\main.wl
+wolframscript -file images\main.wl -- --simulation.mode=scan_horizontal
+wolframscript -file images\main.wl -- --simulation.mode=colour
+wolframscript -file images\main.wl -- --simulation.mode=hsb
+wolframscript -file images\main.wl -- --simulation.images.test_image=temperature
+wolframscript -file images\main.wl -- --simulation.images.brightness_scale=log
+
+REM Mandelbrot and Julia sets — Hilbert curve traversal, self-similarity
+wolframscript -file mandelbrot\main.wl
+wolframscript -file mandelbrot\main.wl -- --simulation.mode=julia
+wolframscript -file mandelbrot\main.wl -- --simulation.mode=zoom
+
+REM Statistical mechanics — Maxwell-Boltzmann distribution
+wolframscript -file thermo\main.wl
+wolframscript -file thermo\main.wl -- --simulation.mode=ensemble
+wolframscript -file thermo\main.wl -- --simulation.mode=cooling
+wolframscript -file thermo\main.wl -- --simulation.mode=equipartition
+
+REM Quantum statistics — Bose-Einstein, Fermi-Dirac, Maxwell-Boltzmann
+wolframscript -file quantum_statistics\main.wl
+wolframscript -file quantum_statistics\main.wl -- --simulation.mode=temperature
+wolframscript -file quantum_statistics\main.wl -- --simulation.mode=fermi_sea
+
+REM Monte Carlo — 2D Ising model
+wolframscript -file montecarlo\main.wl
+wolframscript -file montecarlo\main.wl -- --simulation.mode=critical
+wolframscript -file montecarlo\main.wl -- --simulation.mode=quench
+
+REM Charged particles in a magnetic field
+wolframscript -file magnetic\main.wl
+wolframscript -file magnetic\main.wl -- --simulation.mode=drift
+wolframscript -file magnetic\main.wl -- --simulation.mode=mirror
+wolframscript -file magnetic\main.wl -- --simulation.mode=multi
+
+REM Hydrogen atom — wave functions and emission spectrum
+wolframscript -file hydrogen\main.wl
+wolframscript -file hydrogen\main.wl -- --simulation.mode=spectrum
+wolframscript -file hydrogen\main.wl -- --simulation.mode=transitions
+wolframscript -file hydrogen\main.wl -- --simulation.hydrogen.orbital=320
+
+REM Bayesian inference
+wolframscript -file bayes\main.wl
+wolframscript -file bayes\main.wl -- --simulation.mode=gaussian
+wolframscript -file bayes\main.wl -- --simulation.mode=model
+
+REM Rutherford scattering
+wolframscript -file scattering\main.wl
+wolframscript -file scattering\main.wl -- --simulation.scattering.preset=backscatter
+wolframscript -file scattering\main.wl -- --simulation.mode=discovery
+
+REM Orbital resonances
+wolframscript -file resonance\main.wl
+wolframscript -file resonance\main.wl -- --simulation.mode=kirkwood
+wolframscript -file resonance\main.wl -- --simulation.mode=saturn
+
+REM Kármán vortex street
+wolframscript -file fluid\main.wl
+wolframscript -file fluid\main.wl -- --simulation.mode=strouhal
+wolframscript -file fluid\main.wl -- --simulation.mode=flag
+
+REM Black body radiation
+wolframscript -file blackbody\main.wl
+wolframscript -file blackbody\main.wl -- --simulation.mode=temperature
+wolframscript -file blackbody\main.wl -- --simulation.mode=star ^
+                                          --simulation.blackbody.preset=all
+
+REM Compton scattering
+wolframscript -file compton\main.wl
+wolframscript -file compton\main.wl -- --simulation.mode=sweep
+wolframscript -file compton\main.wl -- --simulation.mode=energy
+wolframscript -file compton\main.wl -- --simulation.mode=discovery
+
+REM Quantum tunnelling
+wolframscript -file quantum_tunnelling\main.wl
+wolframscript -file quantum_tunnelling\main.wl -- --simulation.quantum_tunnelling.preset=stm
+wolframscript -file quantum_tunnelling\main.wl -- --simulation.mode=sweep
+wolframscript -file quantum_tunnelling\main.wl -- --simulation.mode=energy
+
+REM Central Limit Theorem
+wolframscript -file clt\main.wl
+wolframscript -file clt\main.wl -- --simulation.clt.source=exponential
+wolframscript -file clt\main.wl -- --simulation.mode=compare
+wolframscript -file clt\main.wl -- --simulation.mode=dice
+
+REM Brownian motion
+wolframscript -file brownian\main.wl
+wolframscript -file brownian\main.wl -- --simulation.mode=ensemble
+wolframscript -file brownian\main.wl -- --simulation.mode=temperature
+```
+
+</details>
+
 Each project writes outputs into its own directory:
 
 | Project | Output dir | File types |
 |---------|-----------|------------|
 | all thirty-two apps | `output/` | CSV, GIF, WAV (+ PNG for signal, quantum, primes, relativity, images, cosmology, waves, lagrange, hydrogen, blackbody, compton, quantum_tunnelling, clt, henon, brownian, qubit, bell, grover, quantum_statistics, mandelbrot) |
 
-Play audio:
+Play audio. `afplay` is built into macOS; on Linux `aplay` comes with
+alsa-utils (see Prerequisites); in Windows PowerShell `Media.SoundPlayer`
+plays a WAV in the terminal and waits until it ends (the full path, via
+`$PWD`, is needed because .NET does not use PowerShell's current folder);
+in cmd, `start` opens the WAV in the default player.
+
+<details><summary>macOS</summary>
 
 ```sh
-# macOS
 afplay signal/output/chord_narrative_full.wav
 afplay pendulum/output/double_audio.wav
 afplay lorenz/output/lorenz_audio.wav
@@ -412,15 +794,234 @@ afplay clt/output/dice_audio.wav
 afplay brownian/output/brownian_walk.wav
 afplay brownian/output/brownian_ensemble.wav
 afplay brownian/output/brownian_temperature.wav
+```
 
-# Linux — replace afplay with aplay
+</details>
+
+<details><summary>Linux</summary>
+
+```sh
 aplay signal/output/chord_narrative_full.wav
 aplay pendulum/output/double_audio.wav
-
-# Windows PowerShell — replace afplay with Start-Process wmplayer
-Start-Process wmplayer signal\output\chord_narrative_full.wav
-Start-Process wmplayer pendulum\output\double_audio.wav
+aplay lorenz/output/lorenz_audio.wav
+aplay dynamical/output/sweep_audio.wav
+aplay dynamical/output/iterate_audio.wav
+aplay henon/output/henon_attractor.wav
+aplay henon/output/henon_sweep.wav
+aplay henon/output/henon_reverse.wav
+aplay asteroids/output/asteroids_*.wav
+aplay cellular/output/life_rpentomino_audio.wav
+aplay quantum/output/qho_audio.wav
+aplay qubit/output/qubit_gates.wav
+aplay qubit/output/qubit_rabi.wav
+aplay qubit/output/qubit_measurement.wav
+aplay bell/output/bell_correlations.wav
+aplay bell/output/bell_chsh.wav
+aplay bell/output/bell_measurement.wav
+aplay grover/output/grover_search.wav
+aplay grover/output/grover_compare.wav
+aplay grover/output/grover_geometry.wav
+aplay primes/output/ulam_audio.wav
+aplay primes/output/gaps_audio.wav
+aplay relativity/output/chirp.wav
+aplay relativity/output/gw170817.wav
+aplay relativity/output/geodesic.wav
+aplay cosmology/output/cmb_spectrum_audio.wav
+aplay waves/output/ripple_audio.wav
+aplay waves/output/interference_audio.wav
+aplay lagrange/output/l4_audio.wav
+aplay lagrange/output/l1_audio.wav
+aplay images/output/images_brightness_audio.wav
+aplay mandelbrot/output/mandelbrot_mandelbrot.wav
+aplay mandelbrot/output/mandelbrot_julia.wav
+aplay mandelbrot/output/mandelbrot_zoom.wav
+aplay thermo/output/distribution_audio.wav
+aplay thermo/output/cooling_audio.wav
+aplay quantum_statistics/output/quantum_statistics_spectrum.wav
+aplay quantum_statistics/output/quantum_statistics_temperature.wav
+aplay quantum_statistics/output/quantum_statistics_fermi_sea.wav
+aplay montecarlo/output/sweep_audio.wav
+aplay montecarlo/output/critical_audio.wav
+aplay magnetic/output/mirror_audio.wav
+aplay magnetic/output/cyclotron_audio.wav
+aplay hydrogen/output/spectrum_audio.wav
+aplay hydrogen/output/transitions_audio.wav
+aplay bayes/output/coin_audio.wav
+aplay bayes/output/model_audio.wav
+aplay scattering/output/discovery_audio.wav
+aplay resonance/output/galilean_audio.wav
+aplay resonance/output/kirkwood_audio.wav
+aplay fluid/output/karman_audio.wav
+aplay fluid/output/strouhal_audio.wav
+aplay blackbody/output/spectrum_audio.wav
+aplay blackbody/output/temperature_audio.wav
+aplay blackbody/output/star_audio.wav
+aplay compton/output/scatter_audio.wav
+aplay compton/output/sweep_audio.wav
+aplay compton/output/energy_audio.wav
+aplay compton/output/discovery_audio.wav
+aplay quantum_tunnelling/output/barrier_audio.wav
+aplay quantum_tunnelling/output/sweep_audio.wav
+aplay quantum_tunnelling/output/energy_audio.wav
+aplay clt/output/sweep_audio.wav
+aplay clt/output/compare_audio.wav
+aplay clt/output/dice_audio.wav
+aplay brownian/output/brownian_walk.wav
+aplay brownian/output/brownian_ensemble.wav
+aplay brownian/output/brownian_temperature.wav
 ```
+
+</details>
+
+<details><summary>Windows PowerShell</summary>
+
+```powershell
+(New-Object Media.SoundPlayer "$PWD\signal\output\chord_narrative_full.wav").PlaySync()
+(New-Object Media.SoundPlayer "$PWD\pendulum\output\double_audio.wav").PlaySync()
+(New-Object Media.SoundPlayer "$PWD\lorenz\output\lorenz_audio.wav").PlaySync()
+(New-Object Media.SoundPlayer "$PWD\dynamical\output\sweep_audio.wav").PlaySync()
+(New-Object Media.SoundPlayer "$PWD\dynamical\output\iterate_audio.wav").PlaySync()
+(New-Object Media.SoundPlayer "$PWD\henon\output\henon_attractor.wav").PlaySync()
+(New-Object Media.SoundPlayer "$PWD\henon\output\henon_sweep.wav").PlaySync()
+(New-Object Media.SoundPlayer "$PWD\henon\output\henon_reverse.wav").PlaySync()
+Get-ChildItem asteroids\output\asteroids_*.wav | ForEach-Object { (New-Object Media.SoundPlayer $_.FullName).PlaySync() }
+(New-Object Media.SoundPlayer "$PWD\cellular\output\life_rpentomino_audio.wav").PlaySync()
+(New-Object Media.SoundPlayer "$PWD\quantum\output\qho_audio.wav").PlaySync()
+(New-Object Media.SoundPlayer "$PWD\qubit\output\qubit_gates.wav").PlaySync()
+(New-Object Media.SoundPlayer "$PWD\qubit\output\qubit_rabi.wav").PlaySync()
+(New-Object Media.SoundPlayer "$PWD\qubit\output\qubit_measurement.wav").PlaySync()
+(New-Object Media.SoundPlayer "$PWD\bell\output\bell_correlations.wav").PlaySync()
+(New-Object Media.SoundPlayer "$PWD\bell\output\bell_chsh.wav").PlaySync()
+(New-Object Media.SoundPlayer "$PWD\bell\output\bell_measurement.wav").PlaySync()
+(New-Object Media.SoundPlayer "$PWD\grover\output\grover_search.wav").PlaySync()
+(New-Object Media.SoundPlayer "$PWD\grover\output\grover_compare.wav").PlaySync()
+(New-Object Media.SoundPlayer "$PWD\grover\output\grover_geometry.wav").PlaySync()
+(New-Object Media.SoundPlayer "$PWD\primes\output\ulam_audio.wav").PlaySync()
+(New-Object Media.SoundPlayer "$PWD\primes\output\gaps_audio.wav").PlaySync()
+(New-Object Media.SoundPlayer "$PWD\relativity\output\chirp.wav").PlaySync()
+(New-Object Media.SoundPlayer "$PWD\relativity\output\gw170817.wav").PlaySync()
+(New-Object Media.SoundPlayer "$PWD\relativity\output\geodesic.wav").PlaySync()
+(New-Object Media.SoundPlayer "$PWD\cosmology\output\cmb_spectrum_audio.wav").PlaySync()
+(New-Object Media.SoundPlayer "$PWD\waves\output\ripple_audio.wav").PlaySync()
+(New-Object Media.SoundPlayer "$PWD\waves\output\interference_audio.wav").PlaySync()
+(New-Object Media.SoundPlayer "$PWD\lagrange\output\l4_audio.wav").PlaySync()
+(New-Object Media.SoundPlayer "$PWD\lagrange\output\l1_audio.wav").PlaySync()
+(New-Object Media.SoundPlayer "$PWD\images\output\images_brightness_audio.wav").PlaySync()
+(New-Object Media.SoundPlayer "$PWD\mandelbrot\output\mandelbrot_mandelbrot.wav").PlaySync()
+(New-Object Media.SoundPlayer "$PWD\mandelbrot\output\mandelbrot_julia.wav").PlaySync()
+(New-Object Media.SoundPlayer "$PWD\mandelbrot\output\mandelbrot_zoom.wav").PlaySync()
+(New-Object Media.SoundPlayer "$PWD\thermo\output\distribution_audio.wav").PlaySync()
+(New-Object Media.SoundPlayer "$PWD\thermo\output\cooling_audio.wav").PlaySync()
+(New-Object Media.SoundPlayer "$PWD\quantum_statistics\output\quantum_statistics_spectrum.wav").PlaySync()
+(New-Object Media.SoundPlayer "$PWD\quantum_statistics\output\quantum_statistics_temperature.wav").PlaySync()
+(New-Object Media.SoundPlayer "$PWD\quantum_statistics\output\quantum_statistics_fermi_sea.wav").PlaySync()
+(New-Object Media.SoundPlayer "$PWD\montecarlo\output\sweep_audio.wav").PlaySync()
+(New-Object Media.SoundPlayer "$PWD\montecarlo\output\critical_audio.wav").PlaySync()
+(New-Object Media.SoundPlayer "$PWD\magnetic\output\mirror_audio.wav").PlaySync()
+(New-Object Media.SoundPlayer "$PWD\magnetic\output\cyclotron_audio.wav").PlaySync()
+(New-Object Media.SoundPlayer "$PWD\hydrogen\output\spectrum_audio.wav").PlaySync()
+(New-Object Media.SoundPlayer "$PWD\hydrogen\output\transitions_audio.wav").PlaySync()
+(New-Object Media.SoundPlayer "$PWD\bayes\output\coin_audio.wav").PlaySync()
+(New-Object Media.SoundPlayer "$PWD\bayes\output\model_audio.wav").PlaySync()
+(New-Object Media.SoundPlayer "$PWD\scattering\output\discovery_audio.wav").PlaySync()
+(New-Object Media.SoundPlayer "$PWD\resonance\output\galilean_audio.wav").PlaySync()
+(New-Object Media.SoundPlayer "$PWD\resonance\output\kirkwood_audio.wav").PlaySync()
+(New-Object Media.SoundPlayer "$PWD\fluid\output\karman_audio.wav").PlaySync()
+(New-Object Media.SoundPlayer "$PWD\fluid\output\strouhal_audio.wav").PlaySync()
+(New-Object Media.SoundPlayer "$PWD\blackbody\output\spectrum_audio.wav").PlaySync()
+(New-Object Media.SoundPlayer "$PWD\blackbody\output\temperature_audio.wav").PlaySync()
+(New-Object Media.SoundPlayer "$PWD\blackbody\output\star_audio.wav").PlaySync()
+(New-Object Media.SoundPlayer "$PWD\compton\output\scatter_audio.wav").PlaySync()
+(New-Object Media.SoundPlayer "$PWD\compton\output\sweep_audio.wav").PlaySync()
+(New-Object Media.SoundPlayer "$PWD\compton\output\energy_audio.wav").PlaySync()
+(New-Object Media.SoundPlayer "$PWD\compton\output\discovery_audio.wav").PlaySync()
+(New-Object Media.SoundPlayer "$PWD\quantum_tunnelling\output\barrier_audio.wav").PlaySync()
+(New-Object Media.SoundPlayer "$PWD\quantum_tunnelling\output\sweep_audio.wav").PlaySync()
+(New-Object Media.SoundPlayer "$PWD\quantum_tunnelling\output\energy_audio.wav").PlaySync()
+(New-Object Media.SoundPlayer "$PWD\clt\output\sweep_audio.wav").PlaySync()
+(New-Object Media.SoundPlayer "$PWD\clt\output\compare_audio.wav").PlaySync()
+(New-Object Media.SoundPlayer "$PWD\clt\output\dice_audio.wav").PlaySync()
+(New-Object Media.SoundPlayer "$PWD\brownian\output\brownian_walk.wav").PlaySync()
+(New-Object Media.SoundPlayer "$PWD\brownian\output\brownian_ensemble.wav").PlaySync()
+(New-Object Media.SoundPlayer "$PWD\brownian\output\brownian_temperature.wav").PlaySync()
+```
+
+</details>
+
+<details><summary>Windows Command Prompt (cmd)</summary>
+
+```bat
+start "" "signal\output\chord_narrative_full.wav"
+start "" "pendulum\output\double_audio.wav"
+start "" "lorenz\output\lorenz_audio.wav"
+start "" "dynamical\output\sweep_audio.wav"
+start "" "dynamical\output\iterate_audio.wav"
+start "" "henon\output\henon_attractor.wav"
+start "" "henon\output\henon_sweep.wav"
+start "" "henon\output\henon_reverse.wav"
+for %f in (asteroids\output\asteroids_*.wav) do start "" "%f"
+start "" "cellular\output\life_rpentomino_audio.wav"
+start "" "quantum\output\qho_audio.wav"
+start "" "qubit\output\qubit_gates.wav"
+start "" "qubit\output\qubit_rabi.wav"
+start "" "qubit\output\qubit_measurement.wav"
+start "" "bell\output\bell_correlations.wav"
+start "" "bell\output\bell_chsh.wav"
+start "" "bell\output\bell_measurement.wav"
+start "" "grover\output\grover_search.wav"
+start "" "grover\output\grover_compare.wav"
+start "" "grover\output\grover_geometry.wav"
+start "" "primes\output\ulam_audio.wav"
+start "" "primes\output\gaps_audio.wav"
+start "" "relativity\output\chirp.wav"
+start "" "relativity\output\gw170817.wav"
+start "" "relativity\output\geodesic.wav"
+start "" "cosmology\output\cmb_spectrum_audio.wav"
+start "" "waves\output\ripple_audio.wav"
+start "" "waves\output\interference_audio.wav"
+start "" "lagrange\output\l4_audio.wav"
+start "" "lagrange\output\l1_audio.wav"
+start "" "images\output\images_brightness_audio.wav"
+start "" "mandelbrot\output\mandelbrot_mandelbrot.wav"
+start "" "mandelbrot\output\mandelbrot_julia.wav"
+start "" "mandelbrot\output\mandelbrot_zoom.wav"
+start "" "thermo\output\distribution_audio.wav"
+start "" "thermo\output\cooling_audio.wav"
+start "" "quantum_statistics\output\quantum_statistics_spectrum.wav"
+start "" "quantum_statistics\output\quantum_statistics_temperature.wav"
+start "" "quantum_statistics\output\quantum_statistics_fermi_sea.wav"
+start "" "montecarlo\output\sweep_audio.wav"
+start "" "montecarlo\output\critical_audio.wav"
+start "" "magnetic\output\mirror_audio.wav"
+start "" "magnetic\output\cyclotron_audio.wav"
+start "" "hydrogen\output\spectrum_audio.wav"
+start "" "hydrogen\output\transitions_audio.wav"
+start "" "bayes\output\coin_audio.wav"
+start "" "bayes\output\model_audio.wav"
+start "" "scattering\output\discovery_audio.wav"
+start "" "resonance\output\galilean_audio.wav"
+start "" "resonance\output\kirkwood_audio.wav"
+start "" "fluid\output\karman_audio.wav"
+start "" "fluid\output\strouhal_audio.wav"
+start "" "blackbody\output\spectrum_audio.wav"
+start "" "blackbody\output\temperature_audio.wav"
+start "" "blackbody\output\star_audio.wav"
+start "" "compton\output\scatter_audio.wav"
+start "" "compton\output\sweep_audio.wav"
+start "" "compton\output\energy_audio.wav"
+start "" "compton\output\discovery_audio.wav"
+start "" "quantum_tunnelling\output\barrier_audio.wav"
+start "" "quantum_tunnelling\output\sweep_audio.wav"
+start "" "quantum_tunnelling\output\energy_audio.wav"
+start "" "clt\output\sweep_audio.wav"
+start "" "clt\output\compare_audio.wav"
+start "" "clt\output\dice_audio.wav"
+start "" "brownian\output\brownian_walk.wav"
+start "" "brownian\output\brownian_ensemble.wav"
+start "" "brownian\output\brownian_temperature.wav"
+```
+
+</details>
 
 See [RELEASE_NOTES_v1.5.1.md](RELEASE_NOTES_v1.5.1.md) for full app descriptions, physics notes, and listening guides.
 
@@ -460,12 +1061,67 @@ set NASA_API_KEY=your_key_here
 wolframscript -file demo.wl
 ```
 
-Check whether a previous demo run completed successfully:
+Check whether a previous demo run completed successfully, or run a short
+version (four apps) to confirm the setup works:
 ```sh
+# macOS / Linux
 wolframscript -file demo.wl -- --check-only
+wolframscript -file demo.wl -- --quick
+
+# Windows PowerShell
+wolframscript -file demo.wl '--' --check-only
+wolframscript -file demo.wl '--' --quick
+
+:: Windows Command Prompt (cmd)
+wolframscript -file demo.wl -- --check-only
+wolframscript -file demo.wl -- --quick
 ```
 
 Outputs are collected in `demo/` with a written report at `demo/demo-report.md`. A full run takes approximately five to six minutes (33/33 runs — 32 unique apps, `dynamical` runs twice — including live asteroid data).
+
+
+### Checking an installation
+
+`tools/smoke_test.wl` runs every app's default mode and then `demo.wl`, all
+in one kernel, and writes a plain-text report
+`smoke_test_<SystemID>_<date>.txt` in the repository root: an environment
+block (Wolfram version, encodings, which speech and network tools work),
+then one line per app with its status, timings, WAV loudness and length,
+GIF length and pixel size, and any Wolfram messages. It also runs the
+pendulum frame-clipping check, so Python is not needed. It exits with code
+0 only if every app wrote a WAV. `--quick` runs six apps and `demo.wl --quick`
+(about five minutes); without it the run takes about thirty minutes.
+
+```sh
+# macOS / Linux
+wolframscript -file tools/smoke_test.wl
+wolframscript -file tools/smoke_test.wl -- --quick
+
+# Windows PowerShell
+wolframscript -file tools\smoke_test.wl
+wolframscript -file tools\smoke_test.wl '--' --quick
+
+:: Windows Command Prompt (cmd)
+wolframscript -file tools\smoke_test.wl
+wolframscript -file tools\smoke_test.wl -- --quick
+```
+
+`pendulum/tests/verify_animation_frames.py` is the original, optional Python
+version of the frame-clipping check. It needs Python 3 with numpy and Pillow:
+
+```sh
+# macOS
+python3 -m pip install numpy pillow
+python3 pendulum/tests/verify_animation_frames.py
+
+# Linux (Debian/Ubuntu packages, or pip as on macOS)
+sudo apt install python3-numpy python3-pil
+python3 pendulum/tests/verify_animation_frames.py
+
+# Windows PowerShell or cmd (the py launcher comes with Python from python.org)
+py -m pip install numpy pillow
+py pendulum\tests\verify_animation_frames.py
+```
 
 ---
 
@@ -1086,13 +1742,25 @@ $HardcodedDefaults  →  config/config.json  →  <app>/config.json  →  CLI --
 Inspect the fully merged config for any project:
 
 ```sh
+# macOS / Linux
 wolframscript -file pendulum/main.wl -- --config-dump
-wolframscript -file cellular/main.wl -- --config-dump | python3 -m json.tool
+wolframscript -file cellular/main.wl -- --config-dump > cellular_config.json
+
+# Windows PowerShell
+wolframscript -file pendulum\main.wl '--' --config-dump
+
+:: Windows Command Prompt (cmd)
+wolframscript -file pendulum\main.wl -- --config-dump
 ```
+
+`--config-dump` already prints indented JSON, so no formatter is needed. If
+you want Python to validate it anyway, the command is `python3 -m json.tool`
+on macOS and Linux and `py -m json.tool` on Windows.
 
 Override any parameter at runtime using dot-separated key paths:
 
 ```sh
+# macOS / Linux
 wolframscript -file pendulum/main.wl -- --simulation.mode=double
 wolframscript -file lorenz/main.wl -- --simulation.mode=rossler
 wolframscript -file cellular/main.wl -- --simulation.life.starting_pattern=gliderlgun
@@ -1100,6 +1768,24 @@ wolframscript -file signal/main.wl -- --simulation.chord.noise_level=0.8
 wolframscript -file asteroids/main.wl -- --simulation.days_ahead=14
 wolframscript -file quantum/main.wl -- --simulation.qho.alpha=3.0
 wolframscript -file relativity/main.wl -- --simulation.chirp.mass1_solar 50
+
+# Windows PowerShell
+wolframscript -file pendulum\main.wl '--' --simulation.mode=double
+wolframscript -file lorenz\main.wl '--' --simulation.mode=rossler
+wolframscript -file cellular\main.wl '--' --simulation.life.starting_pattern=gliderlgun
+wolframscript -file signal\main.wl '--' --simulation.chord.noise_level=0.8
+wolframscript -file asteroids\main.wl '--' --simulation.days_ahead=14
+wolframscript -file quantum\main.wl '--' --simulation.qho.alpha=3.0
+wolframscript -file relativity\main.wl '--' --simulation.chirp.mass1_solar 50
+
+:: Windows Command Prompt (cmd)
+wolframscript -file pendulum\main.wl -- --simulation.mode=double
+wolframscript -file lorenz\main.wl -- --simulation.mode=rossler
+wolframscript -file cellular\main.wl -- --simulation.life.starting_pattern=gliderlgun
+wolframscript -file signal\main.wl -- --simulation.chord.noise_level=0.8
+wolframscript -file asteroids\main.wl -- --simulation.days_ahead=14
+wolframscript -file quantum\main.wl -- --simulation.qho.alpha=3.0
+wolframscript -file relativity\main.wl -- --simulation.chirp.mass1_solar 50
 ```
 
 See [`docs/APPS.md`](docs/APPS.md) for a full listing of each app's config keys.
@@ -1138,11 +1824,11 @@ STEM_SPEAK=1 wolframscript -file pendulum/main.wl
 STEM_SPEAK=1 wolframscript -file signal/main.wl
 
 # Windows PowerShell
-$env:STEM_SPEAK = "1"; wolframscript -file pendulum/main.wl
+$env:STEM_SPEAK = "1"; wolframscript -file pendulum\main.wl
 
 :: Windows Command Prompt (cmd)
 set STEM_SPEAK=1
-wolframscript -file pendulum/main.wl
+wolframscript -file pendulum\main.wl
 ```
 
 Platform TTS: macOS uses `say`, Linux uses `espeak-ng` (install with

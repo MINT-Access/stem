@@ -15,6 +15,7 @@
      STEM_SPEAK=1 wolframscript -file demo.wl           with speech
      NASA_API_KEY=... wolframscript -file demo.wl       include asteroids
      wolframscript -file demo.wl -- --check-only        verify previous run
+     wolframscript -file demo.wl -- --quick             four short apps only
    ================================================================ *)
 
 (* ── Load stem-core (outer demo context) ─────────────────────── *)
@@ -25,6 +26,7 @@ Get[FileNameJoin[{$stemCoreRoot, "init.wl"}]];
 (* ── CLI ─────────────────────────────────────────────────────── *)
 $demoRawArgs  = Select[Rest[$ScriptCommandLine], # =!= "--" &];
 $checkOnly    = MemberQ[$demoRawArgs, "--check-only"];
+$quickRun     = MemberQ[$demoRawArgs, "--quick"];
 
 (* ── Demo output directory ───────────────────────────────────── *)
 $demoDir = FileNameJoin[{$demoProjectRoot, "demo"}];
@@ -447,12 +449,18 @@ $demoApps = {
   |>
 };
 
+(* --quick: the first entry of four short apps, for a fast end-to-end check *)
+If[$quickRun,
+  $demoApps = Values[KeyTake[
+    GroupBy[$demoApps, #["name"] &, First],
+    {"pendulum", "dynamical", "cellular", "henon"}]]];
+
 $nTotal      = Length[$demoApps];
 $nUniqueApps = Length[DeleteDuplicates[Map[#["name"] &, $demoApps]]];
 
 (* ── Announce ────────────────────────────────────────────────── *)
 Print[""];
-STEMHeading["STEM Demo \[LongDash] " <> If[$checkOnly, "Check Only", "Full Run"]];
+STEMHeading["STEM Demo \[LongDash] " <> Which[$checkOnly, "Check Only", $quickRun, "Quick Run", True, "Full Run"]];
 Print["  Apps:   ", $nUniqueApps, " (", $nTotal,
       " runs \[LongDash] dynamical runs twice: sweep and period-3 window iterate)"];
 Print["  Output: ", $demoDir];
@@ -463,9 +471,14 @@ If[$checkOnly,
 Print[""];
 
 (* ── Main loop ───────────────────────────────────────────────── *)
-(* Open the null sink once so all 8 inline Get calls can share it;
-   /dev/null can only be opened once per wolframscript session. *)
-$nullSink      = If[!$checkOnly, OpenWrite["/dev/null"], Null];
+(* Open one sink for the apps' console output and share it across every
+   inline Get. It is a file in $TemporaryDirectory, deleted after the
+   loop, on every platform: /dev/null does not exist on Windows (and NUL
+   would need its own branch), so the same code runs everywhere. *)
+$nullSinkPath  = FileNameJoin[{$TemporaryDirectory,
+                   "stem_demo_output_" <> ToString[$ProcessID] <> ".txt"}];
+$nullSink      = If[!$checkOnly,
+                   OpenWrite[$nullSinkPath, CharacterEncoding -> "UTF8"], Null];
 $demoResults   = {};
 $demoStartTime = AbsoluteTime[];
 
@@ -641,7 +654,9 @@ Scan[
   $demoApps
 ];         (* end Scan *)
 
-If[$nullSink =!= Null, Close[$nullSink]];
+If[$nullSink =!= Null,
+  Close[$nullSink];
+  Quiet[DeleteFile[$nullSinkPath]]];
 
 (* ── Totals ──────────────────────────────────────────────────── *)
 $totalElapsed = AbsoluteTime[] - $demoStartTime;

@@ -90,7 +90,7 @@ AnimateSearch[model_Association, outGif_String, outPng_String, targetDuration_?N
       PlotRange  -> {{0, Last[kArr]}, {0, 1.05}},
       ImageSize  -> {620, 380}, AspectRatio -> 0.5
     ];
-    Export[outPng, staticPlt, "PNG"];
+    ExportPNG[outPng, staticPlt];
     Print["  PNG: ", outPng];
     {Length[frames], frameRate}
   ];
@@ -149,7 +149,7 @@ AnimateCompare[model_Association, outGif_String, outPng_String, targetDuration_?
       PlotRange  -> {{Min[logN], Max[logN]}, {0, Max[classicalArr] * 1.1}},
       ImageSize  -> {620, 380}, AspectRatio -> 0.5
     ];
-    Export[outPng, staticPlt, "PNG"];
+    ExportPNG[outPng, staticPlt];
     Print["  PNG: ", outPng];
     {Length[frames], frameRate}
   ];
@@ -194,7 +194,7 @@ AnimateGeometry[model_Association, outGif_String, outPng_String, targetDuration_
     ExportGIF[frames, outGif, plan];
 
     staticPlt = RenderGeometryFrame[model, n];
-    Export[outPng, staticPlt, "PNG"];
+    ExportPNG[outPng, staticPlt];
     Print["  PNG: ", outPng];
     {Length[frames], frameRate}
   ];

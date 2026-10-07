@@ -94,19 +94,38 @@ GIFFramePlan[audioDuration_?NumericQ, desiredFps_?NumericQ, OptionsPattern[]] :=
                rounded to whole centiseconds explicitly, which is what
                the GIF format stores anyway. *)
 
+(* $STEMImageResolution, STEMRasterize, ExportPNG
+   Every GIF frame and PNG is rasterised at an explicit 144 dpi, so a
+   Graphics with ImageSize -> w comes out 2w pixels wide on every
+   platform. Without it the pixel size follows the host's backing scale
+   (2x on a Retina Mac, typically 1x on Windows and Linux); on the Mac
+   144 dpi gives exactly the pixels Export produced before. Images pass
+   through unchanged. *)
+
+$STEMImageResolution = 144;
+
+STEMRasterize[img_Image] := img;
+STEMRasterize[expr_]     := Rasterize[expr, ImageResolution -> $STEMImageResolution];
+
+ExportPNG[filePath_String, expr_] :=
+  (EnsureDir[filePath];
+   Export[filePath, STEMRasterize[expr], "PNG"];
+   filePath)
+
+
 ExportGIF[frames_List, filePath_String, plan_Association] :=
   (If[Length[frames] =!= plan["FrameCount"],
      Print["  Warning: ", Length[frames], " frames were rendered for ", filePath,
            " but the frame plan asked for ", plan["FrameCount"], "."]];
    EnsureDir[filePath];
-   Export[filePath, frames, "GIF",
+   Export[filePath, STEMRasterize /@ frames, "GIF",
      "AnimationRepetitions" -> Infinity,
      "DisplayDurations"     -> ConstantArray[plan["FrameDelay"], Length[frames]]];
    filePath)
 
 ExportGIF[frames_List, filePath_String, Optional[frameRate_?NumericQ, 25]] :=
   (EnsureDir[filePath];
-   Export[filePath, frames, "GIF",
+   Export[filePath, STEMRasterize /@ frames, "GIF",
      "AnimationRepetitions" -> Infinity,
      "DisplayDurations"     -> Max[2, Round[100.0 / frameRate]] / 100.0];
    filePath)

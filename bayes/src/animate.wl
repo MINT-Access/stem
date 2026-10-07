@@ -164,7 +164,7 @@ RenderModelFrame[flips_List, stepAssoc_Association, meterRange_?NumericQ] :=
         PlotLabel  -> Style["Bayes Factor Meter \[LongDash] flip " <> ToString[flipIdx], White, 13]
       ],
       Graphics[{White, Text[
-        Style[FlipSequenceText[flips, flipIdx], White, 14, FontFamily -> "Courier"],
+        Style[FlipSequenceText[flips, flipIdx], White, 14, FontFamily -> "Source Code Pro"],
         {0, 0}]},
         Background -> Black, ImageSize -> {600, 180}
       ]

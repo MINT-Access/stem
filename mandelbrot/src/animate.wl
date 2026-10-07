@@ -362,7 +362,7 @@ AnimateAndExportField[model_Association, outGIF_String, outPNG_String,
     upscaled = Graphics[Raster[Reverse @ ImageData[img], {{0, 0}, {size, size}}],
       PlotRange -> {{0, size}, {0, size}}, ImagePadding -> None,
       AspectRatio -> 1, ImageSize -> 512];
-    Export[outPNG, upscaled, "PNG"];
+    ExportPNG[outPNG, upscaled];
     Print["  PNG: ", outPNG];
     gifStats
   ];
@@ -442,7 +442,7 @@ AnimateZoom[model_Association, outGIF_String, outPNG_String,
       {Table[ZoomLevelFrame[images, levels, k, size, panelSize], {k, nLevels}]},
       Spacings -> 4, Background -> Black, ImageSize -> panelSize * nLevels
     ];
-    Export[outPNG, combined, "PNG"];
+    ExportPNG[outPNG, combined];
     Print["  PNG: ", outPNG];
     {actualNFrames, frameRate}
   ];

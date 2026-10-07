@@ -16,7 +16,8 @@
                         KWeightingCoefficients, BlockMeanSquares), PeakLimit,
                         LimiterSettings, LimitedNormalizeToLoudness,
                         ExportAudioBuffer
-     export.wl        — ExportCSV, GIFFramePlan, ExportGIF, GIFFrameDelays,
+     export.wl        — ExportCSV, GIFFramePlan, ExportGIF, ExportPNG,
+                        STEMRasterize, GIFFrameDelays,
                         WAVDuration, PadWAVWithSilence, SyncWAVToGIF
      accessibility.wl — STEMHeading, STEMSection, STEMBullet, STEMPrintN,
                         STEMDescribeCSV, STEMDescribeWAV, STEMDescribeGIF,
@@ -24,6 +25,8 @@
                         $STEMSpeakEnabled, STEMSay
      speech.wl        — STEMSpeakToBuffer, STEMSpeechAvailable,
                         STEMResampleLinear (tiered narration TTS)
+     runapp.wl        — STEMRunApp, STEMRunExperiments (run a main.wl
+                        in this kernel, as demo.wl does)
      hilbert.wl       — HilbertTraversalOrder
      config.wl        — LoadConfig, DeepMerge, GetCfg, $HardcodedDefaults
      sonification.wl  — SonifyTrajectory, SpatialLayer, MotionLayer,
@@ -44,6 +47,7 @@ Get[FileNameJoin[{$stemCoreRoot, "src", "synth.wl"}]];
 Get[FileNameJoin[{$stemCoreRoot, "src", "export.wl"}]];
 Get[FileNameJoin[{$stemCoreRoot, "src", "accessibility.wl"}]];
 Get[FileNameJoin[{$stemCoreRoot, "src", "speech.wl"}]];
+Get[FileNameJoin[{$stemCoreRoot, "src", "runapp.wl"}]];
 Get[FileNameJoin[{$stemCoreRoot, "src", "hilbert.wl"}]];
 Get[FileNameJoin[{$stemCoreRoot, "config.wl"}]];
 Get[FileNameJoin[{$stemCoreRoot, "sonification.wl"}]];

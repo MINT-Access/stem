@@ -356,9 +356,6 @@ All four run unconditionally, every invocation, regardless of mode
 
 ## Speech synthesis note
 
-`speech.wl`'s three-tier fallback (`SpeechSynthesize[]` -> platform TTS
--> text-only `STEMSay`) duplicates the pattern in
-`quantum_tunnelling/src/speech.wl`, `compton/src/speech.wl`, and
-`blackbody/src/speech.wl` — one of many independent copies scattered
-across the codebase, still out of scope for stem-core consolidation
-per every prior app's own build spec.
+Narration audio comes from stem-core's `STEMSpeakToBuffer` (`SpeechSynthesize[]`
+first, then the platform tool: `say`, `espeak-ng` or PowerShell; see
+`stem-core/AGENTS.md`); `speech.wl` holds only this app's narration text.

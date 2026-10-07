@@ -107,7 +107,7 @@ AnimateOrbital[orbitalModel_Association, outGIF_String, outPNG_String, targetDur
       Background -> GrayLevel[0.08]
     ];
     EnsureDir[outPNG];
-    Export[outPNG, staticFig];
+    ExportPNG[outPNG, staticFig];
     Print["  PNG: ", outPNG];
 
     nGIFFrames

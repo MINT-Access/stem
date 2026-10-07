@@ -128,7 +128,7 @@ RenderSweepSmallMultiple[sourceName_String, p_?NumericQ, nMax_Integer, nSamples_
       representativeNs
     ];
 
-    Export[outPng, GraphicsRow[panels, ImageSize -> 320 * Length[panels]], "PNG"];
+    ExportPNG[outPng, GraphicsRow[panels, ImageSize -> 320 * Length[panels]]];
     Print["  PNG: ", outPng]
   ];
 
@@ -223,7 +223,7 @@ RenderCompareStaticPNG[sourceLeft_String, pLeft_?NumericQ, sourceRight_String, p
         ChartStyle -> Directive[Opacity[0.55], RGBColor[0.85, 0.35, 0.1]]
       ]
     ];
-    Export[outPng, plt, "PNG"];
+    ExportPNG[outPng, plt];
     Print["  PNG: ", outPng]
   ];
 
@@ -287,6 +287,6 @@ RenderDiceSmallMultiple[nMax_Integer, nSamples_Integer, domainLo_?NumericQ, doma
       ],
       representativeNs
     ];
-    Export[outPng, GraphicsRow[panels, ImageSize -> 320 * Length[panels]], "PNG"];
+    ExportPNG[outPng, GraphicsRow[panels, ImageSize -> 320 * Length[panels]]];
     Print["  PNG: ", outPng]
   ];
