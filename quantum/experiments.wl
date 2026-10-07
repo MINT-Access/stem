@@ -26,7 +26,7 @@ If[!DirectoryQ[$outDir], CreateDirectory[$outDir]];
 RunQuantumExperiment[name_String, label_String, modelFn_, cfg_Association] :=
   Module[{solution, traj, csvPath},
     Print[""];
-    Print[">>> Experiment: ", name, "  — ", label];
+    Print[">>> Experiment: ", name, "  \[LongDash] ", label];
 
     solution = modelFn[cfg];
     STEMPrintN["Mean energy", solution["mean_energy"], "(natural units)", {6,4}];

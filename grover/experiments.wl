@@ -43,7 +43,7 @@ RunExperiment[name_String, overrides_Association] :=
 
         {rawLeft, rawRight} = BuildSearchAudio[searchModel, 220.0, 1400.0, 0.28, sr];
         introText   = BuildSearchIntroText[searchModel["nItems"], searchModel["optimalK"]];
-        introBuffer = BuildIntroBuffer[introText, sr];
+        introBuffer = STEMSpeakToBuffer[introText, sr];
         introBuffer = If[Length[introBuffer] > 0, NormalizeBuffer[introBuffer, 0.95], introBuffer];
         pauseBuffer = If[Length[introBuffer] > 0, ConstantArray[0.0, Round[sr * 0.4]], {}];
         finalLeft   = Join[introBuffer, pauseBuffer, rawLeft];
@@ -62,7 +62,7 @@ RunExperiment[name_String, overrides_Association] :=
 
         {rawLeft, rawRight} = BuildCompareAudio[compareModel, 440.0, 6.0, sr];
         introText   = BuildCompareIntroText[compareModel["nItems"], Round[compareModel["classicalAtN"]], compareModel["quantumAtN"]];
-        introBuffer = BuildIntroBuffer[introText, sr];
+        introBuffer = STEMSpeakToBuffer[introText, sr];
         introBuffer = If[Length[introBuffer] > 0, NormalizeBuffer[introBuffer, 0.95], introBuffer];
         pauseBuffer = If[Length[introBuffer] > 0, ConstantArray[0.0, Round[sr * 0.4]], {}];
         finalLeft   = Join[introBuffer, pauseBuffer, rawLeft];
@@ -81,7 +81,7 @@ RunExperiment[name_String, overrides_Association] :=
 
         {rawLeft, rawRight} = BuildGeometryAudio[geometryModel, 220.0, 1400.0, duration, sr];
         introText   = BuildGeometryIntroText[geometryModel["nItems"]];
-        introBuffer = BuildIntroBuffer[introText, sr];
+        introBuffer = STEMSpeakToBuffer[introText, sr];
         introBuffer = If[Length[introBuffer] > 0, NormalizeBuffer[introBuffer, 0.95], introBuffer];
         pauseBuffer = If[Length[introBuffer] > 0, ConstantArray[0.0, Round[sr * 0.4]], {}];
         finalLeft   = Join[introBuffer, pauseBuffer, rawLeft];

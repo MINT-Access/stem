@@ -65,7 +65,7 @@ RunExperiment[name_String, overrides_Association] :=
     introText = BuildIntroText[mode, srcDesc,
       ImageDimensions[processedImg][[1]], ImageDimensions[processedImg][[2]],
       brightnessScale, sonificationDurSec, colourStats];
-    introBuffer = BuildIntroBuffer[introText, sr];
+    introBuffer = STEMSpeakToBuffer[introText, sr];
     introBuffer = If[Length[introBuffer] > 0, NormalizeBuffer[introBuffer, 0.95], introBuffer];
     pauseBuffer = If[Length[introBuffer] > 0, ConstantArray[0.0, Round[sr * 0.4]], {}];
 

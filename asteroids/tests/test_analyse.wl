@@ -43,7 +43,7 @@ testAsteroids = {
      "isHazardous"->True,  "absoluteMag"->17.5 |>
 };
 
-Print["Running analysis tests (offline — no API call)..."];
+Print["Running analysis tests (offline \[LongDash] no API call)..."];
 Print[""];
 
 (* Test 1: HazardousAsteroids filter *)
@@ -108,7 +108,7 @@ AssertTrue["Hazardous summary includes warning",
   StringContainsQ[hazSummary, "HAZARDOUS"]];
 
 Print[""];
-Print["Running orbital mechanics tests (offline — no API call)..."];
+Print["Running orbital mechanics tests (offline \[LongDash] no API call)..."];
 Print[""];
 
 (* Test 11: SolveKepler — verify solution satisfies M = E - e sin E *)

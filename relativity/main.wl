@@ -35,6 +35,7 @@
      --sonification.geodesic.duration_s
    ======================================================== *)
 
+$CharacterEncoding = "UTF8";   (* text I/O; keep literals ASCII, see AGENTS.md *)
 $projectRoot  = DirectoryName[$InputFileName];
 $stemCoreRoot = FileNameJoin[{$projectRoot, "..", "stem-core"}];
 Get[FileNameJoin[{$stemCoreRoot, "init.wl"}]];
@@ -85,7 +86,7 @@ Module[{preset, presetData, ovr},
         Print["  Loaded preset: ", preset, " (m1=", presetData["mass1"],
               ", m2=", presetData["mass2"], ", d=", presetData["distance_mpc"], " Mpc)"]
       ],
-      Print["  Warning: preset \"", preset, "\" not found in config — using defaults."]
+      Print["  Warning: preset \"", preset, "\" not found in config \[LongDash] using defaults."]
     ]
   ]
 ];
@@ -106,9 +107,9 @@ Which[
     },
 
     STEMHeading["General Relativity: Gravitational Wave Chirp (PN Inspiral)"];
-    Print["  m1 = ", m1, " M☉   m2 = ", m2, " M☉   distance = ", distMpc, " Mpc"];
+    Print["  m1 = ", m1, " M\:2609   m2 = ", m2, " M\:2609   distance = ", distMpc, " Mpc"];
     Print["  Starting frequency: ", fMin, " Hz"];
-    Print["  Time stretch: ", ts, "×"];
+    Print["  Time stretch: ", ts, "\[Times]"];
     Print[""]];
 
     STEMSay["Computing gravitational wave chirp"];
@@ -209,7 +210,7 @@ Which[
   (* Unknown mode *)
   True,
     Print["Error: unknown simulation.mode \"", mode,
-          "\" — expected \"chirp\" or \"geodesic\"."];
+          "\" \[LongDash] expected \"chirp\" or \"geodesic\"."];
     Exit[1]
 ];
 

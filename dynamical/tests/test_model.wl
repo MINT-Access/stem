@@ -224,7 +224,7 @@ Print["-- Lyapunov sonification --"];
    the false unison fails here. It demands at least a semitone of
    clearance, enough that no slow beating can arise. *)
 Module[{cfgJSON, ly, clearance},
-  cfgJSON = Import[FileNameJoin[{$projectRoot, "config.json"}], "RawJSON"];
+  cfgJSON = Import[FileNameJoin[{$projectRoot, "config.json"}], "RawJSON", CharacterEncoding -> "UTF8"];
   ly = cfgJSON["simulation"]["dynamical"]["lyapunov"];
   clearance = LyapunovHarmonicClearance[N[ly["floor"]], N[ly["octaves_per_unit"]]];
   Print["  config floor ", ly["floor"], ", octaves_per_unit ", ly["octaves_per_unit"],

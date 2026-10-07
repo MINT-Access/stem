@@ -175,7 +175,7 @@ PrintReverseSummary[reverseModel_Association] :=
 (* ── Narrated WAV (all three modes) ─────────────────────────────────
 
    ExportHenonNarratedWAV
-   Speaks introText and outroText (BuildIntroBuffer, peak 0.95 each),
+   Speaks introText and outroText (STEMSpeakToBuffer, peak 0.95 each),
    prints both texts as "Spoken intro:" / "Spoken outro:" lines like
    dynamical, joins intro speech, a 0.4 s pause, the notes, a 0.4 s
    pause and outro speech, normalises to -17 LUFS (peak ceiling 0.97)
@@ -186,7 +186,7 @@ PrintReverseSummary[reverseModel_Association] :=
 ExportHenonNarratedWAV[outWAV_String, introText_String, outroText_String,
                        left_List, right_List, sr_Integer] :=
   Module[{speak, introBuf, outroBuf, pause, introPart, outroPart, finalLeft, finalRight},
-    speak[t_] := With[{b = BuildIntroBuffer[t, sr]}, If[Length[b] > 0, NormalizeBuffer[b, 0.95], b]];
+    speak[t_] := With[{b = STEMSpeakToBuffer[t, sr]}, If[Length[b] > 0, NormalizeBuffer[b, 0.95], b]];
     Print["  Spoken intro: ", introText];
     Print["  Spoken outro: ", outroText];
     introBuf = speak[introText];

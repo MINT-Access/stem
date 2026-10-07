@@ -32,6 +32,7 @@
      dice_audio.wav / dice.gif / dice.png / dice_data.csv
    ======================================================== *)
 
+$CharacterEncoding = "UTF8";   (* text I/O; keep literals ASCII, see AGENTS.md *)
 $projectRoot  = DirectoryName[$InputFileName];
 $stemCoreRoot = FileNameJoin[{$projectRoot, "..", "stem-core"}];
 Get[FileNameJoin[{$stemCoreRoot, "init.wl"}]];
@@ -129,7 +130,7 @@ Which[
     STEMSay["Sonifying the Central Limit Theorem"];
     introText = BuildSweepIntroText[source, nMax];
     Print["  Spoken intro: ", introText];
-    introBuffer = BuildIntroBuffer[introText, sr];
+    introBuffer = STEMSpeakToBuffer[introText, sr];
     introBuffer = If[Length[introBuffer] > 0, NormalizeBuffer[introBuffer, 0.95], introBuffer];
     pauseBuf = If[Length[introBuffer] > 0, ConstantArray[0.0, Round[sr * 0.4]], {}];
     finalLeft  = Join[introBuffer, pauseBuf, sweepAudio["left"]];
@@ -184,7 +185,7 @@ Which[
     STEMSay["Sonifying the shape convergence, binaural"];
     introText = BuildCompareIntroText[sourceLeft, sourceRight, nMax];
     Print["  Spoken intro: ", introText];
-    introBuffer = BuildIntroBuffer[introText, sr];
+    introBuffer = STEMSpeakToBuffer[introText, sr];
     introBuffer = If[Length[introBuffer] > 0, NormalizeBuffer[introBuffer, 0.95], introBuffer];
     pauseBuf = If[Length[introBuffer] > 0, ConstantArray[0.0, Round[sr * 0.4]], {}];
     finalLeft  = Join[introBuffer, pauseBuf, compareAudio["left"]];
@@ -243,7 +244,7 @@ Which[
     STEMSay["Sonifying the sum of fair dice"];
     introText = BuildDiceIntroText[nMax];
     Print["  Spoken intro: ", introText];
-    introBuffer = BuildIntroBuffer[introText, sr];
+    introBuffer = STEMSpeakToBuffer[introText, sr];
     introBuffer = If[Length[introBuffer] > 0, NormalizeBuffer[introBuffer, 0.95], introBuffer];
     pauseBuf = If[Length[introBuffer] > 0, ConstantArray[0.0, Round[sr * 0.4]], {}];
     finalLeft  = Join[introBuffer, pauseBuf, diceAudio["left"]];
@@ -260,7 +261,7 @@ Which[
   (* Unknown mode *)
   True,
     Print["Error: unknown simulation.mode \"", mode,
-          "\" — expected \"sweep\", \"compare\", or \"dice\"."];
+          "\" \[LongDash] expected \"sweep\", \"compare\", or \"dice\"."];
     Exit[1]
 ];
 

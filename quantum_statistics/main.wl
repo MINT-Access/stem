@@ -9,6 +9,7 @@
           Note: --key value (space) also accepted in addition to --key=value.
    ======================================================== *)
 
+$CharacterEncoding = "UTF8";   (* text I/O; keep literals ASCII, see AGENTS.md *)
 $projectRoot  = DirectoryName[$InputFileName];
 $stemCoreRoot = FileNameJoin[{$projectRoot, "..", "stem-core"}];
 Get[FileNameJoin[{$stemCoreRoot, "init.wl"}]];
@@ -94,7 +95,7 @@ Which[
     outWAV = FileNameJoin[{$projectRoot, "output", "quantum_statistics_spectrum.wav"}];
     {rawLeft, rawRight} = BuildSpectrumAudio[spectrumModel, 60, duration, sr];
     introText   = BuildSpectrumIntroText[spectrumModel["T"]];
-    introBuffer = BuildIntroBuffer[introText, sr];
+    introBuffer = STEMSpeakToBuffer[introText, sr];
     introBuffer = If[Length[introBuffer] > 0, NormalizeBuffer[introBuffer, 0.95], introBuffer];
     pauseBuffer = If[Length[introBuffer] > 0, ConstantArray[0.0, Round[sr * 0.4]], {}];
     finalLeft  = Join[introBuffer, pauseBuffer, rawLeft];
@@ -137,7 +138,7 @@ Which[
     outWAV = FileNameJoin[{$projectRoot, "output", "quantum_statistics_temperature.wav"}];
     {rawLeft, rawRight} = BuildTemperatureAudio[temperatureModel, duration, sr];
     introText   = BuildTemperatureIntroText[];
-    introBuffer = BuildIntroBuffer[introText, sr];
+    introBuffer = STEMSpeakToBuffer[introText, sr];
     introBuffer = If[Length[introBuffer] > 0, NormalizeBuffer[introBuffer, 0.95], introBuffer];
     pauseBuffer = If[Length[introBuffer] > 0, ConstantArray[0.0, Round[sr * 0.4]], {}];
     finalLeft  = Join[introBuffer, pauseBuffer, rawLeft];
@@ -178,7 +179,7 @@ Which[
     outWAV = FileNameJoin[{$projectRoot, "output", "quantum_statistics_fermi_sea.wav"}];
     {rawLeft, rawRight} = BuildFermiSeaAudio[fermiSeaModel, 220.0, 1400.0, 1.2, sr];
     introText   = BuildFermiSeaIntroText[];
-    introBuffer = BuildIntroBuffer[introText, sr];
+    introBuffer = STEMSpeakToBuffer[introText, sr];
     introBuffer = If[Length[introBuffer] > 0, NormalizeBuffer[introBuffer, 0.95], introBuffer];
     pauseBuffer = If[Length[introBuffer] > 0, ConstantArray[0.0, Round[sr * 0.4]], {}];
     finalLeft  = Join[introBuffer, pauseBuffer, rawLeft];
@@ -200,7 +201,7 @@ Which[
 
   (* ===== unknown mode ===== *)
   True,
-    Print["Error: unknown simulation.mode \"", mode, "\" — expected \"spectrum\", \"temperature\", or \"fermi_sea\"."];
+    Print["Error: unknown simulation.mode \"", mode, "\" \[LongDash] expected \"spectrum\", \"temperature\", or \"fermi_sea\"."];
     Exit[1]
 ];
 

@@ -59,7 +59,7 @@ $demoApps = {
     "expected"  -> {"output/double_audio.wav",
                     "output/double_animation.gif",
                     "output/double_results.csv"},
-    "listenFor" -> "Two bobs in binaural stereo — hear chaotic divergence between channels"
+    "listenFor" -> "Two bobs in binaural stereo \[LongDash] hear chaotic divergence between channels"
   |>,
   <|
     "name"      -> "lorenz",
@@ -68,7 +68,7 @@ $demoApps = {
     "expected"  -> {"output/rossler_audio.wav",
                     "output/rossler_animation.gif",
                     "output/rossler_trajectory.csv"},
-    "listenFor" -> "Melodic chaos — smoother than Lorenz, almost improvisational but never repeating"
+    "listenFor" -> "Melodic chaos \[LongDash] smoother than Lorenz, almost improvisational but never repeating"
   |>,
   <|
     "name"      -> "dynamical",
@@ -101,7 +101,7 @@ $demoApps = {
                     "output/henon_attractor.gif",
                     "output/henon_attractor.png",
                     "output/henon_attractor.csv"},
-    "listenFor" -> "The Hénon map's strange attractor \[LongDash] Michel Hénon's simplified " <>
+    "listenFor" -> "The H\[EAcute]non map's strange attractor \[LongDash] Michel H\[EAcute]non's simplified " <>
                    "model of a Poincar\[EAcute] section through the Lorenz attractor. Pan " <>
                    "tracks x, pitch tracks y, and accent tones mark each turning point where " <>
                    "the trajectory folds back on itself"
@@ -111,7 +111,7 @@ $demoApps = {
     "preset"    -> "last 7 days, live NASA data with orbital elements",
     "cliArgs"   -> {"main.wl"},
     "expected"  -> {},  (* date-stamped filenames vary; verified by checking output/ contents *)
-    "listenFor" -> "Each asteroid is one note — pitch = miss distance, bright timbre = hazardous"
+    "listenFor" -> "Each asteroid is one note \[LongDash] pitch = miss distance, bright timbre = hazardous"
   |>,
   <|
     "name"      -> "lagrange",
@@ -148,7 +148,7 @@ $demoApps = {
     "expected"  -> {"output/life_rpentomino_audio.wav",
                     "output/life_rpentomino_animation.gif",
                     "output/life_rpentomino_stats.csv"},
-    "listenFor" -> "Five cells grow chaotically for 300 generations — hear population rise and settle"
+    "listenFor" -> "Five cells grow chaotically for 300 generations \[LongDash] hear population rise and settle"
   |>,
   <|
     "name"      -> "signal",
@@ -156,7 +156,7 @@ $demoApps = {
     "cliArgs"   -> {"main.wl", "--", "--simulation.mode=chord"},
     "expected"  -> {"output/chord_clean.wav", "output/chord_noisy.wav",
                     "output/chord_recovered.wav", "output/chord_narrative_full.wav"},
-    "listenFor" -> "chord_narrative_full.wav — spoken guide to Fourier analysis; " <>
+    "listenFor" -> "chord_narrative_full.wav \[LongDash] spoken guide to Fourier analysis; " <>
                    "hear the chord buried in noise then recovered by the DFT"
   |>,
   <|
@@ -193,7 +193,7 @@ $demoApps = {
     "preset"    -> "QHO coherent state, alpha=3.0 (large amplitude)",
     "cliArgs"   -> {"main.wl", "--", "--simulation.qho.alpha=3.0"},
     "expected"  -> {"output/qho_audio.wav", "output/qho_density.gif"},
-    "listenFor" -> "Smooth sinusoidal pitch — the quantum wave packet riding the harmonic potential"
+    "listenFor" -> "Smooth sinusoidal pitch \[LongDash] the quantum wave packet riding the harmonic potential"
   |>,
   <|
     "name"      -> "qubit",
@@ -242,7 +242,7 @@ $demoApps = {
     "expected"  -> {"output/spectrum_audio.wav",
                     "output/spectrum.gif",
                     "output/spectrum_data.csv"},
-    "listenFor" -> "spectrum_audio.wav — the chord of all 28 lines first, then a sweep from " <>
+    "listenFor" -> "spectrum_audio.wav \[LongDash] the chord of all 28 lines first, then a sweep from " <>
                    "ultraviolet through the four bell-marked Balmer lines (the actual colour " <>
                    "of hydrogen) to infrared; the same Rydberg formula behind every hydrogen " <>
                    "spectrum ever measured, in any star or lab"
@@ -282,7 +282,7 @@ $demoApps = {
                     "output/sweep.gif",
                     "output/sweep_data.csv"},
     "listenFor" -> "The loudest, most turbulent moment of the sweep is the phase transition " <>
-                   "itself — the system crossing from disordered noise into a steady, " <>
+                   "itself \[LongDash] the system crossing from disordered noise into a steady, " <>
                    "high-pitched ferromagnetic tone as it cools through T_c \[TildeEqual] 2.269"
   |>,
   <|
@@ -324,7 +324,7 @@ $demoApps = {
     "cliArgs"   -> {"main.wl", "--", "--simulation.mode=gaps"},
     "expected"  -> {"output/gaps_audio.wav", "output/gaps_slow.wav",
                     "output/gaps_animation.gif", "output/gaps_stats.csv"},
-    "listenFor" -> "gaps_slow.wav at quarter tempo — twin-prime pairs as double-attacks; " <>
+    "listenFor" -> "gaps_slow.wav at quarter tempo \[LongDash] twin-prime pairs as double-attacks; " <>
                    "large gaps leave audible rests"
   |>,
   <|
@@ -368,7 +368,7 @@ $demoApps = {
     "cliArgs"   -> {"main.wl", "--", "--simulation.chirp.preset=gw150914",
                     "--sonification.chirp.time_stretch=4"},
     "expected"  -> {"output/chirp.wav", "output/chirp.gif"},
-    "listenFor" -> "chirp.wav — rising pitch and amplitude, abrupt merger, fading ringdown; " <>
+    "listenFor" -> "chirp.wav \[LongDash] rising pitch and amplitude, abrupt merger, fading ringdown; " <>
                    "this is what LIGO heard on 14 September 2015"
   |>,
   <|
@@ -379,7 +379,7 @@ $demoApps = {
     "expected"  -> {"output/cmb_spectrum_audio.wav",
                     "output/cmb_spectrum.png",
                     "output/cmb_spectrum_data.csv"},
-    "listenFor" -> "cmb_spectrum_audio.wav — hear the Sachs-Wolfe plateau give way " <>
+    "listenFor" -> "cmb_spectrum_audio.wav \[LongDash] hear the Sachs-Wolfe plateau give way " <>
                    "to the first acoustic peak swell at l\[TildeEqual]220, then the " <>
                    "second and third harmonics fading into the Silk damping tail"
   |>,
@@ -771,7 +771,7 @@ If[!$checkOnly,
   rl["# $env:NASA_API_KEY='your_key'; wolframscript -file demo.wl"];
   rl["wolframscript -file demo.wl -- --check-only                    # verify outputs"];
   rl["```"];
-  Export[$reportPath, StringRiffle[$rl, "\n"], "Text"];
+  Export[$reportPath, StringRiffle[$rl, "\n"], "Text", CharacterEncoding -> "UTF8"];
   Print[""];
   Print["  Report:  ", $reportPath];
 
@@ -994,7 +994,7 @@ If[!$checkOnly,
   dl["# Verify outputs from a previous run without re-running"];
   dl["wolframscript -file demo.wl -- --check-only"];
   dl["```"];
-  Export[$demoReadmePath, StringRiffle[$dl, "\n"], "Text"];
+  Export[$demoReadmePath, StringRiffle[$dl, "\n"], "Text", CharacterEncoding -> "UTF8"];
   Print["  README:  ", $demoReadmePath]
 ];
 

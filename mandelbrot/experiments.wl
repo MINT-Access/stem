@@ -47,7 +47,7 @@ RunExperiment[name_String, overrides_Association] :=
 
         {rawBuffer, freqAssigned} = BuildMandelbrotAudio[mandelbrotModel, 200.0, 2200.0, 0.015, sr];
         introText   = BuildMandelbrotIntroText[mandelbrotModel["maxIter"]];
-        introBuffer = BuildIntroBuffer[introText, sr];
+        introBuffer = STEMSpeakToBuffer[introText, sr];
         introBuffer = If[Length[introBuffer] > 0, NormalizeBuffer[introBuffer, 0.95], introBuffer];
         pauseBuffer = If[Length[introBuffer] > 0, ConstantArray[0.0, Round[sr * 0.4]], {}];
         fadeSilence = ConstantArray[0.0, Round[sr * fadeSeconds]];
@@ -69,7 +69,7 @@ RunExperiment[name_String, overrides_Association] :=
 
         {rawBuffer, freqAssigned} = BuildJuliaAudio[juliaModel, 200.0, 2200.0, 0.015, sr];
         introText   = BuildJuliaIntroText[juliaModel["cRe"], juliaModel["cIm"], juliaModel["cIsInterior"]];
-        introBuffer = BuildIntroBuffer[introText, sr];
+        introBuffer = STEMSpeakToBuffer[introText, sr];
         introBuffer = If[Length[introBuffer] > 0, NormalizeBuffer[introBuffer, 0.95], introBuffer];
         pauseBuffer = If[Length[introBuffer] > 0, ConstantArray[0.0, Round[sr * 0.4]], {}];
         fadeSilence = ConstantArray[0.0, Round[sr * fadeSeconds]];
@@ -91,7 +91,7 @@ RunExperiment[name_String, overrides_Association] :=
 
         {rawBuffer, freqAssigned} = BuildZoomAudio[zoomModel, 200.0, 2200.0, 0.006, sr];
         introText   = BuildZoomIntroText[zoomModel["nLevels"]];
-        introBuffer = BuildIntroBuffer[introText, sr];
+        introBuffer = STEMSpeakToBuffer[introText, sr];
         introBuffer = If[Length[introBuffer] > 0, NormalizeBuffer[introBuffer, 0.95], introBuffer];
         pauseBuffer = If[Length[introBuffer] > 0, ConstantArray[0.0, Round[sr * 0.4]], {}];
         finalBuffer = Join[introBuffer, pauseBuffer, rawBuffer];
@@ -215,7 +215,7 @@ RunGradientVideoPreset[] :=
 
     {rawBuffer, freqAssigned} = BuildMandelbrotAudio[model, 200.0, 2200.0, 0.015, sr, maxDur];
     introText   = BuildMandelbrotIntroText[model["maxIter"]];
-    introBuffer = BuildIntroBuffer[introText, sr];
+    introBuffer = STEMSpeakToBuffer[introText, sr];
     introBuffer = If[Length[introBuffer] > 0, NormalizeBuffer[introBuffer, 0.95], introBuffer];
     pauseBuffer = If[Length[introBuffer] > 0, ConstantArray[0.0, Round[sr * 0.4]], {}];
     fadeSilence = ConstantArray[0.0, Round[sr * fadeSeconds]];

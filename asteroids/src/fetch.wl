@@ -147,7 +147,7 @@ FetchAsteroids[startDate_String, endDate_String] :=
     raw = FetchRawJson[startDate, endDate];
     If[raw === $Failed, Return[$Failed]];
 
-    json = Quiet @ ConfigToAssoc[ImportString[raw, "JSON"]];
+    json = Quiet @ ConfigToAssoc[ImportString[raw, "JSON", CharacterEncoding -> "UTF8"]];
 
     (* Guard against API error responses (rate limit, bad key, etc.) *)
     If[!AssociationQ[json],
@@ -236,7 +236,7 @@ FetchOrbitalElements[spkid_String, name_String] :=
       Return[$Failed]
     ];
 
-    json = Quiet @ ConfigToAssoc[ImportString[response, "JSON"]];
+    json = Quiet @ ConfigToAssoc[ImportString[response, "JSON", CharacterEncoding -> "UTF8"]];
 
     If[!AssociationQ[json] || !KeyExistsQ[json, "orbit"],
       $OrbitalElementsCache[spkid] = $Failed;

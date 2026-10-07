@@ -291,7 +291,7 @@ count tied only to the number of discrete simulation steps or sweep
 points — the same fixed-nFrames/fixed-frameRate pattern found across
 the repo, decoupled from how long the matching sonification actually
 plays. As in `fluid/`, the WAV also carries a spoken intro
-(`BuildIntroBuffer` in `speech.wl`) prepended directly into the audio
+(`STEMSpeakToBuffer` in `speech.wl`) prepended directly into the audio
 buffer in `main.wl`/`experiments.wl`, whose length depends on the
 platform TTS engine and isn't known ahead of time.
 

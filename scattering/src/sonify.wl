@@ -6,7 +6,7 @@
      directly (not the SonifyTrajectory convenience wrapper, since
      that wrapper has no hook for a prepended spoken intro -- every
      app in this codebase that speaks its intro into the WAV file
-     builds that prepend step by hand; see BuildIntroBuffer/
+     builds that prepend step by hand; see STEMSpeakToBuffer/
      PrependIntroAndExport below, duplicated from magnetic/src/
      sonify.wl's identical pattern).
 
@@ -38,110 +38,11 @@
    ======================================================== *)
 
 
-(* ── Speech: SpeechSynthesize[] -> platform TTS -> text-only STEMSay.
-   Duplicated from magnetic/src/sonify.wl's identical three-tier
-   pattern (apps do not import each other's src/ files). *)
-
-ResampleLinear[data_List, rawSr_?NumericQ, targetSr_?NumericQ] :=
-  Module[{n = Length[data], newN, ratio, oldPos, lo, frac},
-    If[n < 2 || Abs[N[rawSr] - N[targetSr]] < 1.0, Return[data]];
-    ratio = N[targetSr] / N[rawSr];
-    newN  = Max[1, Round[n * ratio]];
-    Table[
-      oldPos = (i - 1) * (n - 1.0) / Max[newN - 1, 1];
-      lo     = Clip[Floor[oldPos], {0, n - 2}];
-      frac   = oldPos - lo;
-      (1 - frac) * data[[lo + 1]] + frac * data[[lo + 2]],
-      {i, newN}
-    ]
-  ]
-
-ScatteringSpeakToBufferPlatform[text_String, targetSr_Integer] :=
-  Module[{id, wavPath, snd, data, rawSr},
-    id      = ToString[RandomInteger[999999]];
-    wavPath = FileNameJoin[{$TemporaryDirectory, "stem_scattering_say_" <> id <> ".wav"}];
-
-    Switch[$OperatingSystem,
-
-      "MacOSX",
-        Module[{aiffPath, result, conv},
-          aiffPath = FileNameJoin[{$TemporaryDirectory, "stem_scattering_say_" <> id <> ".aiff"}];
-          result = Quiet[RunProcess[{"say", "-o", aiffPath, text}]];
-          If[!AssociationQ[result] || result["ExitCode"] =!= 0 || !FileExistsQ[aiffPath],
-            Quiet[DeleteFile /@ Select[{aiffPath, wavPath}, FileExistsQ]];
-            Return[{}]];
-          conv = Quiet[RunProcess[{"afconvert", aiffPath, wavPath, "-d", "LEI16", "-f", "WAVE"}]];
-          Quiet[DeleteFile[aiffPath]];
-          If[!AssociationQ[conv] || conv["ExitCode"] =!= 0 || !FileExistsQ[wavPath],
-            Quiet[DeleteFile /@ Select[{wavPath}, FileExistsQ]];
-            Return[{}]]],
-
-      "Unix",
-        Module[{result},
-          result = Quiet[RunProcess[{"espeak-ng", "-w", wavPath, text}]];
-          If[!AssociationQ[result] || result["ExitCode"] =!= 0 || !FileExistsQ[wavPath],
-            result = Quiet[RunProcess[{"espeak", "-w", wavPath, text}]]];
-          If[!AssociationQ[result] || result["ExitCode"] =!= 0 || !FileExistsQ[wavPath],
-            Quiet[DeleteFile /@ Select[{wavPath}, FileExistsQ]];
-            Return[{}]]],
-
-      "Windows",
-        Module[{psCmd, result},
-          psCmd = "Add-Type -AssemblyName System.Speech; " <>
-                  "$s = New-Object System.Speech.Synthesis.SpeechSynthesizer; " <>
-                  "$s.SetOutputToWaveFile('" <>
-                  StringReplace[wavPath, "\\" -> "/"] <> "'); " <>
-                  "$s.Speak('" <> StringReplace[text, "'" -> "''"] <> "'); " <>
-                  "$s.SetOutputToDefaultAudioDevice()";
-          result = Quiet[RunProcess[{"powershell", "-NoProfile", "-Command", psCmd}]];
-          If[!AssociationQ[result] || result["ExitCode"] =!= 0 || !FileExistsQ[wavPath],
-            Quiet[DeleteFile /@ Select[{wavPath}, FileExistsQ]];
-            Return[{}]]],
-
-      _,
-        Return[{}]
-    ];
-
-    snd = Quiet[Import[wavPath]];
-    If[!AudioQ[snd], Quiet[DeleteFile[wavPath]]; Return[{}]];
-    data  = Quiet[Flatten[N[AudioData[snd]]]];
-    rawSr = Quiet[QuantityMagnitude[AudioSampleRate[snd]]];
-    Quiet[DeleteFile[wavPath]];
-    If[!ListQ[data] || Length[data] === 0 || !NumericQ[rawSr], Return[{}]];
-
-    ResampleLinear[data, rawSr, targetSr]
-  ]
-
-BuildIntroBuffer[text_String, sr_Integer] :=
-  Module[{buf, result, data, rawSr},
-    buf = Quiet[Check[
-      result = SpeechSynthesize[text];
-      If[AudioQ[result],
-        data  = Quiet[Flatten[N[AudioData[result]]]];
-        rawSr = Quiet[QuantityMagnitude[AudioSampleRate[result]]];
-        If[ListQ[data] && Length[data] > 0 && NumericQ[rawSr],
-          ResampleLinear[data, rawSr, sr],
-          {}
-        ],
-        {}
-      ],
-      {}
-    ]];
-    If[ListQ[buf] && Length[buf] > 0, Return[buf]];
-
-    buf = ScatteringSpeakToBufferPlatform[text, sr];
-    If[ListQ[buf] && Length[buf] > 0, Return[buf]];
-
-    Print["[WARNING] Speech synthesis unavailable -- spoken text will be skipped. Text:"];
-    STEMSay[text];
-    {}
-  ]
-
 PrependIntroAndExport[introText_String, leftMain_List, rightMain_List,
                       sr_Integer, outWav_String] :=
   Module[{introBuffer, pauseBuffer, finalLeft, finalRight},
     Print["  Spoken intro: ", introText];
-    introBuffer = BuildIntroBuffer[introText, sr];
+    introBuffer = STEMSpeakToBuffer[introText, sr];
     introBuffer = If[Length[introBuffer] > 0, NormalizeBuffer[introBuffer, 0.95], introBuffer];
     pauseBuffer = If[Length[introBuffer] > 0, ConstantArray[0.0, Round[sr * 0.4]], {}];
     finalLeft   = Join[introBuffer, pauseBuffer, leftMain];
@@ -167,7 +68,7 @@ ScatteringAccentBurst[freq_?NumericQ, dur_?NumericQ, amp_?NumericQ, sr_Integer] 
 
 
 (* ── Main-content durations (excludes spoken intro/outro). ─────────
-   Each mode's WAV is BuildIntroBuffer/outro speech + a silence gap +
+   Each mode's WAV is STEMSpeakToBuffer/outro speech + a silence gap +
    this "main" stretch -- the intro's real length depends on the
    platform TTS voice (macOS `say`, espeak-ng, ...) and has nothing to
    do with the simulated trajectory, so it is the wrong basis for GIF
@@ -368,11 +269,11 @@ SonifyDiscovery[model_Association, cfg_Association, outWav_String] :=
       "led Rutherford to propose the atomic nucleus in 1911.";
 
     Print["  Spoken intro: ", introText];
-    introBuf = BuildIntroBuffer[introText, sr];
+    introBuf = STEMSpeakToBuffer[introText, sr];
     introBuf = If[Length[introBuf] > 0, NormalizeBuffer[introBuf, 0.95], introBuf];
 
     Print["  Spoken outro: ", outroText];
-    outroBuf = BuildIntroBuffer[outroText, sr];
+    outroBuf = STEMSpeakToBuffer[outroText, sr];
     outroBuf = If[Length[outroBuf] > 0, NormalizeBuffer[outroBuf, 0.95], outroBuf];
 
     pauseBuf = ConstantArray[0.0, Round[sr * 0.4]];

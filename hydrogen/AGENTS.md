@@ -34,8 +34,8 @@ hydrogen/
     model.wl            -- physics: energy levels, wave functions, Einstein A,
                            spectral lines, cascade simulation, correctness checks
     sonify.wl            -- audio synthesis for all three modes
-    speech.wl            -- BuildIntroText/BuildIntroBuffer (SpeechSynthesize[] ->
-                           platform TTS -> text-only fallback)
+    speech.wl            -- BuildIntroText and the other narration texts
+                           (audio via stem-core STEMSpeakToBuffer)
     animate.wl            -- GIF/PNG rendering for all three modes
     output.wl             -- CSV export + PASS/FAIL correctness-check printing
   tests/
@@ -76,13 +76,13 @@ config -> ComputeOrbitalTraversal / BuildSpectrumAudio / SimulateCascade x n_rea
                                                           ExportTransitionsCSV
 ```
 
-Every mode also calls `BuildIntroBuffer` (speech.wl) to prepend a spoken
+Every mode also calls `STEMSpeakToBuffer` (speech.wl) to prepend a spoken
 orientation sentence to its main WAV, following the same
 intro-then-pause-then-audio pattern used in `thermo/`, `montecarlo/`,
 and `images/`. `spectrum` mode additionally appends a spoken **outro**
 after the sweep (the only mode that does; see main.wl's `[3/5]` step) —
 there was no existing outro pattern anywhere else in the codebase, so
-`BuildSpectrumOutroText[]`/reusing `BuildIntroBuffer` for the outro text
+`BuildSpectrumOutroText[]`/reusing `STEMSpeakToBuffer` for the outro text
 is this app's own addition.
 
 ## Physics notes
@@ -273,7 +273,7 @@ line for spectrum; one frame per cascade step, capped at 4
 realisations, for transitions) — the same fixed-nFrames/fixed-frameRate
 pattern found repo-wide, decoupled from how long the matching WAV
 actually plays. All three WAVs also carry a spoken intro baked directly
-into the audio buffer (`BuildIntroBuffer` in `speech.wl`, prepended in
+into the audio buffer (`STEMSpeakToBuffer` in `speech.wl`, prepended in
 `main.wl`) whose length depends on the platform TTS engine and isn't
 known ahead of time — for orbitals mode this, plus a long note-per-pixel
 buffer (4096 pixels x 0.02s), is what drives the 33x gap.

@@ -9,6 +9,7 @@
           Note: --key value (space) also accepted in addition to --key=value.
    ======================================================== *)
 
+$CharacterEncoding = "UTF8";   (* text I/O; keep literals ASCII, see AGENTS.md *)
 $projectRoot  = DirectoryName[$InputFileName];
 $stemCoreRoot = FileNameJoin[{$projectRoot, "..", "stem-core"}];
 Get[FileNameJoin[{$stemCoreRoot, "init.wl"}]];
@@ -91,7 +92,7 @@ Which[
     outWAV = FileNameJoin[{$projectRoot, "output", "grover_search.wav"}];
     {rawLeft, rawRight} = BuildSearchAudio[searchModel, 220.0, 1400.0, 0.28, sr];
     introText   = BuildSearchIntroText[searchModel["nItems"], searchModel["optimalK"]];
-    introBuffer = BuildIntroBuffer[introText, sr];
+    introBuffer = STEMSpeakToBuffer[introText, sr];
     introBuffer = If[Length[introBuffer] > 0, NormalizeBuffer[introBuffer, 0.95], introBuffer];
     pauseBuffer = If[Length[introBuffer] > 0, ConstantArray[0.0, Round[sr * 0.4]], {}];
     finalLeft  = Join[introBuffer, pauseBuffer, rawLeft];
@@ -135,7 +136,7 @@ Which[
     outWAV = FileNameJoin[{$projectRoot, "output", "grover_compare.wav"}];
     {rawLeft, rawRight} = BuildCompareAudio[compareModel, 440.0, 6.0, sr];
     introText   = BuildCompareIntroText[compareModel["nItems"], Round[compareModel["classicalAtN"]], compareModel["quantumAtN"]];
-    introBuffer = BuildIntroBuffer[introText, sr];
+    introBuffer = STEMSpeakToBuffer[introText, sr];
     introBuffer = If[Length[introBuffer] > 0, NormalizeBuffer[introBuffer, 0.95], introBuffer];
     pauseBuffer = If[Length[introBuffer] > 0, ConstantArray[0.0, Round[sr * 0.4]], {}];
     finalLeft  = Join[introBuffer, pauseBuffer, rawLeft];
@@ -178,7 +179,7 @@ Which[
     outWAV = FileNameJoin[{$projectRoot, "output", "grover_geometry.wav"}];
     {rawLeft, rawRight} = BuildGeometryAudio[geometryModel, 220.0, 1400.0, duration, sr];
     introText   = BuildGeometryIntroText[geometryModel["nItems"]];
-    introBuffer = BuildIntroBuffer[introText, sr];
+    introBuffer = STEMSpeakToBuffer[introText, sr];
     introBuffer = If[Length[introBuffer] > 0, NormalizeBuffer[introBuffer, 0.95], introBuffer];
     pauseBuffer = If[Length[introBuffer] > 0, ConstantArray[0.0, Round[sr * 0.4]], {}];
     finalLeft  = Join[introBuffer, pauseBuffer, rawLeft];
@@ -200,7 +201,7 @@ Which[
 
   (* ===== unknown mode ===== *)
   True,
-    Print["Error: unknown simulation.mode \"", mode, "\" — expected \"search\", \"compare\", or \"geometry\"."];
+    Print["Error: unknown simulation.mode \"", mode, "\" \[LongDash] expected \"search\", \"compare\", or \"geometry\"."];
     Exit[1]
 ];
 

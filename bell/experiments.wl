@@ -43,7 +43,7 @@ RunExperiment[name_String, overrides_Association] :=
 
         {rawLeft, rawRight} = BuildCorrelationsAudio[corrModel, 220.0, 1400.0, duration, sr];
         introText   = BuildCorrelationsIntroText[];
-        introBuffer = BuildIntroBuffer[introText, sr];
+        introBuffer = STEMSpeakToBuffer[introText, sr];
         introBuffer = If[Length[introBuffer] > 0, NormalizeBuffer[introBuffer, 0.95], introBuffer];
         pauseBuffer = If[Length[introBuffer] > 0, ConstantArray[0.0, Round[sr * 0.4]], {}];
         finalLeft   = Join[introBuffer, pauseBuffer, rawLeft];
@@ -62,7 +62,7 @@ RunExperiment[name_String, overrides_Association] :=
 
         {rawLeft, rawRight} = BuildChshAudio[chshModel, 220.0, 1400.0, 2.5, sr];
         introText   = BuildChshIntroText[chshModel["S"]];
-        introBuffer = BuildIntroBuffer[introText, sr];
+        introBuffer = STEMSpeakToBuffer[introText, sr];
         introBuffer = If[Length[introBuffer] > 0, NormalizeBuffer[introBuffer, 0.95], introBuffer];
         pauseBuffer = If[Length[introBuffer] > 0, ConstantArray[0.0, Round[sr * 0.4]], {}];
         finalLeft   = Join[introBuffer, pauseBuffer, rawLeft];
@@ -81,7 +81,7 @@ RunExperiment[name_String, overrides_Association] :=
 
         {rawLeft, rawRight} = BuildMeasurementAudio[measModel, 220.0, 1400.0, duration, sr];
         introText   = BuildMeasurementIntroText[measModel["nTrials"], measModel["trueE"]];
-        introBuffer = BuildIntroBuffer[introText, sr];
+        introBuffer = STEMSpeakToBuffer[introText, sr];
         introBuffer = If[Length[introBuffer] > 0, NormalizeBuffer[introBuffer, 0.95], introBuffer];
         pauseBuffer = If[Length[introBuffer] > 0, ConstantArray[0.0, Round[sr * 0.4]], {}];
         finalLeft   = Join[introBuffer, pauseBuffer, rawLeft];

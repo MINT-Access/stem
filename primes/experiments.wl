@@ -26,7 +26,7 @@ If[!DirectoryQ[$outDir], CreateDirectory[$outDir]];
 RunUlamExperiment[label_String, cfg_Association] :=
   Module[{model},
     Print[""];
-    Print[">>> Experiment: ulam_spiral  — ", label];
+    Print[">>> Experiment: ulam_spiral  \[LongDash] ", label];
     model = UlamModel[cfg];
     Print["  Grid:         ", model["size"], " x ", model["size"]];
     Print["  Primes:       ", model["prime_count"]];
@@ -42,7 +42,7 @@ RunUlamExperiment[label_String, cfg_Association] :=
 RunGapsExperiment[label_String, cfg_Association] :=
   Module[{model, csvPath, gaps, primes},
     Print[""];
-    Print[">>> Experiment: prime_gaps  — ", label];
+    Print[">>> Experiment: prime_gaps  \[LongDash] ", label];
     model = GapsModel[cfg];
     Print["  Primes:        ", Length[model["primes"]]];
     Print["  Largest prime: ", Last[model["primes"]]];
@@ -80,7 +80,7 @@ RunGapsExperiment[label_String, cfg_Association] :=
 (* A small Ulam spiral makes the diagonal prime alignments visible as
    dense white streaks even without zooming. At 51x51 all integers up to
    2601 are covered; prime density is about 12%. *)
-RunUlamExperiment["51x51 grid — diagonals clearly visible",
+RunUlamExperiment["51x51 grid \[LongDash] diagonals clearly visible",
   <| "simulation" -> <| "mode" -> "ulam",
     "ulam" -> <| "size" -> 51, "color_primes" -> "white", "color_composite" -> "black" |>
   |>,
@@ -93,7 +93,7 @@ RunUlamExperiment["51x51 grid — diagonals clearly visible",
    invisible at smaller sizes. At 201x201 about 40000 integers are covered;
    prime density drops to ~8%. The audio spans the full 30 rows used in
    row-scan sonification. *)
-RunUlamExperiment["201x201 grid — macro diagonal corridors",
+RunUlamExperiment["201x201 grid \[LongDash] macro diagonal corridors",
   <| "simulation" -> <| "mode" -> "ulam",
     "ulam" -> <| "size" -> 201, "color_primes" -> "white", "color_composite" -> "black" |>
   |>,
@@ -129,7 +129,7 @@ RunGapsExperiment["first 10000 primes (up to ~104729)",
 (* Same data as the default run but with a slow tempo (60 bpm) so the
    rhythm of twin-prime pairs (back-to-back attacks separated by 2/total_range)
    is perceptible to the ear. *)
-RunGapsExperiment["5000 primes at slow tempo — twin-prime rhythm audible",
+RunGapsExperiment["5000 primes at slow tempo \[LongDash] twin-prime rhythm audible",
   <| "simulation" -> <| "mode" -> "gaps",
     "gaps" -> <| "count" -> 5000, "max_gap_display" -> 72 |>
   |>,

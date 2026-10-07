@@ -38,6 +38,7 @@
      model_audio.wav    / model.gif    / model_data.csv
    ======================================================== *)
 
+$CharacterEncoding = "UTF8";   (* text I/O; keep literals ASCII, see AGENTS.md *)
 $projectRoot  = DirectoryName[$InputFileName];
 $stemCoreRoot = FileNameJoin[{$projectRoot, "..", "stem-core"}];
 Get[FileNameJoin[{$stemCoreRoot, "init.wl"}]];
@@ -127,7 +128,7 @@ Which[
     audioFreqThetaTrue = freqMin * (freqMax / freqMin)^thetaTrue;
     introText   = BuildCoinIntroText[thetaTrue, nFlips, audioFreqThetaTrue];
     Print["  Spoken intro: ", introText];
-    introBuffer = BuildIntroBuffer[introText, sr];
+    introBuffer = STEMSpeakToBuffer[introText, sr];
     introBuffer = If[Length[introBuffer] > 0, NormalizeBuffer[introBuffer, 0.95], introBuffer];
     pauseBuffer = If[Length[introBuffer] > 0, ConstantArray[0.0, Round[sr * 0.4]], {}];
     finalLeft   = Join[introBuffer, pauseBuffer, coinAudio["left"]];
@@ -176,7 +177,7 @@ Which[
     audioFreqMuTrue = freqMin * (freqMax / freqMin)^Clip[(muTrue - muLo) / (muHi - muLo), {0.0, 1.0}];
     introText   = BuildGaussianIntroText[muTrue, mu0, sigma0, sigmaObs, nObs, audioFreqMu0, audioFreqMuTrue];
     Print["  Spoken intro: ", introText];
-    introBuffer = BuildIntroBuffer[introText, sr];
+    introBuffer = STEMSpeakToBuffer[introText, sr];
     introBuffer = If[Length[introBuffer] > 0, NormalizeBuffer[introBuffer, 0.95], introBuffer];
     pauseBuffer = If[Length[introBuffer] > 0, ConstantArray[0.0, Round[sr * 0.4]], {}];
     finalLeft   = Join[introBuffer, pauseBuffer, gaussAudio["left"]];
@@ -220,7 +221,7 @@ Which[
     modelAudio = BuildModelAudio[modelSeq, 0.5, thetaAlt, frameDuration, freqMin, freqMax, sr];
     introText   = BuildModelIntroText[nFlips, thetaAlt, thetaTrue];
     Print["  Spoken intro: ", introText];
-    introBuffer = BuildIntroBuffer[introText, sr];
+    introBuffer = STEMSpeakToBuffer[introText, sr];
     introBuffer = If[Length[introBuffer] > 0, NormalizeBuffer[introBuffer, 0.95], introBuffer];
     pauseBuffer = If[Length[introBuffer] > 0, ConstantArray[0.0, Round[sr * 0.4]], {}];
     finalLeft   = Join[introBuffer, pauseBuffer, modelAudio["left"]];
@@ -246,7 +247,7 @@ Which[
 
   (* Unknown mode *)
   True,
-    Print["Error: unknown simulation.mode \"", mode, "\" — expected \"coin\", \"gaussian\", or \"model\"."];
+    Print["Error: unknown simulation.mode \"", mode, "\" \[LongDash] expected \"coin\", \"gaussian\", or \"model\"."];
     Exit[1]
 ];
 

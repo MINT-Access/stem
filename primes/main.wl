@@ -16,6 +16,7 @@
      gaps — Prime gap rhythm: percussive audio + animated gap chart
    ======================================================== *)
 
+$CharacterEncoding = "UTF8";   (* text I/O; keep literals ASCII, see AGENTS.md *)
 $projectRoot  = DirectoryName[$InputFileName];
 $stemCoreRoot = FileNameJoin[{$projectRoot, "..", "stem-core"}];
 Get[FileNameJoin[{$stemCoreRoot, "init.wl"}]];
@@ -174,7 +175,7 @@ Which[
   (* Unknown mode *)
   True,
     Print["Error: unknown simulation.mode \"", mode,
-          "\" — expected \"ulam\" or \"gaps\"."];
+          "\" \[LongDash] expected \"ulam\" or \"gaps\"."];
     Exit[1]
 ];
 

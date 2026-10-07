@@ -19,6 +19,7 @@
    Note: --key value (space) also accepted in addition to --key=value.
    ======================================================== *)
 
+$CharacterEncoding = "UTF8";   (* text I/O; keep literals ASCII, see AGENTS.md *)
 $projectRoot  = DirectoryName[$InputFileName];
 $stemCoreRoot = FileNameJoin[{$projectRoot, "..", "stem-core"}];
 Get[FileNameJoin[{$stemCoreRoot, "init.wl"}]];
@@ -145,7 +146,7 @@ Which[
     },
 
     STEMHeading["Signal Processing: Frequency Sweep (Fourier Analysis)"];
-    Print["  Sweep range:  ", f0, " — ", f1, " Hz"];
+    Print["  Sweep range:  ", f0, " to ", f1, " Hz"];
     Print["  Duration:     ", dur, " s"];
     Print["  Noise level:  ", noise];
     Print[""]];
@@ -280,7 +281,7 @@ Which[
   (* Unknown mode *)
   True,
     Print["Error: unknown simulation.mode \"", mode,
-          "\" — expected \"chord\", \"sweep\", or \"am\"."];
+          "\" \[LongDash] expected \"chord\", \"sweep\", or \"am\"."];
     Exit[1]
 ];
 

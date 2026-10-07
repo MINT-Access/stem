@@ -9,6 +9,7 @@
           Note: --key value (space) also accepted in addition to --key=value.
    ======================================================== *)
 
+$CharacterEncoding = "UTF8";   (* text I/O; keep literals ASCII, see AGENTS.md *)
 $projectRoot  = DirectoryName[$InputFileName];
 $stemCoreRoot = FileNameJoin[{$projectRoot, "..", "stem-core"}];
 Get[FileNameJoin[{$stemCoreRoot, "init.wl"}]];
@@ -98,7 +99,7 @@ Which[
     outWAV = FileNameJoin[{$projectRoot, "output", "bell_correlations.wav"}];
     {rawLeft, rawRight} = BuildCorrelationsAudio[corrModel, 220.0, 1400.0, duration, sr];
     introText   = BuildCorrelationsIntroText[];
-    introBuffer = BuildIntroBuffer[introText, sr];
+    introBuffer = STEMSpeakToBuffer[introText, sr];
     introBuffer = If[Length[introBuffer] > 0, NormalizeBuffer[introBuffer, 0.95], introBuffer];
     pauseBuffer = If[Length[introBuffer] > 0, ConstantArray[0.0, Round[sr * 0.4]], {}];
     finalLeft  = Join[introBuffer, pauseBuffer, rawLeft];
@@ -142,7 +143,7 @@ Which[
     outWAV = FileNameJoin[{$projectRoot, "output", "bell_chsh.wav"}];
     {rawLeft, rawRight} = BuildChshAudio[chshModel, 220.0, 1400.0, 2.5, sr];
     introText   = BuildChshIntroText[chshModel["S"]];
-    introBuffer = BuildIntroBuffer[introText, sr];
+    introBuffer = STEMSpeakToBuffer[introText, sr];
     introBuffer = If[Length[introBuffer] > 0, NormalizeBuffer[introBuffer, 0.95], introBuffer];
     pauseBuffer = If[Length[introBuffer] > 0, ConstantArray[0.0, Round[sr * 0.4]], {}];
     finalLeft  = Join[introBuffer, pauseBuffer, rawLeft];
@@ -189,7 +190,7 @@ Which[
     outWAV = FileNameJoin[{$projectRoot, "output", "bell_measurement.wav"}];
     {rawLeft, rawRight} = BuildMeasurementAudio[measModel, 220.0, 1400.0, duration, sr];
     introText   = BuildMeasurementIntroText[measModel["nTrials"], measModel["trueE"]];
-    introBuffer = BuildIntroBuffer[introText, sr];
+    introBuffer = STEMSpeakToBuffer[introText, sr];
     introBuffer = If[Length[introBuffer] > 0, NormalizeBuffer[introBuffer, 0.95], introBuffer];
     pauseBuffer = If[Length[introBuffer] > 0, ConstantArray[0.0, Round[sr * 0.4]], {}];
     finalLeft  = Join[introBuffer, pauseBuffer, rawLeft];
@@ -201,7 +202,7 @@ Which[
 
   (* ===== unknown mode ===== *)
   True,
-    Print["Error: unknown simulation.mode \"", mode, "\" — expected \"correlations\", \"chsh\", or \"measurement\"."];
+    Print["Error: unknown simulation.mode \"", mode, "\" \[LongDash] expected \"correlations\", \"chsh\", or \"measurement\"."];
     Exit[1]
 ];
 

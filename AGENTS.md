@@ -182,6 +182,8 @@ wolframscript -file scattering/tests/test_model.wl
 wolframscript -file resonance/tests/test_model.wl
 wolframscript -file fluid/tests/test_model.wl
 wolframscript -file stem-core/tests/test_gifsync.wl
+wolframscript -file stem-core/tests/test_loudness.wl
+wolframscript -file stem-core/tests/test_speech.wl
 ```
 
 `cellular`, `signal`, `quantum`, `primes`, and `relativity` do not have test files. All existing test files exit 0 on success, 1 on failure.
@@ -223,6 +225,8 @@ After `Get[".../stem-core/init.wl"]` all of the following are available:
 | `STEMTimingLine[<\|"intro", "introPause", "notes", "outroPause", "outro"\|>]` | accessibility | Print the WAV's structure (zero parts stated) |
 | `$STEMSpeakEnabled` | accessibility | Boolean flag; `True` when `STEM_SPEAK=1` env var is set at load time |
 | `STEMSay[text]` | accessibility | Print text + optionally speak via `say` |
+| `STEMSpeakToBuffer[text, sr]` | speech | Narration PCM: SpeechSynthesize[] -> platform tool (UTF-8 text file) -> `{}` with one warning sentence |
+| `STEMSpeechAvailable[]` | speech | `True` when a speech tier can produce audio (`False` under `STEM_SPEECH_OFF=1`) |
 
 See `stem-core/AGENTS.md` for full parameter descriptions and constraints.
 
@@ -274,6 +278,14 @@ All code must run correctly via `wolframscript -file` with no display server.
   `SyncWAVToGIF[gifPath, wavPath]` in `main.wl` once both files exist. GIF
   delays are whole centiseconds, so a count computed from a non-round fps
   drifts from the audio; the plan derives the count from the rounded delay.
+- **Text encoding**: `stem-core/init.wl` and every `main.wl` set
+  `$CharacterEncoding = "UTF8"`, and every `Export` of `"Text"`/`"CSV"` and
+  `Import` of JSON passes `CharacterEncoding -> "UTF8"`. That does not change
+  how `wolframscript -file` decodes the script itself (Latin-1), so string
+  literals in files run with `-file` (`main.wl`, `experiments.wl`, `demo*.wl`,
+  `tests/*.wl`) must be ASCII: write `\[EAcute]`, `\[LongDash]`, `\[Times]`,
+  `\:2609` and so on. Files loaded with `Get` (`src/`, stem-core) are read as
+  UTF-8 and may hold raw non-ASCII.
 - **Tests**: `Exit[1]` on any failure so CI tools detect broken runs.
 
 ---
@@ -386,21 +398,20 @@ the complete list of simplifications.
 
 ## Spoken audio generation
 
-`SpeechSynthesize[]` is the current standard for generating spoken-word audio
-segments embedded in a WAV file (e.g. `signal/`'s `{mode}_narrative_full.wav`,
-or the spoken intro prepended to `thermo/`, `montecarlo/`, `dynamical/`,
-`magnetic/`, and `images/`'s main audio output). The pattern is three-tier:
-`SpeechSynthesize[]` first, falling back to platform-native TTS (macOS `say`,
-Linux `espeak-ng`/`espeak`, Windows PowerShell `SpeechSynthesizer`) if that
-fails, falling back to silence (of the same nominal duration) if both fail —
-never a hard error, since a missing spoken segment shouldn't break the rest
-of the audio. Earlier apps called platform-native TTS directly with no
-`SpeechSynthesize[]` attempt; this inconsistency was fixed project-wide in
-the v1.3.0 speech-consolidation pass (Part A) — `signal/` was the last
-holdout. This is distinct from `STEMSay[text]` (stem-core), which is a
+Every narrated app (22 of them) gets its spoken audio from one stem-core
+helper, `STEMSpeakToBuffer[text, sampleRate]` (`stem-core/src/speech.wl`):
+`SpeechSynthesize[]` first on every platform, then the platform tool (macOS
+`say` + `afconvert`, Linux `espeak-ng`/`espeak`, Windows PowerShell
+`System.Speech`) given the text through a temporary UTF-8 file, then nothing:
+one warning sentence naming the app, the tiers tried and the seconds of
+narration lost, and `{}` returned so the app still writes its WAV without
+the segment (`signal/` substitutes 0.5 s of silence). Never a hard error.
+Apps keep only their narration text and how they place the buffer (pause,
+normalisation); they must not carry their own TTS code. `STEMSpeechAvailable[]`
+says whether a tier can speak; `STEM_SPEECH_OFF=1` skips every tier for
+testing. This is distinct from `STEMSay[text]` (stem-core), which is a
 *console-only* announcement (spoken via the OS's TTS command when
-`STEM_SPEAK=1`, otherwise just printed) — it never produces WAV file content
-and needs no `SpeechSynthesize[]` equivalent.
+`STEM_SPEAK=1`, otherwise just printed) — it never produces WAV file content.
 
 ## Sanity check pattern
 

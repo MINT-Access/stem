@@ -303,7 +303,7 @@ Every run prints checks 1-3; `sweep` mode additionally prints check 4:
    dropped from the WAV (this happened once during development: the
    intro text was computed and printed to the console but never
    actually synthesised into the exported audio, since `SonifyIsingRun`
-   originally exported the file itself before `BuildIntroBuffer` ever
+   originally exported the file itself before `STEMSpeakToBuffer` ever
    ran).
 
 ## Dependencies

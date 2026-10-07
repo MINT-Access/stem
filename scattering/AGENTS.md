@@ -84,14 +84,12 @@ construction stem-core's own `EventLayer` and `magnetic`'s
 none of which can express "660 Hz exactly when theta > 90 deg" for a
 per-particle event list.
 
-### 3. Spoken intro/outro: `SpeechSynthesize[]` -> platform TTS -> text fallback, duplicated per app
+### 3. Spoken intro/outro via stem-core `STEMSpeakToBuffer`
 
-`ResampleLinear`, `ScatteringSpeakToBufferPlatform`, `BuildIntroBuffer`,
-and `PrependIntroAndExport` in `src/sonify.wl` are the same three-tier
-pattern (and largely the same code) as `magnetic/src/sonify.wl`'s
-equivalents. Apps do not import each other's `src/` files (only
-stem-core is shared), so this is duplicated rather than factored out —
-consistent with the rest of the codebase. `discovery` mode additionally
+The speech itself comes from stem-core's `STEMSpeakToBuffer`
+(`SpeechSynthesize[]` -> platform TTS -> `{}` with a warning).
+`PrependIntroAndExport` in `src/sonify.wl` is the same pattern (and
+largely the same code) as `magnetic/src/sonify.wl`'s equivalent. `discovery` mode additionally
 appends a spoken *outro* after the main audio (the historical
 conclusion) — no other app in this codebase currently does this, so
 that half of `SonifyDiscovery` (building and joining `outroBuf`) is
@@ -165,7 +163,7 @@ before the spoken intro alone was done playing.
 **Root cause.** Same class of bug as `lorenz`/`magnetic`: frame count
 and frame rate were fixed constants, decoupled from anything about the
 actual run. Unlike `lorenz` (no spoken intro, WAV length ties directly
-to trajectory duration), this app's WAV is `BuildIntroBuffer`/outro
+to trajectory duration), this app's WAV is `STEMSpeakToBuffer`/outro
 speech + a silence gap + a "main content" stretch (see
 `PrependIntroAndExport` in `src/sonify.wl`) — and the spoken portion's
 real length depends on the platform TTS voice (macOS `say`, espeak-ng,
@@ -281,7 +279,7 @@ wolframscript -file experiments.wl
    beam size; `--simulation.scattering.n_particles` has no effect on
    it (only `distribution` mode reads that key).
 4. **Load order in `main.wl` matters**: `sonify.wl` defines
-   `ScatteringAccentBurst`/`BuildIntroBuffer`, used by nothing in
+   `ScatteringAccentBurst`/`STEMSpeakToBuffer`, used by nothing in
    `animate.wl`, so load order between those two is not load-bearing
    here (unlike `magnetic/`'s `SafeRescale` dependency) — but
    `model.wl` must still load before both.

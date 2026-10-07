@@ -53,6 +53,7 @@
      images_<mode>.png        -- the processed source image
    ======================================================== *)
 
+$CharacterEncoding = "UTF8";   (* text I/O; keep literals ASCII, see AGENTS.md *)
 $projectRoot  = DirectoryName[$InputFileName];
 $stemCoreRoot = FileNameJoin[{$projectRoot, "..", "stem-core"}];
 Get[FileNameJoin[{$stemCoreRoot, "init.wl"}]];
@@ -155,7 +156,7 @@ introText = BuildIntroText[mode, srcDesc,
   ImageDimensions[processedImg][[1]], ImageDimensions[processedImg][[2]],
   brightnessScale, sonificationDurSec, colourStats];
 Print["  Spoken intro: ", introText];
-introBuffer = BuildIntroBuffer[introText, sr];
+introBuffer = STEMSpeakToBuffer[introText, sr];
 introBuffer = If[Length[introBuffer] > 0, NormalizeBuffer[introBuffer, 0.95], introBuffer];
 pauseBuffer = If[Length[introBuffer] > 0, ConstantArray[0.0, Round[sr * 0.4]], {}];
 

@@ -45,6 +45,7 @@
      equipartition_audio.wav / equipartition.gif / equipartition_data.csv
    ======================================================== *)
 
+$CharacterEncoding = "UTF8";   (* text I/O; keep literals ASCII, see AGENTS.md *)
 $projectRoot  = DirectoryName[$InputFileName];
 $stemCoreRoot = FileNameJoin[{$projectRoot, "..", "stem-core"}];
 Get[FileNameJoin[{$stemCoreRoot, "init.wl"}]];
@@ -131,7 +132,7 @@ Which[
     STEMSay["Sonifying the Maxwell-Boltzmann distribution"];
     introText   = BuildDistributionIntroText[gasName, massAmu, TStart, TEnd];
     Print["  Spoken intro: ", introText];
-    introBuffer = BuildIntroBuffer[introText, sr];
+    introBuffer = STEMSpeakToBuffer[introText, sr];
     introBuffer = If[Length[introBuffer] > 0, NormalizeBuffer[introBuffer, 0.95], introBuffer];
     pauseBuffer = If[Length[introBuffer] > 0, ConstantArray[0.0, Round[sr * 0.4]], {}];
     finalLeft   = Join[introBuffer, pauseBuffer, distResult["left"]];
@@ -180,7 +181,7 @@ Which[
     STEMSay["Sonifying the particle ensemble"];
     introText   = BuildEnsembleIntroText[nParticles, gasName, TFixed];
     Print["  Spoken intro: ", introText];
-    introBuffer = BuildIntroBuffer[introText, sr];
+    introBuffer = STEMSpeakToBuffer[introText, sr];
     introBuffer = If[Length[introBuffer] > 0, NormalizeBuffer[introBuffer, 0.95], introBuffer];
     pauseBuffer = If[Length[introBuffer] > 0, ConstantArray[0.0, Round[sr * 0.4]], {}];
     ensResult   = BuildEnsembleAudio[ensembleModel, freqMin, freqMax, frameDur, sr];
@@ -230,7 +231,7 @@ Which[
     STEMSay["Sonifying thermal cooling"];
     introText   = BuildCoolingIntroText[gasName, THot, TCold];
     Print["  Spoken intro: ", introText];
-    introBuffer = BuildIntroBuffer[introText, sr];
+    introBuffer = STEMSpeakToBuffer[introText, sr];
     introBuffer = If[Length[introBuffer] > 0, NormalizeBuffer[introBuffer, 0.95], introBuffer];
     pauseBuffer = If[Length[introBuffer] > 0, ConstantArray[0.0, Round[sr * 0.4]], {}];
     finalLeft   = Join[introBuffer, pauseBuffer, coolResult["left"]];
@@ -290,7 +291,7 @@ Which[
     STEMSay["Sonifying the equipartition theorem"];
     introText   = BuildEquipartitionIntroText[moleculeType, TStart, TEnd];
     Print["  Spoken intro: ", introText];
-    introBuffer = BuildIntroBuffer[introText, sr];
+    introBuffer = STEMSpeakToBuffer[introText, sr];
     introBuffer = If[Length[introBuffer] > 0, NormalizeBuffer[introBuffer, 0.95], introBuffer];
     pauseBuffer = If[Length[introBuffer] > 0, ConstantArray[0.0, Round[sr * 0.4]], {}];
     finalLeft   = Join[introBuffer, pauseBuffer, eqResult["left"]];
@@ -316,7 +317,7 @@ Which[
   (* Unknown mode *)
   True,
     Print["Error: unknown simulation.mode \"", mode,
-          "\" — expected \"distribution\", \"ensemble\", \"cooling\", or \"equipartition\"."];
+          "\" \[LongDash] expected \"distribution\", \"ensemble\", \"cooling\", or \"equipartition\"."];
     Exit[1]
 ];
 

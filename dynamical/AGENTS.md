@@ -394,7 +394,7 @@ dynamical/
                             LyapunovTimeOfR, SonifyLyapunov,
                             DivergenceSeparationHz, DivergenceNoteMapping,
                             DivergenceNoteBuffer, SonifyDivergence ($divergenceSaturationMarker)
-    speech.wl                — ResampleLinear, DynamicalSpeakToBufferPlatform, BuildIntroBuffer,
+    speech.wl                — narration texts (audio via stem-core STEMSpeakToBuffer),
                             sentence cache (NarrationSentences, SpeakSentence, SpeakNarration),
                             NarrationConventionIssues, SpokenDec/SpokenFixed/SpokenList,
                             BuildSweepIntroText/OutroText, BuildIterateIntroText/OutroText,

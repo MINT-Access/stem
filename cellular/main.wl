@@ -10,6 +10,7 @@
      wolframscript -file main.wl -- --simulation.life.starting_pattern=gliderlgun
    ======================================================== *)
 
+$CharacterEncoding = "UTF8";   (* text I/O; keep literals ASCII, see AGENTS.md *)
 $projectRoot  = DirectoryName[$InputFileName];
 $stemCoreRoot = FileNameJoin[{$projectRoot, "..", "stem-core"}];
 Get[FileNameJoin[{$stemCoreRoot, "init.wl"}]];
@@ -147,7 +148,7 @@ Which[
   (* Unknown mode *)
   True,
     Print["Error: unknown simulation.mode \"", mode,
-          "\" — expected \"life\" or \"rule110\"."];
+          "\" \[LongDash] expected \"life\" or \"rule110\"."];
     Exit[1]
 ];
 

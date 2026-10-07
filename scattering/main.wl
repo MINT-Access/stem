@@ -29,6 +29,7 @@
      <mode>_audio.wav / <mode>.gif / <mode>_data.csv
    ======================================================== *)
 
+$CharacterEncoding = "UTF8";   (* text I/O; keep literals ASCII, see AGENTS.md *)
 $projectRoot  = DirectoryName[$InputFileName];
 $stemCoreRoot = FileNameJoin[{$projectRoot, "..", "stem-core"}];
 Get[FileNameJoin[{$stemCoreRoot, "init.wl"}]];
@@ -203,6 +204,6 @@ Which[
   (* Unknown mode *)
   True,
     Print["Error: unknown simulation.mode \"", mode,
-          "\" — expected \"scatter\", \"distribution\", or \"discovery\"."];
+          "\" \[LongDash] expected \"scatter\", \"distribution\", or \"discovery\"."];
     Exit[1]
 ]

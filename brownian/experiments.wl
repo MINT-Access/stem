@@ -59,7 +59,7 @@ RunExperiment[name_String, overrides_Association] :=
 
         {rawLeft, rawRight} = WalkStereoBuffer[walkTable, cfg];
         introText   = BuildWalkIntroText[Dcoeff, nSteps];
-        introBuffer = BuildIntroBuffer[introText, sr];
+        introBuffer = STEMSpeakToBuffer[introText, sr];
         introBuffer = If[Length[introBuffer] > 0, NormalizeBuffer[introBuffer, 0.95], introBuffer];
         pauseBuffer = If[Length[introBuffer] > 0, ConstantArray[0.0, Round[sr * 0.4]], {}];
         finalLeft   = Join[introBuffer, pauseBuffer, rawLeft];
@@ -81,7 +81,7 @@ RunExperiment[name_String, overrides_Association] :=
 
         {rawLeft, rawRight} = EnsembleGlissandoBuffer[ensembleModel, 220.0, 1600.0, duration, sr];
         introText   = BuildEnsembleIntroText[nWalkers];
-        introBuffer = BuildIntroBuffer[introText, sr];
+        introBuffer = STEMSpeakToBuffer[introText, sr];
         introBuffer = If[Length[introBuffer] > 0, NormalizeBuffer[introBuffer, 0.95], introBuffer];
         pauseBuffer = If[Length[introBuffer] > 0, ConstantArray[0.0, Round[sr * 0.4]], {}];
         finalLeft   = Join[introBuffer, pauseBuffer, rawLeft];
@@ -104,7 +104,7 @@ RunExperiment[name_String, overrides_Association] :=
 
         {rawLeft, rawRight} = BuildTemperatureAudio[tVals, dVals, nStepsPerFrame, dt, frameDuration, cfg];
         introText   = BuildTemperatureIntroText[tempMin, tempMax];
-        introBuffer = BuildIntroBuffer[introText, sr];
+        introBuffer = STEMSpeakToBuffer[introText, sr];
         introBuffer = If[Length[introBuffer] > 0, NormalizeBuffer[introBuffer, 0.95], introBuffer];
         pauseBuffer = If[Length[introBuffer] > 0, ConstantArray[0.0, Round[sr * 0.4]], {}];
         finalLeft   = Join[introBuffer, pauseBuffer, rawLeft];

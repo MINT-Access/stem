@@ -10,6 +10,7 @@
      wolframscript -file run.wl -- --simulation.double.angle1_deg=150
    ======================================================== *)
 
+$CharacterEncoding = "UTF8";   (* text I/O; keep literals ASCII, see AGENTS.md *)
 $projectRoot  = DirectoryName[$InputFileName];
 $stemCoreRoot = FileNameJoin[{$projectRoot, "..", "stem-core"}];
 Get[FileNameJoin[{$stemCoreRoot, "init.wl"}]];
@@ -183,7 +184,7 @@ Which[
   (* Unknown mode *)
   True,
     Print["Error: unknown simulation.mode \"", mode,
-          "\" — expected \"simple\" or \"double\"."];
+          "\" \[LongDash] expected \"simple\" or \"double\"."];
     Exit[1]
 ];
 

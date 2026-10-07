@@ -308,7 +308,7 @@ relationship to the WAV they ship alongside. Measured before the fix:
 `scatter.gif` played 2.80s against a 39.11s WAV (13.97x), `sweep.gif`
 3.20s against 22.09s (6.90x), `energy.gif` 3.20s against 30.03s
 (9.38x). The mismatch was worst on `main.wl`'s default invocations,
-which bake a spoken intro/outro into the WAV via `BuildIntroBuffer`
+which bake a spoken intro/outro into the WAV via `STEMSpeakToBuffer`
 (`speech.wl`) — the spoken text alone runs 15-35s, dwarfing the 1-3s of
 actual collision/sweep/energy audio underneath it. `experiments.wl`'s
 presets (no speech) were much closer, e.g. 0.91x-1.88x, because their
@@ -321,7 +321,7 @@ WAV turned out to be. Unlike `lorenz`, where WAV duration is a single
 known quantity (`solution[[-1,1]]`) available before rendering, here
 the true source of truth is the *fully assembled* WAV — intro speech +
 pause + main sonification + pause + outro speech — whose length isn't
-known until `BuildIntroBuffer` has actually run (`speech.wl`'s TTS
+known until `STEMSpeakToBuffer` has actually run (`speech.wl`'s TTS
 calls; duration isn't predictable from text length alone). `main.wl`
 was rendering the animation *before* synthesising audio, so the
 correct target duration didn't exist yet at the point the GIF was

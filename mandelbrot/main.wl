@@ -9,6 +9,7 @@
           Note: --key value (space) also accepted in addition to --key=value.
    ======================================================== *)
 
+$CharacterEncoding = "UTF8";   (* text I/O; keep literals ASCII, see AGENTS.md *)
 $projectRoot  = DirectoryName[$InputFileName];
 $stemCoreRoot = FileNameJoin[{$projectRoot, "..", "stem-core"}];
 Get[FileNameJoin[{$stemCoreRoot, "init.wl"}]];
@@ -109,7 +110,7 @@ Which[
     outWAV = FileNameJoin[{$projectRoot, "output", "mandelbrot_mandelbrot.wav"}];
     {rawBuffer, freqAssigned} = BuildMandelbrotAudio[mandelbrotModel, 200.0, 2200.0, 0.015, sr];
     introText   = BuildMandelbrotIntroText[mandelbrotModel["maxIter"]];
-    introBuffer = BuildIntroBuffer[introText, sr];
+    introBuffer = STEMSpeakToBuffer[introText, sr];
     introBuffer = If[Length[introBuffer] > 0, NormalizeBuffer[introBuffer, 0.95], introBuffer];
     pauseBuffer = If[Length[introBuffer] > 0, ConstantArray[0.0, Round[sr * 0.4]], {}];
     fadeSilence = ConstantArray[0.0, Round[sr * $overlayFadeSeconds]];
@@ -154,7 +155,7 @@ Which[
     outWAV = FileNameJoin[{$projectRoot, "output", "mandelbrot_julia.wav"}];
     {rawBuffer, freqAssigned} = BuildJuliaAudio[juliaModel, 200.0, 2200.0, 0.015, sr];
     introText   = BuildJuliaIntroText[juliaModel["cRe"], juliaModel["cIm"], juliaModel["cIsInterior"]];
-    introBuffer = BuildIntroBuffer[introText, sr];
+    introBuffer = STEMSpeakToBuffer[introText, sr];
     introBuffer = If[Length[introBuffer] > 0, NormalizeBuffer[introBuffer, 0.95], introBuffer];
     pauseBuffer = If[Length[introBuffer] > 0, ConstantArray[0.0, Round[sr * 0.4]], {}];
     fadeSilence = ConstantArray[0.0, Round[sr * $overlayFadeSeconds]];
@@ -199,7 +200,7 @@ Which[
     outWAV = FileNameJoin[{$projectRoot, "output", "mandelbrot_zoom.wav"}];
     {rawBuffer, freqAssigned} = BuildZoomAudio[zoomModel, 200.0, 2200.0, 0.006, sr];
     introText   = BuildZoomIntroText[zoomModel["nLevels"]];
-    introBuffer = BuildIntroBuffer[introText, sr];
+    introBuffer = STEMSpeakToBuffer[introText, sr];
     introBuffer = If[Length[introBuffer] > 0, NormalizeBuffer[introBuffer, 0.95], introBuffer];
     pauseBuffer = If[Length[introBuffer] > 0, ConstantArray[0.0, Round[sr * 0.4]], {}];
     finalBuffer = Join[introBuffer, pauseBuffer, rawBuffer];
@@ -221,7 +222,7 @@ Which[
 
   (* ===== unknown mode ===== *)
   True,
-    Print["Error: unknown simulation.mode \"", mode, "\" — expected \"mandelbrot\", \"julia\", or \"zoom\"."];
+    Print["Error: unknown simulation.mode \"", mode, "\" \[LongDash] expected \"mandelbrot\", \"julia\", or \"zoom\"."];
     Exit[1]
 ];
 

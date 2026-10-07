@@ -27,7 +27,7 @@ If[!DirectoryQ[$outDir], CreateDirectory[$outDir]];
 RunSignalExperiment[name_String, label_String, signalFn_, cfg_Association] :=
   Module[{signal, analysis},
     Print[""];
-    Print[">>> Experiment: ", name, "  — ", label];
+    Print[">>> Experiment: ", name, "  \[LongDash] ", label];
 
     signal   = signalFn[cfg];
     analysis = FourierAnalysis[signal, cfg];
@@ -57,7 +57,7 @@ RunSignalExperiment[name_String, label_String, signalFn_, cfg_Association] :=
    audio are nearly identical. Good baseline to hear what the chord
    sounds like before noise is added. *)
 Print[""];
-Print[">>> Experiment: chord_clean  — C major chord, low noise"];
+Print[">>> Experiment: chord_clean  \[LongDash] C major chord, low noise"];
 With[{
   cfg = <|
     "simulation" -> <| "mode" -> "chord",
@@ -85,7 +85,7 @@ With[{
    Fourier filtering still recovers the main tones but the SNR gain
    is more dramatic — listen to the noisy vs. recovered WAVs. *)
 Print[""];
-Print[">>> Experiment: noisy_chord  — C major chord, heavy noise (level 1.5)"];
+Print[">>> Experiment: noisy_chord  \[LongDash] C major chord, heavy noise (level 1.5)"];
 With[{
   cfg = <|
     "simulation" -> <| "mode" -> "chord",
@@ -113,7 +113,7 @@ With[{
    spanning the full frequency range. The recovered audio should sound
    identical to the clean chirp despite the added noise. *)
 Print[""];
-Print[">>> Experiment: frequency_sweep  — 100 to 4000 Hz, 4 s"];
+Print[">>> Experiment: frequency_sweep  \[LongDash] 100 to 4000 Hz, 4 s"];
 With[{
   cfg = <|
     "simulation" -> <| "mode" -> "sweep",
@@ -141,7 +141,7 @@ With[{
    (900 and 1100 Hz) are close to the carrier and easy to hear as a
    beating effect. *)
 Print[""];
-Print[">>> Experiment: am_radio  — 1000 Hz carrier, 100 Hz modulator"];
+Print[">>> Experiment: am_radio  \[LongDash] 1000 Hz carrier, 100 Hz modulator"];
 With[{
   cfg = <|
     "simulation" -> <| "mode" -> "am",
@@ -171,7 +171,7 @@ With[{
    the power spectrum. Demonstrates the robustness of frequency-domain
    filtering. *)
 Print[""];
-Print[">>> Experiment: heavy_noise  — C major chord, extreme noise (level 3.0)"];
+Print[">>> Experiment: heavy_noise  \[LongDash] C major chord, extreme noise (level 3.0)"];
 With[{
   cfg = <|
     "simulation" -> <| "mode" -> "chord",

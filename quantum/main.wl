@@ -16,6 +16,7 @@
      box — (phi_1 + phi_2)/sqrt(2) superposition in a particle-in-a-box
    ======================================================== *)
 
+$CharacterEncoding = "UTF8";   (* text I/O; keep literals ASCII, see AGENTS.md *)
 $projectRoot  = DirectoryName[$InputFileName];
 $stemCoreRoot = FileNameJoin[{$projectRoot, "..", "stem-core"}];
 Get[FileNameJoin[{$stemCoreRoot, "init.wl"}]];
@@ -77,7 +78,7 @@ Which[
     Print["  Grid points: ", Length[solution["x"]]];
     If[solution["norm_ok"],
       Print["  Normalisation: OK (all sampled norms within 1%)"],
-      Print["  Normalisation: WARNING — some norms outside 1%"]];
+      Print["  Normalisation: WARNING \[LongDash] some norms outside 1%"]];
     Print[""];
 
     Print["[2/4] Exporting time-series CSV..."];
@@ -129,7 +130,7 @@ Which[
     Print["  Grid points: ", Length[solution["x"]]];
     If[solution["norm_ok"],
       Print["  Normalisation: OK (all sampled norms within 1%)"],
-      Print["  Normalisation: WARNING — some norms outside 1%"]];
+      Print["  Normalisation: WARNING \[LongDash] some norms outside 1%"]];
     Print[""];
 
     Print["[2/4] Exporting time-series CSV..."];
@@ -159,7 +160,7 @@ Which[
   (* Unknown mode *)
   True,
     Print["Error: unknown simulation.mode \"", mode,
-          "\" — expected \"qho\" or \"box\"."];
+          "\" \[LongDash] expected \"qho\" or \"box\"."];
     Exit[1]
 ];
 

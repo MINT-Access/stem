@@ -38,6 +38,7 @@
      transitions_audio.wav / transitions.gif / transitions_data.csv
    ======================================================== *)
 
+$CharacterEncoding = "UTF8";   (* text I/O; keep literals ASCII, see AGENTS.md *)
 $projectRoot  = DirectoryName[$InputFileName];
 $stemCoreRoot = FileNameJoin[{$projectRoot, "..", "stem-core"}];
 Get[FileNameJoin[{$stemCoreRoot, "init.wl"}]];
@@ -127,7 +128,7 @@ Which[
     outWAV = FileNameJoin[{$outDir, "orbitals_audio.wav"}];
     introText   = BuildOrbitalsIntroText[orbitalKey, nOrb, lOrb, mOrb, gridSize];
     Print["  Spoken intro: ", introText];
-    introBuffer = BuildIntroBuffer[introText, sr];
+    introBuffer = STEMSpeakToBuffer[introText, sr];
     introBuffer = If[Length[introBuffer] > 0, NormalizeBuffer[introBuffer, 0.95], introBuffer];
     pauseBuffer = If[Length[introBuffer] > 0, ConstantArray[0.0, Round[sr * 0.4]], {}];
     finalBuffer = Join[introBuffer, pauseBuffer, sonifyResult["buffer"]];
@@ -189,8 +190,8 @@ Which[
     introText = BuildSpectrumIntroText[nMax, nLines];
     outroText = BuildSpectrumOutroText[];
     Print["  Spoken intro: ", introText];
-    introBuffer = BuildIntroBuffer[introText, sr];
-    outroBuffer = BuildIntroBuffer[outroText, sr];
+    introBuffer = STEMSpeakToBuffer[introText, sr];
+    outroBuffer = STEMSpeakToBuffer[outroText, sr];
     introBuffer = If[Length[introBuffer] > 0, NormalizeBuffer[introBuffer, 0.95], introBuffer];
     outroBuffer = If[Length[outroBuffer] > 0, NormalizeBuffer[outroBuffer, 0.95], outroBuffer];
     pauseShort = ConstantArray[0.0, Round[sr * 0.4]];
@@ -255,7 +256,7 @@ Which[
 
     introText   = BuildTransitionsIntroText[nReal, nStart, lStart];
     Print["  Spoken intro: ", introText];
-    introBuffer = BuildIntroBuffer[introText, sr];
+    introBuffer = STEMSpeakToBuffer[introText, sr];
     introBuffer = If[Length[introBuffer] > 0, NormalizeBuffer[introBuffer, 0.95], introBuffer];
     pauseBuffer = If[Length[introBuffer] > 0, ConstantArray[0.0, Round[sr * 0.4]], {}];
     finalLeft   = Join[introBuffer, pauseBuffer, sonifyResult["left"]];
@@ -286,7 +287,7 @@ Which[
   (* Unknown mode *)
   True,
     Print["Error: unknown simulation.mode \"", mode,
-          "\" — expected \"orbitals\", \"spectrum\", or \"transitions\"."];
+          "\" \[LongDash] expected \"orbitals\", \"spectrum\", or \"transitions\"."];
     Exit[1]
 ];
 

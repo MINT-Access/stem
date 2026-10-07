@@ -44,7 +44,7 @@ RunExperiment[name_String, overrides_Association] :=
 
         {rawLeft, rawRight} = BuildSpectrumAudio[spectrumModel, 60, duration, sr];
         introText   = BuildSpectrumIntroText[spectrumModel["T"]];
-        introBuffer = BuildIntroBuffer[introText, sr];
+        introBuffer = STEMSpeakToBuffer[introText, sr];
         introBuffer = If[Length[introBuffer] > 0, NormalizeBuffer[introBuffer, 0.95], introBuffer];
         pauseBuffer = If[Length[introBuffer] > 0, ConstantArray[0.0, Round[sr * 0.4]], {}];
         finalLeft   = Join[introBuffer, pauseBuffer, rawLeft];
@@ -63,7 +63,7 @@ RunExperiment[name_String, overrides_Association] :=
 
         {rawLeft, rawRight} = BuildTemperatureAudio[temperatureModel, duration, sr];
         introText   = BuildTemperatureIntroText[];
-        introBuffer = BuildIntroBuffer[introText, sr];
+        introBuffer = STEMSpeakToBuffer[introText, sr];
         introBuffer = If[Length[introBuffer] > 0, NormalizeBuffer[introBuffer, 0.95], introBuffer];
         pauseBuffer = If[Length[introBuffer] > 0, ConstantArray[0.0, Round[sr * 0.4]], {}];
         finalLeft   = Join[introBuffer, pauseBuffer, rawLeft];
@@ -82,7 +82,7 @@ RunExperiment[name_String, overrides_Association] :=
 
         {rawLeft, rawRight} = BuildFermiSeaAudio[fermiSeaModel, 220.0, 1400.0, 1.2, sr];
         introText   = BuildFermiSeaIntroText[];
-        introBuffer = BuildIntroBuffer[introText, sr];
+        introBuffer = STEMSpeakToBuffer[introText, sr];
         introBuffer = If[Length[introBuffer] > 0, NormalizeBuffer[introBuffer, 0.95], introBuffer];
         pauseBuffer = If[Length[introBuffer] > 0, ConstantArray[0.0, Round[sr * 0.4]], {}];
         finalLeft   = Join[introBuffer, pauseBuffer, rawLeft];

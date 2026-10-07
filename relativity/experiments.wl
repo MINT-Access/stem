@@ -27,7 +27,7 @@ If[!DirectoryQ[$outDir], CreateDirectory[$outDir]];
 RunChirpExperiment[label_String, cfg_Association] :=
   Module[{model},
     Print[""];
-    Print[">>> Experiment: chirp  — ", label];
+    Print[">>> Experiment: chirp  \[LongDash] ", label];
     model = ChirpModel[cfg];
     STEMPrintN["Chirp mass",      model["chirp_mass_solar"],  "M\[SmallCircle]", {5,3}];
     STEMPrintN["Coalescence time",model["coalescence_time"],  "s",              {6,4}];
@@ -43,7 +43,7 @@ RunChirpExperiment[label_String, cfg_Association] :=
 RunGeodesicExperiment[label_String, cfg_Association] :=
   Module[{model},
     Print[""];
-    Print[">>> Experiment: geodesic  — ", label];
+    Print[">>> Experiment: geodesic  \[LongDash] ", label];
     model = GeodesicModel[cfg];
     STEMPrintN["r_min",       model["r_min"] / 2.0,    "r_s", {6,3}];
     STEMPrintN["r_max",       model["r_max"] / 2.0,    "r_s", {6,2}];
@@ -62,7 +62,7 @@ RunGeodesicExperiment[label_String, cfg_Association] :=
 (* 36 + 29 solar masses at 410 Mpc. The classic "chirp" sound that
    proved gravitational waves exist. Coalescence time ~0.45 s;
    the frequency sweeps from 20 Hz to ~150 Hz at merger. *)
-RunChirpExperiment["GW150914 — 36+29 M\[SmallCircle], 410 Mpc (first detection)",
+RunChirpExperiment["GW150914 \[LongDash] 36+29 M\[SmallCircle], 410 Mpc (first detection)",
   <| "simulation" -> <| "mode" -> "chirp",
     "chirp" -> <|
       "mass1_solar"       -> 36.0,
@@ -84,7 +84,7 @@ RunChirpExperiment["GW150914 — 36+29 M\[SmallCircle], 410 Mpc (first detection
    the inspiral lasts many seconds and the frequency rises more slowly.
    The PN approximation is least accurate near merger for NS, but the
    inspiral phase is well-modelled. *)
-RunChirpExperiment["GW170817 — 1.4+1.4 M\[SmallCircle], 40 Mpc (neutron stars)",
+RunChirpExperiment["GW170817 \[LongDash] 1.4+1.4 M\[SmallCircle], 40 Mpc (neutron stars)",
   <| "simulation" -> <| "mode" -> "chirp",
     "chirp" -> <|
       "mass1_solar"       -> 1.4,
@@ -105,7 +105,7 @@ RunChirpExperiment["GW170817 — 1.4+1.4 M\[SmallCircle], 40 Mpc (neutron stars)
 (* 10 + 10 solar masses at 200 Mpc — a hypothetical stellar-mass merger.
    Intermediate chirp mass gives a coalescence time between GW150914 and GW170817.
    A good reference for comparing chirp rate vs. mass. *)
-RunChirpExperiment["Stellar merger — 10+10 M\[SmallCircle], 200 Mpc",
+RunChirpExperiment["Stellar merger \[LongDash] 10+10 M\[SmallCircle], 200 Mpc",
   <| "simulation" -> <| "mode" -> "chirp",
     "chirp" -> <|
       "mass1_solar"       -> 10.0,
@@ -127,7 +127,7 @@ RunChirpExperiment["Stellar merger — 10+10 M\[SmallCircle], 200 Mpc",
    GR periapsis precession produces a slowly rotating ellipse (rosette).
    Pitch oscillates fast at periapsis, slow at apoapsis — hear the
    Keplerian rhythm plus relativistic correction. *)
-RunGeodesicExperiment["Bound orbit — ellipse with GR precession",
+RunGeodesicExperiment["Bound orbit \[LongDash] ellipse with GR precession",
   <| "simulation" -> <| "mode" -> "geodesic",
     "geodesic" -> <|
       "mass_solar"   -> 10.0,
@@ -149,7 +149,7 @@ RunGeodesicExperiment["Bound orbit — ellipse with GR precession",
    potential barrier. The particle spirals inward monotonically and
    crosses the event horizon. Pitch rises continuously as the particle
    falls (gravitational blueshift); amplitude fades to silence at the horizon. *)
-RunGeodesicExperiment["Plunging orbit — inspiral to event horizon",
+RunGeodesicExperiment["Plunging orbit \[LongDash] inspiral to event horizon",
   <| "simulation" -> <| "mode" -> "geodesic",
     "geodesic" -> <|
       "mass_solar"   -> 10.0,

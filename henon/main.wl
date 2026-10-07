@@ -9,6 +9,7 @@
           Note: --key value (space) also accepted in addition to --key=value.
    ======================================================== *)
 
+$CharacterEncoding = "UTF8";   (* text I/O; keep literals ASCII, see AGENTS.md *)
 $projectRoot  = DirectoryName[$InputFileName];
 $stemCoreRoot = FileNameJoin[{$projectRoot, "..", "stem-core"}];
 Get[FileNameJoin[{$stemCoreRoot, "init.wl"}]];
@@ -42,7 +43,7 @@ cfg  = LoadConfig["henon", $cliArgs];
 mode = GetCfg[cfg, {"simulation", "mode"}, "attractor"];
 sr   = GetCfg[cfg, {"sonification", "sample_rate"}, 44100];
 
-STEMHeading["Hénon Map"];
+STEMHeading["H\[EAcute]non Map"];
 Print["  mode: ", mode];
 Print[""];
 
@@ -92,7 +93,7 @@ Which[
     attractorModel = HenonAttractorModel[x0, y0, a, b, nTransient, nPoints];
     If[!TrajectoryIsBounded[attractorModel["trajectory"]],
       Print["Error: trajectory diverged at a=", FmtN[a, 4], ", b=", FmtN[b, 4],
-            " — the Hénon map's bounded region depends on BOTH parameters together; ",
+            " \[LongDash] the H\[EAcute]non map's bounded region depends on BOTH parameters together; ",
             "try a smaller a for this b (canonical a=1.4 requires b near 0.3)."];
       Exit[1]
     ];
@@ -208,7 +209,7 @@ Which[
     reverseModel = HenonReverseModel[x0, y0, a, b, nTransient, nForward, reverseSteps];
     If[!TrajectoryIsBounded[reverseModel["forwardSeg"]],
       Print["Error: trajectory diverged at a=", FmtN[a, 4], ", b=", FmtN[b, 4],
-            " — the Hénon map's bounded region depends on BOTH parameters together; ",
+            " \[LongDash] the H\[EAcute]non map's bounded region depends on BOTH parameters together; ",
             "try a smaller a for this b (canonical a=1.4 requires b near 0.3)."];
       Exit[1]
     ];
@@ -240,7 +241,7 @@ Which[
 
   (* ===== unknown mode ===== *)
   True,
-    Print["Error: unknown simulation.mode \"", mode, "\" — expected \"attractor\", \"sweep\", or \"reverse\"."];
+    Print["Error: unknown simulation.mode \"", mode, "\" \[LongDash] expected \"attractor\", \"sweep\", or \"reverse\"."];
     Exit[1]
 ];
 

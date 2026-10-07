@@ -106,7 +106,7 @@ GetCfg[cfg_Association, keys_List, default_] :=
 LoadJsonConfig[path_String] :=
   Module[{raw},
     If[!FileExistsQ[path], Return[<||>]];
-    raw = Import[path, "JSON"];
+    raw = Import[path, "JSON", CharacterEncoding -> "UTF8"];
     If[raw === $Failed,
       Print["[WARNING] Could not parse JSON: ", path, " — skipping."];
       Return[<||>]
@@ -158,7 +158,7 @@ $numericPattern = ("-" | "") ~~ NumberString;
 
 ParseListLiteral[rawVal_String] :=
   If[StringStartsQ[rawVal, "["] && StringEndsQ[rawVal, "]"],
-    Module[{parsed = Quiet[ImportString[rawVal, "RawJSON"]]},
+    Module[{parsed = Quiet[ImportString[rawVal, "RawJSON", CharacterEncoding -> "UTF8"]]},
       If[ListQ[parsed], parsed, $Failed]
     ],
     $Failed

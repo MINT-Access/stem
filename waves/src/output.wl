@@ -11,7 +11,7 @@ ExportRippleData[model_Association, outCSV_String] :=
     csvData   = Table[
       Join[{tVals[[i]]}, Map[lpDisp[[#, i]] &, Range[nLP]]],
       {i, nT}];
-    Export[outCSV, Join[{csvHeader}, csvData], "CSV"];
+    Export[outCSV, Join[{csvHeader}, csvData], "CSV", CharacterEncoding -> "UTF8"];
     STEMDescribeCSV[outCSV, nT, nLP + 1]
   ];
 
@@ -28,6 +28,6 @@ ExportInterferenceData[model_Association, outCSV_String] :=
       {i, nT}];
     Export[outCSV,
       Join[{{"t_s", "lp_x_units", "displacement_units", "disp_fixed_units"}}, csvData],
-      "CSV"];
+      "CSV", CharacterEncoding -> "UTF8"];
     STEMDescribeCSV[outCSV, nT, 4]
   ];

@@ -33,6 +33,7 @@
      discovery_audio.wav / discovery.png / discovery_data.csv
    ======================================================== *)
 
+$CharacterEncoding = "UTF8";   (* text I/O; keep literals ASCII, see AGENTS.md *)
 $projectRoot  = DirectoryName[$InputFileName];
 $stemCoreRoot = FileNameJoin[{$projectRoot, "..", "stem-core"}];
 Get[FileNameJoin[{$stemCoreRoot, "init.wl"}]];
@@ -104,8 +105,8 @@ Which[
     outroText = BuildScatterOutroText[model];
     Print["  Spoken intro: ", introText];
     {mainL, mainR} = BuildScatterAudio[model, audioFreqMin, audioFreqMax, EMinKevGlobal, EMaxKevGlobal, sr];
-    introBuffer = BuildIntroBuffer[introText, sr];
-    outroBuffer = BuildIntroBuffer[outroText, sr];
+    introBuffer = STEMSpeakToBuffer[introText, sr];
+    outroBuffer = STEMSpeakToBuffer[outroText, sr];
     introBuffer = If[Length[introBuffer] > 0, NormalizeBuffer[introBuffer, 0.95], introBuffer];
     outroBuffer = If[Length[outroBuffer] > 0, NormalizeBuffer[outroBuffer, 0.95], outroBuffer];
     pauseBuf = ConstantArray[0.0, Round[sr * 0.4]];
@@ -153,7 +154,7 @@ Which[
     Print["  Spoken intro: ", introText];
     {mainL, mainR} = BuildSweepAudio[model, audioFreqMin, audioFreqMax, EMinKevGlobal, EMaxKevGlobal,
                                      sweepDuration, sr];
-    introBuffer = BuildIntroBuffer[introText, sr];
+    introBuffer = STEMSpeakToBuffer[introText, sr];
     introBuffer = If[Length[introBuffer] > 0, NormalizeBuffer[introBuffer, 0.95], introBuffer];
     pauseBuf = If[Length[introBuffer] > 0, ConstantArray[0.0, Round[sr * 0.4]], {}];
     finalLeft  = Join[introBuffer, pauseBuf, mainL];
@@ -197,7 +198,7 @@ Which[
     introText = BuildEnergyIntroText[model];
     Print["  Spoken intro: ", introText];
     {mainL, mainR} = BuildEnergyAudio[model, audioFreqMin, audioFreqMax, frameDur, sr];
-    introBuffer = BuildIntroBuffer[introText, sr];
+    introBuffer = STEMSpeakToBuffer[introText, sr];
     introBuffer = If[Length[introBuffer] > 0, NormalizeBuffer[introBuffer, 0.95], introBuffer];
     pauseBuf = If[Length[introBuffer] > 0, ConstantArray[0.0, Round[sr * 0.4]], {}];
     finalLeft  = Join[introBuffer, pauseBuf, mainL];
@@ -247,8 +248,8 @@ Which[
     Print["  Spoken intro: ", introText];
     {mainL, mainR} = BuildDiscoveryAudio[model, audioFreqMin, audioFreqMax, EMinKevGlobal, EMaxKevGlobal,
                                          discoveryDuration, sr];
-    introBuffer = BuildIntroBuffer[introText, sr];
-    outroBuffer = BuildIntroBuffer[outroText, sr];
+    introBuffer = STEMSpeakToBuffer[introText, sr];
+    outroBuffer = STEMSpeakToBuffer[outroText, sr];
     introBuffer = If[Length[introBuffer] > 0, NormalizeBuffer[introBuffer, 0.95], introBuffer];
     outroBuffer = If[Length[outroBuffer] > 0, NormalizeBuffer[outroBuffer, 0.95], outroBuffer];
     pauseBuf = ConstantArray[0.0, Round[sr * 0.4]];
@@ -269,7 +270,7 @@ Which[
   (* Unknown mode *)
   True,
     Print["Error: unknown simulation.mode \"", mode,
-          "\" — expected \"scatter\", \"sweep\", \"energy\", or \"discovery\"."];
+          "\" \[LongDash] expected \"scatter\", \"sweep\", \"energy\", or \"discovery\"."];
     Exit[1]
 ];
 

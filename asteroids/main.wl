@@ -10,6 +10,7 @@
    Note: --key value (space) also accepted in addition to --key=value.
    ======================================================== *)
 
+$CharacterEncoding = "UTF8";   (* text I/O; keep literals ASCII, see AGENTS.md *)
 $projectRoot  = DirectoryName[$InputFileName];
 $stemCoreRoot = FileNameJoin[{$projectRoot, "..", "stem-core"}];
 Get[FileNameJoin[{$stemCoreRoot, "init.wl"}]];
@@ -97,7 +98,7 @@ STEMSay["Fetching asteroid data from NASA"];
 asteroids = FetchAsteroidsMulti[startDate, endDate];
 
 If[asteroids === $Failed,
-  Print["Aborting — could not fetch data."];
+  Print["Aborting \[LongDash] could not fetch data."];
   Exit[1]
 ];
 Print["  Retrieved ", Length[asteroids], " asteroids."];

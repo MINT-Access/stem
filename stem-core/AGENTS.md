@@ -19,15 +19,16 @@ Get[FileNameJoin[{$stemCoreRoot, "init.wl"}]];
 ```
 
 `init.wl` resolves its own location from `$InputFileName`, sets `$stemCoreRoot`,
-and loads the eight modules in dependency order:
+sets `$CharacterEncoding = "UTF8"`, and loads the nine modules in dependency order:
 
 ```
 utils.wl  →  scales.wl  →  synth.wl  →  export.wl  →  accessibility.wl
-  →  hilbert.wl  →  config.wl  →  sonification.wl
+  →  speech.wl  →  hilbert.wl  →  config.wl  →  sonification.wl
 ```
 
 `synth.wl` and `export.wl` both call `EnsureDir` from `utils.wl`;
-`accessibility.wl` calls `FmtN`/`FmtDec` from `utils.wl`. `config.wl` calls `DeepMerge`
+`accessibility.wl` calls `FmtN`/`FmtDec` from `utils.wl`; `speech.wl` calls `STEMSay`
+from `accessibility.wl` and `FmtDec`. `config.wl` calls `DeepMerge`
 internally. Nothing requires a later module, so the order is fixed and must not
 be changed.
 
@@ -207,6 +208,52 @@ shell hand-off.
 ```sh
 STEM_SPEAK=1 wolframscript -file main.wl   # printed + spoken
 ```
+
+---
+
+### speech.wl — Narration rendered into audio
+
+The one tiered text-to-speech path for every narrated app (it replaced 22
+per-app copies). Apps never shell out to `say`/`espeak-ng`/PowerShell
+themselves.
+
+#### `STEMSpeakToBuffer[text_String, sampleRate_Integer]`
+Returns mono PCM samples (a list of reals, not normalised) of `text` spoken at
+`sampleRate`, or `{}` when no tier produced audio. Tiers:
+
+1. `SpeechSynthesize[text]` (all platforms).
+2. The platform tool, given the text through a temporary UTF-8 file (never a
+   command-line argument, so non-ASCII text survives every console code page):
+   macOS `say -f <txt> -o <aiff>` then `afconvert -d LEI16 -f WAVE`; Linux
+   `espeak-ng -b 1 -f <txt> -w <wav>`, then `espeak` with the same flags;
+   Windows `powershell` with `System.Speech`, the text read by
+   `Get-Content -Raw -Encoding UTF8`.
+3. Nothing: prints one warning sentence naming the app (`$projectRoot`'s
+   directory), the tiers tried and why each failed, and the narration lost
+   (words, and seconds at 175 words per minute); then `STEMSay[text]`; returns
+   `{}`. Callers must build their WAV without the segment (most skip the
+   intro and its pause; `signal` substitutes 0.5 s of silence).
+
+The platform tier draws exactly one `RandomInteger[999999]` (temporary file
+names), as the per-app copies did, so seeded runs keep their random streams.
+Callers normalise the buffer (usually `NormalizeBuffer[buf, 0.95]`).
+
+#### `STEMSpeechAvailable[]`
+`True` when a tier can speak: the platform tool is on `PATH` (macOS also needs
+`afconvert`), or else a cached one-word `SpeechSynthesize[]` probe returns audio.
+`False` when `STEM_SPEECH_OFF=1`. Starts no process and draws no random numbers
+when the tool is found.
+
+#### `STEMResampleLinear[data_List, rawSr_, targetSr_]`
+Linear-interpolation resampler, any ratio; returns `data` unchanged when the
+rates differ by less than 1 Hz.
+
+#### Test hooks
+`$STEMSpeechUseSynthesize = False` skips tier 1; `$STEMSpeechTools` maps each
+tool name (`"say"`, `"afconvert"`, `"espeak-ng"`, `"espeak"`, `"powershell"`)
+to its executable, so pointing one at a missing path forces it unavailable
+(`Block` both). `STEM_SPEECH_OFF=1` in the environment skips every tier, for an
+end-to-end run of the no-speech path. See `tests/test_speech.wl`.
 
 ---
 
@@ -635,6 +682,7 @@ init.wl
  ├── synth.wl          ← utils.wl  (EnsureDir)
  ├── export.wl         ← utils.wl  (EnsureDir)
  ├── accessibility.wl  ← utils.wl  (FmtN)
+ ├── speech.wl         ← accessibility.wl (STEMSay), utils.wl (FmtDec)
  ├── config.wl         ← (self-contained; calls DeepMerge internally)
  └── sonification.wl   ← scales.wl (ScaleLookup), synth.wl (ExportAudioBuffer)
 ```

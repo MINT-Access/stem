@@ -59,7 +59,7 @@ RunExperiment[name_String, overrides_Association] :=
 
         {rawLeft, rawRight} = GatesStereoBuffer[gatesResult, cfg];
         introText   = BuildGatesIntroText[gateSequence];
-        introBuffer = BuildIntroBuffer[introText, sr];
+        introBuffer = STEMSpeakToBuffer[introText, sr];
         introBuffer = If[Length[introBuffer] > 0, NormalizeBuffer[introBuffer, 0.95], introBuffer];
         pauseBuffer = If[Length[introBuffer] > 0, ConstantArray[0.0, Round[sr * 0.4]], {}];
         finalLeft   = Join[introBuffer, pauseBuffer, rawLeft];
@@ -83,7 +83,7 @@ RunExperiment[name_String, overrides_Association] :=
 
         {rawLeft, rawRight} = RabiStereoBuffer[Omega, tMax, 220.0, 1400.0, duration, sr];
         introText   = BuildRabiIntroText[Omega];
-        introBuffer = BuildIntroBuffer[introText, sr];
+        introBuffer = STEMSpeakToBuffer[introText, sr];
         introBuffer = If[Length[introBuffer] > 0, NormalizeBuffer[introBuffer, 0.95], introBuffer];
         pauseBuffer = If[Length[introBuffer] > 0, ConstantArray[0.0, Round[sr * 0.4]], {}];
         finalLeft   = Join[introBuffer, pauseBuffer, rawLeft];
@@ -105,7 +105,7 @@ RunExperiment[name_String, overrides_Association] :=
 
         {rawLeft, rawRight} = MeasurementStereoBuffer[trialsResult, 220.0, 1400.0, duration, sr];
         introText   = BuildMeasurementIntroText[nTrials, trialsResult["trueP0"]];
-        introBuffer = BuildIntroBuffer[introText, sr];
+        introBuffer = STEMSpeakToBuffer[introText, sr];
         introBuffer = If[Length[introBuffer] > 0, NormalizeBuffer[introBuffer, 0.95], introBuffer];
         pauseBuffer = If[Length[introBuffer] > 0, ConstantArray[0.0, Round[sr * 0.4]], {}];
         finalLeft   = Join[introBuffer, pauseBuffer, rawLeft];

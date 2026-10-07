@@ -40,6 +40,7 @@
      star_audio.wav / star.gif / star.png / star_data.csv
    ======================================================== *)
 
+$CharacterEncoding = "UTF8";   (* text I/O; keep literals ASCII, see AGENTS.md *)
 $projectRoot  = DirectoryName[$InputFileName];
 $stemCoreRoot = FileNameJoin[{$projectRoot, "..", "stem-core"}];
 Get[FileNameJoin[{$stemCoreRoot, "init.wl"}]];
@@ -119,8 +120,8 @@ Which[
     introText   = BuildSpectrumIntroText[T, nBins];
     outroText   = BuildSpectrumOutroText[];
     Print["  Spoken intro: ", introText];
-    introBuffer = BuildIntroBuffer[introText, sr];
-    outroBuffer = BuildIntroBuffer[outroText, sr];
+    introBuffer = STEMSpeakToBuffer[introText, sr];
+    outroBuffer = STEMSpeakToBuffer[outroText, sr];
     introBuffer = If[Length[introBuffer] > 0, NormalizeBuffer[introBuffer, 0.95], introBuffer];
     outroBuffer = If[Length[outroBuffer] > 0, NormalizeBuffer[outroBuffer, 0.95], outroBuffer];
     pauseShort  = ConstantArray[0.0, Round[sr * 0.4]];
@@ -183,7 +184,7 @@ Which[
     STEMSay["Sonifying the temperature sweep"];
     introText   = BuildTemperatureIntroText[Tmin, Tmax];
     Print["  Spoken intro: ", introText];
-    introBuffer = BuildIntroBuffer[introText, sr];
+    introBuffer = STEMSpeakToBuffer[introText, sr];
     introBuffer = If[Length[introBuffer] > 0, NormalizeBuffer[introBuffer, 0.95], introBuffer];
     pauseBuffer = If[Length[introBuffer] > 0, ConstantArray[0.0, Round[sr * 0.4]], {}];
     finalLeft   = Join[introBuffer, pauseBuffer, tempResult["left"]];
@@ -242,14 +243,14 @@ Which[
       STEMSay["Sonifying the star tour"];
       overviewText = BuildStarTourIntroText[];
       Print["  Spoken overview: ", overviewText];
-      overviewBuffer = BuildIntroBuffer[overviewText, sr];
+      overviewBuffer = STEMSpeakToBuffer[overviewText, sr];
       overviewBuffer = If[Length[overviewBuffer] > 0, NormalizeBuffer[overviewBuffer, 0.95], overviewBuffer];
       pauseBuffer    = ConstantArray[0.0, Round[sr * 0.35]];
       segmentBuffers = MapThread[
         Function[{key, seg},
           Module[{nameText, nameBuffer},
             nameText   = BuildStarIntroText[StarDisplayName[key], seg["T"]];
-            nameBuffer = BuildIntroBuffer[nameText, sr];
+            nameBuffer = STEMSpeakToBuffer[nameText, sr];
             nameBuffer = If[Length[nameBuffer] > 0, NormalizeBuffer[nameBuffer, 0.95], nameBuffer];
             <| "left" -> Join[nameBuffer, pauseBuffer, seg["left"]],
                "right" -> Join[nameBuffer, pauseBuffer, seg["right"]] |>
@@ -304,7 +305,7 @@ Which[
       STEMSay["Sonifying " <> StarDisplayName[preset]];
       introText   = BuildStarIntroText[StarDisplayName[preset], T];
       Print["  Spoken intro: ", introText];
-      introBuffer = BuildIntroBuffer[introText, sr];
+      introBuffer = STEMSpeakToBuffer[introText, sr];
       introBuffer = If[Length[introBuffer] > 0, NormalizeBuffer[introBuffer, 0.95], introBuffer];
       pauseBuffer = If[Length[introBuffer] > 0, ConstantArray[0.0, Round[sr * 0.4]], {}];
       finalLeft   = Join[introBuffer, pauseBuffer, spectrumResult["chordL"], pauseBuffer, spectrumResult["sweepL"]];
@@ -334,7 +335,7 @@ Which[
   (* Unknown mode *)
   True,
     Print["Error: unknown simulation.mode \"", mode,
-          "\" — expected \"spectrum\", \"temperature\", or \"star\"."];
+          "\" \[LongDash] expected \"spectrum\", \"temperature\", or \"star\"."];
     Exit[1]
 ];
 

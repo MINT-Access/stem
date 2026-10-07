@@ -211,7 +211,7 @@ config.json + CLI args
      BuildCoinAudio           BuildGaussianAudio          BuildModelAudio
         |                        |                          |
    BuildCoinIntroText/       BuildGaussianIntroText/    BuildModelIntroText/
-   BuildIntroBuffer          BuildIntroBuffer            BuildIntroBuffer
+   STEMSpeakToBuffer         STEMSpeakToBuffer          STEMSpeakToBuffer
         |                        |                          |
    Join[intro, pause, channel] per channel, single final WAV export (main.wl)
         |                        |                          |

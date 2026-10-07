@@ -9,6 +9,7 @@
           Note: --key value (space) also accepted in addition to --key=value.
    ======================================================== *)
 
+$CharacterEncoding = "UTF8";   (* text I/O; keep literals ASCII, see AGENTS.md *)
 $projectRoot  = DirectoryName[$InputFileName];
 $stemCoreRoot = FileNameJoin[{$projectRoot, "..", "stem-core"}];
 Get[FileNameJoin[{$stemCoreRoot, "init.wl"}]];
@@ -113,7 +114,7 @@ Which[
     outWAV = FileNameJoin[{$projectRoot, "output", "brownian_walk.wav"}];
     {rawLeft, rawRight} = WalkStereoBuffer[walkTable, cfg];
     introText   = BuildWalkIntroText[Dcoeff, nSteps];
-    introBuffer = BuildIntroBuffer[introText, sr];
+    introBuffer = STEMSpeakToBuffer[introText, sr];
     introBuffer = If[Length[introBuffer] > 0, NormalizeBuffer[introBuffer, 0.95], introBuffer];
     pauseBuffer = If[Length[introBuffer] > 0, ConstantArray[0.0, Round[sr * 0.4]], {}];
     finalLeft  = Join[introBuffer, pauseBuffer, rawLeft];
@@ -174,7 +175,7 @@ Which[
     outWAV = FileNameJoin[{$projectRoot, "output", "brownian_ensemble.wav"}];
     {rawLeft, rawRight} = EnsembleGlissandoBuffer[ensembleModel, 220.0, 1600.0, duration, sr];
     introText   = BuildEnsembleIntroText[nWalkers];
-    introBuffer = BuildIntroBuffer[introText, sr];
+    introBuffer = STEMSpeakToBuffer[introText, sr];
     introBuffer = If[Length[introBuffer] > 0, NormalizeBuffer[introBuffer, 0.95], introBuffer];
     pauseBuffer = If[Length[introBuffer] > 0, ConstantArray[0.0, Round[sr * 0.4]], {}];
     finalLeft  = Join[introBuffer, pauseBuffer, rawLeft];
@@ -227,7 +228,7 @@ Which[
     outWAV = FileNameJoin[{$projectRoot, "output", "brownian_temperature.wav"}];
     {rawLeft, rawRight} = BuildTemperatureAudio[tVals, dVals, nStepsPerFrame, dt, frameDuration, cfg];
     introText   = BuildTemperatureIntroText[tempMin, tempMax];
-    introBuffer = BuildIntroBuffer[introText, sr];
+    introBuffer = STEMSpeakToBuffer[introText, sr];
     introBuffer = If[Length[introBuffer] > 0, NormalizeBuffer[introBuffer, 0.95], introBuffer];
     pauseBuffer = If[Length[introBuffer] > 0, ConstantArray[0.0, Round[sr * 0.4]], {}];
     finalLeft  = Join[introBuffer, pauseBuffer, rawLeft];
@@ -239,7 +240,7 @@ Which[
 
   (* ===== unknown mode ===== *)
   True,
-    Print["Error: unknown simulation.mode \"", mode, "\" — expected \"walk\", \"ensemble\", or \"temperature\"."];
+    Print["Error: unknown simulation.mode \"", mode, "\" \[LongDash] expected \"walk\", \"ensemble\", or \"temperature\"."];
     Exit[1]
 ];
 

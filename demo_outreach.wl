@@ -767,7 +767,7 @@ closingHtml <>
 "</body>\n" <>
 "</html>\n";
 
-    Export[outPath, html, "Text"];
+    Export[outPath, html, "Text", CharacterEncoding -> "UTF8"];
 
     Print[""];
     STEMHeading["Summary"];

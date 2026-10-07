@@ -16,7 +16,7 @@
 
 ExportCSV[rows_List, filePath_String] :=
   (EnsureDir[filePath];
-   Export[filePath, rows, "CSV"];
+   Export[filePath, rows, "CSV", CharacterEncoding -> "UTF8"];
    filePath)
 
 

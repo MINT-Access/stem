@@ -82,32 +82,75 @@ wolframscript -version
 | Linux (alt) | `paplay` | `sudo apt install pulseaudio-utils` |
 | Windows | Windows Media Player | Built into Windows 10/11 — no install needed |
 
-### Platform-specific text-to-speech (optional — `STEM_SPEAK=1` only)
+### Text-to-speech (required for narration)
+
+Twenty-two apps speak an intro (and often an outro) into their WAV files;
+`signal` builds a fully narrated WAV. That narration is synthesised in three
+tiers, the same on every platform (stem-core `STEMSpeakToBuffer`):
+
+1. `SpeechSynthesize[]`, Wolfram's built-in speech, is tried first on all
+   platforms. On many Wolfram Engine installs it is not available, so in
+   practice the platform tool below is what produces the narration.
+2. The platform text-to-speech tool, which is therefore **required** for
+   narration:
 
 | Platform | Tool | Install |
 |---|---|---|
-| macOS | `say` | Built into macOS |
-| Linux | `espeak-ng` | `sudo apt install espeak-ng` · `sudo dnf install espeak-ng` |
-| Windows | System.Speech | Built into Windows 10/11 (PowerShell 5.1+) |
+| macOS | `say` (with `afconvert`) | Built into macOS |
+| Linux | `espeak-ng` (`espeak` is tried if it is missing) | `sudo apt install espeak-ng` · `sudo dnf install espeak-ng` |
+| Windows | PowerShell with System.Speech | Built into Windows 10/11 (Windows PowerShell 5.1) |
 
-TTS is disabled by default. If the tool is missing the app prints a warning and continues.
+3. If neither produces audio, the app prints one warning naming the app, the
+   tiers tried and how many seconds of narration are missing, prints the
+   text, and still writes a valid WAV without the speech (`signal` puts
+   0.5 s of silence in each missing segment).
 
-### NASA API key (asteroids app only — optional)
+The text reaches the platform tool through a temporary UTF-8 text file, so
+names such as "Hénon" are spoken correctly on every platform.
 
-Register for a free key at https://api.nasa.gov/. The built-in `DEMO_KEY` works
-at 30 requests/hour; a personal key removes that limit.
+This is separate from `STEM_SPEAK=1`, which only makes the console
+announcements speak aloud as they are printed (see Accessibility below); the
+narration inside the WAV files does not depend on it.
 
-Set the key as an environment variable before running:
+### Environment variables
+
+| Variable | Effect |
+|---|---|
+| `STEM_SPEAK=1` | Also speak the console announcements aloud (uses the same platform tool) |
+| `NASA_API_KEY` | Personal NASA key for the `asteroids` app (optional; `DEMO_KEY` otherwise) |
+| `STEM_SPEECH_OFF=1` | Skip all narration synthesis (testing the no-speech path) |
+
+Register for a free NASA key at https://api.nasa.gov/. The built-in
+`DEMO_KEY` works at 30 requests/hour; a personal key removes that limit.
 
 ```sh
-# macOS / Linux — add to ~/.zshrc or ~/.bashrc to persist
+# macOS / Linux (bash or zsh) — for one command
+STEM_SPEAK=1 wolframscript -file pendulum/main.wl
+NASA_API_KEY=your_key_here wolframscript -file asteroids/main.wl
+
+# macOS / Linux — for the session (add to ~/.zshrc or ~/.bashrc to persist)
+export STEM_SPEAK=1
 export NASA_API_KEY=your_key_here
+```
 
-# Windows PowerShell — set for the current session
+```powershell
+# Windows PowerShell — for the current session
+$env:STEM_SPEAK = "1"
 $env:NASA_API_KEY = "your_key_here"
+wolframscript -file asteroids/main.wl
 
-# Windows — set permanently via System Properties → Environment Variables
-# Variable name: NASA_API_KEY   Value: your_key_here
+# Windows PowerShell — persist for your user account (new windows only)
+[Environment]::SetEnvironmentVariable("NASA_API_KEY", "your_key_here", "User")
+```
+
+```bat
+:: Windows Command Prompt (cmd) — for the current session
+set STEM_SPEAK=1
+set NASA_API_KEY=your_key_here
+wolframscript -file asteroids/main.wl
+
+:: Windows Command Prompt — persist for your user account (new windows only)
+setx NASA_API_KEY your_key_here
 ```
 
 ---
@@ -398,6 +441,10 @@ STEM_SPEAK=1 wolframscript -file demo.wl
 
 # Windows PowerShell
 $env:STEM_SPEAK = "1"; wolframscript -file demo.wl
+
+:: Windows Command Prompt (cmd)
+set STEM_SPEAK=1
+wolframscript -file demo.wl
 ```
 
 With NASA asteroid data (requires API key):
@@ -407,6 +454,10 @@ NASA_API_KEY=$NASA_API_KEY wolframscript -file demo.wl
 
 # Windows PowerShell
 $env:NASA_API_KEY = "your_key_here"; wolframscript -file demo.wl
+
+:: Windows Command Prompt (cmd)
+set NASA_API_KEY=your_key_here
+wolframscript -file demo.wl
 ```
 
 Check whether a previous demo run completed successfully:
@@ -1088,11 +1139,17 @@ STEM_SPEAK=1 wolframscript -file signal/main.wl
 
 # Windows PowerShell
 $env:STEM_SPEAK = "1"; wolframscript -file pendulum/main.wl
+
+:: Windows Command Prompt (cmd)
+set STEM_SPEAK=1
+wolframscript -file pendulum/main.wl
 ```
 
 Platform TTS: macOS uses `say`, Linux uses `espeak-ng` (install with
-`sudo apt install espeak-ng`), Windows uses the built-in System.Speech.
-If TTS is unavailable the app prints a warning and continues silently.
+`sudo apt install espeak-ng`), Windows uses PowerShell with the built-in
+System.Speech. If the tool is unavailable the console announcement is only
+printed. The narration inside the WAV files needs
+the same tool (see Text-to-speech under Installation).
 
 The `signal` app's `{mode}_narrative_full.wav` is the most accessible single
 output — it chains spoken text with the clean, noisy, and recovered signals so

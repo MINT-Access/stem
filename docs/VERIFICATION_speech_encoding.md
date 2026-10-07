@@ -1,0 +1,797 @@
+# Speech helper and text encoding: verification (measured 2026-10-07)
+
+## Context
+- Acts on docs/PORTABILITY_AUDIT.md D3, D4, D6, D7 and D12. Repo HEAD 126bd6a (main); every change is uncommitted, as asked.
+- Machine: macOS (Darwin 25.6.0, Apple silicon), wolframscript, macOS say + afconvert. SpeechSynthesize[] fails on this machine (SpeechSynthesize::interr), so every narration here comes from tier 2 (say).
+- "Before" = a copy of HEAD taken before any edit (rsync of the tree without .git, output/ and demo/ to the scratchpad); "after" = the working tree with this change.
+- Sweep runner: `sweep.sh <repo> <outdir> [runs]` runs, for each line `app|args` of runs.txt, `wolframscript -file <app>/main.wl -- <args> < /dev/null` from the repo root and copies every WAV newer than the run start. runs.txt = the 109 runs used in earlier rounds (every mode of every app, the dynamical iterate/lyapunov/divergence presets, the lorenz presets, asteroids default with the live NASA API).
+- Commands: `sweep.sh <copy of HEAD> basesweep` and `sweep.sh <repo> aftersweep` (run at the same time), then `sweep.sh <copy> rerun_base rerun.txt; sweep.sh <repo> rerun_after rerun.txt` (one after the other) for the 16 narrated runs whose sweep WAVs were not byte-identical.
+- Before sweep: 109 runs, exit codes non-zero: 0. After sweep: 109 runs, exit codes non-zero: 0.
+- Intro length = start of the first run of at least 0.38 s with |x| < 1e-3 on every channel, searched from 0.5 s (the apps put a 0.4 s pause after the intro); given in samples at 44.1 kHz. "Timing" values are the app's own Timing line where it prints one. Waveform comparison = byte comparison of the whole WAV and, over the intro, the largest sample difference and the Pearson correlation of channel 1.
+
+## Part 1: the two required comparisons
+- henon attractor (henon_attractor.wav): intro before 799548 samples (18.1303 s); intro after 799548 samples (18.1303 s); difference 0 samples
+- henon attractor: Timing line intro before 18.17 s, after 18.17 s
+- henon attractor: whole WAV byte-identical before and after: yes (1364860 samples each); intro largest sample difference 0; intro correlation 1.000000
+- dynamical lyapunov_window (lyapunov_window_audio.wav): intro before 1089440 samples (24.7039 s); intro after 1089440 samples (24.7039 s); difference 0 samples
+- dynamical lyapunov_window: Timing line intro before 24.73 s, after 24.73 s
+- dynamical lyapunov_window: whole WAV byte-identical before and after: yes (3730638 samples each); intro largest sample difference 0; intro correlation 1.000000
+- Result: both match to the sample, so the say -f path reproduces the old say <argument> audio exactly.
+- Also: `say -o` of "This is full chaos: the population never repeats." six times as an argument and six times with -f from a UTF-8 file gave 12 byte-identical AIFF files (md5 7c1bcbebbfff88656e5c952cd87d2f74, 3.481859 s).
+
+## Part 1: every narrated app, intro before and after
+- sweep 001 bayes --simulation.mode=coin, coin_audio.wav: intro before 911220 samples (20.663 s), after 911220 samples (20.663 s), difference +0 samples; whole WAV byte-identical
+- sweep 002 bayes --simulation.mode=gaussian, gaussian_audio.wav: intro before 1033066 samples (23.426 s), after 1033066 samples (23.426 s), difference +0 samples; whole WAV byte-identical
+- sweep 003 bayes --simulation.mode=model, model_audio.wav: intro before 1081890 samples (24.533 s), after 1081890 samples (24.533 s), difference +0 samples; whole WAV byte-identical
+- sweep 004 bell --simulation.mode=chsh, bell_chsh.wav: intro before 614042 samples (13.924 s), after 614042 samples (13.924 s), difference +0 samples; whole WAV byte-identical
+- sweep 005 bell --simulation.mode=correlations, bell_correlations.wav: intro before 598453 samples (13.570 s), after 598453 samples (13.570 s), difference +0 samples; whole WAV byte-identical
+- sweep 006 bell --simulation.mode=measurement, bell_measurement.wav: intro before 710577 samples (16.113 s), after 710577 samples (16.113 s), difference +0 samples; whole WAV byte-identical
+- sweep 007 blackbody --simulation.mode=spectrum, spectrum_audio.wav: intro before 969321 samples (21.980 s), after 969321 samples (21.980 s), difference +0 samples; whole WAV byte-identical
+- sweep 008 blackbody --simulation.mode=star, star_audio.wav: intro before 227068 samples (5.149 s), after 227068 samples (5.149 s), difference +0 samples; whole WAV byte-identical
+- sweep 009 blackbody --simulation.mode=temperature, temperature_audio.wav: intro before 885993 samples (20.091 s), after 885993 samples (20.091 s), difference +0 samples; whole WAV byte-identical
+- sweep 010 brownian --simulation.mode=ensemble, brownian_ensemble.wav: intro before 1029783 samples (23.351 s), after 1029783 samples (23.351 s), difference +0 samples; whole WAV byte-identical
+- sweep 011 brownian --simulation.mode=temperature, brownian_temperature.wav: intro before 709327 samples (16.085 s), after 796376 samples (18.058 s), difference +87049 samples; WAV not byte-identical, intro correlation -0.010191, largest intro sample difference 0.613
+- sweep 012 brownian --simulation.mode=walk, brownian_walk.wav: intro before 1218796 samples (27.637 s), after 1218796 samples (27.637 s), difference +0 samples; whole WAV byte-identical
+- sweep 015 clt --simulation.mode=compare, compare_audio.wav: intro before 890626 samples (20.196 s), after 890626 samples (20.196 s), difference +0 samples; whole WAV byte-identical
+- sweep 016 clt --simulation.mode=dice, dice_audio.wav: intro before 965637 samples (21.897 s), after 965637 samples (21.897 s), difference +0 samples; whole WAV byte-identical
+- sweep 017 clt --simulation.mode=sweep, sweep_audio.wav: intro before 765184 samples (17.351 s), after 765184 samples (17.351 s), difference +0 samples; whole WAV byte-identical
+- sweep 018 compton --simulation.mode=discovery, discovery_audio.wav: intro before 1092496 samples (24.773 s), after 1092496 samples (24.773 s), difference +0 samples; whole WAV byte-identical
+- sweep 019 compton --simulation.mode=energy, energy_audio.wav: intro before 864633 samples (19.606 s), after 864633 samples (19.606 s), difference +0 samples; whole WAV byte-identical
+- sweep 020 compton --simulation.mode=scatter, scatter_audio.wav: intro before 956207 samples (21.683 s), after 956207 samples (21.683 s), difference +0 samples; whole WAV byte-identical
+- sweep 021 compton --simulation.mode=sweep, sweep_audio.wav: intro before 691224 samples (15.674 s), after 691224 samples (15.674 s), difference +0 samples; whole WAV byte-identical
+- sweep 024 dynamical --simulation.mode=divergence, divergence_audio.wav: intro before 507245 samples (11.502 s), after 507245 samples (11.502 s), difference +0 samples; whole WAV byte-identical
+- sweep 025 dynamical --simulation.mode=iterate, iterate_audio.wav: intro before 460456 samples (10.441 s), after 460456 samples (10.441 s), difference +0 samples; whole WAV byte-identical
+- sweep 026 dynamical --simulation.mode=lyapunov, lyapunov_audio.wav: intro before 1091438 samples (24.749 s), after 1091438 samples (24.749 s), difference +0 samples; whole WAV byte-identical
+- sweep 027 dynamical --simulation.mode=sweep, sweep_audio.wav: intro before 632689 samples (14.347 s), after 632689 samples (14.347 s), difference +0 samples; whole WAV byte-identical
+- sweep 028 fluid --simulation.mode=flag, flag_audio.wav: intro before 942623 samples (21.375 s), after 942623 samples (21.375 s), difference +0 samples; whole WAV byte-identical
+- sweep 029 fluid --simulation.mode=karman, karman_audio.wav: intro before 935832 samples (21.221 s), after 935832 samples (21.221 s), difference +0 samples; whole WAV byte-identical
+- sweep 030 fluid --simulation.mode=strouhal, strouhal_audio.wav: intro before 743281 samples (16.854 s), after 743281 samples (16.854 s), difference +0 samples; whole WAV byte-identical
+- sweep 031 grover --simulation.mode=compare, grover_compare.wav: intro before 680262 samples (15.425 s), after 680262 samples (15.425 s), difference +0 samples; whole WAV byte-identical
+- sweep 032 grover --simulation.mode=geometry, grover_geometry.wav: intro before 716919 samples (16.257 s), after 716919 samples (16.257 s), difference +0 samples; whole WAV byte-identical
+- sweep 033 grover --simulation.mode=search, grover_search.wav: intro before 626798 samples (14.213 s), after 626798 samples (14.213 s), difference +0 samples; whole WAV byte-identical
+- sweep 034 henon --simulation.mode=attractor, henon_attractor.wav: intro before 799548 samples (18.130 s), after 799548 samples (18.130 s), difference +0 samples; whole WAV byte-identical
+- sweep 035 henon --simulation.mode=reverse, henon_reverse.wav: intro before 904610 samples (20.513 s), after 813928 samples (18.456 s), difference -90682 samples; WAV not byte-identical, intro correlation 0.006194, largest intro sample difference 0.834
+- sweep 036 henon --simulation.mode=sweep, henon_sweep.wav: intro before 877526 samples (19.899 s), after 877526 samples (19.899 s), difference +0 samples; whole WAV byte-identical
+- sweep 037 hydrogen --simulation.mode=orbitals, orbitals_audio.wav: intro before 1025470 samples (23.253 s), after 1025470 samples (23.253 s), difference +0 samples; whole WAV byte-identical
+- sweep 038 hydrogen --simulation.mode=spectrum, spectrum_audio.wav: intro before 923206 samples (20.934 s), after 923206 samples (20.934 s), difference +0 samples; whole WAV byte-identical
+- sweep 038 hydrogen --simulation.mode=spectrum, spectrum_chord.wav: no spoken intro in this file (signal plain signal file or chord/sweep side file), byte-identical
+- sweep 038 hydrogen --simulation.mode=spectrum, spectrum_sweep.wav: no spoken intro in this file (signal plain signal file or chord/sweep side file), byte-identical
+- sweep 039 hydrogen --simulation.mode=transitions, transitions_audio.wav: intro before 851046 samples (19.298 s), after 851046 samples (19.298 s), difference +0 samples; WAV not byte-identical, intro correlation 1.000000, largest intro sample difference 0.00562
+- sweep 040 images --simulation.mode=brightness, images_brightness_audio.wav: intro before 730848 samples (16.573 s), after 730848 samples (16.573 s), difference +0 samples; whole WAV byte-identical
+- sweep 041 images --simulation.mode=colour, images_colour_audio.wav: intro before 1031751 samples (23.396 s), after 1031751 samples (23.396 s), difference +0 samples; whole WAV byte-identical
+- sweep 042 images --simulation.mode=hsb, images_hsb_audio.wav: intro before 812656 samples (18.428 s), after 812656 samples (18.428 s), difference +0 samples; whole WAV byte-identical
+- sweep 043 images --simulation.mode=scan_horizontal, images_scan_horizontal_audio.wav: intro before 771758 samples (17.500 s), after 771758 samples (17.500 s), difference +0 samples; whole WAV byte-identical
+- sweep 049 magnetic --simulation.mode=cyclotron, cyclotron_audio.wav: intro before 914141 samples (20.729 s), after 914141 samples (20.729 s), difference +0 samples; whole WAV byte-identical
+- sweep 050 magnetic --simulation.mode=drift, drift_audio.wav: intro before 740440 samples (16.790 s), after 740440 samples (16.790 s), difference +0 samples; whole WAV byte-identical
+- sweep 051 magnetic --simulation.mode=mirror, mirror_audio.wav: intro before 769078 samples (17.439 s), after 769078 samples (17.439 s), difference +0 samples; whole WAV byte-identical
+- sweep 052 magnetic --simulation.mode=multi, multi_audio.wav: intro before 1320138 samples (29.935 s), after 1320138 samples (29.935 s), difference +0 samples; whole WAV byte-identical
+- sweep 053 mandelbrot --simulation.mode=julia, mandelbrot_julia.wav: intro before 660294 samples (14.973 s), after 660294 samples (14.973 s), difference +0 samples; whole WAV byte-identical
+- sweep 054 mandelbrot --simulation.mode=mandelbrot, mandelbrot_mandelbrot.wav: intro before 807705 samples (18.315 s), after 898244 samples (20.368 s), difference +90539 samples; WAV not byte-identical, intro correlation 0.002906, largest intro sample difference 0.304
+- sweep 055 mandelbrot --simulation.mode=zoom, mandelbrot_zoom.wav: intro before 609635 samples (13.824 s), after 609635 samples (13.824 s), difference +0 samples; whole WAV byte-identical
+- sweep 056 montecarlo --simulation.mode=critical, critical_audio.wav: intro before 627692 samples (14.233 s), after 627687 samples (14.233 s), difference -5 samples; WAV not byte-identical, intro correlation 1.000000, largest intro sample difference 0.149
+- sweep 057 montecarlo --simulation.mode=quench, quench_audio.wav: intro before 695015 samples (15.760 s), after 695015 samples (15.760 s), difference +0 samples; whole WAV byte-identical
+- sweep 058 montecarlo --simulation.mode=sweep, sweep_audio.wav: intro before 862161 samples (19.550 s), after 862260 samples (19.552 s), difference +99 samples; WAV not byte-identical, intro correlation 1.000000, largest intro sample difference 0.207
+- sweep 065 quantum_statistics --simulation.mode=fermi_sea, quantum_statistics_fermi_sea.wav: intro before 676696 samples (15.345 s), after 676696 samples (15.345 s), difference +0 samples; whole WAV byte-identical
+- sweep 066 quantum_statistics --simulation.mode=spectrum, quantum_statistics_spectrum.wav: intro before 890900 samples (20.202 s), after 890900 samples (20.202 s), difference +0 samples; whole WAV byte-identical
+- sweep 067 quantum_statistics --simulation.mode=temperature, quantum_statistics_temperature.wav: intro before 849296 samples (19.258 s), after 849296 samples (19.258 s), difference +0 samples; whole WAV byte-identical
+- sweep 068 quantum_tunnelling --simulation.mode=barrier, barrier_audio.wav: intro before 1305494 samples (29.603 s), after 1305494 samples (29.603 s), difference +0 samples; whole WAV byte-identical
+- sweep 069 quantum_tunnelling --simulation.mode=energy, energy_audio.wav: intro before 1304276 samples (29.575 s), after 1304276 samples (29.575 s), difference +0 samples; whole WAV byte-identical
+- sweep 070 quantum_tunnelling --simulation.mode=sweep, sweep_audio.wav: intro before 769056 samples (17.439 s), after 769056 samples (17.439 s), difference +0 samples; whole WAV byte-identical
+- sweep 071 qubit --simulation.mode=gates, qubit_gates.wav: intro before 620612 samples (14.073 s), after 620612 samples (14.073 s), difference +0 samples; whole WAV byte-identical
+- sweep 072 qubit --simulation.mode=measurement, qubit_measurement.wav: intro before 719554 samples (16.316 s), after 719554 samples (16.316 s), difference +0 samples; whole WAV byte-identical
+- sweep 073 qubit --simulation.mode=rabi, qubit_rabi.wav: intro before 500894 samples (11.358 s), after 500894 samples (11.358 s), difference +0 samples; whole WAV byte-identical
+- sweep 076 resonance --simulation.mode=galilean, galilean_audio.wav: intro before 1040606 samples (23.597 s), after 1040606 samples (23.597 s), difference +0 samples; whole WAV byte-identical
+- sweep 077 resonance --simulation.mode=kirkwood, kirkwood_audio.wav: intro before 975292 samples (22.115 s), after 975292 samples (22.115 s), difference +0 samples; whole WAV byte-identical
+- sweep 078 resonance --simulation.mode=saturn, saturn_audio.wav: intro before 864414 samples (19.601 s), after 864414 samples (19.601 s), difference +0 samples; whole WAV byte-identical
+- sweep 079 scattering --simulation.mode=discovery, discovery_audio.wav: intro before 1095894 samples (24.850 s), after 1095894 samples (24.850 s), difference +0 samples; whole WAV byte-identical
+- sweep 080 scattering --simulation.mode=distribution, distribution_audio.wav: intro before 855725 samples (19.404 s), after 855725 samples (19.404 s), difference +0 samples; whole WAV byte-identical
+- sweep 081 scattering --simulation.mode=scatter, scatter_audio.wav: intro before 887220 samples (20.118 s), after 887220 samples (20.118 s), difference +0 samples; WAV not byte-identical, intro correlation 1.000000, largest intro sample difference 3.05e-05
+- sweep 082 signal --simulation.mode=am, am_clean.wav: no spoken intro in this file (signal plain signal file or chord/sweep side file), byte-identical
+- sweep 082 signal --simulation.mode=am, am_narrative_full.wav: intro before 343414 samples (7.787 s), after 343414 samples (7.787 s), difference +0 samples; WAV not byte-identical, intro correlation 1.000000, largest intro sample difference 0.000763
+- sweep 082 signal --simulation.mode=am, am_noisy.wav: no spoken intro in this file (signal plain signal file or chord/sweep side file), not byte-identical (unseeded noise or random roughness, no speech in it)
+- sweep 082 signal --simulation.mode=am, am_recovered.wav: no spoken intro in this file (signal plain signal file or chord/sweep side file), not byte-identical (unseeded noise or random roughness, no speech in it)
+- sweep 083 signal --simulation.mode=chord, chord_clean.wav: no spoken intro in this file (signal plain signal file or chord/sweep side file), byte-identical
+- sweep 083 signal --simulation.mode=chord, chord_narrative_full.wav: intro before 342665 samples (7.770 s), after 342665 samples (7.770 s), difference +0 samples; WAV not byte-identical, intro correlation 1.000000, largest intro sample difference 0.00671
+- sweep 083 signal --simulation.mode=chord, chord_noisy.wav: no spoken intro in this file (signal plain signal file or chord/sweep side file), not byte-identical (unseeded noise or random roughness, no speech in it)
+- sweep 083 signal --simulation.mode=chord, chord_recovered.wav: no spoken intro in this file (signal plain signal file or chord/sweep side file), not byte-identical (unseeded noise or random roughness, no speech in it)
+- sweep 084 signal --simulation.mode=sweep, sweep_clean.wav: no spoken intro in this file (signal plain signal file or chord/sweep side file), byte-identical
+- sweep 084 signal --simulation.mode=sweep, sweep_narrative_full.wav: intro before 132360 samples (3.001 s), after 132360 samples (3.001 s), difference +0 samples; WAV not byte-identical, intro correlation 1.000000, largest intro sample difference 0.000763
+- sweep 084 signal --simulation.mode=sweep, sweep_noisy.wav: no spoken intro in this file (signal plain signal file or chord/sweep side file), not byte-identical (unseeded noise or random roughness, no speech in it)
+- sweep 084 signal --simulation.mode=sweep, sweep_recovered.wav: no spoken intro in this file (signal plain signal file or chord/sweep side file), not byte-identical (unseeded noise or random roughness, no speech in it)
+- sweep 085 thermo --simulation.mode=cooling, cooling_audio.wav: intro before 465179 samples (10.548 s), after 465179 samples (10.548 s), difference +0 samples; whole WAV byte-identical
+- sweep 086 thermo --simulation.mode=distribution, distribution_audio.wav: intro before 916605 samples (20.785 s), after 916605 samples (20.785 s), difference +0 samples; whole WAV byte-identical
+- sweep 087 thermo --simulation.mode=ensemble, ensemble_audio.wav: intro before 585968 samples (13.287 s), after 585968 samples (13.287 s), difference +0 samples; WAV not byte-identical, intro correlation 1.000000, largest intro sample difference 0.0171
+- sweep 088 thermo --simulation.mode=equipartition, equipartition_audio.wav: intro before 885494 samples (20.079 s), after 885494 samples (20.079 s), difference +0 samples; whole WAV byte-identical
+- sweep 091 dynamical --simulation.mode=iterate --simulation.dynamical.preset=extinction, iterate_extinction_audio.wav: intro before 554676 samples (12.578 s), after 539453 samples (12.232 s), difference -15223 samples; WAV not byte-identical, intro correlation 0.888947, largest intro sample difference 0.882
+- sweep 092 dynamical --simulation.mode=iterate --simulation.dynamical.preset=growth, iterate_growth_audio.wav: intro before 586560 samples (13.301 s), after 586559 samples (13.301 s), difference -1 samples; WAV not byte-identical, intro correlation 1.000000, largest intro sample difference 0.0136
+- sweep 093 dynamical --simulation.mode=iterate --simulation.dynamical.preset=fixed_point, iterate_fixed_point_audio.wav: intro before 620218 samples (14.064 s), after 562496 samples (12.755 s), difference -57722 samples; WAV not byte-identical, intro correlation 0.333225, largest intro sample difference 0.961
+- sweep 094 dynamical --simulation.mode=iterate --simulation.dynamical.preset=period2, iterate_period2_audio.wav: intro before 591126 samples (13.404 s), after 591126 samples (13.404 s), difference +0 samples; whole WAV byte-identical
+- sweep 095 dynamical --simulation.mode=iterate --simulation.dynamical.preset=period4, iterate_period4_audio.wav: intro before 584994 samples (13.265 s), after 584994 samples (13.265 s), difference +0 samples; whole WAV byte-identical
+- sweep 096 dynamical --simulation.mode=iterate --simulation.dynamical.preset=period3_window, iterate_period3_window_audio.wav: intro before 624460 samples (14.160 s), after 624460 samples (14.160 s), difference +0 samples; WAV not byte-identical, intro correlation 1.000000, largest intro sample difference 0.00305
+- sweep 097 dynamical --simulation.mode=iterate --simulation.dynamical.preset=chaos, iterate_chaos_audio.wav: intro before 624277 samples (14.156 s), after 587481 samples (13.322 s), difference -36796 samples; WAV not byte-identical, intro correlation 0.310265, largest intro sample difference 0.816
+- sweep 098 dynamical --simulation.mode=lyapunov --simulation.dynamical.preset=lyapunov_window, lyapunov_window_audio.wav: intro before 1089440 samples (24.704 s), after 1089440 samples (24.704 s), difference +0 samples; whole WAV byte-identical
+- sweep 099 dynamical --simulation.mode=divergence --simulation.dynamical.preset=divergence_chaotic, divergence_chaotic_audio.wav: intro before 507245 samples (11.502 s), after 507245 samples (11.502 s), difference +0 samples; whole WAV byte-identical
+- sweep 100 dynamical --simulation.mode=divergence --simulation.dynamical.preset=divergence_edge, divergence_edge_audio.wav: intro before 475698 samples (10.787 s), after 475698 samples (10.787 s), difference +0 samples; whole WAV byte-identical
+- sweep 101 dynamical --simulation.mode=divergence --simulation.dynamical.preset=divergence_periodic, divergence_periodic_audio.wav: intro before 497202 samples (11.274 s), after 497202 samples (11.274 s), difference +0 samples; whole WAV byte-identical
+- sweep 102 dynamical --simulation.mode=divergence --simulation.dynamical.preset=divergence_stable, divergence_stable_audio.wav: intro before 498174 samples (11.296 s), after 498174 samples (11.296 s), difference +0 samples; whole WAV byte-identical
+- Sweep summary: narrated WAVs 94, byte-identical 72.
+
+### Reruns, one at a time, of the narrated runs that were not byte-identical
+- rerun 001 brownian --simulation.mode=temperature, brownian_temperature.wav: intro before 709327 samples (16.085 s), after 709327 samples (16.085 s), difference +0 samples; whole WAV byte-identical
+- rerun 002 henon --simulation.mode=reverse, henon_reverse.wav: intro before 813928 samples (18.456 s), after 813928 samples (18.456 s), difference +0 samples; whole WAV byte-identical
+- rerun 003 hydrogen --simulation.mode=transitions, transitions_audio.wav: intro before 851046 samples (19.298 s), after 851046 samples (19.298 s), difference +0 samples; WAV not byte-identical, intro correlation 1.000000, largest intro sample difference 0.00775
+- rerun 004 mandelbrot --simulation.mode=mandelbrot, mandelbrot_mandelbrot.wav: intro before 807705 samples (18.315 s), after 807705 samples (18.315 s), difference +0 samples; whole WAV byte-identical
+- rerun 005 montecarlo --simulation.mode=critical, critical_audio.wav: intro before 627690 samples (14.233 s), after 627690 samples (14.233 s), difference +0 samples; WAV not byte-identical, intro correlation 1.000000, largest intro sample difference 0.00168
+- rerun 006 montecarlo --simulation.mode=sweep, sweep_audio.wav: intro before 862260 samples (19.552 s), after 862260 samples (19.552 s), difference +0 samples; WAV not byte-identical, intro correlation 1.000000, largest intro sample difference 0.00757
+- rerun 007 scattering --simulation.mode=scatter, scatter_audio.wav: intro before 887220 samples (20.118 s), after 887220 samples (20.118 s), difference +0 samples; WAV not byte-identical, intro correlation 1.000000, largest intro sample difference 3.05e-05
+- rerun 008 signal --simulation.mode=am, am_clean.wav: no spoken intro in this file (signal plain signal file or chord/sweep side file), byte-identical
+- rerun 008 signal --simulation.mode=am, am_narrative_full.wav: intro before 343414 samples (7.787 s), after 343414 samples (7.787 s), difference +0 samples; WAV not byte-identical, intro correlation 1.000000, largest intro sample difference 0.011
+- rerun 008 signal --simulation.mode=am, am_noisy.wav: no spoken intro in this file (signal plain signal file or chord/sweep side file), not byte-identical (unseeded noise or random roughness, no speech in it)
+- rerun 008 signal --simulation.mode=am, am_recovered.wav: no spoken intro in this file (signal plain signal file or chord/sweep side file), not byte-identical (unseeded noise or random roughness, no speech in it)
+- rerun 009 signal --simulation.mode=chord, chord_clean.wav: no spoken intro in this file (signal plain signal file or chord/sweep side file), byte-identical
+- rerun 009 signal --simulation.mode=chord, chord_narrative_full.wav: intro before 342665 samples (7.770 s), after 342665 samples (7.770 s), difference +0 samples; WAV not byte-identical, intro correlation 1.000000, largest intro sample difference 0.0112
+- rerun 009 signal --simulation.mode=chord, chord_noisy.wav: no spoken intro in this file (signal plain signal file or chord/sweep side file), not byte-identical (unseeded noise or random roughness, no speech in it)
+- rerun 009 signal --simulation.mode=chord, chord_recovered.wav: no spoken intro in this file (signal plain signal file or chord/sweep side file), not byte-identical (unseeded noise or random roughness, no speech in it)
+- rerun 010 signal --simulation.mode=sweep, sweep_clean.wav: no spoken intro in this file (signal plain signal file or chord/sweep side file), byte-identical
+- rerun 010 signal --simulation.mode=sweep, sweep_narrative_full.wav: intro before 132360 samples (3.001 s), after 132360 samples (3.001 s), difference +0 samples; WAV not byte-identical, intro correlation 1.000000, largest intro sample difference 0.00302
+- rerun 010 signal --simulation.mode=sweep, sweep_noisy.wav: no spoken intro in this file (signal plain signal file or chord/sweep side file), not byte-identical (unseeded noise or random roughness, no speech in it)
+- rerun 010 signal --simulation.mode=sweep, sweep_recovered.wav: no spoken intro in this file (signal plain signal file or chord/sweep side file), not byte-identical (unseeded noise or random roughness, no speech in it)
+- rerun 011 thermo --simulation.mode=ensemble, ensemble_audio.wav: intro before 585968 samples (13.287 s), after 585910 samples (13.286 s), difference -58 samples; WAV not byte-identical, intro correlation 1.000000, largest intro sample difference 0.0292
+- rerun 012 dynamical --simulation.mode=iterate --simulation.dynamical.preset=extinction, iterate_extinction_audio.wav: intro before 539453 samples (12.232 s), after 539453 samples (12.232 s), difference +0 samples; whole WAV byte-identical
+- rerun 013 dynamical --simulation.mode=iterate --simulation.dynamical.preset=growth, iterate_growth_audio.wav: intro before 586559 samples (13.301 s), after 586559 samples (13.301 s), difference +0 samples; whole WAV byte-identical
+- rerun 014 dynamical --simulation.mode=iterate --simulation.dynamical.preset=fixed_point, iterate_fixed_point_audio.wav: intro before 562496 samples (12.755 s), after 562496 samples (12.755 s), difference +0 samples; whole WAV byte-identical
+- rerun 015 dynamical --simulation.mode=iterate --simulation.dynamical.preset=period3_window, iterate_period3_window_audio.wav: intro before 624460 samples (14.160 s), after 624460 samples (14.160 s), difference +0 samples; whole WAV byte-identical
+- rerun 016 dynamical --simulation.mode=iterate --simulation.dynamical.preset=chaos, iterate_chaos_audio.wav: intro before 602707 samples (13.667 s), after 587481 samples (13.322 s), difference -15226 samples; WAV not byte-identical, intro correlation 0.894548, largest intro sample difference 0.764
+- Not byte-identical in the rerun, but intro equal to the sample (or within 2 ms) with correlation above 0.99999: hydrogen transitions, montecarlo critical and sweep, scattering scatter, signal narrative files, thermo ensemble. These apps add unseeded random content (MotionLayer roughness, signal noise, Monte Carlo) and normalise the whole file, so the intro differs only by gain.
+- thermo ensemble rerun intro end differs by 58 samples (1.3 ms) with correlation 0.999999996: the detected end falls in the first quiet stretch, which depends on the random note level after it, not on the speech; the Timing line and correlation show the speech is the same.
+
+### Run-to-run variation of say-based intros (old and new code alike)
+- henon reverse Timing intro: earlier round (old code) 18.49 s; before sweep (old code) 20.52 s; after sweep (new code) 18.49 s
+- dynamical iterate extinction Timing intro: earlier round (old code) 12.26 s; before sweep (old code) 12.59 s; after sweep (new code) 12.26 s
+- dynamical iterate fixed_point Timing intro: earlier round (old code) 12.78 s; before sweep (old code) 14.09 s; after sweep (new code) 12.78 s
+- dynamical iterate chaos Timing intro: earlier round (old code) 13.34 s; before sweep (old code) 14.18 s; after sweep (new code) 13.34 s
+- henon reverse Timing intro: rerun old code 18.49 s; rerun new code 18.49 s
+- dynamical iterate extinction Timing intro: rerun old code 12.26 s; rerun new code 12.26 s
+- dynamical iterate fixed_point Timing intro: rerun old code 12.78 s; rerun new code 12.78 s
+- dynamical iterate chaos Timing intro: rerun old code 13.68 s; rerun new code 13.34 s
+- brownian temperature intro: before sweep (old code) 709327 samples; after sweep (new code) 796376 samples; rerun old code 709327; rerun new code 709327. mandelbrot mandelbrot: before 807705, after 898244, both reruns 807705. So the same variation also hit the new code once; every rerun pair except dynamical chaos matched to the sample.
+- dynamical iterate chaos: the old code gave three different intro lengths in three runs (13.34, 14.18, 13.68 s); the new code gave 13.34 s both times. The spoken text was the same in every log.
+- In one kernel, each chaos sentence spoken six times through the old DynamicalSpeakToBufferPlatform and six times through the new STEMSpeakPlatform gave one length per sentence, identical between old and new: 173520, 153550 and 64744 samples. `say` under a 10-process CPU load gave 12 identical files. The cause of the run-to-run variation is not identified; it happens with the old code and the new code alike, so it is not caused by this change, and every run with identical text has matched to the sample at least once.
+
+## Part 1: forced no-speech runs (STEM_SPEECH_OFF=1)
+- Command: `STEM_SPEECH_OFF=1 sweep.sh <repo> offsweep offruns.txt` (one run per narrated app, default mode; dynamical lyapunov_window, henon attractor)
+- bayes (default): exit 0; WAVs read back: coin_audio.wav 15.00 s; warning lines: 1
+- bayes first warning: [WARNING] bayes: no speech tier produced audio (tried SpeechSynthesize[] and the platform speech tool, both switched off by STEM_SPEECH_OFF=1), so about 15.8 s of spoken narration (46 words) is left out of the WAV, which is still written without it.
+- bell (default): exit 0; WAVs read back: bell_correlations.wav 10.00 s; warning lines: 1
+- bell first warning: [WARNING] bell: no speech tier produced audio (tried SpeechSynthesize[] and the platform speech tool, both switched off by STEM_SPEECH_OFF=1), so about 12.3 s of spoken narration (36 words) is left out of the WAV, which is still written without it.
+- blackbody (default): exit 0; WAVs read back: spectrum_audio.wav 9.52 s; warning lines: 2
+- blackbody first warning: [WARNING] blackbody: no speech tier produced audio (tried SpeechSynthesize[] and the platform speech tool, both switched off by STEM_SPEECH_OFF=1), so about 20.9 s of spoken narration (61 words) is left out of the WAV, which is still written without it.
+- brownian (default): exit 0; WAVs read back: brownian_walk.wav 10.00 s; warning lines: 1
+- brownian first warning: [WARNING] brownian: no speech tier produced audio (tried SpeechSynthesize[] and the platform speech tool, both switched off by STEM_SPEECH_OFF=1), so about 23.3 s of spoken narration (68 words) is left out of the WAV, which is still written without it.
+- clt (default): exit 0; WAVs read back: sweep_audio.wav 6.00 s; warning lines: 1
+- clt first warning: [WARNING] clt: no speech tier produced audio (tried SpeechSynthesize[] and the platform speech tool, both switched off by STEM_SPEECH_OFF=1), so about 17.1 s of spoken narration (50 words) is left out of the WAV, which is still written without it.
+- compton (default): exit 0; WAVs read back: scatter_audio.wav 2.55 s; warning lines: 2
+- compton first warning: [WARNING] compton: no speech tier produced audio (tried SpeechSynthesize[] and the platform speech tool, both switched off by STEM_SPEECH_OFF=1), so about 16.1 s of spoken narration (47 words) is left out of the WAV, which is still written without it.
+- dynamical --simulation.mode=lyapunov --simulation.dynamical.preset=lyapunov_window: exit 0; WAVs read back: lyapunov_window_audio.wav 40.00 s; warning lines: 9
+- dynamical first warning: [WARNING] dynamical: no speech tier produced audio (tried SpeechSynthesize[] and the platform speech tool, both switched off by STEM_SPEECH_OFF=1), so about 2.4 s of spoken narration (7 words) is left out of the WAV, which is still written without it.
+- fluid (default): exit 0; WAVs read back: karman_audio.wav 24.00 s; warning lines: 1
+- fluid first warning: [WARNING] fluid: no speech tier produced audio (tried SpeechSynthesize[] and the platform speech tool, both switched off by STEM_SPEECH_OFF=1), so about 17.8 s of spoken narration (52 words) is left out of the WAV, which is still written without it.
+- grover (default): exit 0; WAVs read back: grover_search.wav 4.03 s; warning lines: 1
+- grover first warning: [WARNING] grover: no speech tier produced audio (tried SpeechSynthesize[] and the platform speech tool, both switched off by STEM_SPEECH_OFF=1), so about 14.1 s of spoken narration (41 words) is left out of the WAV, which is still written without it.
+- henon --simulation.mode=attractor: exit 0; WAVs read back: henon_attractor.wav 10.00 s; warning lines: 2
+- henon first warning: [WARNING] henon: no speech tier produced audio (tried SpeechSynthesize[] and the platform speech tool, both switched off by STEM_SPEECH_OFF=1), so about 14.7 s of spoken narration (43 words) is left out of the WAV, which is still written without it.
+- hydrogen (default): exit 0; WAVs read back: orbitals_audio.wav 81.92 s; warning lines: 1
+- hydrogen first warning: [WARNING] hydrogen: no speech tier produced audio (tried SpeechSynthesize[] and the platform speech tool, both switched off by STEM_SPEECH_OFF=1), so about 16.1 s of spoken narration (47 words) is left out of the WAV, which is still written without it.
+- images (default): exit 0; WAVs read back: images_brightness_audio.wav 81.92 s; warning lines: 1
+- images first warning: [WARNING] images: no speech tier produced audio (tried SpeechSynthesize[] and the platform speech tool, both switched off by STEM_SPEECH_OFF=1), so about 10.3 s of spoken narration (30 words) is left out of the WAV, which is still written without it.
+- magnetic (default): exit 0; WAVs read back: cyclotron_audio.wav 31.42 s; warning lines: 1
+- magnetic first warning: [WARNING] magnetic: no speech tier produced audio (tried SpeechSynthesize[] and the platform speech tool, both switched off by STEM_SPEECH_OFF=1), so about 13.7 s of spoken narration (40 words) is left out of the WAV, which is still written without it.
+- mandelbrot (default): exit 0; WAVs read back: mandelbrot_mandelbrot.wav 62.49 s; warning lines: 1
+- mandelbrot first warning: [WARNING] mandelbrot: no speech tier produced audio (tried SpeechSynthesize[] and the platform speech tool, both switched off by STEM_SPEECH_OFF=1), so about 16.8 s of spoken narration (49 words) is left out of the WAV, which is still written without it.
+- montecarlo (default): exit 0; WAVs read back: sweep_audio.wav 61.44 s; warning lines: 1
+- montecarlo first warning: [WARNING] montecarlo: no speech tier produced audio (tried SpeechSynthesize[] and the platform speech tool, both switched off by STEM_SPEECH_OFF=1), so about 14.1 s of spoken narration (41 words) is left out of the WAV, which is still written without it.
+- quantum_statistics (default): exit 0; WAVs read back: quantum_statistics_spectrum.wav 10.00 s; warning lines: 1
+- quantum_statistics first warning: [WARNING] quantum_statistics: no speech tier produced audio (tried SpeechSynthesize[] and the platform speech tool, both switched off by STEM_SPEECH_OFF=1), so about 15.8 s of spoken narration (46 words) is left out of the WAV, which is still written without it.
+- quantum_tunnelling (default): exit 0; WAVs read back: barrier_audio.wav 2.55 s; warning lines: 2
+- quantum_tunnelling first warning: [WARNING] quantum_tunnelling: no speech tier produced audio (tried SpeechSynthesize[] and the platform speech tool, both switched off by STEM_SPEECH_OFF=1), so about 19.5 s of spoken narration (57 words) is left out of the WAV, which is still written without it.
+- qubit (default): exit 0; WAVs read back: qubit_gates.wav 10.00 s; warning lines: 1
+- qubit first warning: [WARNING] qubit: no speech tier produced audio (tried SpeechSynthesize[] and the platform speech tool, both switched off by STEM_SPEECH_OFF=1), so about 14.4 s of spoken narration (42 words) is left out of the WAV, which is still written without it.
+- resonance (default): exit 0; WAVs read back: galilean_audio.wav 33.00 s; warning lines: 1
+- resonance first warning: [WARNING] resonance: no speech tier produced audio (tried SpeechSynthesize[] and the platform speech tool, both switched off by STEM_SPEECH_OFF=1), so about 21.6 s of spoken narration (63 words) is left out of the WAV, which is still written without it.
+- scattering (default): exit 0; WAVs read back: scatter_audio.wav 20.00 s; warning lines: 1
+- scattering first warning: [WARNING] scattering: no speech tier produced audio (tried SpeechSynthesize[] and the platform speech tool, both switched off by STEM_SPEECH_OFF=1), so about 14.7 s of spoken narration (43 words) is left out of the WAV, which is still written without it.
+- signal (default): exit 0; WAVs read back: chord_clean.wav 3.00 s; chord_narrative_full.wav 13.40 s; chord_recovered.wav 3.00 s; chord_noisy.wav 3.00 s; warning lines: 5
+- signal first warning: [WARNING] signal: no speech tier produced audio (tried SpeechSynthesize[] and the platform speech tool, both switched off by STEM_SPEECH_OFF=1), so about 3.4 s of spoken narration (10 words) is left out of the WAV, which is still written without it.
+- thermo (default): exit 0; WAVs read back: distribution_audio.wav 10.00 s; warning lines: 1
+- thermo first warning: [WARNING] thermo: no speech tier produced audio (tried SpeechSynthesize[] and the platform speech tool, both switched off by STEM_SPEECH_OFF=1), so about 17.8 s of spoken narration (52 words) is left out of the WAV, which is still written without it.
+
+## Part 1: stem-core speech test
+- Command: `wolframscript -file stem-core/tests/test_speech.wl`
+- -- STEMResampleLinear --
+- PASS  equal rates return the data unchanged
+- PASS  22050 -> 44100 doubles the length and keeps the end points
+- -- Platform tool reads the text from a UTF-8 file --
+- PASS  the tool was called with -f <file>
+- PASS  the text itself was not passed as an argument
+- PASS  the file holds the text as UTF-8 (Hénon = 48 C3 A9 6E 6F 6E)
+- PASS  audio came back (37840 samples at 44.1 kHz)
+- PASS  the temporary text and audio files were deleted
+- PASS  STEMSpeakToBuffer returns the same samples as the platform tier
+- PASS  one random draw per platform call (seeded runs stay reproducible)
+- -- Silent fallback --
+- PASS  STEMSpeechAvailable[] is False with every tool missing and SpeechSynthesize[] off
+- PASS  returns {} when no tier produces audio
+- PASS  prints exactly one warning line
+- [WARNING] henon: no speech tier produced audio (tried SpeechSynthesize[], which was switched off, then the macOS say command, which was not found), so about 12 s of spoken narration (35 words) is left out of the WAV, which is still written without it.
+- PASS  the warning names the app
+- PASS  the warning names the tiers tried
+- PASS  the warning states the narration lost (35 words at 175 wpm = 12 s)
+- PASS  the warning is one sentence (ends with a full stop, no full stop inside)
+- PASS  the narration text is still printed
+- PASS  a WAV built around the empty narration exports and imports (1 s of notes)
+- -- STEM_SPEECH_OFF=1 --
+- PASS  STEMSpeechAvailable[] is False
+- PASS  returns {} and warns once, naming the switch
+- Results: 20 passed, 0 failed.
+
+## Every app: loudness and GIF/WAV sync (after sweep)
+- 001 bayes --simulation.mode=coin: loudness line: none printed by this app
+- 001 bayes: measured coin_audio.wav: -17.00 LUFS integrated, peak -5.59 dBFS, 36.09 s
+- 001 bayes: sync: GIF/WAV sync: the GIF has 150 frames of 0.24 s each and plays for 36 s, the WAV plays for 36.093 s, and the GIF is 0.093 s shorter than the WAV.
+- 002 bayes --simulation.mode=gaussian: loudness line: none printed by this app
+- 002 bayes: measured gaussian_audio.wav: -17.00 LUFS integrated, peak -5.07 dBFS, 35.84 s
+- 002 bayes: sync: GIF/WAV sync: the GIF has 149 frames of 0.24 s each and plays for 35.76 s, the WAV plays for 35.845 s, and the GIF is 0.085 s shorter than the WAV.
+- 003 bayes --simulation.mode=model: loudness line: none printed by this app
+- 003 bayes: measured model_audio.wav: -17.00 LUFS integrated, peak -10.14 dBFS, 39.96 s
+- 003 bayes: sync: GIF/WAV sync: the GIF has 148 frames of 0.27 s each and plays for 39.96 s, the WAV plays for 39.959 s, and the GIF is 0.001 s longer than the WAV.
+- 004 bell --simulation.mode=chsh: loudness line: none printed by this app
+- 004 bell: measured bell_chsh.wav: -17.00 LUFS integrated, peak -8.57 dBFS, 19.04 s
+- 004 bell: sync: GIF/WAV sync: the GIF has 146 frames of 0.13 s each and plays for 18.98 s, the WAV plays for 19.036 s, and the GIF is 0.056 s shorter than the WAV.
+- 005 bell --simulation.mode=correlations: loudness line: none printed by this app
+- 005 bell: measured bell_correlations.wav: -17.00 LUFS integrated, peak -13.00 dBFS, 24.00 s
+- 005 bell: sync: GIF/WAV sync: the GIF has 150 frames of 0.16 s each and plays for 24 s, the WAV plays for 24 s, and the GIF and the WAV have the same duration to the millisecond.
+- 006 bell --simulation.mode=measurement: loudness line: none printed by this app
+- 006 bell: measured bell_measurement.wav: -17.00 LUFS integrated, peak -12.46 dBFS, 33.34 s
+- 006 bell: sync: no GIF in this mode, so no sync sentence (same before the change)
+- 007 blackbody --simulation.mode=spectrum: loudness line: none printed by this app
+- 007 blackbody: measured spectrum_audio.wav: -17.00 LUFS integrated, peak -4.25 dBFS, 42.54 s
+- 007 blackbody: sync: GIF/WAV sync: the GIF has 152 frames of 0.28 s each and plays for 42.56 s, the WAV plays for 42.54 s, and the GIF is 0.02 s longer than the WAV.
+- 008 blackbody --simulation.mode=star: loudness line: none printed by this app
+- 008 blackbody: measured star_audio.wav: -17.00 LUFS integrated, peak -2.29 dBFS, 15.10 s
+- 008 blackbody: sync: GIF/WAV sync: the GIF has 151 frames of 0.1 s each and plays for 15.1 s, the WAV plays for 15.103 s, and the GIF is 0.003 s shorter than the WAV.
+- 009 blackbody --simulation.mode=temperature: loudness line: none printed by this app
+- 009 blackbody: measured temperature_audio.wav: -17.00 LUFS integrated, peak -4.75 dBFS, 32.52 s
+- 009 blackbody: sync: GIF/WAV sync: the GIF has 148 frames of 0.22 s each and plays for 32.56 s, the WAV plays for 32.52 s, and the GIF is 0.04 s longer than the WAV.
+- 010 brownian --simulation.mode=ensemble: loudness line: none printed by this app
+- 010 brownian: measured brownian_ensemble.wav: -17.00 LUFS integrated, peak -12.59 dBFS, 33.79 s
+- 010 brownian: sync: no GIF in this mode, so no sync sentence (same before the change)
+- 011 brownian --simulation.mode=temperature: loudness line: none printed by this app
+- 011 brownian: measured brownian_temperature.wav: -17.00 LUFS integrated, peak -4.33 dBFS, 36.47 s
+- 011 brownian: sync: no GIF in this mode, so no sync sentence (same before the change)
+- 012 brownian --simulation.mode=walk: loudness line: none printed by this app
+- 012 brownian: measured brownian_walk.wav: -17.00 LUFS integrated, peak -3.98 dBFS, 38.07 s
+- 012 brownian: sync: GIF/WAV sync: the GIF has 152 frames of 0.25 s each and plays for 38 s, the WAV plays for 38.071 s, and the GIF is 0.071 s shorter than the WAV.
+- 013 cellular --simulation.mode=life: loudness line: none printed by this app
+- 013 cellular: measured life_rpentomino_audio.wav: -17.00 LUFS integrated, peak -7.57 dBFS, 18.00 s
+- 013 cellular: sync: GIF/WAV sync: the GIF has 300 frames of 0.06 s each and plays for 18 s, the WAV plays for 18 s, and the GIF and the WAV have the same duration to the millisecond.
+- 014 cellular --simulation.mode=rule110: loudness line: none printed by this app
+- 014 cellular: measured rule110_audio.wav: -17.00 LUFS integrated, peak -9.15 dBFS, 20.00 s
+- 014 cellular: sync: GIF/WAV sync: the GIF has 1 frame of 20 s and plays for 20 s, the WAV plays for 20 s, and the GIF and the WAV have the same duration to the millisecond.
+- 015 clt --simulation.mode=compare: loudness line: none printed by this app
+- 015 clt: measured compare_audio.wav: -17.00 LUFS integrated, peak -5.31 dBFS, 26.62 s
+- 015 clt: sync: GIF/WAV sync: the GIF has 30 frames of 0.2 s each and plays for 6 s, the WAV plays for 26.624 s, of which the part after the 20.624 s spoken intro lasts 6 s, and the GIF and that part have the same duration to the millisecond.
+- 016 clt --simulation.mode=dice: loudness line: none printed by this app
+- 016 clt: measured dice_audio.wav: -17.00 LUFS integrated, peak -5.45 dBFS, 24.32 s
+- 016 clt: sync: GIF/WAV sync: the GIF has 10 frames of 0.2 s each and plays for 2 s, the WAV plays for 24.32 s, of which the part after the 22.32 s spoken intro lasts 2 s, and the GIF and that part have the same duration to the millisecond.
+- 017 clt --simulation.mode=sweep: loudness line: none printed by this app
+- 017 clt: measured sweep_audio.wav: -17.00 LUFS integrated, peak -1.20 dBFS, 23.78 s
+- 017 clt: sync: GIF/WAV sync: the GIF has 30 frames of 0.2 s each and plays for 6 s, the WAV plays for 23.781 s, of which the part after the 17.781 s spoken intro lasts 6 s, and the GIF and that part have the same duration to the millisecond.
+- 018 compton --simulation.mode=discovery: loudness line: none printed by this app
+- 018 compton: measured discovery_audio.wav: -17.00 LUFS integrated, peak -8.56 dBFS, 44.04 s
+- 018 compton: sync: no GIF in this mode, so no sync sentence (same before the change)
+- 019 compton --simulation.mode=energy: loudness line: none printed by this app
+- 019 compton: measured energy_audio.wav: -17.00 LUFS integrated, peak -5.35 dBFS, 30.03 s
+- 019 compton: sync: GIF/WAV sync: the GIF has 60 frames of 0.5 s each and plays for 30 s, the WAV plays for 30.029 s, and the GIF is 0.029 s shorter than the WAV.
+- 020 compton --simulation.mode=scatter: loudness line: none printed by this app
+- 020 compton: measured scatter_audio.wav: -17.00 LUFS integrated, peak -5.14 dBFS, 39.11 s
+- 020 compton: sync: GIF/WAV sync: the GIF has 78 frames of 0.5 s each and plays for 39 s, the WAV plays for 39.115 s, and the GIF is 0.115 s shorter than the WAV.
+- 021 compton --simulation.mode=sweep: loudness line: none printed by this app
+- 021 compton: measured sweep_audio.wav: -17.00 LUFS integrated, peak -9.45 dBFS, 22.09 s
+- 021 compton: sync: GIF/WAV sync: the GIF has 44 frames of 0.5 s each and plays for 22 s, the WAV plays for 22.093 s, and the GIF is 0.093 s shorter than the WAV.
+- 022 cosmology --simulation.mode=sky: loudness line: none printed by this app
+- 022 cosmology: measured cmb_sky_audio.wav: -17.00 LUFS integrated, peak -12.58 dBFS, 32.79 s
+- 022 cosmology: sync: GIF/WAV sync: the GIF has 66 frames of 0.5 s each and plays for 33 s, the WAV plays for 32.787 s, and the GIF is 0.213 s longer than the WAV.
+- 023 cosmology --simulation.mode=spectrum: loudness line: none printed by this app
+- 023 cosmology: measured cmb_spectrum_audio.wav: -17.00 LUFS integrated, peak -4.96 dBFS, 49.95 s
+- 023 cosmology: sync: no GIF in this mode, so no sync sentence (same before the change)
+- 024 dynamical --simulation.mode=divergence: loudness line: Loudness: the WAV was normalised to -17 LUFS and measures -17 LUFS integrated, with a peak of -1.8 dBFS.
+- 024 dynamical: measured divergence_audio.wav: -17.00 LUFS integrated, peak -1.80 dBFS, 65.02 s
+- 024 dynamical: sync: GIF/WAV sync: the GIF has 296 frames of 0.22 s each and plays for 65.12 s, the WAV plays for 65.021 s, and the GIF is 0.099 s longer than the WAV.
+- 025 dynamical --simulation.mode=iterate: loudness line: Loudness: the WAV was normalised to -17 LUFS and measures -17 LUFS integrated, with a peak of -4.81 dBFS.
+- 025 dynamical: measured iterate_audio.wav: -17.00 LUFS integrated, peak -4.81 dBFS, 46.21 s
+- 025 dynamical: sync: GIF/WAV sync: the GIF has 149 frames of 0.31 s each and plays for 46.19 s, the WAV plays for 46.212 s, and the GIF is 0.022 s shorter than the WAV.
+- 026 dynamical --simulation.mode=lyapunov: loudness line: Loudness: the WAV was normalised to -17 LUFS and measures -17 LUFS integrated, with a peak of -9.04 dBFS.
+- 026 dynamical: measured lyapunov_audio.wav: -17.00 LUFS integrated, peak -9.04 dBFS, 164.57 s
+- 026 dynamical: sync: GIF/WAV sync: the GIF has 329 frames of 0.5 s each and plays for 164.5 s, the WAV plays for 164.572 s, and the GIF is 0.072 s shorter than the WAV.
+- 027 dynamical --simulation.mode=sweep: loudness line: Loudness: the WAV was normalised to -17 LUFS and measures -17 LUFS integrated, with a peak of -1.13 dBFS.
+- 027 dynamical: measured sweep_audio.wav: -17.00 LUFS integrated, peak -1.13 dBFS, 338.29 s
+- 027 dynamical: sync: GIF/WAV sync: the GIF has 677 frames of 0.5 s each and plays for 338.5 s, the WAV plays for 338.285 s, and the GIF is 0.215 s longer than the WAV.
+- 028 fluid --simulation.mode=flag: loudness line: none printed by this app
+- 028 fluid: measured flag_audio.wav: -17.00 LUFS integrated, peak -7.53 dBFS, 39.80 s
+- 028 fluid: sync: GIF/WAV sync: the GIF has 147 frames of 0.27 s each and plays for 39.69 s, the WAV plays for 39.799 s, and the GIF is 0.109 s shorter than the WAV.
+- 029 fluid --simulation.mode=karman: loudness line: none printed by this app
+- 029 fluid: measured karman_audio.wav: -17.00 LUFS integrated, peak -5.79 dBFS, 45.65 s
+- 029 fluid: sync: GIF/WAV sync: the GIF has 152 frames of 0.3 s each and plays for 45.6 s, the WAV plays for 45.646 s, and the GIF is 0.046 s shorter than the WAV.
+- 030 fluid --simulation.mode=strouhal: loudness line: none printed by this app
+- 030 fluid: measured strouhal_audio.wav: -17.00 LUFS integrated, peak -7.85 dBFS, 47.28 s
+- 030 fluid: sync: GIF/WAV sync: the GIF has 148 frames of 0.32 s each and plays for 47.36 s, the WAV plays for 47.276 s, and the GIF is 0.084 s longer than the WAV.
+- 031 grover --simulation.mode=compare: loudness line: none printed by this app
+- 031 grover: measured grover_compare.wav: -17.00 LUFS integrated, peak -4.49 dBFS, 21.25 s
+- 031 grover: sync: GIF/WAV sync: the GIF has 152 frames of 0.14 s each and plays for 21.28 s, the WAV plays for 21.251 s, and the GIF is 0.029 s longer than the WAV.
+- 032 grover --simulation.mode=geometry: loudness line: none printed by this app
+- 032 grover: measured grover_geometry.wav: -17.00 LUFS integrated, peak -10.34 dBFS, 26.69 s
+- 032 grover: sync: GIF/WAV sync: the GIF has 148 frames of 0.18 s each and plays for 26.64 s, the WAV plays for 26.689 s, and the GIF is 0.049 s shorter than the WAV.
+- 033 grover --simulation.mode=search: loudness line: none printed by this app
+- 033 grover: measured grover_search.wav: -17.00 LUFS integrated, peak -5.54 dBFS, 18.67 s
+- 033 grover: sync: GIF/WAV sync: the GIF has 156 frames of 0.12 s each and plays for 18.72 s, the WAV plays for 18.667 s, and the GIF is 0.053 s longer than the WAV.
+- 034 henon --simulation.mode=attractor: loudness line: Loudness: the WAV was normalised to -17 LUFS and measures -17 LUFS integrated, with a peak of -1.62 dBFS.
+- 034 henon: measured henon_attractor.wav: -17.00 LUFS integrated, peak -1.62 dBFS, 30.95 s
+- 034 henon: sync: GIF/WAV sync: the GIF has 147 frames of 0.21 s each and plays for 30.87 s, the WAV plays for 30.949 s, and the GIF is 0.079 s shorter than the WAV.
+- 035 henon --simulation.mode=reverse: loudness line: Loudness: the WAV was normalised to -17 LUFS and measures -17 LUFS integrated, with a peak of -4.93 dBFS.
+- 035 henon: measured henon_reverse.wav: -17.00 LUFS integrated, peak -4.93 dBFS, 29.48 s
+- 035 henon: sync: no GIF in this mode, so no sync sentence (same before the change)
+- 036 henon --simulation.mode=sweep: loudness line: Loudness: the WAV was normalised to -17 LUFS and measures -17 LUFS integrated, with a peak of -4.27 dBFS.
+- 036 henon: measured henon_sweep.wav: -17.00 LUFS integrated, peak -4.27 dBFS, 145.37 s
+- 036 henon: sync: GIF/WAV sync: the GIF has 291 frames of 0.5 s each and plays for 145.5 s, the WAV plays for 145.373 s, and the GIF is 0.127 s longer than the WAV.
+- 037 hydrogen --simulation.mode=orbitals: loudness line: none printed by this app
+- 037 hydrogen: measured orbitals_audio.wav: -17.00 LUFS integrated, peak -9.13 dBFS, 105.61 s
+- 037 hydrogen: sync: GIF/WAV sync: the GIF has 211 frames of 0.5 s each and plays for 105.5 s, the WAV plays for 105.606 s, and the GIF is 0.106 s shorter than the WAV.
+- 038 hydrogen --simulation.mode=spectrum: loudness line: none printed by this app
+- 038 hydrogen: measured spectrum_audio.wav: -17.00 LUFS integrated, peak -1.82 dBFS, 43.96 s
+- 038 hydrogen: measured spectrum_chord.wav: -18.81 LUFS integrated, peak -0.26 dBFS, 3.00 s
+- 038 hydrogen: measured spectrum_sweep.wav: -17.00 LUFS integrated, peak -3.58 dBFS, 8.40 s
+- 038 hydrogen: sync: GIF/WAV sync: the GIF has 152 frames of 0.29 s each and plays for 44.08 s, the WAV plays for 43.965 s, and the GIF is 0.115 s longer than the WAV.
+- 039 hydrogen --simulation.mode=transitions: loudness line: none printed by this app
+- 039 hydrogen: measured transitions_audio.wav: -17.00 LUFS integrated, peak -3.47 dBFS, 53.59 s
+- 039 hydrogen: sync: GIF/WAV sync: the GIF has 149 frames of 0.36 s each and plays for 53.64 s, the WAV plays for 53.587 s, and the GIF is 0.053 s longer than the WAV.
+- 040 images --simulation.mode=brightness: loudness line: none printed by this app
+- 040 images: measured images_brightness_audio.wav: -17.00 LUFS integrated, peak -10.01 dBFS, 98.93 s
+- 040 images: sync: GIF/WAV sync: the GIF has 198 frames of 0.5 s each and plays for 99 s, the WAV plays for 98.925 s, and the GIF is 0.075 s longer than the WAV.
+- 041 images --simulation.mode=colour: loudness line: none printed by this app
+- 041 images: measured images_colour_audio.wav: -17.00 LUFS integrated, peak -3.66 dBFS, 105.74 s
+- 041 images: sync: GIF/WAV sync: the GIF has 211 frames of 0.5 s each and plays for 105.5 s, the WAV plays for 105.74 s, and the GIF is 0.24 s shorter than the WAV.
+- 042 images --simulation.mode=hsb: loudness line: none printed by this app
+- 042 images: measured images_hsb_audio.wav: -18.00 LUFS integrated, peak -0.26 dBFS, 100.77 s
+- 042 images: sync: GIF/WAV sync: the GIF has 202 frames of 0.5 s each and plays for 101 s, the WAV plays for 100.771 s, and the GIF is 0.229 s longer than the WAV.
+- 043 images --simulation.mode=scan_horizontal: loudness line: none printed by this app
+- 043 images: measured images_scan_horizontal_audio.wav: -17.00 LUFS integrated, peak -11.53 dBFS, 99.85 s
+- 043 images: sync: GIF/WAV sync: the GIF has 200 frames of 0.5 s each and plays for 100 s, the WAV plays for 99.854 s, and the GIF is 0.146 s longer than the WAV.
+- 044 lagrange --simulation.mode=l1: loudness line: none printed by this app
+- 044 lagrange: measured l1_audio.wav: -17.00 LUFS integrated, peak -7.01 dBFS, 8.00 s
+- 044 lagrange: sync: GIF/WAV sync: the GIF has 160 frames of 0.05 s each and plays for 8 s, the WAV plays for 8 s, and the GIF and the WAV have the same duration to the millisecond.
+- 045 lagrange --simulation.mode=l4: loudness line: none printed by this app
+- 045 lagrange: measured l4_audio.wav: -16.93 LUFS integrated, peak -4.74 dBFS, 18.85 s
+- 045 lagrange: sync: GIF/WAV sync: the GIF has 145 frames of 0.13 s each and plays for 18.85 s, the WAV plays for 18.85 s, and the GIF and the WAV have the same duration to the millisecond.
+- 046 lagrange --simulation.mode=l5: loudness line: none printed by this app
+- 046 lagrange: measured l5_audio.wav: -17.00 LUFS integrated, peak -5.04 dBFS, 18.85 s
+- 046 lagrange: sync: GIF/WAV sync: the GIF has 145 frames of 0.13 s each and plays for 18.85 s, the WAV plays for 18.85 s, and the GIF and the WAV have the same duration to the millisecond.
+- 047 lorenz --simulation.mode=lorenz: loudness line: Loudness: the WAV was normalised to -17 LUFS and measures -17.02 LUFS integrated, with a peak of -1 dBFS.
+- 047 lorenz: measured lorenz_audio.wav: -17.02 LUFS integrated, peak -1.00 dBFS, 40.00 s
+- 047 lorenz: sync: GIF/WAV sync: the GIF has 148 frames of 0.27 s each and plays for 39.96 s, the WAV plays for 40 s, and the GIF is 0.04 s shorter than the WAV.
+- 048 lorenz --simulation.mode=rossler: loudness line: Loudness: the WAV was normalised to -17 LUFS and measures -17 LUFS integrated, with a peak of -1.47 dBFS.
+- 048 lorenz: measured rossler_audio.wav: -17.00 LUFS integrated, peak -1.47 dBFS, 40.00 s
+- 048 lorenz: sync: GIF/WAV sync: the GIF has 148 frames of 0.27 s each and plays for 39.96 s, the WAV plays for 40 s, and the GIF is 0.04 s shorter than the WAV.
+- 049 magnetic --simulation.mode=cyclotron: loudness line: none printed by this app
+- 049 magnetic: measured cyclotron_audio.wav: -17.00 LUFS integrated, peak -8.90 dBFS, 52.57 s
+- 049 magnetic: sync: GIF/WAV sync: the GIF has 150 frames of 0.35 s each and plays for 52.5 s, the WAV plays for 52.573 s, and the GIF is 0.073 s shorter than the WAV.
+- 050 magnetic --simulation.mode=drift: loudness line: none printed by this app
+- 050 magnetic: measured drift_audio.wav: -17.00 LUFS integrated, peak -9.97 dBFS, 48.64 s
+- 050 magnetic: sync: GIF/WAV sync: the GIF has 152 frames of 0.32 s each and plays for 48.64 s, the WAV plays for 48.637 s, and the GIF is 0.003 s longer than the WAV.
+- 051 magnetic --simulation.mode=mirror: loudness line: none printed by this app
+- 051 magnetic: measured mirror_audio.wav: -17.00 LUFS integrated, peak -9.10 dBFS, 47.87 s
+- 051 magnetic: sync: GIF/WAV sync: the GIF has 150 frames of 0.32 s each and plays for 48 s, the WAV plays for 47.866 s, and the GIF is 0.134 s longer than the WAV.
+- 052 magnetic --simulation.mode=multi: loudness line: none printed by this app
+- 052 magnetic: measured multi_audio.wav: -17.00 LUFS integrated, peak -7.07 dBFS, 61.78 s
+- 052 magnetic: sync: GIF/WAV sync: the GIF has 151 frames of 0.41 s each and plays for 61.91 s, the WAV plays for 61.783 s, and the GIF is 0.127 s longer than the WAV.
+- 053 mandelbrot --simulation.mode=julia: loudness line: none printed by this app
+- 053 mandelbrot: measured mandelbrot_julia.wav: -17.00 LUFS integrated, peak -10.61 dBFS, 77.89 s
+- 053 mandelbrot: sync: GIF/WAV sync: the GIF has 156 frames of 0.5 s each and plays for 78 s, the WAV plays for 77.895 s, and the GIF is 0.105 s longer than the WAV.
+- 054 mandelbrot --simulation.mode=mandelbrot: loudness line: none printed by this app
+- 054 mandelbrot: measured mandelbrot_mandelbrot.wav: -17.00 LUFS integrated, peak -11.38 dBFS, 83.27 s
+- 054 mandelbrot: sync: GIF/WAV sync: the GIF has 167 frames of 0.5 s each and plays for 83.5 s, the WAV plays for 83.272 s, and the GIF is 0.228 s longer than the WAV.
+- 055 mandelbrot --simulation.mode=zoom: loudness line: none printed by this app
+- 055 mandelbrot: measured mandelbrot_zoom.wav: -17.00 LUFS integrated, peak -14.52 dBFS, 115.31 s
+- 055 mandelbrot: sync: GIF/WAV sync: the GIF has 231 frames of 0.5 s each and plays for 115.5 s, the WAV plays for 115.311 s, and the GIF is 0.189 s longer than the WAV.
+- 056 montecarlo --simulation.mode=critical: loudness line: none printed by this app
+- 056 montecarlo: measured critical_audio.wav: -19.71 LUFS integrated, peak -0.26 dBFS, 76.10 s
+- 056 montecarlo: sync: GIF/WAV sync: the GIF has 152 frames of 0.5 s each and plays for 76 s, the WAV plays for 76.097 s, and the GIF is 0.097 s shorter than the WAV.
+- 057 montecarlo --simulation.mode=quench: loudness line: none printed by this app
+- 057 montecarlo: measured quench_audio.wav: -18.73 LUFS integrated, peak -0.26 dBFS, 77.63 s
+- 057 montecarlo: sync: GIF/WAV sync: the GIF has 155 frames of 0.5 s each and plays for 77.5 s, the WAV plays for 77.629 s, and the GIF is 0.129 s shorter than the WAV.
+- 058 montecarlo --simulation.mode=sweep: loudness line: none printed by this app
+- 058 montecarlo: measured sweep_audio.wav: -17.00 LUFS integrated, peak -1.32 dBFS, 81.41 s
+- 058 montecarlo: sync: GIF/WAV sync: the GIF has 163 frames of 0.5 s each and plays for 81.5 s, the WAV plays for 81.414 s, and the GIF is 0.086 s longer than the WAV.
+- 059 pendulum --simulation.mode=double: loudness line: Loudness: the WAV was normalised to -17 LUFS and measures -17 LUFS integrated, with a peak of -4.52 dBFS.
+- 059 pendulum: measured double_audio.wav: -17.00 LUFS integrated, peak -4.52 dBFS, 20.00 s
+- 059 pendulum: sync: GIF/WAV sync: the GIF has 500 frames of 0.04 s each and plays for 20 s, the WAV plays for 20 s, and the GIF and the WAV have the same duration to the millisecond.
+- 060 pendulum --simulation.mode=simple: loudness line: Loudness: the WAV was normalised to -17 LUFS and measures -17 LUFS integrated, with a peak of -9.62 dBFS.
+- 060 pendulum: measured simple_audio.wav: -17.00 LUFS integrated, peak -9.62 dBFS, 20.00 s
+- 060 pendulum: sync: GIF/WAV sync: the GIF has 500 frames of 0.04 s each and plays for 20 s, the WAV plays for 20 s, and the GIF and the WAV have the same duration to the millisecond.
+- 061 primes --simulation.mode=gaps: loudness line: none printed by this app
+- 061 primes: measured gaps_audio.wav: -17.00 LUFS integrated, peak -0.81 dBFS, 30.08 s
+- 061 primes: measured gaps_slow.wav: -17.00 LUFS integrated, peak -0.65 dBFS, 120.08 s
+- 061 primes: sync: GIF/WAV sync: the GIF has 60 frames of 0.5 s each and plays for 30 s, the WAV plays for 30.08 s, and the GIF is 0.08 s shorter than the WAV.
+- 062 primes --simulation.mode=ulam: loudness line: none printed by this app
+- 062 primes: measured ulam_audio.wav: -17.00 LUFS integrated, peak -1.19 dBFS, 10.00 s
+- 062 primes: sync: GIF/WAV sync: the GIF has 1 frame of 10 s and plays for 10 s, the WAV plays for 10 s, and the GIF and the WAV have the same duration to the millisecond.
+- 063 quantum --simulation.mode=box: loudness line: none printed by this app
+- 063 quantum: measured box_audio.wav: -17.00 LUFS integrated, peak -9.69 dBFS, 20.00 s
+- 063 quantum: sync: GIF/WAV sync: the GIF has 400 frames of 0.05 s each and plays for 20 s, the WAV plays for 20 s, and the GIF and the WAV have the same duration to the millisecond.
+- 064 quantum --simulation.mode=qho: loudness line: none printed by this app
+- 064 quantum: measured qho_audio.wav: -17.00 LUFS integrated, peak -11.10 dBFS, 12.55 s
+- 064 quantum: sync: GIF/WAV sync: the GIF has 251 frames of 0.05 s each and plays for 12.55 s, the WAV plays for 12.55 s, and the GIF and the WAV have the same duration to the millisecond.
+- 065 quantum_statistics --simulation.mode=fermi_sea: loudness line: none printed by this app
+- 065 quantum_statistics: measured quantum_statistics_fermi_sea.wav: -17.00 LUFS integrated, peak -5.32 dBFS, 22.97 s
+- 065 quantum_statistics: sync: GIF/WAV sync: the GIF has 46 frames of 0.5 s each and plays for 23 s, the WAV plays for 22.972 s, and the GIF is 0.028 s longer than the WAV.
+- 066 quantum_statistics --simulation.mode=spectrum: loudness line: none printed by this app
+- 066 quantum_statistics: measured quantum_statistics_spectrum.wav: -17.00 LUFS integrated, peak -4.68 dBFS, 30.62 s
+- 066 quantum_statistics: sync: GIF/WAV sync: the GIF has 61 frames of 0.5 s each and plays for 30.5 s, the WAV plays for 30.622 s, and the GIF is 0.122 s shorter than the WAV.
+- 067 quantum_statistics --simulation.mode=temperature: loudness line: none printed by this app
+- 067 quantum_statistics: measured quantum_statistics_temperature.wav: -17.00 LUFS integrated, peak -9.33 dBFS, 29.69 s
+- 067 quantum_statistics: sync: GIF/WAV sync: the GIF has 59 frames of 0.5 s each and plays for 29.5 s, the WAV plays for 29.687 s, and the GIF is 0.187 s shorter than the WAV.
+- 068 quantum_tunnelling --simulation.mode=barrier: loudness line: none printed by this app
+- 068 quantum_tunnelling: measured barrier_audio.wav: -17.00 LUFS integrated, peak -4.77 dBFS, 47.23 s
+- 068 quantum_tunnelling: sync: GIF/WAV sync: the GIF has 43 frames of 0.06 s each and plays for 2.58 s, the WAV plays for 47.233 s, of which the part between the 30.026 s spoken intro and the 14.657 s spoken outro lasts 2.55 s, and the GIF is 0.03 s longer than that part.
+- 069 quantum_tunnelling --simulation.mode=energy: loudness line: none printed by this app
+- 069 quantum_tunnelling: measured energy_audio.wav: -17.00 LUFS integrated, peak -10.55 dBFS, 38.01 s
+- 069 quantum_tunnelling: sync: GIF/WAV sync: the GIF has 40 frames of 0.2 s each and plays for 8 s, the WAV plays for 38.005 s, of which the part after the 30.005 s spoken intro lasts 8 s, and the GIF and that part have the same duration to the millisecond.
+- 070 quantum_tunnelling --simulation.mode=sweep: loudness line: none printed by this app
+- 070 quantum_tunnelling: measured sweep_audio.wav: -17.00 LUFS integrated, peak -8.59 dBFS, 23.88 s
+- 070 quantum_tunnelling: sync: GIF/WAV sync: the GIF has 40 frames of 0.15 s each and plays for 6 s, the WAV plays for 23.877 s, of which the part after the 17.877 s spoken intro lasts 6 s, and the GIF and that part have the same duration to the millisecond.
+- 071 qubit --simulation.mode=gates: loudness line: none printed by this app
+- 071 qubit: measured qubit_gates.wav: -17.00 LUFS integrated, peak -4.22 dBFS, 24.50 s
+- 071 qubit: sync: GIF/WAV sync: the GIF has 79 frames of 0.31 s each and plays for 24.49 s, the WAV plays for 24.504 s, and the GIF is 0.014 s shorter than the WAV.
+- 072 qubit --simulation.mode=measurement: loudness line: none printed by this app
+- 072 qubit: measured qubit_measurement.wav: -17.00 LUFS integrated, peak -13.08 dBFS, 26.75 s
+- 072 qubit: sync: no GIF in this mode, so no sync sentence (same before the change)
+- 073 qubit --simulation.mode=rabi: loudness line: none printed by this app
+- 073 qubit: measured qubit_rabi.wav: -17.00 LUFS integrated, peak -14.10 dBFS, 21.80 s
+- 073 qubit: sync: no GIF in this mode, so no sync sentence (same before the change)
+- 074 relativity --simulation.mode=chirp: loudness line: none printed by this app
+- 074 relativity: measured chirp.wav: -24.16 LUFS integrated, peak -0.26 dBFS, 3.58 s
+- 074 relativity: measured gw150914.wav: -24.16 LUFS integrated, peak -0.26 dBFS, 3.58 s
+- 074 relativity: measured gw170817.wav: -17.00 LUFS integrated, peak -2.45 dBFS, 15.08 s
+- 074 relativity: measured stellar.wav: -24.57 LUFS integrated, peak -0.26 dBFS, 28.96 s
+- 074 relativity: sync: GIF/WAV sync: the GIF has 60 frames of 0.06 s each and plays for 3.6 s, the WAV plays for 3.58 s, and the GIF is 0.02 s longer than the WAV.
+- 075 relativity --simulation.mode=geodesic: loudness line: none printed by this app
+- 075 relativity: measured geodesic.wav: -17.00 LUFS integrated, peak -12.70 dBFS, 10.00 s
+- 075 relativity: sync: GIF/WAV sync: the GIF has 59 frames of 0.17 s each and plays for 10.03 s, the WAV plays for 10 s, and the GIF is 0.03 s longer than the WAV.
+- 076 resonance --simulation.mode=galilean: loudness line: none printed by this app
+- 076 resonance: measured galilean_audio.wav: -17.00 LUFS integrated, peak -3.06 dBFS, 57.02 s
+- 076 resonance: sync: GIF/WAV sync: the GIF has 150 frames of 0.22 s each and plays for 33 s, the WAV plays for 57.022 s, of which the part after the 24.022 s spoken intro lasts 33 s, and the GIF and that part have the same duration to the millisecond.
+- 077 resonance --simulation.mode=kirkwood: loudness line: none printed by this app
+- 077 resonance: measured kirkwood_audio.wav: -17.00 LUFS integrated, peak -6.73 dBFS, 36.95 s
+- 077 resonance: sync: GIF/WAV sync: the GIF has 144 frames of 0.1 s each and plays for 14.4 s, the WAV plays for 36.95 s, of which the part after the 22.55 s spoken intro lasts 14.4 s, and the GIF and that part have the same duration to the millisecond.
+- 078 resonance --simulation.mode=saturn: loudness line: none printed by this app
+- 078 resonance: measured saturn_audio.wav: -16.99 LUFS integrated, peak -7.29 dBFS, 34.44 s
+- 078 resonance: sync: GIF/WAV sync: the GIF has 144 frames of 0.1 s each and plays for 14.4 s, the WAV plays for 34.435 s, of which the part after the 20.035 s spoken intro lasts 14.4 s, and the GIF and that part have the same duration to the millisecond.
+- 079 scattering --simulation.mode=discovery: loudness line: none printed by this app
+- 079 scattering: measured discovery_audio.wav: -17.00 LUFS integrated, peak -0.78 dBFS, 41.34 s
+- 079 scattering: sync: GIF/WAV sync: the GIF has 160 frames of 0.05 s each and plays for 8 s, the WAV plays for 41.344 s, of which the part between the 25.281 s spoken intro and the 8.063 s spoken outro lasts 8 s, and the GIF and that part have the same duration to the millisecond.
+- 080 scattering --simulation.mode=distribution: loudness line: none printed by this app
+- 080 scattering: measured distribution_audio.wav: -17.00 LUFS integrated, peak -4.11 dBFS, 36.13 s
+- 080 scattering: sync: GIF/WAV sync: the GIF has 148 frames of 0.11 s each and plays for 16.28 s, the WAV plays for 36.131 s, of which the part after the 19.831 s spoken intro lasts 16.3 s, and the GIF is 0.02 s shorter than that part.
+- 081 scattering --simulation.mode=scatter: loudness line: none printed by this app
+- 081 scattering: measured scatter_audio.wav: -17.00 LUFS integrated, peak -7.71 dBFS, 40.55 s
+- 081 scattering: sync: GIF/WAV sync: the GIF has 154 frames of 0.13 s each and plays for 20.02 s, the WAV plays for 40.55 s, of which the part after the 20.55 s spoken intro lasts 20 s, and the GIF is 0.02 s longer than that part.
+- 082 signal --simulation.mode=am: loudness line: none printed by this app
+- 082 signal: measured am_clean.wav: -17.00 LUFS integrated, peak -9.41 dBFS, 3.00 s
+- 082 signal: measured am_narrative_full.wav: -17.00 LUFS integrated, peak -4.84 dBFS, 38.44 s
+- 082 signal: measured am_noisy.wav: -17.00 LUFS integrated, peak -6.71 dBFS, 3.00 s
+- 082 signal: measured am_recovered.wav: -17.00 LUFS integrated, peak -9.23 dBFS, 3.00 s
+- 082 signal: sync: GIF/WAV sync: the GIF has 30 frames of 0.1 s each and plays for 3 s, the WAV plays for 3 s, and the GIF and the WAV have the same duration to the millisecond.
+- 083 signal --simulation.mode=chord: loudness line: none printed by this app
+- 083 signal: measured chord_clean.wav: -17.00 LUFS integrated, peak -8.62 dBFS, 3.00 s
+- 083 signal: measured chord_narrative_full.wav: -17.00 LUFS integrated, peak -4.44 dBFS, 37.61 s
+- 083 signal: measured chord_noisy.wav: -17.00 LUFS integrated, peak -5.94 dBFS, 3.00 s
+- 083 signal: measured chord_recovered.wav: -17.00 LUFS integrated, peak -8.57 dBFS, 3.00 s
+- 083 signal: sync: GIF/WAV sync: the GIF has 30 frames of 0.1 s each and plays for 3 s, the WAV plays for 3 s, and the GIF and the WAV have the same duration to the millisecond.
+- 084 signal --simulation.mode=sweep: loudness line: none printed by this app
+- 084 signal: measured sweep_clean.wav: -17.00 LUFS integrated, peak -14.49 dBFS, 4.00 s
+- 084 signal: measured sweep_narrative_full.wav: -17.00 LUFS integrated, peak -8.27 dBFS, 35.92 s
+- 084 signal: measured sweep_noisy.wav: -17.00 LUFS integrated, peak -8.73 dBFS, 4.00 s
+- 084 signal: measured sweep_recovered.wav: -17.00 LUFS integrated, peak -9.89 dBFS, 4.00 s
+- 084 signal: sync: GIF/WAV sync: the GIF has 40 frames of 0.1 s each and plays for 4 s, the WAV plays for 4 s, and the GIF and the WAV have the same duration to the millisecond.
+- 085 thermo --simulation.mode=cooling: loudness line: none printed by this app
+- 085 thermo: measured cooling_audio.wav: -17.00 LUFS integrated, peak -4.98 dBFS, 15.97 s
+- 085 thermo: sync: GIF/WAV sync: the GIF has 50 frames of 0.32 s each and plays for 16 s, the WAV plays for 15.973 s, and the GIF is 0.027 s longer than the WAV.
+- 086 thermo --simulation.mode=distribution: loudness line: none printed by this app
+- 086 thermo: measured distribution_audio.wav: -17.00 LUFS integrated, peak -4.73 dBFS, 31.22 s
+- 086 thermo: sync: GIF/WAV sync: the GIF has 101 frames of 0.31 s each and plays for 31.31 s, the WAV plays for 31.221 s, and the GIF is 0.089 s longer than the WAV.
+- 087 thermo --simulation.mode=ensemble: loudness line: none printed by this app
+- 087 thermo: measured ensemble_audio.wav: -17.00 LUFS integrated, peak -3.48 dBFS, 33.82 s
+- 087 thermo: sync: GIF/WAV sync: the GIF has 199 frames of 0.17 s each and plays for 33.83 s, the WAV plays for 33.817 s, and the GIF is 0.013 s longer than the WAV.
+- 088 thermo --simulation.mode=equipartition: loudness line: none printed by this app
+- 088 thermo: measured equipartition_audio.wav: -17.00 LUFS integrated, peak -6.08 dBFS, 30.51 s
+- 088 thermo: sync: GIF/WAV sync: the GIF has 98 frames of 0.31 s each and plays for 30.38 s, the WAV plays for 30.505 s, and the GIF is 0.125 s shorter than the WAV.
+- 089 waves --simulation.mode=interference: loudness line: none printed by this app
+- 089 waves: measured interference_audio.wav: -21.68 LUFS integrated, peak -0.26 dBFS, 16.00 s
+- 089 waves: sync: GIF/WAV sync: the GIF has 145 frames of 0.11 s each and plays for 15.95 s, the WAV plays for 16 s, and the GIF is 0.05 s shorter than the WAV.
+- 090 waves --simulation.mode=ripple: loudness line: none printed by this app
+- 090 waves: measured ripple_audio.wav: -17.00 LUFS integrated, peak -9.04 dBFS, 20.00 s
+- 090 waves: sync: GIF/WAV sync: the GIF has 154 frames of 0.13 s each and plays for 20.02 s, the WAV plays for 20 s, and the GIF is 0.02 s longer than the WAV.
+- 091 dynamical --simulation.mode=iterate --simulation.dynamical.preset=extinction: loudness line: Loudness: the WAV was normalised to -17 LUFS and measures -17 LUFS integrated, with a peak of -3.07 dBFS.
+- 091 dynamical: measured iterate_extinction_audio.wav: -17.00 LUFS integrated, peak -3.07 dBFS, 55.48 s
+- 091 dynamical: sync: GIF/WAV sync: the GIF has 150 frames of 0.37 s each and plays for 55.5 s, the WAV plays for 55.478 s, and the GIF is 0.022 s longer than the WAV.
+- 092 dynamical --simulation.mode=iterate --simulation.dynamical.preset=growth: loudness line: Loudness: the WAV was normalised to -17 LUFS and measures -17 LUFS integrated, with a peak of -2.96 dBFS.
+- 092 dynamical: measured iterate_growth_audio.wav: -17.00 LUFS integrated, peak -2.96 dBFS, 49.57 s
+- 092 dynamical: sync: GIF/WAV sync: the GIF has 150 frames of 0.33 s each and plays for 49.5 s, the WAV plays for 49.57 s, and the GIF is 0.07 s shorter than the WAV.
+- 093 dynamical --simulation.mode=iterate --simulation.dynamical.preset=fixed_point: loudness line: Loudness: the WAV was normalised to -17 LUFS and measures -17 LUFS integrated, with a peak of -2.92 dBFS.
+- 093 dynamical: measured iterate_fixed_point_audio.wav: -17.00 LUFS integrated, peak -2.92 dBFS, 48.62 s
+- 093 dynamical: sync: GIF/WAV sync: the GIF has 152 frames of 0.32 s each and plays for 48.64 s, the WAV plays for 48.618 s, and the GIF is 0.022 s longer than the WAV.
+- 094 dynamical --simulation.mode=iterate --simulation.dynamical.preset=period2: loudness line: Loudness: the WAV was normalised to -17 LUFS and measures -17 LUFS integrated, with a peak of -6.75 dBFS.
+- 094 dynamical: measured iterate_period2_audio.wav: -17.00 LUFS integrated, peak -6.75 dBFS, 48.93 s
+- 094 dynamical: sync: GIF/WAV sync: the GIF has 148 frames of 0.33 s each and plays for 48.84 s, the WAV plays for 48.932 s, and the GIF is 0.092 s shorter than the WAV.
+- 095 dynamical --simulation.mode=iterate --simulation.dynamical.preset=period4: loudness line: Loudness: the WAV was normalised to -17 LUFS and measures -17 LUFS integrated, with a peak of -6.19 dBFS.
+- 095 dynamical: measured iterate_period4_audio.wav: -17.00 LUFS integrated, peak -6.19 dBFS, 49.05 s
+- 095 dynamical: sync: GIF/WAV sync: the GIF has 149 frames of 0.33 s each and plays for 49.17 s, the WAV plays for 49.048 s, and the GIF is 0.122 s longer than the WAV.
+- 096 dynamical --simulation.mode=iterate --simulation.dynamical.preset=period3_window: loudness line: Loudness: the WAV was normalised to -17 LUFS and measures -17 LUFS integrated, with a peak of -5.34 dBFS.
+- 096 dynamical: measured iterate_period3_window_audio.wav: -17.00 LUFS integrated, peak -5.34 dBFS, 50.29 s
+- 096 dynamical: sync: GIF/WAV sync: the GIF has 148 frames of 0.34 s each and plays for 50.32 s, the WAV plays for 50.285 s, and the GIF is 0.035 s longer than the WAV.
+- 097 dynamical --simulation.mode=iterate --simulation.dynamical.preset=chaos: loudness line: Loudness: the WAV was normalised to -17 LUFS and measures -17 LUFS integrated, with a peak of -4.1 dBFS.
+- 097 dynamical: measured iterate_chaos_audio.wav: -17.00 LUFS integrated, peak -4.10 dBFS, 49.32 s
+- 097 dynamical: sync: GIF/WAV sync: the GIF has 149 frames of 0.33 s each and plays for 49.17 s, the WAV plays for 49.324 s, and the GIF is 0.154 s shorter than the WAV.
+- 098 dynamical --simulation.mode=lyapunov --simulation.dynamical.preset=lyapunov_window: loudness line: Loudness: the WAV was normalised to -17 LUFS and measures -17 LUFS integrated, with a peak of -7.1 dBFS.
+- 098 dynamical: measured lyapunov_window_audio.wav: -17.00 LUFS integrated, peak -7.10 dBFS, 84.59 s
+- 098 dynamical: sync: GIF/WAV sync: the GIF has 302 frames of 0.28 s each and plays for 84.56 s, the WAV plays for 84.595 s, and the GIF is 0.035 s shorter than the WAV.
+- 099 dynamical --simulation.mode=divergence --simulation.dynamical.preset=divergence_chaotic: loudness line: Loudness: the WAV was normalised to -17 LUFS and measures -17 LUFS integrated, with a peak of -1.8 dBFS.
+- 099 dynamical: measured divergence_chaotic_audio.wav: -17.00 LUFS integrated, peak -1.80 dBFS, 65.02 s
+- 099 dynamical: sync: GIF/WAV sync: the GIF has 296 frames of 0.22 s each and plays for 65.12 s, the WAV plays for 65.021 s, and the GIF is 0.099 s longer than the WAV.
+- 100 dynamical --simulation.mode=divergence --simulation.dynamical.preset=divergence_edge: loudness line: Loudness: the WAV was normalised to -17 LUFS and measures -17 LUFS integrated, with a peak of -5.85 dBFS.
+- 100 dynamical: measured divergence_edge_audio.wav: -17.00 LUFS integrated, peak -5.85 dBFS, 65.02 s
+- 100 dynamical: sync: GIF/WAV sync: the GIF has 296 frames of 0.22 s each and plays for 65.12 s, the WAV plays for 65.021 s, and the GIF is 0.099 s longer than the WAV.
+- 101 dynamical --simulation.mode=divergence --simulation.dynamical.preset=divergence_periodic: loudness line: Loudness: the WAV was normalised to -17 LUFS and measures -17 LUFS integrated, with a peak of -6.49 dBFS.
+- 101 dynamical: measured divergence_periodic_audio.wav: -17.00 LUFS integrated, peak -6.49 dBFS, 65.02 s
+- 101 dynamical: sync: GIF/WAV sync: the GIF has 296 frames of 0.22 s each and plays for 65.12 s, the WAV plays for 65.021 s, and the GIF is 0.099 s longer than the WAV.
+- 102 dynamical --simulation.mode=divergence --simulation.dynamical.preset=divergence_stable: loudness line: Loudness: the WAV was normalised to -17 LUFS and measures -17 LUFS integrated, with a peak of -2.19 dBFS.
+- 102 dynamical: measured divergence_stable_audio.wav: -17.00 LUFS integrated, peak -2.19 dBFS, 65.02 s
+- 102 dynamical: sync: GIF/WAV sync: the GIF has 296 frames of 0.22 s each and plays for 65.12 s, the WAV plays for 65.021 s, and the GIF is 0.099 s longer than the WAV.
+- 103 lorenz --simulation.lorenz.preset=classic: loudness line: Loudness: the WAV was normalised to -17 LUFS and measures -17.02 LUFS integrated, with a peak of -1 dBFS.
+- 103 lorenz: measured lorenz_audio_classic.wav: -17.02 LUFS integrated, peak -1.00 dBFS, 40.00 s
+- 103 lorenz: sync: GIF/WAV sync: the GIF has 148 frames of 0.27 s each and plays for 39.96 s, the WAV plays for 40 s, and the GIF is 0.04 s shorter than the WAV.
+- 104 lorenz --simulation.lorenz.preset=butterfly: loudness line: Loudness: the WAV was normalised to -17 LUFS and measures -17.02 LUFS integrated, with a peak of -1 dBFS.
+- 104 lorenz: measured lorenz_audio_butterfly.wav: -17.02 LUFS integrated, peak -1.00 dBFS, 30.00 s
+- 104 lorenz: sync: GIF/WAV sync: the GIF has 150 frames of 0.2 s each and plays for 30 s, the WAV plays for 30 s, and the GIF and the WAV have the same duration to the millisecond.
+- 105 lorenz --simulation.lorenz.preset=stable: loudness line: Loudness: the WAV was normalised to -17 LUFS and measures -17.01 LUFS integrated, with a peak of -1 dBFS.
+- 105 lorenz: measured lorenz_audio_stable.wav: -17.01 LUFS integrated, peak -1.00 dBFS, 30.00 s
+- 105 lorenz: sync: GIF/WAV sync: the GIF has 150 frames of 0.2 s each and plays for 30 s, the WAV plays for 30 s, and the GIF and the WAV have the same duration to the millisecond.
+- 106 lorenz --simulation.lorenz.preset=wild: loudness line: Loudness: the WAV was normalised to -17 LUFS and measures -17.02 LUFS integrated, with a peak of -1 dBFS.
+- 106 lorenz: measured lorenz_audio_wild.wav: -17.02 LUFS integrated, peak -1.00 dBFS, 20.00 s
+- 106 lorenz: sync: GIF/WAV sync: the GIF has 154 frames of 0.13 s each and plays for 20.02 s, the WAV plays for 20 s, and the GIF is 0.02 s longer than the WAV.
+- 107 lorenz --simulation.lorenz.preset=slow: loudness line: Loudness: the WAV was normalised to -17 LUFS and measures -17.01 LUFS integrated, with a peak of -1 dBFS.
+- 107 lorenz: measured lorenz_audio_slow.wav: -17.01 LUFS integrated, peak -1.00 dBFS, 60.00 s
+- 107 lorenz: sync: GIF/WAV sync: the GIF has 150 frames of 0.4 s each and plays for 60 s, the WAV plays for 60 s, and the GIF and the WAV have the same duration to the millisecond.
+- 108 lorenz --simulation.lorenz.preset=rho9996: loudness line: Loudness: the WAV was normalised to -17 LUFS and measures -17.02 LUFS integrated, with a peak of -1 dBFS.
+- 108 lorenz: measured lorenz_audio_rho9996.wav: -17.02 LUFS integrated, peak -1.00 dBFS, 120.00 s
+- 108 lorenz: sync: GIF/WAV sync: the GIF has 240 frames of 0.5 s each and plays for 120 s, the WAV plays for 120 s, and the GIF and the WAV have the same duration to the millisecond.
+- 109 asteroids (default): loudness line: none printed by this app
+- 109 asteroids: measured asteroids_2026-10-01_2026-10-07.wav: -17.00 LUFS integrated, peak -5.48 dBFS, 22.78 s
+- 109 asteroids: sync: GIF/WAV sync: the GIF has 152 frames of 0.15 s each and plays for 22.8 s, the WAV plays for 22.78 s, and the GIF is 0.02 s longer than the WAV.
+
+## Part 2: heading lines
+- henon attractor heading before: `=== HÃ©non Map ===`
+- henon attractor heading after: `=== Hénon Map ===`
+- relativity chirp time-stretch line before: `Time stretch: 4.\xc3\x97`
+- relativity chirp masses line before: `m1 = 36. Mâ   m2 = 29. Mâ   distance = 410. Mpc`
+- relativity chirp time-stretch line after: `Time stretch: 4.×`
+- relativity chirp masses line after: `m1 = 36. M☉   m2 = 29. M☉   distance = 410. Mpc`
+- Mojibake ("Ã" or "Â") lines in after-sweep logs: 0; in before-sweep logs: 4
+- Setting $CharacterEncoding = "UTF8" does not change how wolframscript -file decodes the script: a test script printing the literal "Hénon ×" gave "HÃ©non Ã\x97" both before and after the assignment, and "H\[EAcute]non \[Times]" printed correctly. $CharacterEncoding was already "UTF8" by default ($SystemCharacterEncoding "UTF-8"); the assignment makes it explicit for other systems.
+
+## Part 2: non-ASCII bytes left in string literals
+- Command: a tokeniser over every tracked and new .wl file (comments and strings separated, nested comments handled) listing non-ASCII characters inside string literals.
+- main.wl, experiments.wl, experiment.wl, demo*.wl and tests/*.wl: 0 left (asteroids/tests/test_analyse.wl had two em dashes, also replaced).
+- Every remaining line below is in a file loaded with Get (an app src/ file, stem-core, or tools/src), which wolframscript decodes as UTF-8, so the characters print, speak and render as written. Narration text among them (henon, bell, brownian, grover, mandelbrot, quantum_statistics, qubit speech.wl) now reaches say through a UTF-8 file.
+- asteroids/src/animate.wl:336: – (GIF/PNG label text; Get-loaded, safe)
+- asteroids/src/fetch.wl:158: — (console text; Get-loaded, safe)
+- bell/src/output.wl:92: — (console text; Get-loaded, safe)
+- bell/src/speech.wl:25: — (narration text (spoken via the UTF-8 file); Get-loaded, safe)
+- brownian/src/speech.wl:28: — (narration text (spoken via the UTF-8 file); Get-loaded, safe)
+- cellular/src/animate.wl:100: — (GIF/PNG label text; Get-loaded, safe)
+- grover/src/speech.wl:14: — (narration text (spoken via the UTF-8 file); Get-loaded, safe)
+- henon/src/animate.wl:104: é (GIF/PNG label text; Get-loaded, safe)
+- henon/src/animate.wl:121: é (GIF/PNG label text; Get-loaded, safe)
+- henon/src/animate.wl:265: é (GIF/PNG label text; Get-loaded, safe)
+- henon/src/output.wl:140: — (console text; Get-loaded, safe)
+- henon/src/output.wl:171: — (console text; Get-loaded, safe)
+- henon/src/speech.wl:12: é (narration text (spoken via the UTF-8 file); Get-loaded, safe)
+- henon/src/speech.wl:14: é (narration text (spoken via the UTF-8 file); Get-loaded, safe)
+- henon/src/speech.wl:43: é (narration text (spoken via the UTF-8 file); Get-loaded, safe)
+- henon/src/speech.wl:58: é (narration text (spoken via the UTF-8 file); Get-loaded, safe)
+- henon/src/speech.wl:67: é (narration text (spoken via the UTF-8 file); Get-loaded, safe)
+- henon/src/speech.wl:68: — (narration text (spoken via the UTF-8 file); Get-loaded, safe)
+- henon/src/speech.wl:71: é (narration text (spoken via the UTF-8 file); Get-loaded, safe)
+- mandelbrot/src/speech.wl:13: — (narration text (spoken via the UTF-8 file); Get-loaded, safe)
+- mandelbrot/src/speech.wl:14: — (narration text (spoken via the UTF-8 file); Get-loaded, safe)
+- mandelbrot/src/speech.wl:23: — (narration text (spoken via the UTF-8 file); Get-loaded, safe)
+- mandelbrot/src/speech.wl:29: — (narration text (spoken via the UTF-8 file); Get-loaded, safe)
+- pendulum/src/sonify.wl:93: − (console text; Get-loaded, safe)
+- primes/src/model.wl:72: — (console text; Get-loaded, safe)
+- quantum/src/animate.wl:121: — (GIF/PNG label text; Get-loaded, safe)
+- quantum_statistics/src/speech.wl:20: — (narration text (spoken via the UTF-8 file); Get-loaded, safe)
+- quantum_statistics/src/speech.wl:27: — (narration text (spoken via the UTF-8 file); Get-loaded, safe)
+- qubit/src/speech.wl:26: — (narration text (spoken via the UTF-8 file); Get-loaded, safe)
+- relativity/src/animate.wl:213: — (GIF/PNG label text; Get-loaded, safe)
+- relativity/src/animate.wl:346: — (GIF/PNG label text; Get-loaded, safe)
+- relativity/src/animate.wl:347: — (GIF/PNG label text; Get-loaded, safe)
+- relativity/src/animate.wl:348: — (GIF/PNG label text; Get-loaded, safe)
+- relativity/src/animate.wl:388: — (GIF/PNG label text; Get-loaded, safe)
+- relativity/src/animate.wl:389: — (GIF/PNG label text; Get-loaded, safe)
+- relativity/src/animate.wl:390: — (GIF/PNG label text; Get-loaded, safe)
+- relativity/src/model.wl:72: ☉ (console text; Get-loaded, safe)
+- relativity/src/model.wl:73: ☉ (console text; Get-loaded, safe)
+- relativity/src/model.wl:256: ̃ ₀ (console text; Get-loaded, safe)
+- relativity/src/model.wl:265: ² ̃ (console text; Get-loaded, safe)
+- relativity/src/model.wl:270: ̃ ₀ (console text; Get-loaded, safe)
+- relativity/src/model.wl:271: ̃ (console text; Get-loaded, safe)
+- relativity/src/model.wl:272: ̃ ₀ (console text; Get-loaded, safe)
+- relativity/src/model.wl:301: ̃ ₀ (console text; Get-loaded, safe)
+- relativity/src/model.wl:302: ̃ (console text; Get-loaded, safe)
+- relativity/src/model.wl:304: ² ̃ (console text; Get-loaded, safe)
+- relativity/src/model.wl:305: — (console text; Get-loaded, safe)
+- relativity/src/model.wl:306: — (console text; Get-loaded, safe)
+- relativity/src/model.wl:336: ̃ ₀ (console text; Get-loaded, safe)
+- relativity/src/model.wl:340: → (console text; Get-loaded, safe)
+- relativity/src/model.wl:361: — (console text; Get-loaded, safe)
+- relativity/src/model.wl:389: τ (console text; Get-loaded, safe)
+- relativity/src/model.wl:392: Δ φ (console text; Get-loaded, safe)
+- relativity/src/model.wl:395: τ (console text; Get-loaded, safe)
+- relativity/src/sonify.wl:212: ☉ (console text; Get-loaded, safe)
+- relativity/src/sonify.wl:229: ☉ (console text; Get-loaded, safe)
+- relativity/src/sonify.wl:236: ☉ (console text; Get-loaded, safe)
+- relativity/src/sonify.wl:346: — (console text; Get-loaded, safe)
+- signal/src/animate.wl:82: ₀ ₁ (GIF/PNG label text; Get-loaded, safe)
+- signal/src/animate.wl:228: — (GIF/PNG label text; Get-loaded, safe)
+- signal/src/animate.wl:229: — (GIF/PNG label text; Get-loaded, safe)
+- signal/src/animate.wl:230: — (GIF/PNG label text; Get-loaded, safe)
+- stem-core/config.wl:111: — (console text; Get-loaded, safe)
+- stem-core/src/accessibility.wl:75: — (console text; Get-loaded, safe)
+- stem-core/src/accessibility.wl:86: — (console text; Get-loaded, safe)
+- stem-core/src/accessibility.wl:98: — (console text; Get-loaded, safe)
+- tools/src/video_pipeline.wl:619: — (console text; Get-loaded, safe)
+- tools/src/video_pipeline.wl:627: — (console text; Get-loaded, safe)
+
+## Test suites
+- `wolframscript -file asteroids/tests/test_analyse.wl`: exit 0, 5 s; Results: 29 passed, 0 failed.
+- `wolframscript -file bayes/tests/test_model.wl`: exit 0, 3 s; Results: 23 passed, 0 failed.
+- `wolframscript -file bell/tests/test_model.wl`: exit 0, 6 s; Results: 35 passed, 0 failed.
+- `wolframscript -file blackbody/tests/test_model.wl`: exit 0, 3 s; Results: 23 passed, 0 failed.
+- `wolframscript -file brownian/tests/test_model.wl`: exit 0, 7 s; Results: 24 passed, 0 failed.
+- `wolframscript -file cellular/tests/test_model.wl`: exit 0, 4 s; Results: 16 passed, 0 failed.
+- `wolframscript -file clt/tests/test_model.wl`: exit 0, 7 s; Results: 23 passed, 0 failed.
+- `wolframscript -file compton/tests/test_model.wl`: exit 0, 3 s; Results: 25 passed, 0 failed.
+- `wolframscript -file cosmology/tests/test_model.wl`: exit 0, 3 s; Results: 27 passed, 0 failed.
+- `wolframscript -file dynamical/tests/test_model.wl`: exit 0, 4 s; Results: 114 passed, 0 failed.
+- `wolframscript -file fluid/tests/test_model.wl`: exit 0, 14 s; Results: 5 passed, 0 failed.
+- `wolframscript -file grover/tests/test_model.wl`: exit 0, 3 s; Results: 24 passed, 0 failed.
+- `wolframscript -file henon/tests/test_model.wl`: exit 0, 6 s; Results: 44 passed, 0 failed.
+- `wolframscript -file hydrogen/tests/test_model.wl`: exit 0, 3 s; Results: 23 passed, 0 failed.
+- `wolframscript -file images/tests/test_model.wl`: exit 0, 3 s; Results: 51 passed, 0 failed.
+- `wolframscript -file lagrange/tests/test_model.wl`: exit 0, 3 s; Passed: 43, Failed: 0
+- `wolframscript -file lorenz/tests/test_model.wl`: exit 0, 4 s; Results: 34 passed, 0 failed.
+- `wolframscript -file magnetic/tests/test_model.wl`: exit 0, 3 s; Passed: 18, Failed: 0
+- `wolframscript -file mandelbrot/tests/test_model.wl`: exit 0, 6 s; Results: 27 passed, 0 failed.
+- `wolframscript -file montecarlo/tests/test_model.wl`: exit 0, 3 s; Results: 19 passed, 0 failed.
+- `wolframscript -file pendulum/tests/test_model.wl`: exit 0, 4 s; Results: 18 passed, 0 failed.
+- `wolframscript -file primes/tests/test_model.wl`: exit 0, 9 s; Results: 17 passed, 0 failed.
+- `wolframscript -file quantum/tests/test_model.wl`: exit 0, 12 s; Results: 14 passed, 0 failed.
+- `wolframscript -file quantum_statistics/tests/test_model.wl`: exit 0, 4 s; Results: 26 passed, 0 failed.
+- `wolframscript -file quantum_tunnelling/tests/test_model.wl`: exit 0, 3 s; Results: 20 passed, 0 failed.
+- `wolframscript -file qubit/tests/test_model.wl`: exit 0, 3 s; Results: 33 passed, 0 failed.
+- `wolframscript -file relativity/tests/test_model.wl`: exit 0, 5 s; Results: 16 passed, 0 failed.
+- `wolframscript -file resonance/tests/test_model.wl`: exit 0, 8 s; Passed: 11, Failed: 0
+- `wolframscript -file scattering/tests/test_model.wl`: exit 0, 3 s; Passed: 7, Failed: 0
+- `wolframscript -file signal/tests/test_model.wl`: exit 0, 4 s; Results: 13 passed, 0 failed.
+- `wolframscript -file stem-core/tests/test_gifsync.wl`: exit 0, 5 s; Results: 31 passed, 0 failed.
+- `wolframscript -file stem-core/tests/test_loudness.wl`: exit 0, 7 s; Results: 31 passed, 0 failed.
+- `wolframscript -file stem-core/tests/test_speech.wl`: exit 0, 5 s; Results: 20 passed, 0 failed.
+- `wolframscript -file thermo/tests/test_model.wl`: exit 0, 3 s; Results: 28 passed, 0 failed.
+- `wolframscript -file waves/tests/test_model.wl`: exit 0, 4 s; Results: 23 passed, 0 failed.
+
+## Files changed
+- M AGENTS.md
+- M README.md
+- M asteroids/main.wl
+- M asteroids/src/fetch.wl
+- M asteroids/tests/test_analyse.wl
+- M bayes/AGENTS.md
+- M bayes/experiments.wl
+- M bayes/main.wl
+- M bayes/src/speech.wl
+- M bell/experiments.wl
+- M bell/main.wl
+- M bell/src/speech.wl
+- M blackbody/main.wl
+- M blackbody/src/speech.wl
+- M brownian/experiments.wl
+- M brownian/main.wl
+- M brownian/src/speech.wl
+- M cellular/main.wl
+- M clt/main.wl
+- M clt/src/speech.wl
+- M compton/AGENTS.md
+- M compton/main.wl
+- M compton/src/speech.wl
+- M cosmology/main.wl
+- M demo.wl
+- M demo_html.wl
+- M demo_outreach.wl
+- M dynamical/AGENTS.md
+- M dynamical/main.wl
+- M dynamical/src/speech.wl
+- M dynamical/tests/test_model.wl
+- M fluid/main.wl
+- M fluid/src/output.wl
+- M fluid/src/sonify.wl
+- M grover/AGENTS.md
+- M grover/experiments.wl
+- M grover/main.wl
+- M grover/src/speech.wl
+- M henon/AGENTS.md
+- M henon/main.wl
+- M henon/src/output.wl
+- M henon/src/speech.wl
+- M hydrogen/AGENTS.md
+- M hydrogen/main.wl
+- M hydrogen/src/speech.wl
+- M images/AGENTS.md
+- M images/experiments.wl
+- M images/main.wl
+- M images/src/speech.wl
+- M lagrange/main.wl
+- M lorenz/main.wl
+- M magnetic/main.wl
+- M magnetic/src/sonify.wl
+- M mandelbrot/experiments.wl
+- M mandelbrot/main.wl
+- M mandelbrot/src/speech.wl
+- M montecarlo/AGENTS.md
+- M montecarlo/main.wl
+- M montecarlo/src/speech.wl
+- M pendulum/main.wl
+- M primes/experiments.wl
+- M primes/main.wl
+- M quantum/experiments.wl
+- M quantum/main.wl
+- M quantum_statistics/AGENTS.md
+- M quantum_statistics/experiments.wl
+- M quantum_statistics/main.wl
+- M quantum_statistics/src/speech.wl
+- M quantum_tunnelling/main.wl
+- M quantum_tunnelling/src/speech.wl
+- M qubit/experiments.wl
+- M qubit/main.wl
+- M qubit/src/speech.wl
+- M relativity/experiments.wl
+- M relativity/main.wl
+- M resonance/main.wl
+- M resonance/src/sonify.wl
+- M scattering/AGENTS.md
+- M scattering/main.wl
+- M scattering/src/sonify.wl
+- M signal/AGENTS.md
+- M signal/experiments.wl
+- M signal/main.wl
+- M signal/src/sonify.wl
+- M stem-core/AGENTS.md
+- M stem-core/config.wl
+- M stem-core/init.wl
+- M stem-core/src/export.wl
+- M stem-core/src/utils.wl
+- M thermo/main.wl
+- M thermo/src/speech.wl
+- M waves/main.wl
+- M waves/src/output.wl
+- ?? docs/VERIFICATION_speech_encoding.md
+- ?? stem-core/src/speech.wl
+- ?? stem-core/tests/test_speech.wl

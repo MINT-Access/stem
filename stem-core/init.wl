@@ -22,11 +22,19 @@
                         STEMDescribeCSV, STEMDescribeWAV, STEMDescribeGIF,
                         STEMLoudnessLine, STEMTimingLine,
                         $STEMSpeakEnabled, STEMSay
+     speech.wl        — STEMSpeakToBuffer, STEMSpeechAvailable,
+                        STEMResampleLinear (tiered narration TTS)
      hilbert.wl       — HilbertTraversalOrder
      config.wl        — LoadConfig, DeepMerge, GetCfg, $HardcodedDefaults
      sonification.wl  — SonifyTrajectory, SpatialLayer, MotionLayer,
                         EventLayer, MixLayers, RenderAudio
    ======================================================== *)
+
+(* UTF-8 for every text read and write (Import/Export, streams, RunProcess).
+   It does not change how wolframscript -file decodes the script itself
+   (Latin-1), so string literals in main.wl, experiments.wl and demo*.wl
+   use named characters such as \[EAcute] instead of raw non-ASCII. *)
+$CharacterEncoding = "UTF8";
 
 $stemCoreRoot = DirectoryName[$InputFileName];
 
@@ -35,6 +43,7 @@ Get[FileNameJoin[{$stemCoreRoot, "src", "scales.wl"}]];
 Get[FileNameJoin[{$stemCoreRoot, "src", "synth.wl"}]];
 Get[FileNameJoin[{$stemCoreRoot, "src", "export.wl"}]];
 Get[FileNameJoin[{$stemCoreRoot, "src", "accessibility.wl"}]];
+Get[FileNameJoin[{$stemCoreRoot, "src", "speech.wl"}]];
 Get[FileNameJoin[{$stemCoreRoot, "src", "hilbert.wl"}]];
 Get[FileNameJoin[{$stemCoreRoot, "config.wl"}]];
 Get[FileNameJoin[{$stemCoreRoot, "sonification.wl"}]];

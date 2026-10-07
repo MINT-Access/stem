@@ -39,8 +39,7 @@ images/
                            BrightnessToFreq, RasterTraversalOrder, ColourRunsFromIndices
     sonify.wl            — SonifyImageMode (dispatches brightness/scan_horizontal/colour/hsb),
                            TimbreHarmonics, AddQuadrantClicks, OverlayAt
-    speech.wl            — BuildIntroText, BuildIntroBuffer (SpeechSynthesize[] ->
-                           platform TTS -> text-only fallback), ResampleLinear
+    speech.wl            — BuildIntroText (audio via stem-core STEMSpeakToBuffer)
     animate.wl            — AnimateImageTraversal (Hilbert, duration-synced GIF),
                            AnimateRasterScan (raster sweep line, duration-synced GIF)
     output.wl             — ExportImageData (CSV), ExportImagePNG (PNG)
@@ -123,7 +122,7 @@ config.json + CLI args
    SonifyImageMode            → <|"channels"->{...}, "freqAssigned"->{...},
         |                        "colourStats"->assoc or Missing[]|>
         |
-   BuildIntroText/BuildIntroBuffer (speech.wl) → intro PCM buffer (or {})
+   BuildIntroText/STEMSpeakToBuffer (speech.wl) → intro PCM buffer (or {})
         |
    Join[intro, pause, channel] per channel, export WAV (main.wl)
         |
@@ -226,22 +225,11 @@ the mode's key mapping (different text per mode), colour-mode statistics
 (distinct colour count + most common colour) when applicable, and the
 sonification duration to follow.
 
-`BuildIntroBuffer[text, sr]` is a three-tier fallback, most to least capable:
-
-1. **`SpeechSynthesize[]`** — Wolfram's built-in TTS, tried first. Not
-   reliably available on every Wolfram Engine install (observed to return
-   `$Failed` in this environment) — this is why tier 2 exists and is the
-   one that actually produces audio in practice.
-2. **Platform-native TTS** — macOS `say` + `afconvert`, Linux
-   espeak-ng/espeak, Windows PowerShell `SpeechSynthesizer`. Adapted from
-   the equivalent (and independently duplicated) helper in
-   `signal/src/sonify.wl`. Uses `ResampleLinear` (a general linear
-   resampler, any ratio) rather than signal's ratio-2-only upsampler,
-   since `SpeechSynthesize[]`/various TTS engines may return arbitrary
-   sample rates.
-3. **Text-only** — if both audio tiers fail, print the intro via `STEMSay`
-   and return `{}`. Callers must check for an empty buffer and skip the
-   prepend rather than assume audio is always present.
+The audio comes from stem-core's `STEMSpeakToBuffer[text, sr]`
+(`SpeechSynthesize[]`, then the platform tool given the text through a
+UTF-8 file, then `{}` with one warning sentence; see `stem-core/AGENTS.md`).
+Callers must check for an empty buffer and skip the prepend rather than
+assume audio is always present.
 
 `main.wl` and `experiments.wl` both: build the intro buffer, normalise it
 once (0.95) if non-empty, prepend a 0.4 s pause, then `Join` it in front of
@@ -323,7 +311,7 @@ fixed 32 frames at a fixed 10 fps (3.2s) regardless of how long the
 matching WAV actually plays — the same fixed-nFrames/fixed-frameRate
 pattern found repo-wide, decoupled from the per-pixel note buffer
 (`nPixels * note_duration_base`, here 4096 x 0.02s = 81.9s) plus the
-spoken intro baked directly into the audio buffer (`BuildIntroBuffer` in
+spoken intro baked directly into the audio buffer (`STEMSpeakToBuffer` in
 `speech.wl`, prepended in `main.wl`) whose length isn't known until the
 platform TTS engine actually renders it.
 

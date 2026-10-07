@@ -199,7 +199,7 @@ committed `output/` files before this fix:
 | `temperature` | 3.20s | 29.69s | 0.11x |
 
 The WAV side runs long chiefly because every mode prepends a spoken
-intro (`BuildIntroBuffer`) plus a 0.4s pause ahead of the main
+intro (`STEMSpeakToBuffer`) plus a 0.4s pause ahead of the main
 sonification — the GIF frame budget never accounted for that, or for
 the config-driven `duration`/`nTSteps` values either.
 

@@ -55,7 +55,7 @@ LogError[message_String, logPath_String] :=
     ts = DateString[{"Year", "-", "Month", "-", "Day", " ",
                      "Hour", ":", "Minute", ":", "Second"}];
     EnsureDir[logPath];
-    stream = OpenAppend[logPath];
+    stream = OpenAppend[logPath, CharacterEncoding -> "UTF8"];
     WriteString[stream, "[ERROR] " <> ts <> " " <> message <> "\n"];
     Close[stream]
   ]

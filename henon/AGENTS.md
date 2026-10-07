@@ -407,7 +407,7 @@ discrete simulated states (100 evenly-spaced trajectory points for
 attractor mode; `a_steps - 1` for sweep mode) — the same
 fixed-nFrames/fixed-frameRate pattern found repo-wide, decoupled from
 how long the matching WAV actually plays. Both modes' WAVs also carry a
-spoken intro baked directly into the audio buffer (`BuildIntroBuffer` in
+spoken intro baked directly into the audio buffer (`STEMSpeakToBuffer` in
 `speech.wl`, prepended in `main.wl`/`experiments.wl`) whose length isn't
 known until the platform TTS engine actually renders it — for attractor
 mode this intro (a full descriptive sentence) is longer than the 10s

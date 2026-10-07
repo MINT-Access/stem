@@ -33,6 +33,7 @@
      quench_audio.wav / quench.gif / quench_data.csv
    ======================================================== *)
 
+$CharacterEncoding = "UTF8";   (* text I/O; keep literals ASCII, see AGENTS.md *)
 $projectRoot  = DirectoryName[$InputFileName];
 $stemCoreRoot = FileNameJoin[{$projectRoot, "..", "stem-core"}];
 Get[FileNameJoin[{$stemCoreRoot, "init.wl"}]];
@@ -72,7 +73,7 @@ nSizeCfg = GetCfg[cfg, {"simulation", "montecarlo", "lattice_size"}, 32];
 nSize    = NearestPowerOfTwo[nSizeCfg];
 If[nSize =!= nSizeCfg,
   Print["  [NOTE] lattice_size ", nSizeCfg, " is not a power of 2 (required for the Hilbert ",
-        "spatial layer) — using ", nSize, " instead."]
+        "spatial layer) \[LongDash] using ", nSize, " instead."]
 ];
 
 sr = GetCfg[cfg, {"sonification", "sample_rate"}, 44100];
@@ -93,13 +94,13 @@ outGIF = FileNameJoin[{$outDir, mode <> ".gif"}];
 outCSV = FileNameJoin[{$outDir, mode <> "_data.csv"}];
 
 (* ExportWithIntro — shared by all three modes: prepend the spoken
-   intro (BuildIntroBuffer -> pause -> sonifyResult's buffers), export
+   intro (STEMSpeakToBuffer -> pause -> sonifyResult's buffers), export
    once. Returns the total duration in seconds (matches thermo/
    dynamical's pattern of exporting only after intro is prepended, so
    STEMDescribeWAV's reported duration includes the intro). *)
 ExportWithIntro[sonifyResult_Association, introText_String, outPath_String] :=
   Module[{introBuffer, pauseBuffer, finalLeft, finalRight, totalDur},
-    introBuffer = BuildIntroBuffer[introText, sr];
+    introBuffer = STEMSpeakToBuffer[introText, sr];
     introBuffer = If[Length[introBuffer] > 0, NormalizeBuffer[introBuffer, 0.95], introBuffer];
     pauseBuffer = If[Length[introBuffer] > 0, ConstantArray[0.0, Round[sr * 0.4]], {}];
     finalLeft   = Join[introBuffer, pauseBuffer, sonifyResult["left"]];
@@ -260,7 +261,7 @@ Which[
   (* Unknown mode *)
   True,
     Print["Error: unknown simulation.mode \"", mode,
-          "\" — expected \"sweep\", \"critical\", or \"quench\"."];
+          "\" \[LongDash] expected \"sweep\", \"critical\", or \"quench\"."];
     Exit[1]
 ];
 

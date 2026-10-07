@@ -21,7 +21,7 @@ ExportKarmanCSV[model_Association, outCSV_String] :=
     ];
     Export[outCSV,
       Join[{{"t_s", "L_proxy", "n_vortices_pos", "n_vortices_neg", "f_shed_measured", "pitch_hz", "pan", "volume"}}, rows],
-      "CSV"];
+      "CSV", CharacterEncoding -> "UTF8"];
     STEMDescribeCSV[outCSV, n, 8]
   ];
 
@@ -43,7 +43,7 @@ ExportStrouhalCSV[model_Association, outCSV_String] :=
     ];
     Export[outCSV,
       Join[{{"Re", "f_shed_measured", "St_measured", "St_predicted", "onset_flag", "pitch_hz"}}, rows],
-      "CSV"];
+      "CSV", CharacterEncoding -> "UTF8"];
     STEMDescribeCSV[outCSV, n, 6]
   ];
 
@@ -66,6 +66,6 @@ ExportFlagCSV[model_Association, outCSV_String] :=
     ];
     Export[outCSV,
       Join[{{"t", "y_tip", "dy_tip_dt", "f_flag", "pitch_hz", "pan", "volume"}}, rows],
-      "CSV"];
+      "CSV", CharacterEncoding -> "UTF8"];
     STEMDescribeCSV[outCSV, n, 7]
   ];

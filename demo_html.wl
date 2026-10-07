@@ -1790,7 +1790,7 @@ $sectionsHtml <>
 "</body>\n" <>
 "</html>\n";
 
-Export[$demoHtmlOut, $html, "Text"];
+Export[$demoHtmlOut, $html, "Text", CharacterEncoding -> "UTF8"];
 
 (* ── Summary ──────────────────────────────────────────────────── *)
 
