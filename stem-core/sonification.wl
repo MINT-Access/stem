@@ -287,7 +287,7 @@ MixLayers[spatial_Association, motion_Association,
    ------------------------------------------------------------ *)
 
 RenderAudio[stereoData_?MatrixQ, cfg_Association, outPath_String] :=
-  Module[{sr, chanPair, normalized, sound},
+  Module[{sr, chanPair, normalized, sound, limiter},
     sr         = CfgAt[cfg, {"sonification","sample_rate"}, 44100];
     (* Was: peak-normalize straight to 1.0 (0 dBFS, no headroom at
        all) -- see stem-core/src/synth.wl's NormalizeToLoudness for
@@ -304,7 +304,14 @@ RenderAudio[stereoData_?MatrixQ, cfg_Association, outPath_String] :=
        run: the bare-symbol version left the WAV unwritten
        (Export::nodta) with no visible error at the call site itself. *)
     chanPair   = Transpose[stereoData];   (* {left, right}, channel-major *)
-    normalized = Global`NormalizeToLoudness[chanPair, -17.0, 0.97, sr];
+    (* An app can opt in to the look-ahead peak limiter with the config
+       block audio.limiter (enabled, ceiling_dbfs, attack_ms, release_ms,
+       optional modes); see stem-core/src/synth.wl LimiterSettings. With
+       it off this is exactly the previous call, so output is unchanged. *)
+    limiter    = Global`LimiterSettings[cfg];
+    normalized = If[limiter === None,
+      Global`NormalizeToLoudness[chanPair, -17.0, 0.97, sr],
+      Global`LimitedNormalizeToLoudness[chanPair, -17.0, 0.97, sr, limiter]];
     (* Export channel-major {left, right} directly -- NOT Transpose'd back
        to the interleaved {nSamples, 2} shape stereoData arrived in.
        Verified directly: SampledSoundList given the interleaved shape

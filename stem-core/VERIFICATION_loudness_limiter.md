@@ -1,0 +1,273 @@
+# stem-core loudness meter and peak limiter — verification (measured 2026-10-07)
+
+## Context
+- Repo HEAD: e20cf37 (main); all changes uncommitted, as asked. wolframscript on Mac OS X ARM; every value below comes from runs made in this session.
+- "Old meter" = the previous MeasureIntegratedLoudness (AudioLoudness["EBUMomentary"] per channel plus gating), kept as a scratchpad copy (old_meter.wl) for comparison only.
+- pyloudnorm = Python pyloudnorm 0.1.x Meter (BS.1770-4 implementation) on the same files.
+
+## Part 1: where the old meter departed from ITU-R BS.1770-4
+- K-weighting: the old meter used AudioLoudness's built-in K-weighting; on a -20 dBFS 997 Hz mono sine it read -23.008 per channel (BS.1770: -23.01), so the filter itself was not the problem.
+- Blocks: AudioLoudness["EBUMomentary"] returned 401 values for 40 s, one every 100 ms at t = 0 ... 40 s, from 400 ms windows centred on those times with zero padding. BS.1770 uses only complete 400 ms blocks starting at t = 0: 397 for 40 s. The extra partial blocks at the start and end read 2.5-6 dB low (first values -26.02 and -24.26 LUFS on a steady -23.01 LUFS channel).
+- Effect of the extra blocks on a steady signal: full-scale 997 Hz stereo read -0.062 LUFS (BS.1770: 0.000 at 48 kHz, +0.0028 at 44.1 kHz); -20 dBFS read -20.062.
+- Silence: AudioLoudness returned Indeterminate for silent blocks and values such as -253 and -459 LUFS for the filter tail; the absolute gate happened to reject both, so this did not change results.
+- Channel combination and both gates (absolute -70 LUFS, relative -10 LU below the ungated mean power of the absolute-gated blocks, final mean over blocks passing both) were implemented correctly.
+- Instability on sparse files: the same samples measured -16.34 LUFS after a 16-bit WAV round trip and -17.00 before it (dynamical extinction, identical within one 16-bit step), and -16.45 when built as Real64 Audio. That is inside AudioLoudness and cannot be corrected around it.
+- Old meter on the gated test signals: on/off sine -20.110 (exact BS.1770 -20.095), two-level -20.046 (exact -20.030).
+- Fix: MeasureIntegratedLoudness now implements BS.1770-4 directly (stem-core/src/synth.wl): KWeightingCoefficients (shelf f0 1681.974450955533 Hz, G 3.999843853973347 dB, Q 0.7071752369554196; high pass f0 38.13547087602444 Hz, Q 0.5003270373238773; bilinear transform with K = tan(pi f0/fs)), RecurrenceFilter biquads, BlockMeanSquares (complete 400 ms blocks, 100 ms hop, cumulative sums), channel weight 1, absolute and relative gates. NormalizeToLoudness and STEMLoudnessLine call it on sample lists (no Audio object).
+- K-weighting at 48 kHz (derived): shelf b = {1.5351248595869702, -2.6916961894063807, 1.19839281085285}, a = {1, -1.6906592931824103, 0.7324807742158501}; high pass a = {1, -1.9900474548339797, 0.9900722503662099}. Published BS.1770: b = {1.53512485958697, -2.69169618940638, 1.19839281085285}, a = {1, -1.69065929318241, 0.73248077421585}; a = {1, -1.99004745483398, 0.99007225036621}. Agreement: 1e-12.
+- |H(997 Hz)|^2 of the derived filter: +0.6910 dB at 48 kHz, +0.6938 dB at 44.1 kHz (bilinear warping), so a full-scale 997 Hz stereo sine is 0.0000 LUFS at 48 kHz and +0.0028 LUFS at 44.1 kHz.
+
+## Part 1: unit tests with analytic expectations
+- Command: `wolframscript -file stem-core/tests/test_loudness.wl`
+- 48 kHz: {<|b -> {1.5351248595869702, -2.6916961894063807, 1.19839281085285}, a -> {1., -1.6906592931824103, 0.7324807742158501}|>, <|b -> {1., -2., 1.}, a -> {1., -1.9900474548339797, 0.9900722503662099}|>}
+- PASS  48 kHz shelf b = {1.53512485958697, -2.69169618940638, 1.19839281085285} (published)
+- PASS  48 kHz shelf a = {1, -1.69065929318241, 0.73248077421585} (published)
+- PASS  48 kHz high pass b = {1, -2, 1}, a = {1, -1.99004745483398, 0.99007225036621} (published)
+- PASS  44.1 kHz coefficients differ from the 48 kHz ones (re-derived, not reused)
+- PASS  40 s at 44.1 kHz gives 397 complete 400 ms blocks on a 100 ms hop
+- PASS  a block mean square of a 0.1-amplitude sine is 0.005 (+-1e-5)
+- full-scale 997 Hz stereo: 0.0027824283729165344
+- PASS  full-scale 997 Hz sine in both channels = +0.0028 LUFS (+-0.002); BS.1770 calibration 0.00 (+-0.01)
+- full-scale 997 Hz mono: -3.007517528266895
+- PASS  full-scale 997 Hz sine in one channel = -3.0075 LUFS (-3.01 per BS.1770, +-0.01)
+- -20 dBFS stereo: -19.997217571627083
+- PASS  -20 dBFS 997 Hz sine in both channels = -19.9972 LUFS (+-0.002)
+- on/off at -20 dBFS: -20.094584086124083
+- PASS  on/off: silent blocks rejected, result = -20.0946 LUFS (+-0.01)
+- PASS  on/off: result within 0.1 LU of the on-level (-19.9972)
+- PASS  on/off: without gating the result would be 3 dB lower (ungated mean of all 397 blocks)
+- two-level -20/-40 dBFS: -20.029592948384114
+- PASS  two-level: relative gate rejects the quiet half, result = -20.0296 LUFS (+-0.01)
+- PASS  two-level: result within 0.1 LU of the loud level (-19.9972)
+- PASS  digital silence measures -Infinity
+- PASS  audio shorter than one 400 ms block measures -Infinity
+- PASS  scaling by 2 raises the reading by 6.0206 dB
+- PASS  the Audio form gives the same reading as the list form
+- PASS  NormalizeToLoudness brings a -20 dBFS sine to -17 LUFS
+- PASS  PeakLimit: output peak is at most the -1 dBFS ceiling (+1e-9)
+- PASS  PeakLimit: material far from the burst passes unchanged (gain 1 for the first 0.9 s)
+- PASS  PeakLimit: the gain is already reduced 2 ms before the burst (look-ahead)
+- PASS  PeakLimit: both channels get the same gain (linked)
+- PASS  LimitedNormalizeToLoudness reaches -17 LUFS within 0.02 LU where plain normalisation is peak-held
+- PASS  LimitedNormalizeToLoudness keeps the peak at or below -1 dBFS
+- PASS  $StemLastLimiter reports the maximum gain reduction (> 0 dB) and the ceiling
+- PASS  PeakLimit: a peak within the first 5 ms is held at the ceiling too
+- PASS  LimiterSettings: off by default (no audio.limiter block)
+- PASS  LimiterSettings: enabled false is off
+- PASS  LimiterSettings: defaults -1 dBFS, 5 ms, 50 ms when enabled
+- PASS  LimiterSettings: modes restricts it (on for lorenz, off for rossler)
+- Results: 31 passed, 0 failed.
+- Expected values, derived in the test file header: full-scale stereo +0.0028; full-scale mono -3.0075 (-3.01 per BS.1770); -20 dBFS stereo -19.9972; on/off -19.9972 + 10 log10(198.5/203) = -20.0946 (three blocks straddle each of the three edges and carry 75/50/25 percent of the sine, so the exact BS.1770 value is 0.097 LU below the on-level, not equal to it); two-level -19.9972 + 10 log10(198.515/200) = -20.0296 (the relative gate rejects every -40 dBFS block).
+
+## Part 1: the four disputed files
+- Files as written before this change (normalised with the old meter): dynamical/output/iterate_extinction_audio.wav, lorenz/output/lorenz_audio_slow.wav, lorenz/output/rossler_audio.wav, lorenz/output/lorenz_audio_stable.wav; measured with `wolframscript -file disputed.wl` and pyloudnorm.
+- iterate_extinction: old meter -16.34, new meter -17.7773, pyloudnorm -17.8221, new minus pyloudnorm +0.0448 LU (old minus pyloudnorm +1.48 LU)
+- lorenz slow: old meter -18.89, new meter -20.9506, pyloudnorm -20.9960, new minus pyloudnorm +0.0454 LU (old minus pyloudnorm +2.11 LU)
+- rossler: old meter -17.00, new meter -17.5728, pyloudnorm -17.6185, new minus pyloudnorm +0.0457 LU (old minus pyloudnorm +0.62 LU)
+- lorenz stable: old meter -16.95, new meter -17.6604, pyloudnorm -17.7055, new minus pyloudnorm +0.0451 LU (old minus pyloudnorm +0.76 LU)
+- All four now agree within 0.1 LU (0.045-0.046 LU).
+- Residual 0.045 LU: pyloudnorm is the one that departs. Its K-weighting uses rounded parameters (high shelf fc 1500 Hz, G 4.0 dB, Q 0.7071; high pass fc 38 Hz, Q 0.5), not the BS.1770 prototype. On a full-scale 997 Hz stereo sine it reads -0.0414 LUFS at 48 kHz, where BS.1770 defines 0.000 and the new meter reads 0.0000; at 44.1 kHz -0.0421 vs +0.0028. Measured on sines from 100 Hz to 8 kHz, pyloudnorm reads 0.037-0.047 dB below the new meter at every frequency.
+
+## Part 1: regression sweep (every mode of every app, all presets)
+- Runner (scratchpad sweep.sh): for each line of runs.txt, `wolframscript -file <app>/main.wl -- <args>` from the repo root, stdin from /dev/null; every WAV newer than the run start copied to a per-run folder. Runs: 109 (90 modes from each main.wl, 7 dynamical iterate presets, lyapunov_window, 4 divergence presets, 6 lorenz presets, asteroids default with the live NASA API). Non-zero exit codes: 0.
+- Measurement: `wolframscript -file measure_sweep.wl` (new meter, old meter) and pyloudnorm on every collected WAV: 124 files.
+- How far each file moved: both meters shift one for one with gain, and the old code normalised each file to -17 by the old meter (or was held by the 0.97 peak clamp). So the change in the file's level caused by the new meter is max(old(N) + 17, -headroom) dB, where old(N) is the old meter's reading of the new file N and headroom = -0.2646 dBFS minus N's peak. This avoids comparing two runs; pendulum, lorenz and other trajectory apps are not bit-reproducible run to run (random roughness in stem-core MotionLayer).
+- Files that moved less than 0.1 LU: 108; moved 0.1 LU or more: 15; not normalised to -17 as a whole: 1
+- New meter minus pyloudnorm on 120 files: median +0.0457, range +0.0121 to +0.0710 LU; the 4 relativity chirp files differ more (below).
+- asteroids (default) asteroids_2026-10-01_2026-10-07.wav: app prints no loudness line; new meter -17.00, old meter on the new file -16.84, pyloudnorm -17.05, peak -5.48 dBFS; moved +0.16 LU
+- bayes --simulation.mode=coin coin_audio.wav: app prints no loudness line; new meter -17.00, old meter on the new file -17.01, pyloudnorm -17.04, peak -5.59 dBFS; moved -0.01 LU
+- bayes --simulation.mode=gaussian gaussian_audio.wav: app prints no loudness line; new meter -17.00, old meter on the new file -17.01, pyloudnorm -17.05, peak -5.07 dBFS; moved -0.01 LU
+- bayes --simulation.mode=model model_audio.wav: app prints no loudness line; new meter -17.00, old meter on the new file -17.00, pyloudnorm -17.03, peak -10.14 dBFS; moved +0.00 LU
+- bell --simulation.mode=chsh bell_chsh.wav: app prints no loudness line; new meter -17.00, old meter on the new file -16.93, pyloudnorm -17.05, peak -8.57 dBFS; moved +0.07 LU
+- bell --simulation.mode=correlations bell_correlations.wav: app prints no loudness line; new meter -17.00, old meter on the new file -17.02, pyloudnorm -17.04, peak -13.00 dBFS; moved -0.02 LU
+- bell --simulation.mode=measurement bell_measurement.wav: app prints no loudness line; new meter -17.00, old meter on the new file -16.99, pyloudnorm -17.04, peak -12.46 dBFS; moved +0.01 LU
+- blackbody --simulation.mode=spectrum spectrum_audio.wav: app prints no loudness line; new meter -17.00, old meter on the new file -17.01, pyloudnorm -17.05, peak -4.25 dBFS; moved -0.01 LU
+- blackbody --simulation.mode=star star_audio.wav: app prints no loudness line; new meter -17.00, old meter on the new file -17.03, pyloudnorm -17.05, peak -2.29 dBFS; moved -0.03 LU
+- blackbody --simulation.mode=temperature temperature_audio.wav: app prints no loudness line; new meter -17.00, old meter on the new file -17.01, pyloudnorm -17.05, peak -4.75 dBFS; moved -0.01 LU
+- brownian --simulation.mode=ensemble brownian_ensemble.wav: app prints no loudness line; new meter -17.00, old meter on the new file -16.97, pyloudnorm -17.01, peak -12.59 dBFS; moved +0.03 LU
+- brownian --simulation.mode=temperature brownian_temperature.wav: app prints no loudness line; new meter -17.00, old meter on the new file -17.03, pyloudnorm -17.05, peak -5.08 dBFS; moved -0.03 LU
+- brownian --simulation.mode=walk brownian_walk.wav: app prints no loudness line; new meter -17.00, old meter on the new file -17.01, pyloudnorm -17.05, peak -3.98 dBFS; moved -0.01 LU
+- cellular --simulation.mode=life life_rpentomino_audio.wav: app prints no loudness line; new meter -17.00, old meter on the new file -17.05, pyloudnorm -17.05, peak -7.57 dBFS; moved -0.05 LU
+- cellular --simulation.mode=rule110 rule110_audio.wav: app prints no loudness line; new meter -17.00, old meter on the new file -17.04, pyloudnorm -17.05, peak -9.15 dBFS; moved -0.04 LU
+- clt --simulation.mode=compare compare_audio.wav: app prints no loudness line; new meter -17.00, old meter on the new file -17.00, pyloudnorm -17.05, peak -5.31 dBFS; moved +0.00 LU
+- clt --simulation.mode=dice dice_audio.wav: app prints no loudness line; new meter -17.00, old meter on the new file -17.03, pyloudnorm -17.05, peak -5.45 dBFS; moved -0.03 LU
+- clt --simulation.mode=sweep sweep_audio.wav: app prints no loudness line; new meter -17.00, old meter on the new file -17.03, pyloudnorm -17.05, peak -1.20 dBFS; moved -0.03 LU
+- compton --simulation.mode=discovery discovery_audio.wav: app prints no loudness line; new meter -17.00, old meter on the new file -17.01, pyloudnorm -17.05, peak -8.56 dBFS; moved -0.01 LU
+- compton --simulation.mode=energy energy_audio.wav: app prints no loudness line; new meter -17.00, old meter on the new file -17.01, pyloudnorm -17.05, peak -5.35 dBFS; moved -0.01 LU
+- compton --simulation.mode=scatter scatter_audio.wav: app prints no loudness line; new meter -17.00, old meter on the new file -17.02, pyloudnorm -17.05, peak -5.14 dBFS; moved -0.02 LU
+- compton --simulation.mode=sweep sweep_audio.wav: app prints no loudness line; new meter -17.00, old meter on the new file -16.99, pyloudnorm -17.02, peak -9.45 dBFS; moved +0.01 LU
+- cosmology --simulation.mode=sky cmb_sky_audio.wav: app prints no loudness line; new meter -17.00, old meter on the new file -17.02, pyloudnorm -17.05, peak -12.58 dBFS; moved -0.02 LU
+- cosmology --simulation.mode=spectrum cmb_spectrum_audio.wav: app prints no loudness line; new meter -17.00, old meter on the new file -17.02, pyloudnorm -17.05, peak -4.96 dBFS; moved -0.02 LU
+- dynamical --simulation.mode=divergence divergence_audio.wav: app line: "Loudness: the WAV was normalised to -17 LUFS and measures -17 LUFS integrated, with a peak of -1.8 dBFS."; new meter -17.00, old meter on the new file -17.01, pyloudnorm -17.05, peak -1.80 dBFS; moved -0.01 LU
+- dynamical --simulation.mode=divergence --simulation.dynamical.preset=divergence_chaotic divergence_chaotic_audio.wav: app line: "Loudness: the WAV was normalised to -17 LUFS and measures -17 LUFS integrated, with a peak of -1.8 dBFS."; new meter -17.00, old meter on the new file -17.01, pyloudnorm -17.05, peak -1.80 dBFS; moved -0.01 LU
+- dynamical --simulation.mode=divergence --simulation.dynamical.preset=divergence_edge divergence_edge_audio.wav: app line: "Loudness: the WAV was normalised to -17 LUFS and measures -17 LUFS integrated, with a peak of -5.85 dBFS."; new meter -17.00, old meter on the new file -17.01, pyloudnorm -17.05, peak -5.85 dBFS; moved -0.01 LU
+- dynamical --simulation.mode=divergence --simulation.dynamical.preset=divergence_periodic divergence_periodic_audio.wav: app line: "Loudness: the WAV was normalised to -17 LUFS and measures -17 LUFS integrated, with a peak of -6.49 dBFS."; new meter -17.00, old meter on the new file -17.01, pyloudnorm -17.05, peak -6.49 dBFS; moved -0.01 LU
+- dynamical --simulation.mode=divergence --simulation.dynamical.preset=divergence_stable divergence_stable_audio.wav: app line: "Loudness: the WAV was normalised to -17 LUFS and measures -17 LUFS integrated, with a peak of -2.19 dBFS."; new meter -17.00, old meter on the new file -17.00, pyloudnorm -17.04, peak -2.19 dBFS; moved +0.00 LU
+- dynamical --simulation.mode=iterate iterate_audio.wav: app line: "Loudness: the WAV was normalised to -17 LUFS and measures -17 LUFS integrated, with a peak of -4.81 dBFS."; new meter -17.00, old meter on the new file -17.01, pyloudnorm -17.05, peak -4.81 dBFS; moved -0.01 LU
+- dynamical --simulation.mode=iterate --simulation.dynamical.preset=chaos iterate_chaos_audio.wav: app line: "Loudness: the WAV was normalised to -17 LUFS and measures -17 LUFS integrated, with a peak of -4.1 dBFS."; new meter -17.00, old meter on the new file -17.01, pyloudnorm -17.05, peak -4.10 dBFS; moved -0.01 LU
+- dynamical --simulation.mode=iterate --simulation.dynamical.preset=extinction iterate_extinction_audio.wav: app line: "Loudness: the WAV was normalised to -17 LUFS and measures -17 LUFS integrated, with a peak of -3.07 dBFS."; new meter -17.00, old meter on the new file -15.57, pyloudnorm -17.04, peak -3.07 dBFS; moved +1.43 LU
+- dynamical --simulation.mode=iterate --simulation.dynamical.preset=fixed_point iterate_fixed_point_audio.wav: app line: "Loudness: the WAV was normalised to -17 LUFS and measures -17 LUFS integrated, with a peak of -2.92 dBFS."; new meter -17.00, old meter on the new file -17.00, pyloudnorm -17.05, peak -2.92 dBFS; moved +0.00 LU
+- dynamical --simulation.mode=iterate --simulation.dynamical.preset=growth iterate_growth_audio.wav: app line: "Loudness: the WAV was normalised to -17 LUFS and measures -17 LUFS integrated, with a peak of -2.96 dBFS."; new meter -17.00, old meter on the new file -17.00, pyloudnorm -17.04, peak -2.96 dBFS; moved +0.00 LU
+- dynamical --simulation.mode=iterate --simulation.dynamical.preset=period2 iterate_period2_audio.wav: app line: "Loudness: the WAV was normalised to -17 LUFS and measures -17 LUFS integrated, with a peak of -6.75 dBFS."; new meter -17.00, old meter on the new file -17.02, pyloudnorm -17.05, peak -6.75 dBFS; moved -0.02 LU
+- dynamical --simulation.mode=iterate --simulation.dynamical.preset=period3_window iterate_period3_window_audio.wav: app line: "Loudness: the WAV was normalised to -17 LUFS and measures -17 LUFS integrated, with a peak of -5.39 dBFS."; new meter -17.00, old meter on the new file -17.02, pyloudnorm -17.05, peak -5.39 dBFS; moved -0.02 LU
+- dynamical --simulation.mode=iterate --simulation.dynamical.preset=period4 iterate_period4_audio.wav: app line: "Loudness: the WAV was normalised to -17 LUFS and measures -17 LUFS integrated, with a peak of -6.19 dBFS."; new meter -17.00, old meter on the new file -17.02, pyloudnorm -17.05, peak -6.19 dBFS; moved -0.02 LU
+- dynamical --simulation.mode=lyapunov lyapunov_audio.wav: app line: "Loudness: the WAV was normalised to -17 LUFS and measures -17 LUFS integrated, with a peak of -9.04 dBFS."; new meter -17.00, old meter on the new file -17.01, pyloudnorm -17.05, peak -9.04 dBFS; moved -0.01 LU
+- dynamical --simulation.mode=lyapunov --simulation.dynamical.preset=lyapunov_window lyapunov_window_audio.wav: app line: "Loudness: the WAV was normalised to -17 LUFS and measures -17 LUFS integrated, with a peak of -7.1 dBFS."; new meter -17.00, old meter on the new file -17.01, pyloudnorm -17.05, peak -7.10 dBFS; moved -0.01 LU
+- dynamical --simulation.mode=sweep sweep_audio.wav: app line: "Loudness: the WAV was normalised to -17 LUFS and measures -17 LUFS integrated, with a peak of -1.13 dBFS."; new meter -17.00, old meter on the new file -17.00, pyloudnorm -17.05, peak -1.13 dBFS; moved +0.00 LU
+- fluid --simulation.mode=flag flag_audio.wav: app prints no loudness line; new meter -17.00, old meter on the new file -17.00, pyloudnorm -17.04, peak -7.53 dBFS; moved -0.00 LU
+- fluid --simulation.mode=karman karman_audio.wav: app prints no loudness line; new meter -17.00, old meter on the new file -17.01, pyloudnorm -17.05, peak -5.79 dBFS; moved -0.01 LU
+- fluid --simulation.mode=strouhal strouhal_audio.wav: app prints no loudness line; new meter -17.00, old meter on the new file -17.01, pyloudnorm -17.04, peak -7.85 dBFS; moved -0.01 LU
+- grover --simulation.mode=compare grover_compare.wav: app prints no loudness line; new meter -17.00, old meter on the new file -16.65, pyloudnorm -17.05, peak -4.49 dBFS; moved +0.35 LU
+- grover --simulation.mode=geometry grover_geometry.wav: app prints no loudness line; new meter -17.00, old meter on the new file -17.02, pyloudnorm -17.04, peak -10.34 dBFS; moved -0.02 LU
+- grover --simulation.mode=search grover_search.wav: app prints no loudness line; new meter -17.00, old meter on the new file -17.04, pyloudnorm -17.05, peak -5.54 dBFS; moved -0.04 LU
+- henon --simulation.mode=attractor henon_attractor.wav: app line: "Loudness: the WAV was normalised to -17 LUFS and measures -17 LUFS integrated, with a peak of -1.62 dBFS."; new meter -17.00, old meter on the new file -17.01, pyloudnorm -17.05, peak -1.62 dBFS; moved -0.01 LU
+- henon --simulation.mode=reverse henon_reverse.wav: app line: "Loudness: the WAV was normalised to -17 LUFS and measures -17 LUFS integrated, with a peak of -4.93 dBFS."; new meter -17.00, old meter on the new file -17.01, pyloudnorm -17.05, peak -4.93 dBFS; moved -0.01 LU
+- henon --simulation.mode=sweep henon_sweep.wav: app line: "Loudness: the WAV was normalised to -17 LUFS and measures -17 LUFS integrated, with a peak of -4.27 dBFS."; new meter -17.00, old meter on the new file -17.00, pyloudnorm -17.05, peak -4.27 dBFS; moved +0.00 LU
+- hydrogen --simulation.mode=orbitals orbitals_audio.wav: app prints no loudness line; new meter -17.00, old meter on the new file -17.01, pyloudnorm -17.05, peak -9.13 dBFS; moved -0.01 LU
+- hydrogen --simulation.mode=spectrum spectrum_audio.wav: app prints no loudness line; new meter -17.00, old meter on the new file -17.01, pyloudnorm -17.05, peak -1.82 dBFS; moved -0.01 LU
+- hydrogen --simulation.mode=spectrum spectrum_chord.wav: app prints no loudness line; new meter -18.81, old meter on the new file -18.81, pyloudnorm -18.85, peak -0.26 dBFS; moved +0.00 LU
+- hydrogen --simulation.mode=spectrum spectrum_sweep.wav: app prints no loudness line; new meter -17.00, old meter on the new file -16.91, pyloudnorm -17.05, peak -3.58 dBFS; moved +0.09 LU
+- hydrogen --simulation.mode=transitions transitions_audio.wav: app prints no loudness line; new meter -17.00, old meter on the new file -16.99, pyloudnorm -17.05, peak -3.44 dBFS; moved +0.01 LU
+- images --simulation.mode=brightness images_brightness_audio.wav: app prints no loudness line; new meter -17.00, old meter on the new file -17.01, pyloudnorm -17.05, peak -10.01 dBFS; moved -0.01 LU
+- images --simulation.mode=colour images_colour_audio.wav: app prints no loudness line; new meter -17.00, old meter on the new file -17.01, pyloudnorm -17.05, peak -3.66 dBFS; moved -0.01 LU
+- images --simulation.mode=hsb images_hsb_audio.wav: app prints no loudness line; new meter -18.00, old meter on the new file -17.99, pyloudnorm -18.05, peak -0.26 dBFS; moved +0.00 LU
+- images --simulation.mode=scan_horizontal images_scan_horizontal_audio.wav: app prints no loudness line; new meter -17.00, old meter on the new file -17.01, pyloudnorm -17.05, peak -11.53 dBFS; moved -0.01 LU
+- lagrange --simulation.mode=l1 l1_audio.wav: app prints no loudness line; new meter -17.00, old meter on the new file -16.92, pyloudnorm -17.04, peak -7.01 dBFS; moved +0.08 LU
+- lagrange --simulation.mode=l4 l4_audio.wav: app prints no loudness line; new meter -16.93, old meter on the new file -17.00, pyloudnorm -16.97, peak -4.74 dBFS; not normalised to -17 as a whole (new meter reads -16.93), move not defined
+- lagrange --simulation.mode=l5 l5_audio.wav: app prints no loudness line; new meter -17.00, old meter on the new file -17.05, pyloudnorm -17.05, peak -5.04 dBFS; moved -0.05 LU
+- lorenz --simulation.lorenz.preset=butterfly lorenz_audio_butterfly.wav: app line: "Loudness: the WAV was normalised to -17 LUFS and measures -19.65 LUFS integrated, with a peak of -0.26 dBFS."; new meter -19.65, old meter on the new file -19.70, pyloudnorm -19.69, peak -0.26 dBFS; moved +0.00 LU
+- lorenz --simulation.lorenz.preset=classic lorenz_audio_classic.wav: app line: "Loudness: the WAV was normalised to -17 LUFS and measures -23.57 LUFS integrated, with a peak of -0.26 dBFS."; new meter -23.57, old meter on the new file -23.61, pyloudnorm -23.62, peak -0.26 dBFS; moved +0.00 LU
+- lorenz --simulation.lorenz.preset=rho9996 lorenz_audio_rho9996.wav: app line: "Loudness: the WAV was normalised to -17 LUFS and measures -26.41 LUFS integrated, with a peak of -0.26 dBFS."; new meter -26.41, old meter on the new file -26.42, pyloudnorm -26.45, peak -0.26 dBFS; moved +0.00 LU
+- lorenz --simulation.lorenz.preset=slow lorenz_audio_slow.wav: app line: "Loudness: the WAV was normalised to -17 LUFS and measures -20.95 LUFS integrated, with a peak of -0.26 dBFS."; new meter -20.95, old meter on the new file -18.89, pyloudnorm -21.00, peak -0.26 dBFS; moved +0.00 LU
+- lorenz --simulation.lorenz.preset=stable lorenz_audio_stable.wav: app line: "Loudness: the WAV was normalised to -17 LUFS and measures -17.64 LUFS integrated, with a peak of -0.26 dBFS."; new meter -17.64, old meter on the new file -16.92, pyloudnorm -17.68, peak -0.26 dBFS; moved +0.08 LU
+- lorenz --simulation.lorenz.preset=wild lorenz_audio_wild.wav: app line: "Loudness: the WAV was normalised to -17 LUFS and measures -21.54 LUFS integrated, with a peak of -0.26 dBFS."; new meter -21.54, old meter on the new file -21.71, pyloudnorm -21.58, peak -0.26 dBFS; moved +0.00 LU
+- lorenz --simulation.mode=lorenz lorenz_audio.wav: app line: "Loudness: the WAV was normalised to -17 LUFS and measures -21.51 LUFS integrated, with a peak of -0.26 dBFS."; new meter -21.51, old meter on the new file -21.58, pyloudnorm -21.55, peak -0.26 dBFS; moved +0.00 LU
+- lorenz --simulation.mode=rossler rossler_audio.wav: app line: "Loudness: the WAV was normalised to -17 LUFS and measures -17 LUFS integrated, with a peak of -1.47 dBFS."; new meter -17.00, old meter on the new file -16.43, pyloudnorm -17.05, peak -1.47 dBFS; moved +0.57 LU
+- magnetic --simulation.mode=cyclotron cyclotron_audio.wav: app prints no loudness line; new meter -17.00, old meter on the new file -17.01, pyloudnorm -17.04, peak -8.90 dBFS; moved -0.01 LU
+- magnetic --simulation.mode=drift drift_audio.wav: app prints no loudness line; new meter -17.00, old meter on the new file -17.02, pyloudnorm -17.05, peak -9.97 dBFS; moved -0.02 LU
+- magnetic --simulation.mode=mirror mirror_audio.wav: app prints no loudness line; new meter -17.00, old meter on the new file -17.01, pyloudnorm -17.04, peak -9.10 dBFS; moved -0.01 LU
+- magnetic --simulation.mode=multi multi_audio.wav: app prints no loudness line; new meter -17.00, old meter on the new file -17.01, pyloudnorm -17.04, peak -7.07 dBFS; moved -0.01 LU
+- mandelbrot --simulation.mode=julia mandelbrot_julia.wav: app prints no loudness line; new meter -17.00, old meter on the new file -17.01, pyloudnorm -17.05, peak -10.61 dBFS; moved -0.01 LU
+- mandelbrot --simulation.mode=mandelbrot mandelbrot_mandelbrot.wav: app prints no loudness line; new meter -17.00, old meter on the new file -17.01, pyloudnorm -17.05, peak -11.04 dBFS; moved -0.01 LU
+- mandelbrot --simulation.mode=zoom mandelbrot_zoom.wav: app prints no loudness line; new meter -17.00, old meter on the new file -17.01, pyloudnorm -17.05, peak -14.52 dBFS; moved -0.01 LU
+- montecarlo --simulation.mode=critical critical_audio.wav: app prints no loudness line; new meter -19.41, old meter on the new file -19.40, pyloudnorm -19.46, peak -0.26 dBFS; moved +0.00 LU
+- montecarlo --simulation.mode=quench quench_audio.wav: app prints no loudness line; new meter -18.73, old meter on the new file -18.71, pyloudnorm -18.78, peak -0.26 dBFS; moved +0.00 LU
+- montecarlo --simulation.mode=sweep sweep_audio.wav: app prints no loudness line; new meter -17.58, old meter on the new file -17.56, pyloudnorm -17.62, peak -0.26 dBFS; moved +0.00 LU
+- pendulum --simulation.mode=double double_audio.wav: app line: "Loudness: the WAV was normalised to -17 LUFS and measures -17 LUFS integrated, with a peak of -4.51 dBFS."; new meter -17.00, old meter on the new file -17.02, pyloudnorm -17.05, peak -4.51 dBFS; moved -0.02 LU
+- pendulum --simulation.mode=simple simple_audio.wav: app line: "Loudness: the WAV was normalised to -17 LUFS and measures -17 LUFS integrated, with a peak of -9.63 dBFS."; new meter -17.00, old meter on the new file -17.00, pyloudnorm -17.05, peak -9.63 dBFS; moved +0.00 LU
+- primes --simulation.mode=gaps gaps_audio.wav: app prints no loudness line; new meter -17.00, old meter on the new file -17.02, pyloudnorm -17.05, peak -0.81 dBFS; moved -0.02 LU
+- primes --simulation.mode=gaps gaps_slow.wav: app prints no loudness line; new meter -17.00, old meter on the new file -17.00, pyloudnorm -17.05, peak -0.65 dBFS; moved -0.00 LU
+- primes --simulation.mode=ulam ulam_audio.wav: app prints no loudness line; new meter -17.00, old meter on the new file -17.18, pyloudnorm -17.05, peak -1.15 dBFS; moved -0.18 LU
+- quantum --simulation.mode=box box_audio.wav: app prints no loudness line; new meter -17.00, old meter on the new file -17.00, pyloudnorm -17.05, peak -9.69 dBFS; moved -0.00 LU
+- quantum --simulation.mode=qho qho_audio.wav: app prints no loudness line; new meter -17.00, old meter on the new file -17.05, pyloudnorm -17.05, peak -11.11 dBFS; moved -0.05 LU
+- quantum_statistics --simulation.mode=fermi_sea quantum_statistics_fermi_sea.wav: app prints no loudness line; new meter -17.00, old meter on the new file -16.98, pyloudnorm -17.01, peak -5.32 dBFS; moved +0.02 LU
+- quantum_statistics --simulation.mode=spectrum quantum_statistics_spectrum.wav: app prints no loudness line; new meter -17.00, old meter on the new file -17.02, pyloudnorm -17.05, peak -4.68 dBFS; moved -0.02 LU
+- quantum_statistics --simulation.mode=temperature quantum_statistics_temperature.wav: app prints no loudness line; new meter -17.00, old meter on the new file -16.99, pyloudnorm -17.02, peak -9.33 dBFS; moved +0.01 LU
+- quantum_tunnelling --simulation.mode=barrier barrier_audio.wav: app prints no loudness line; new meter -17.00, old meter on the new file -17.02, pyloudnorm -17.05, peak -4.77 dBFS; moved -0.02 LU
+- quantum_tunnelling --simulation.mode=energy energy_audio.wav: app prints no loudness line; new meter -17.00, old meter on the new file -16.95, pyloudnorm -17.05, peak -10.55 dBFS; moved +0.05 LU
+- quantum_tunnelling --simulation.mode=sweep sweep_audio.wav: app prints no loudness line; new meter -17.00, old meter on the new file -17.02, pyloudnorm -17.05, peak -8.59 dBFS; moved -0.02 LU
+- qubit --simulation.mode=gates qubit_gates.wav: app prints no loudness line; new meter -17.00, old meter on the new file -17.04, pyloudnorm -17.05, peak -4.22 dBFS; moved -0.04 LU
+- qubit --simulation.mode=measurement qubit_measurement.wav: app prints no loudness line; new meter -17.00, old meter on the new file -17.00, pyloudnorm -17.05, peak -13.08 dBFS; moved +0.00 LU
+- qubit --simulation.mode=rabi qubit_rabi.wav: app prints no loudness line; new meter -17.00, old meter on the new file -16.99, pyloudnorm -17.03, peak -14.10 dBFS; moved +0.01 LU
+- relativity --simulation.mode=chirp chirp.wav: app prints no loudness line; new meter -24.16, old meter on the new file -22.38, pyloudnorm -22.97, peak -0.26 dBFS; moved +0.00 LU
+- relativity --simulation.mode=chirp gw150914.wav: app prints no loudness line; new meter -24.16, old meter on the new file -22.38, pyloudnorm -22.97, peak -0.26 dBFS; moved +0.00 LU
+- relativity --simulation.mode=chirp gw170817.wav: app prints no loudness line; new meter -17.00, old meter on the new file -16.80, pyloudnorm -16.90, peak -2.45 dBFS; moved +0.20 LU
+- relativity --simulation.mode=chirp stellar.wav: app prints no loudness line; new meter -24.57, old meter on the new file -24.04, pyloudnorm -24.28, peak -0.26 dBFS; moved +0.00 LU
+- relativity --simulation.mode=geodesic geodesic.wav: app prints no loudness line; new meter -17.00, old meter on the new file -17.07, pyloudnorm -17.05, peak -12.70 dBFS; moved -0.07 LU
+- resonance --simulation.mode=galilean galilean_audio.wav: app prints no loudness line; new meter -17.00, old meter on the new file -17.00, pyloudnorm -17.04, peak -3.06 dBFS; moved +0.00 LU
+- resonance --simulation.mode=kirkwood kirkwood_audio.wav: app prints no loudness line; new meter -17.00, old meter on the new file -16.93, pyloudnorm -17.05, peak -6.73 dBFS; moved +0.07 LU
+- resonance --simulation.mode=saturn saturn_audio.wav: app prints no loudness line; new meter -16.99, old meter on the new file -16.99, pyloudnorm -17.03, peak -7.29 dBFS; moved +0.01 LU
+- scattering --simulation.mode=discovery discovery_audio.wav: app prints no loudness line; new meter -17.00, old meter on the new file -17.02, pyloudnorm -17.05, peak -0.78 dBFS; moved -0.02 LU
+- scattering --simulation.mode=distribution distribution_audio.wav: app prints no loudness line; new meter -17.00, old meter on the new file -17.00, pyloudnorm -17.05, peak -4.11 dBFS; moved -0.00 LU
+- scattering --simulation.mode=scatter scatter_audio.wav: app prints no loudness line; new meter -17.00, old meter on the new file -16.99, pyloudnorm -17.03, peak -7.71 dBFS; moved +0.01 LU
+- signal --simulation.mode=am am_clean.wav: app prints no loudness line; new meter -17.00, old meter on the new file -17.22, pyloudnorm -17.05, peak -9.41 dBFS; moved -0.22 LU
+- signal --simulation.mode=am am_narrative_full.wav: app prints no loudness line; new meter -17.00, old meter on the new file -17.03, pyloudnorm -17.05, peak -4.80 dBFS; moved -0.03 LU
+- signal --simulation.mode=am am_noisy.wav: app prints no loudness line; new meter -17.00, old meter on the new file -17.22, pyloudnorm -17.05, peak -6.14 dBFS; moved -0.22 LU
+- signal --simulation.mode=am am_recovered.wav: app prints no loudness line; new meter -17.00, old meter on the new file -17.22, pyloudnorm -17.05, peak -9.25 dBFS; moved -0.22 LU
+- signal --simulation.mode=chord chord_clean.wav: app prints no loudness line; new meter -17.00, old meter on the new file -17.21, pyloudnorm -17.05, peak -8.62 dBFS; moved -0.21 LU
+- signal --simulation.mode=chord chord_narrative_full.wav: app prints no loudness line; new meter -17.00, old meter on the new file -17.03, pyloudnorm -17.05, peak -4.40 dBFS; moved -0.03 LU
+- signal --simulation.mode=chord chord_noisy.wav: app prints no loudness line; new meter -17.00, old meter on the new file -17.22, pyloudnorm -17.05, peak -6.06 dBFS; moved -0.22 LU
+- signal --simulation.mode=chord chord_recovered.wav: app prints no loudness line; new meter -17.00, old meter on the new file -17.22, pyloudnorm -17.05, peak -8.48 dBFS; moved -0.22 LU
+- signal --simulation.mode=sweep sweep_clean.wav: app prints no loudness line; new meter -17.00, old meter on the new file -17.14, pyloudnorm -17.05, peak -14.49 dBFS; moved -0.14 LU
+- signal --simulation.mode=sweep sweep_narrative_full.wav: app prints no loudness line; new meter -17.00, old meter on the new file -17.03, pyloudnorm -17.05, peak -8.25 dBFS; moved -0.03 LU
+- signal --simulation.mode=sweep sweep_noisy.wav: app prints no loudness line; new meter -17.00, old meter on the new file -17.14, pyloudnorm -17.05, peak -8.70 dBFS; moved -0.14 LU
+- signal --simulation.mode=sweep sweep_recovered.wav: app prints no loudness line; new meter -17.00, old meter on the new file -17.14, pyloudnorm -17.05, peak -9.70 dBFS; moved -0.14 LU
+- thermo --simulation.mode=cooling cooling_audio.wav: app prints no loudness line; new meter -17.00, old meter on the new file -17.01, pyloudnorm -17.07, peak -4.98 dBFS; moved -0.01 LU
+- thermo --simulation.mode=distribution distribution_audio.wav: app prints no loudness line; new meter -17.00, old meter on the new file -17.03, pyloudnorm -17.05, peak -4.73 dBFS; moved -0.03 LU
+- thermo --simulation.mode=ensemble ensemble_audio.wav: app prints no loudness line; new meter -17.00, old meter on the new file -17.01, pyloudnorm -17.05, peak -4.27 dBFS; moved -0.01 LU
+- thermo --simulation.mode=equipartition equipartition_audio.wav: app prints no loudness line; new meter -17.00, old meter on the new file -17.02, pyloudnorm -17.04, peak -6.08 dBFS; moved -0.02 LU
+- waves --simulation.mode=interference interference_audio.wav: app prints no loudness line; new meter -21.71, old meter on the new file -21.71, pyloudnorm -21.76, peak -0.26 dBFS; moved +0.00 LU
+- waves --simulation.mode=ripple ripple_audio.wav: app prints no loudness line; new meter -17.00, old meter on the new file -17.00, pyloudnorm -17.05, peak -9.16 dBFS; moved -0.00 LU
+- Relativity chirp files: chirp.wav and gw150914.wav (3.58 s) new -24.16 vs pyloudnorm -22.97; stellar.wav -24.57 vs -24.28; gw170817.wav -17.00 vs -16.90. pyloudnorm counts blocks with np.round((T - 0.4)/0.1) + 1 (33 for 3.58 s) where BS.1770 has floor (32 complete blocks); its 33rd block covers 3.2-3.58 s, holds the merger, and is divided by a full 400 ms. With complete blocks only, pyloudnorm's own filter gives -24.190 (chirp), -24.632 (stellar), -17.042 (gw170817), matching the new meter within the 0.03-0.05 filter offset. The new meter follows BS.1770; the chirp WAVs are peak-clamped because their merger lies in the last few hundred ms.
+- lagrange l4_audio.wav reads -16.93 (new) and -17.00 (old) with peak -4.74 dBFS: it is not normalised to -17 by the new meter as a whole, so its move is not defined by the formula; lagrange normalises before it adds part of the file (not investigated further).
+
+## Part 2: limiter off is byte-identical
+- dynamical iterate (`wolframscript -file dynamical/main.wl -- --simulation.mode=iterate`): WAV from the sweep (before the limiter code) and from the run after it: byte-identical, 8151856 bytes.
+- pendulum double and lorenz rossler are not reproducible run to run (two consecutive pendulum double runs of the same code differ, stem-core MotionLayer roughness noise is unseeded). So each was run with SeedRandom[20261007] (scratchpad wrapper: SeedRandom, then Get of main.wl) once in the current tree and once in a scratchpad copy whose stem-core has the limiter removed and RenderAudio's previous call restored.
+- pendulum double, seeded, limiter code vs no limiter code: byte-identical (sha1 6ba0acdf434c...).
+- lorenz rossler (limiter enabled in lorenz/config.json but restricted to modes ["lorenz"]), seeded: byte-identical (sha1 d3527bd08e85...).
+
+## Part 2: lorenz with the limiter (audio.limiter enabled, ceiling -1 dBFS, attack 5 ms, release 50 ms, modes ["lorenz"])
+- lorenz mode command: `wolframscript -file lorenz/main.wl -- --simulation.mode=lorenz`
+- lorenz mode before (no limiter, new meter): -21.51 LUFS, peak -0.26 dBFS; app line then: "Loudness: the WAV was normalised to -17 LUFS and measures -21.51 LUFS integrated, with a peak of -0.26 dBFS."
+- lorenz mode after: -17.02 LUFS (app meter), -17.06 LUFS (pyloudnorm), peak -1.00 dBFS; maximum gain reduction 10.22 dB
+- lorenz mode reaches -17 LUFS within 0.1 LU: yes
+- lorenz mode limiter sentence: "The look-ahead peak limiter was applied to lorenz_audio.wav with a ceiling of -1 dBFS (5 ms attack, 50 ms release), and its maximum gain reduction was 10.22 dB, bringing the WAV to -17.02 LUFS."
+- lorenz mode loudness line: "Loudness: the WAV was normalised to -17 LUFS and measures -17.02 LUFS integrated, with a peak of -1 dBFS."
+- classic command: `wolframscript -file lorenz/main.wl -- --simulation.lorenz.preset=classic`
+- classic before (no limiter, new meter): -23.57 LUFS, peak -0.26 dBFS; app line then: "Loudness: the WAV was normalised to -17 LUFS and measures -23.57 LUFS integrated, with a peak of -0.26 dBFS."
+- classic after: -17.02 LUFS (app meter), -17.06 LUFS (pyloudnorm), peak -1.00 dBFS; maximum gain reduction 10.85 dB
+- classic reaches -17 LUFS within 0.1 LU: yes
+- classic limiter sentence: "The look-ahead peak limiter was applied to lorenz_audio_classic.wav with a ceiling of -1 dBFS (5 ms attack, 50 ms release), and its maximum gain reduction was 10.85 dB, bringing the WAV to -17.02 LUFS."
+- classic loudness line: "Loudness: the WAV was normalised to -17 LUFS and measures -17.02 LUFS integrated, with a peak of -1 dBFS."
+- butterfly command: `wolframscript -file lorenz/main.wl -- --simulation.lorenz.preset=butterfly`
+- butterfly before (no limiter, new meter): -19.65 LUFS, peak -0.26 dBFS; app line then: "Loudness: the WAV was normalised to -17 LUFS and measures -19.65 LUFS integrated, with a peak of -0.26 dBFS."
+- butterfly after: -17.02 LUFS (app meter), -17.06 LUFS (pyloudnorm), peak -1.00 dBFS; maximum gain reduction 5.04 dB
+- butterfly reaches -17 LUFS within 0.1 LU: yes
+- butterfly limiter sentence: "The look-ahead peak limiter was applied to lorenz_audio_butterfly.wav with a ceiling of -1 dBFS (5 ms attack, 50 ms release), and its maximum gain reduction was 5.04 dB, bringing the WAV to -17.02 LUFS."
+- butterfly loudness line: "Loudness: the WAV was normalised to -17 LUFS and measures -17.02 LUFS integrated, with a peak of -1 dBFS."
+- stable command: `wolframscript -file lorenz/main.wl -- --simulation.lorenz.preset=stable`
+- stable before (no limiter, new meter): -17.64 LUFS, peak -0.26 dBFS; app line then: "Loudness: the WAV was normalised to -17 LUFS and measures -17.64 LUFS integrated, with a peak of -0.26 dBFS."
+- stable after: -17.01 LUFS (app meter), -17.05 LUFS (pyloudnorm), peak -1.00 dBFS; maximum gain reduction 1.45 dB
+- stable reaches -17 LUFS within 0.1 LU: yes
+- stable limiter sentence: "The look-ahead peak limiter was applied to lorenz_audio_stable.wav with a ceiling of -1 dBFS (5 ms attack, 50 ms release), and its maximum gain reduction was 1.45 dB, bringing the WAV to -17.01 LUFS."
+- stable loudness line: "Loudness: the WAV was normalised to -17 LUFS and measures -17.01 LUFS integrated, with a peak of -1 dBFS."
+- wild command: `wolframscript -file lorenz/main.wl -- --simulation.lorenz.preset=wild`
+- wild before (no limiter, new meter): -21.54 LUFS, peak -0.26 dBFS; app line then: "Loudness: the WAV was normalised to -17 LUFS and measures -21.54 LUFS integrated, with a peak of -0.26 dBFS."
+- wild after: -17.02 LUFS (app meter), -17.06 LUFS (pyloudnorm), peak -1.00 dBFS; maximum gain reduction 11.11 dB
+- wild reaches -17 LUFS within 0.1 LU: yes
+- wild limiter sentence: "The look-ahead peak limiter was applied to lorenz_audio_wild.wav with a ceiling of -1 dBFS (5 ms attack, 50 ms release), and its maximum gain reduction was 11.11 dB, bringing the WAV to -17.02 LUFS."
+- wild loudness line: "Loudness: the WAV was normalised to -17 LUFS and measures -17.02 LUFS integrated, with a peak of -1 dBFS."
+- slow command: `wolframscript -file lorenz/main.wl -- --simulation.lorenz.preset=slow`
+- slow before (no limiter, new meter): -20.95 LUFS, peak -0.26 dBFS; app line then: "Loudness: the WAV was normalised to -17 LUFS and measures -20.95 LUFS integrated, with a peak of -0.26 dBFS."
+- slow after: -17.01 LUFS (app meter), -17.06 LUFS (pyloudnorm), peak -1.00 dBFS; maximum gain reduction 15.64 dB
+- slow reaches -17 LUFS within 0.1 LU: yes
+- slow limiter sentence: "The look-ahead peak limiter was applied to lorenz_audio_slow.wav with a ceiling of -1 dBFS (5 ms attack, 50 ms release), and its maximum gain reduction was 15.64 dB, bringing the WAV to -17.01 LUFS."
+- slow loudness line: "Loudness: the WAV was normalised to -17 LUFS and measures -17.01 LUFS integrated, with a peak of -1 dBFS."
+- rho9996 command: `wolframscript -file lorenz/main.wl -- --simulation.lorenz.preset=rho9996`
+- rho9996 before (no limiter, new meter): -26.41 LUFS, peak -0.26 dBFS; app line then: "Loudness: the WAV was normalised to -17 LUFS and measures -26.41 LUFS integrated, with a peak of -0.26 dBFS."
+- rho9996 after: -17.02 LUFS (app meter), -17.07 LUFS (pyloudnorm), peak -1.00 dBFS; maximum gain reduction 15.92 dB
+- rho9996 reaches -17 LUFS within 0.1 LU: yes
+- rho9996 limiter sentence: "The look-ahead peak limiter was applied to lorenz_audio_rho9996.wav with a ceiling of -1 dBFS (5 ms attack, 50 ms release), and its maximum gain reduction was 15.92 dB, bringing the WAV to -17.02 LUFS."
+- rho9996 loudness line: "Loudness: the WAV was normalised to -17 LUFS and measures -17.02 LUFS integrated, with a peak of -1 dBFS."
+- rossler (limiter not applied; prints no limiter sentence): "Loudness: the WAV was normalised to -17 LUFS and measures -17 LUFS integrated, with a peak of -1.47 dBFS."
+- First run of this batch found two faults, fixed before the numbers above: the limiter let a peak in the first 5 ms through (attack window padded with gain 1 before the first sample; slow overshot the ceiling by 0.2 dB at sample 83 and the 0.97 backstop then pulled the whole file to -22.82 LUFS), and 6 correction passes left lorenz mode, wild and rho9996 at -17.16 to -17.28; the window is now padded with the first held gain and the pass limit is 12.
+
+## Part 2: apex event tones (lorenz mode)
+- Command: `python3 apex.py <before WAV> <after WAV> <lorenz_trajectory.csv>` (scratchpad): apex events located with EventLayer's rule (local maxima of |y| above half its maximum, event sample = round(t / duration x samples)); 880 Hz amplitude by correlation over each 40 ms burst window, mid channel.
+- Before: lorenz mode from the sweep (no limiter, held by the peak clamp at -21.51 LUFS, peak -0.26 dBFS); after: limited, -17.02 LUFS.
+- apex events: 48; makeup gain where the limiter is idle (median sample ratio after/before): +9.48 dB
+- event at t=13.405 s (|y|=24.28): 880 Hz level before -27.10 dBFS, after -27.59 dBFS, difference -0.50 dB; relative to the rest of the file (makeup removed) -9.98 dB; 880 Hz level relative to everything sounding in its 40 ms window before -18.92 dB, after -19.22 dB, change -0.29 dB
+- event at t=37.970 s (|y|=23.82): 880 Hz level before -28.27 dBFS, after -28.24 dBFS, difference +0.03 dB; relative to the rest of the file (makeup removed) -9.45 dB; 880 Hz level relative to everything sounding in its 40 ms window before -18.71 dB, after -19.09 dB, change -0.38 dB
+- event at t=22.165 s (|y|=23.75): 880 Hz level before -29.94 dBFS, after -28.69 dBFS, difference +1.25 dB; relative to the rest of the file (makeup removed) -8.23 dB; 880 Hz level relative to everything sounding in its 40 ms window before -19.55 dB, after -19.85 dB, change -0.31 dB
+- all 48 apex events: absolute 880 Hz level change median +9.49 dB, worst -0.50 dB, events changed by more than 3 dB: 45
+- all 48 apex events: relative to the rest of the file median +0.00 dB, worst -9.98 dB, more than 3 dB: 7
+- all 48 apex events: change of the 880 Hz level relative to its own 40 ms window, median -0.00 dB, largest -1.34 dB
+- The three apex events with the largest |y| are the most limited ones. Their peak level changed by -0.50, +0.03 and +1.25 dB, so none exceeds 3 dB and attack and ceiling were left at 5 ms and -1 dBFS.
+- Against the sound in the same 40 ms they changed by 0.29-0.38 dB, because the linked gain applies equally to the burst and the carrier; across all 48 events the largest such change is 1.34 dB.
+- Relative to the rest of the file, which the makeup raised 9.48 dB, those three events are 8.2-10.0 dB less prominent: they coincide with the loudest carrier peaks (apex = |y| maximum = top of the pitch range), where the limiter must act. A shorter attack does not change the reduction at the peak itself, and raising the ceiling to the old -0.26 dBFS backstop would recover at most 0.74 dB.
+
+## Test suites
+- `wolframscript -file stem-core/tests/test_loudness.wl` -> "Results: 31 passed, 0 failed."
+- `wolframscript -file stem-core/tests/test_gifsync.wl` -> "Results: 31 passed, 0 failed."
+- `wolframscript -file lorenz/tests/test_model.wl` -> "Results: 34 passed, 0 failed."

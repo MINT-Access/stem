@@ -137,8 +137,20 @@ Which[
     Print["[5/5] Synthesising audio..."];
     STEMSay["Synthesising audio"];
     outWAV = FileNameJoin[{$projectRoot, "output", "lorenz_audio" <> suffix <> ".wav"}];
+    $StemLastLimiter = None;
     ExportSonification[solution, params, cfg, outWAV];
     STEMDescribeWAV[outWAV, solution[[-1, 1]]];
+    (* audio.limiter in config.json enables stem-core's look-ahead peak
+       limiter for lorenz mode (not rossler): fast passages at the top of
+       the pitch range otherwise hit the peak ceiling and hold the WAV
+       below -17 LUFS. *)
+    If[AssociationQ[$StemLastLimiter],
+      Print["  The look-ahead peak limiter was applied to ", FileNameTake[outWAV], " with a ceiling of ",
+            FmtDec[$StemLastLimiter["ceilingDB"], 1], " dBFS (", FmtDec[$StemLastLimiter["attackMs"]], " ms attack, ",
+            FmtDec[$StemLastLimiter["releaseMs"]], " ms release), and its maximum gain reduction was ",
+            FmtDec[$StemLastLimiter["maxReductionDB"], 2], " dB, bringing the WAV to ",
+            FmtDec[$StemLastLimiter["lufs"], 2], " LUFS."],
+      Print["  The peak limiter is off for this run (audio.limiter)."]];
     SyncWAVToGIF[outGIF, outWAV];
     STEMLoudnessLine[outWAV, -17.0];
     STEMTimingLine[<|"notes" -> WAVDuration[outWAV]|>];

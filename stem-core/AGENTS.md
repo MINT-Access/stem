@@ -293,6 +293,66 @@ notes before passing to `ExportAudioBuffer`.
 audio = NormalizeBuffer[Total[notes]];
 ```
 
+#### `MeasureIntegratedLoudness[channels_List, sr_]` / `MeasureIntegratedLoudness[audio_Audio]`
+Integrated loudness in LUFS per ITU-R BS.1770-4, written out step by step
+(it does not use `AudioLoudness`): K-weighting re-derived for the sample
+rate (`KWeightingCoefficients`, reproduces the published 48 kHz coefficients
+to 1e-12; `KWeight` applies the two biquads), complete 400 ms blocks every
+100 ms from the first sample (`BlockMeanSquares`), channel weight 1 for L/R,
+absolute gate -70 LUFS, relative gate -10 LU below the mean power of the
+absolute-gated blocks. `channels` is `{left, right}` or one sample list.
+Returns `-Infinity` for silence or audio shorter than 400 ms.
+
+Verified against analytic signals in `tests/test_loudness.wl` (full-scale
+997 Hz stereo = +0.0028 LUFS at 44.1 kHz, 0.0000 at 48 kHz; gated on/off and
+two-level signals to 1e-4). The previous version used
+`AudioLoudness["EBUMomentary"]`, which adds zero-padded partial blocks at
+both ends and was unstable on sparse files (0.6-2.1 LU off on several);
+see `VERIFICATION_loudness_limiter.md`. pyloudnorm reads about 0.045 LU
+lower than this meter on everything (its K-weighting uses rounded
+parameters: at 48 kHz it reads -0.041 for the 0.000 calibration sine), and
+up to 1.2 LU higher on short files whose loudest part is in the last
+400 ms, because it counts one extra, incomplete block.
+
+#### `NormalizeToLoudness[buffer, targetLUFS_:-17.0, peakCeiling_:0.97, sr_:44100]`
+Scales `buffer` (`{left, right}` or one list) to `targetLUFS` by the meter
+above, then scales down if the peak would exceed `peakCeiling` (a backstop:
+a signal with a large crest factor ends up below the target). Used at every
+app's final export.
+
+#### Peak limiter (opt-in): `audio.limiter`
+An app enables it in its `config.json`; `RenderAudio` (the
+`SonifyTrajectory` path) reads it, and apps that call `NormalizeToLoudness`
+themselves can call `LimitedNormalizeToLoudness` with
+`LimiterSettings[cfg]`.
+
+```json
+"audio": { "limiter": { "enabled": true, "modes": ["lorenz"],
+                         "ceiling_dbfs": -1.0, "attack_ms": 5, "release_ms": 50 } }
+```
+
+- `enabled` (default `false`): off means the exact previous code path,
+  so output is byte-identical (verified with a fixed random seed).
+- `ceiling_dbfs` (-1.0), `attack_ms` (5), `release_ms` (50).
+- `modes` (optional): the `simulation.mode` values it applies to; without it,
+  every mode.
+
+`LimiterSettings[cfg]` returns the settings or `None`.
+`PeakLimit[channels, sr, ceilingDB, attackMs, releaseMs]` is a linked
+stereo look-ahead limiter: required gain = min(1, ceiling / peak), held at
+its minimum over the next attack window, averaged over the attack window
+(so the gain is fully reduced when the peak arrives and the output never
+exceeds the ceiling), then a one-pole release. Returns `<|"data", "gain",
+"maxReductionDB"|>`. `LimitedNormalizeToLoudness[buffer, target, peakCeiling,
+sr, settings]` scales to the target, limits, re-measures and corrects the
+gain until the limited result is within 0.02 LU of the target (at most 12
+passes), and records `$StemLastLimiter` (`ceilingDB`, `attackMs`,
+`releaseMs`, `maxReductionDB`, `passes`, `lufs`, `gain`) for the app to
+report. Limiting reduces the prominence of whatever sits on the loudest
+peaks relative to the rest of the file (lorenz's loudest 880 Hz apex events:
+8-10 dB), while their level relative to the sound around them is kept
+(linked gain).
+
 #### `ExportAudioBuffer[buffer_List, filePath_String, sr_Integer:44100]`
 Wraps `buffer` in `Sound[SampledSoundList[buffer, sr]]` and writes a WAV file.
 Returns `filePath`. Creates the output directory if necessary.

@@ -12,7 +12,10 @@
      utils.wl         — EnsureDir, LogError, FmtN, FmtDec
      scales.wl        — $StemSampleRate, $StemScales, SemitoneToHz, ScaleLookup
      synth.wl         — StemSynthNote, NormalizeBuffer, NormalizeToLoudness,
-                        MeasureIntegratedLoudness, ExportAudioBuffer
+                        MeasureIntegratedLoudness (BS.1770-4: KWeight,
+                        KWeightingCoefficients, BlockMeanSquares), PeakLimit,
+                        LimiterSettings, LimitedNormalizeToLoudness,
+                        ExportAudioBuffer
      export.wl        — ExportCSV, GIFFramePlan, ExportGIF, GIFFrameDelays,
                         WAVDuration, PadWAVWithSilence, SyncWAVToGIF
      accessibility.wl — STEMHeading, STEMSection, STEMBullet, STEMPrintN,

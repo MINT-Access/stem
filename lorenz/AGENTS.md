@@ -76,8 +76,7 @@ near-origin starting point, not a stale table entry.
   passages at the ceiling. Measured after the change (stem-core meter):
   lorenz -21.58, classic -23.61, butterfly -19.70, wild -21.71, slow
   -18.89, rho9996 -26.41; rossler -17.00 and stable -16.95 reach the
-  target. A limiter before normalisation or a narrower volume range would
-  be the next step (a sound change, not made yet). Rossler's 50 s matches
+  target. Rossler's 50 s matches
   its slow spiral-out from near the origin (growth rate about a/2 = 0.1
   per time unit, about 46 time units from 0.1 to the attractor's size).
   Set either to 0 to hear the start again.
@@ -97,6 +96,21 @@ near-origin starting point, not a stale table entry.
 - experiment.wl no longer holds parameter blocks: it sets `label` and runs
   main.wl with `--simulation.lorenz.preset=<label>`, so its output is
   identical to the main.wl preset run.
+- **Peak limiter (lorenz mode and its presets only).** `config.json` has
+  `audio.limiter` enabled with `modes: ["lorenz"]`, ceiling -1 dBFS, attack
+  5 ms, release 50 ms; stem-core `RenderAudio` then uses
+  `LimitedNormalizeToLoudness`, and main.wl prints one sentence with the
+  ceiling, attack, release, maximum gain reduction and resulting loudness.
+  Measured (stem-core meter): lorenz mode -21.51 -> -17.02 LUFS (10.22 dB
+  maximum reduction), classic -23.57 -> -17.02 (10.85), butterfly -19.65 ->
+  -17.02 (5.04), stable -17.64 -> -17.01 (1.45), wild -21.54 -> -17.02
+  (11.11), slow -20.95 -> -17.01 (15.64), rho9996 -26.41 -> -17.02 (15.92);
+  every peak at -1 dBFS. Rossler is not limited (-17.00, byte-identical to
+  before with a fixed seed). The loudest 880 Hz apex events sit on the
+  limited peaks: their absolute level changed by -0.5 to +1.3 dB and their
+  level against the sound around them by under 0.4 dB, but relative to the
+  rest of the file (raised 9.5 dB) they are 8-10 dB less prominent. Set
+  `--audio.limiter.enabled=false` to hear the unlimited version.
 - Console: every mode ends with the stem-core loudness line
   (`STEMLoudnessLine`) and Timing line (`STEMTimingLine`; lorenz has no
   narration, so intro, pauses and outro are 0 s).

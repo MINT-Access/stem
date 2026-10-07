@@ -109,7 +109,7 @@ STEMLoudnessLine[wavPath_String, targetLUFS_?NumericQ] :=
   Module[{data, sr, lufs, peak},
     data = Import[wavPath, "Data"]; sr = Import[wavPath, "SampleRate"];
     If[VectorQ[data], data = {data}];
-    lufs = MeasureIntegratedLoudness[Audio[data, SampleRate -> sr]];
+    lufs = MeasureIntegratedLoudness[data, sr];
     peak = 20.0 * Log10[Max[Abs[Flatten[data]]]];
     Print["  Loudness: the WAV was normalised to ", FmtDec[targetLUFS, 1],
           " LUFS and measures ", FmtDec[lufs, 2], " LUFS integrated, with a peak of ",

@@ -162,10 +162,13 @@ and `simulation.duration` is the length of what remains. Without it the
 lorenz start from (0.1, 0, 0) produced a loud transient at the top of the
 pitch range in the first 0.6 s, the loudness normalisation hit its peak
 ceiling, and the WAV came out near -25 LUFS instead of -17. With the
-transient discarded lorenz mode measures -21.6 LUFS: still below the
-target, because fast passages at the top of the pitch range keep hitting
-the peak ceiling (most presets measure -19 to -26 LUFS; rossler and the
-stable preset reach -17). See AGENTS.md "Transient and presets".
+transient discarded lorenz mode still measured about -21.5 LUFS, because
+fast passages at the top of the pitch range kept hitting the peak ceiling.
+Lorenz mode and its presets therefore use stem-core's look-ahead peak
+limiter (`audio.limiter` in config.json: ceiling -1 dBFS, 5 ms attack,
+50 ms release, lorenz mode only); every lorenz run now measures -17.0 LUFS
+and prints the limiter's maximum gain reduction. Rossler is unchanged. See
+AGENTS.md "Transient and presets".
 
 ## Project structure
 

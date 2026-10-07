@@ -200,6 +200,9 @@ After `Get[".../stem-core/init.wl"]` all of the following are available:
 | `ScaleLookup[value, lo, hi, scale, rootHz]` | scales | Map a data value to a frequency |
 | `StemSynthNote[freq, dur, vol, harmonics, decayFrac, sr]` | synth | Generate PCM samples for one note |
 | `NormalizeBuffer[buffer, ceiling]` | synth | Scale buffer peak to ≤ ceiling |
+| `MeasureIntegratedLoudness[channels, sr]` | synth | Integrated loudness (LUFS), ITU-R BS.1770-4, written out (K-weighting for any sample rate, 400 ms/100 ms complete blocks, both gates) |
+| `NormalizeToLoudness[buffer, target, peakCeiling, sr]` | synth | Scale to a target LUFS with a peak-ceiling backstop (every app's final export) |
+| `LimiterSettings[cfg]` / `LimitedNormalizeToLoudness[...]` / `PeakLimit[...]` | synth | Opt-in look-ahead peak limiter, config `audio.limiter` (enabled, ceiling_dbfs, attack_ms, release_ms, modes); off = byte-identical output |
 | `ExportAudioBuffer[buffer, filePath, sr]` | synth | Write WAV (headless-safe) |
 | `ExportCSV[rows, filePath]` | export | Write CSV, create directory if needed |
 | `GIFFramePlan[audioDur, desiredFps, opts]` | export | Whole-centisecond frame delay + frame count for a GIF timed to audio |
