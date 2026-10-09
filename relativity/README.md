@@ -6,7 +6,7 @@ entirely from the terminal via `wolframscript`. Two modes:
 - **chirp** — gravitational wave emission from a binary inspiral, modelled
   with the post-Newtonian approximation. The strain h(t) is literally an
   audio waveform — time-stretched to make it clearly audible, then exported
-  as a WAV file you can play with `afplay` (macOS), `aplay` (Linux), or Windows Media Player.
+  as a WAV file you can play with `afplay` (macOS), `aplay` (Linux), or, in Windows PowerShell, `(New-Object Media.SoundPlayer "$PWD\output\chirp.wav").PlaySync()`.
 - **geodesic** — test-particle and photon orbits around a Schwarzschild black
   hole, solved numerically. Three orbit types: bound elliptical orbits (showing
   GR periapsis precession as a rosette), plunging orbits (particle falls past
@@ -100,8 +100,8 @@ aplay output/chirp.wav
 aplay output/gw170817.wav
 
 # Windows PowerShell
-Start-Process wmplayer output\chirp.wav
-Start-Process wmplayer output\gw170817.wav
+(New-Object Media.SoundPlayer "$PWD\output\chirp.wav").PlaySync()
+(New-Object Media.SoundPlayer "$PWD\output\gw170817.wav").PlaySync()
 ```
 
 ### Geodesic mode
@@ -137,7 +137,7 @@ afplay output/geodesic.wav
 # Linux
 aplay output/geodesic.wav
 # Windows PowerShell
-# Start-Process wmplayer output\geodesic.wav
+# (New-Object Media.SoundPlayer "$PWD\output\geodesic.wav").PlaySync()
 
 # Inspect merged configuration
 wolframscript -file main.wl -- --config-dump

@@ -17,7 +17,7 @@ enable spoken announcements through the accessibility layer built into stem-core
 |---|---|---|---|
 | Wolfram Engine | 13.x+ | 13.x+ | 13.x+ |
 | Screen reader | VoiceOver (built-in) | Orca (`sudo apt install orca`) | Narrator (built-in) |
-| Audio player | `afplay` (built-in) | `aplay` (`sudo apt install alsa-utils`) | Windows Media Player (built-in) |
+| Audio player | `afplay` (built-in) | `aplay` (`sudo apt install alsa-utils`) | PowerShell `Media.SoundPlayer` (built-in) |
 | TTS for STEM_SPEAK | `say` (built-in) | `espeak-ng` (`sudo apt install espeak-ng`) | System.Speech (built-in) |
 
 Verify `wolframscript` is on your PATH:
@@ -118,7 +118,7 @@ aplay output/<output>.wav
 
 # Windows PowerShell — blocks until playback completes
 (New-Object Media.SoundPlayer 'output\<output>.wav').PlaySync()
-# Or: Start-Process wmplayer output\<output>.wav
+# Or: (New-Object Media.SoundPlayer "$PWD\output\<output>.wav").PlaySync()
 ```
 
 ---

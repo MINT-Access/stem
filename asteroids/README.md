@@ -93,7 +93,7 @@ afplay output/asteroids_<start>_<end>.wav
 aplay output/asteroids_<start>_<end>.wav
 
 # Windows PowerShell
-Start-Process wmplayer output\asteroids_<start>_<end>.wav
+(New-Object Media.SoundPlayer "$PWD\output\asteroids_<start>_<end>.wav").PlaySync()
 ```
 
 With `DEMO_KEY` the NASA API allows 30 requests/hour; a multi-month range stays

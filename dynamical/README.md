@@ -160,7 +160,7 @@ period-3 window.
 wolframscript -file main.wl
 # macOS:   afplay output/sweep_audio.wav
 # Linux:   aplay  output/sweep_audio.wav
-# Windows: Start-Process wmplayer output\sweep_audio.wav
+# Windows: (New-Object Media.SoundPlayer "$PWD\output\sweep_audio.wav").PlaySync()
 ```
 
 ### iterate
@@ -188,7 +188,7 @@ fixed point x* = 1 − 1/r and whether it attracts or repels, from
 wolframscript -file main.wl -- --simulation.mode=iterate --simulation.dynamical.preset=chaos
 # macOS:   afplay output/iterate_audio.wav
 # Linux:   aplay  output/iterate_audio.wav
-# Windows: Start-Process wmplayer output\iterate_audio.wav
+# Windows: (New-Object Media.SoundPlayer "$PWD\output\iterate_audio.wav").PlaySync()
 ```
 
 ### lyapunov

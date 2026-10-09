@@ -1,0 +1,64 @@
+STEM smoke test, 2026-10-09 01:52
+== Environment ==
+Wolfram version: 15.0.0 for Microsoft Windows (64-bit) (June 2, 2026)
+SystemID: Windows-x86-64, OperatingSystem: Windows
+CharacterEncoding: UTF8, SystemCharacterEncoding: WindowsANSI
+Repository: C:\Users\mintaccess\stem-test
+SpeechSynthesize["Test."]: returns audio (1.32 s)
+Speech tier available (STEMSpeechAvailable[]): True
+Tool say: not found
+Tool afconvert: not found
+Tool espeak-ng: not found
+Tool espeak: not found
+Tool powershell: C:\WINDOWS\System32\WindowsPowerShell\v1.0\powershell.exe, starts (exit code 1)
+Tool curl: C:\WINDOWS\system32\curl.exe, starts (exit code 0)
+Network (URLRead to ssd-api.jpl.nasa.gov): HTTP 200
+Probe: Hénon — λ × ☉
+Probe UTF-8 bytes: 48 c3 a9 6e 6f 6e 20 e2 80 94 20 ce bb 20 c3 97 20 e2 98 89 (expect 48 c3 a9 6e 6f 6e 20 e2 80 94 20 ce bb 20 c3 97 20 e2 98 89)
+GIF of a Graphics with ImageSize 100: ExportGIF (144 dpi) 200x200 px; plain Export (host scale) 267x267 px
+
+== Apps (32, default mode each) ==
+app | mode | status | seconds | WAV s | LUFS | peak dBFS | GIF s | GIF-WAV s | GIF px | intro | first message
+asteroids | - | OK | 216 | 23.45 | -17 | -6.37 | 23.52 | 0.07 | 1000x1000 | no | -
+bayes | coin | OK | 42.9 | 40.04 | -17 | -4.38 | 39.96 | -0.08 | 1200x800 | yes | -
+bell | correlations | OK | 69.4 | 27.11 | -16.97 | -12.34 | 27.18 | 0.068 | 1200x760 | yes | -
+blackbody | spectrum | OK | 21 | 47.46 | -17 | -0.26 | 47.36 | -0.102 | 1200x800 | yes | -
+brownian | walk | OK | 280.7 | 43.72 | -17 | -1.12 | 43.79 | 0.067 | 960x960 | yes | -
+cellular | life | OK | 23.3 | 18 | -17 | -7.57 | 18 | 0 | 960x960 | no | -
+clt | sweep | OK | 12 | 26.5 | -18.02 | -0.26 | 6 | 0 | 1200x760 | yes | -
+compton | scatter | OK | 50.6 | 45.05 | -17 | -0.53 | 45 | -0.047 | 920x920 | yes | -
+cosmology | spectrum | OK | 6 | 49.95 | -17 | -4.96 | - | - | - | no | -
+dynamical | sweep | OK | 199.6 | 342.53 | -17.74 | -0.26 | 342.5 | -0.034 | 1200x840 | yes | -
+fluid | karman | OK | 16.4 | 49.63 | -17 | -4.87 | 49.5 | -0.125 | 1040x400 | yes | -
+grover | search | OK | 14.6 | 21.16 | -17 | -1.93 | 21.14 | -0.022 | 1240x760 | yes | -
+henon | attractor | OK | 124.7 | 34.54 | -18.23 | -0.26 | 34.5 | -0.04 | 1400x560 | yes | -
+hydrogen | orbitals | OK | 51.8 | 110.07 | -17 | -8.36 | 110 | -0.065 | 640x640 | yes | -
+images | brightness | OK | 26.8 | 104.34 | -16.99 | -10.39 | 104.5 | 0.159 | 512x512 | yes | -
+lagrange | l4 | OK | 35.1 | 18.85 | -16.93 | -4.74 | 18.85 | 0 | 840x662 | no | -
+lorenz | lorenz | OK | 256.5 | 40 | -17.01 | -1 | 39.96 | -0.04 | 1000x840 | no | -
+magnetic | cyclotron | OK | 133.1 | 55.74 | -17 | -6.92 | 55.87 | 0.134 | 840x1092 | yes | -
+mandelbrot | mandelbrot | OK | 26 | 84.56 | -17 | -11.38 | 84.5 | -0.057 | 640x640 | yes | -
+montecarlo | sweep | OK | 64.4 | 84.76 | -21.68 | -0.26 | 85 | 0.245 | 840x1183 | yes | -
+pendulum | double | OK | 103.3 | 20 | -17 | -4.52 | 20 | 0 | 960x932 | no | -
+primes | ulam | OK | 4.3 | 10 | -17 | -1.13 | 10 | 0 | 1200x1200 | no | -
+quantum | qho | OK | 24.7 | 12.55 | -17 | -11.09 | 12.55 | 0 | 1200x600 | no | -
+quantum_statistics | spectrum | OK | 39.2 | 35.71 | -17 | -0.48 | 35.5 | -0.205 | 1240x760 | yes | -
+quantum_tunnelling | barrier | OK | 15.3 | 54.06 | -17 | -0.87 | 2.58 | 0.03 | 1040x394 | yes | -
+qubit | gates | OK | 118 | 27.34 | -17 | -3.34 | 27.2 | -0.137 | 1040x1040 | yes | -
+relativity | chirp | OK | 34.4 | 28.96 (+3 more WAV) | -24.57 | -0.26 | 3.6 | 0.02 | 1600x800 | no | -
+resonance | galilean | OK | 93.4 | 60.67 | -17 | -0.94 | 33 | 0 | 920x920 | yes | -
+scattering | scatter | OK | 121.1 | 43.73 | -17 | -5.09 | 20.02 | 0.02 | 920x920 | yes | -
+signal | chord | OK | 38.3 | 46.91 (+3 more WAV) | -17 | -1.44 | 3 | 0 | 1600x800 | yes | -
+thermo | distribution | OK | 15.1 | 34.47 | -17 | -1.56 | 34.34 | -0.13 | 1200x800 | yes | -
+waves | ripple | OK | 46.9 | 20 | -17 | -6.75 | 20.02 | 0.02 | 60x60 | no | -
+
+== Pendulum frame clipping (margin >= 3 px on every frame) ==
+[PASS] double_animation.gif: 500 frames, 960x932 px, worst margins top 119, bottom 37, left 37, right 37 px, 0 frames under the margin
+
+== demo.wl ==
+demo.wl | OK | 1529.9 s | passed 32/33 | -
+
+== Messages ==
+none
+
+Summary: 32 of 32 apps wrote a WAV; demo.wl OK.

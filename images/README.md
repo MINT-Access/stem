@@ -111,7 +111,7 @@ random-sounding scatter.
 wolframscript -file main.wl
 # macOS:   afplay output/images_brightness_audio.wav
 # Linux:   aplay  output/images_brightness_audio.wav
-# Windows: Start-Process wmplayer output\images_brightness_audio.wav
+# Windows: (New-Object Media.SoundPlayer "$PWD\output\images_brightness_audio.wav").PlaySync()
 ```
 
 ### scan_horizontal
@@ -131,7 +131,7 @@ jumps abruptly at the end of every row (nearby pixels in the image are
 wolframscript -file main.wl -- --simulation.mode=scan_horizontal
 # macOS:   afplay output/images_scan_horizontal_audio.wav
 # Linux:   aplay  output/images_scan_horizontal_audio.wav
-# Windows: Start-Process wmplayer output\images_scan_horizontal_audio.wav
+# Windows: (New-Object Media.SoundPlayer "$PWD\output\images_scan_horizontal_audio.wav").PlaySync()
 ```
 
 ### colour
@@ -155,7 +155,7 @@ held-note duration directly tells you how large a region is.
 wolframscript -file main.wl -- --simulation.mode=colour
 # macOS:   afplay output/images_colour_audio.wav
 # Linux:   aplay  output/images_colour_audio.wav
-# Windows: Start-Process wmplayer output\images_colour_audio.wav
+# Windows: (New-Object Media.SoundPlayer "$PWD\output\images_colour_audio.wav").PlaySync()
 ```
 
 ### hsb
@@ -186,7 +186,7 @@ pattern before adding the pitch+timbre encoding.
 wolframscript -file main.wl -- --simulation.mode=hsb
 # macOS:   afplay output/images_hsb_audio.wav
 # Linux:   aplay  output/images_hsb_audio.wav
-# Windows: Start-Process wmplayer output\images_hsb_audio.wav
+# Windows: (New-Object Media.SoundPlayer "$PWD\output\images_hsb_audio.wav").PlaySync()
 ```
 
 ## Colour-to-pitch mapping (colour and hsb modes' pitch reference)

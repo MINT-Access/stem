@@ -162,7 +162,7 @@ comes from `GIFFramePlan` for the audio's duration, so GIF and WAV play for
 the same time (500 frames for 20 s; it used to be 501). `STEMSay` is called at each pipeline phase (ODE solve,
 animation, sonification) and as the final completion message with the
 platform-appropriate play command (`afplay` on macOS, `aplay` on Linux,
-`Start-Process wmplayer` on Windows).
+`(New-Object Media.SoundPlayer "<file>").PlaySync()` in Windows PowerShell).
 
 To also hear a spoken announcement when the run finishes, set `STEM_SPEAK=1`
 before running:

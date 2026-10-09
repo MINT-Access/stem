@@ -49,7 +49,7 @@ afplay output/chord_narrative_full.wav
 aplay output/chord_narrative_full.wav
 
 # Windows PowerShell
-Start-Process wmplayer output\chord_narrative_full.wav
+(New-Object Media.SoundPlayer "$PWD\output\chord_narrative_full.wav").PlaySync()
 ```
 
 ## Modes

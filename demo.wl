@@ -36,10 +36,25 @@ If[!DirectoryQ[$demoDir], CreateDirectory[$demoDir]];
 
 FormatBytes[n_Integer] :=
   Which[
-    n >= 1024^2, ToString[Round[n / 1024.0^2, 0.1]] <> " MB",
-    n >= 1024,   ToString[Round[n / 1024.0,   0.1]] <> " KB",
+    n >= 1024^2, FmtDec[n / 1024.0^2, 1] <> " MB",
+    n >= 1024,   FmtDec[n / 1024.0,   1] <> " KB",
     True,        ToString[n] <> " B"
   ];
+
+(* Playback command for this platform, from the repository root.
+   Windows: Media.SoundPlayer plays a WAV in the terminal and waits; it
+   needs the full path ($PWD), because .NET does not use PowerShell's
+   current folder. *)
+DemoPlayLine[rel_String, os_String : $OperatingSystem] :=
+  With[{win = StringReplace[rel, "/" -> "\\"]},
+    Switch[os,
+      "Unix",    "aplay " <> rel,
+      "Windows", If[StringContainsQ[rel, "*"],
+                   "Get-ChildItem " <> win <> " | ForEach-Object { (New-Object Media.SoundPlayer $_.FullName).PlaySync() }",
+                   "(New-Object Media.SoundPlayer \"$PWD\\" <> win <> "\").PlaySync()"],
+      _,         "afplay " <> rel]];
+DemoPlayFence[os_String : $OperatingSystem] := If[os === "Windows", "```powershell", "```sh"];
+DemoPlatformName[] := Switch[$OperatingSystem, "MacOSX", "macOS", "Windows", "Windows", "Unix", "Linux", _, $OperatingSystem];
 FormatBytes[_] := "0 B";
 
 TruncPad[s_String, n_Integer] :=
@@ -490,7 +505,7 @@ Scan[
       t0, duration,
       outputFiles, copiedFiles, fileInfo,
       missing, failed, status, note,
-      apiKey, demoFiles
+      apiKey, demoFiles, beforeFiles
     },
 
       appName      = app["name"];
@@ -556,6 +571,12 @@ Scan[
           Print["  Preset: ", preset];
 
           failed = False;
+          (* output/ before the run, so only files this run created or
+             rewrote are collected (dynamical runs twice; an app's folder
+             can hold older files from other modes) *)
+          beforeFiles = If[DirectoryQ[appOutputDir],
+            AssociationMap[FileDate[#, "Modification"] &,
+              Select[FileNames["*", appOutputDir], !DirectoryQ[#] &]], <||>];
           t0     = AbsoluteTime[];
 
           (* Load the app in a protected Block:
@@ -597,7 +618,9 @@ Scan[
 
           (* Collect all files from the app's output/ *)
           outputFiles = If[DirectoryQ[appOutputDir],
-            Select[FileNames["*", appOutputDir], !DirectoryQ[#] &],
+            Select[FileNames["*", appOutputDir],
+              !DirectoryQ[#] && (!KeyExistsQ[beforeFiles, #] ||
+                FileDate[#, "Modification"] =!= beforeFiles[#]) &],
             {}
           ];
 
@@ -717,8 +740,8 @@ If[!$checkOnly,
   rl["# STEM Demo Report"]; rl[""];
   rl["Generated: " <> DateString[]]; rl[""];
   rl["## System"]; rl[""];
-  rl["- Wolfram Language: " <> ToString[$VersionNumber]];
-  rl["- macOS: " <> $osVersion]; rl[""];
+  rl["- Wolfram Language: " <> $Version];
+  rl["- " <> DemoPlatformName[] <> ": " <> $osVersion]; rl[""];
   rl["## Summary"]; rl[""];
   rl["| App | Preset | Duration | Files | Status |"];
   rl["|-----|--------|----------|-------|--------|"];
@@ -734,7 +757,7 @@ If[!$checkOnly,
                True,                      "\[Times] FAIL"] <> " |"]],
     $demoResults];
   rl[""];
-  rl["**Total elapsed:** " <> ToString[Round[$totalElapsed, 0.1]] <> " s  |  " <>
+  rl["**Total elapsed:** " <> FmtDec[$totalElapsed, 1] <> " s  |  " <>
      ToString[$nPassed] <> " passed" <>
      If[$nFailed  > 0, "  |  " <> ToString[$nFailed]  <> " failed",  ""] <>
      If[$nSkipped > 0, "  |  " <> ToString[$nSkipped] <> " skipped", ""]]; rl[""];
@@ -745,7 +768,7 @@ If[!$checkOnly,
       rl["- **Preset:** " <> r["preset"]];
       rl["- **Status:** " <> r["status"]];
       If[r["duration"] =!= 0,
-         rl["- **Duration:** " <> ToString[Round[r["duration"], 0.1]] <> " s"]];
+         rl["- **Duration:** " <> FmtDec[r["duration"], 1] <> " s"]];
       If[r["note"] =!= "", rl["- **Note:** " <> r["note"]]];
       rl["- **Listen for:** " <> r["listenFor"]]; rl[""];
       If[Length[r["files"]] > 0,
@@ -757,17 +780,19 @@ If[!$checkOnly,
              r["files"]]; rl[""]]],
     $demoResults];
   rl["## Audio Guide"]; rl[""];
-  rl["All audio files are in `demo/<app>/output/`. Play them with:"]; rl[""];
+  rl["All audio files are in `demo/<app>/output/`. The commands below are for " <>
+     DemoPlatformName[] <> ", the platform this report was made on; run them from the " <>
+     "repository root, in an interactive desktop session (audio does not play over SSH)."]; rl[""];
   rl["- macOS: `afplay demo/<app>/output/<file>.wav`"];
   rl["- Linux: `aplay demo/<app>/output/<file>.wav`"];
-  rl["- Windows: `Start-Process wmplayer demo\\<app>\\output\\<file>.wav`"]; rl[""];
-  rl["```sh"];
+  rl["- Windows PowerShell: `(New-Object Media.SoundPlayer \"$PWD\\demo\\<app>\\output\\<file>.wav\").PlaySync()`"]; rl[""];
+  rl[DemoPlayFence[]];
   Scan[
     Function[r,
       If[r["status"] === "PASS",
         Scan[Function[f,
                If[StringEndsQ[f["path"], ".wav"],
-                  rl["afplay demo/" <> r["name"] <> "/output/" <> FileNameTake[f["path"]]]]],
+                  rl[DemoPlayLine["demo/" <> r["name"] <> "/output/" <> FileNameTake[f["path"]]]]]],
              r["files"]]]],
     $demoResults];
   rl["```"]; rl[""];
@@ -961,43 +986,45 @@ If[!$checkOnly,
   dl["   then the second and third harmonics fading into the Silk damping tail."];
   dl["   The oldest light in the universe \[LongDash] the Big Bang's afterglow."]; dl[""];
   dl["## Playing audio"]; dl[""];
-  dl["From the project root (macOS):"]; dl[""];
-  dl["```sh"];
-  dl["afplay demo/signal/output/chord_narrative_full.wav"];
-  dl["afplay demo/waves/output/ripple_audio.wav"];
-  dl["afplay demo/fluid/output/karman_audio.wav"];
-  dl["afplay demo/pendulum/output/double_audio.wav"];
-  dl["afplay demo/cellular/output/life_rpentomino_audio.wav"];
-  dl["afplay demo/primes/output/gaps_slow.wav"];
-  dl["afplay demo/bayes/output/coin_audio.wav"];
-  dl["afplay demo/quantum/output/qho_audio.wav"];
-  dl["afplay demo/qubit/output/qubit_rabi.wav"];
-  dl["afplay demo/bell/output/bell_chsh.wav"];
-  dl["afplay demo/grover/output/grover_compare.wav"];
-  dl["afplay demo/scattering/output/discovery_audio.wav"];
-  dl["afplay demo/hydrogen/output/spectrum_audio.wav"];
-  dl["afplay demo/blackbody/output/spectrum_audio.wav"];
-  dl["afplay demo/compton/output/discovery_audio.wav"];
-  dl["afplay demo/quantum_tunnelling/output/barrier_audio.wav"];
-  dl["afplay demo/clt/output/dice_audio.wav"];
-  dl["afplay demo/brownian/output/brownian_ensemble.wav"];
-  dl["afplay demo/thermo/output/distribution_audio.wav"];
-  dl["afplay demo/quantum_statistics/output/quantum_statistics_fermi_sea.wav"];
-  dl["afplay demo/montecarlo/output/sweep_audio.wav"];
-  dl["afplay demo/magnetic/output/mirror_audio.wav"];
-  dl["afplay demo/lorenz/output/rossler_audio.wav"];
-  dl["afplay demo/dynamical/output/sweep_audio.wav"];
-  dl["afplay demo/henon/output/henon_attractor.wav"];
-  dl["afplay demo/asteroids/output/*.wav"];
-  dl["afplay demo/lagrange/output/l4_audio.wav"];
-  dl["afplay demo/resonance/output/galilean_audio.wav"];
-  dl["afplay demo/images/output/images_brightness_audio.wav"];
-  dl["afplay demo/mandelbrot/output/mandelbrot_mandelbrot.wav"];
-  dl["afplay demo/relativity/output/chirp.wav"];
-  dl["afplay demo/cosmology/output/cmb_spectrum_audio.wav"];
+  dl["From the project root (" <> DemoPlatformName[] <> "):"]; dl[""];
+  dl[DemoPlayFence[]];
+  dl[DemoPlayLine["demo/signal/output/chord_narrative_full.wav"]];
+  dl[DemoPlayLine["demo/waves/output/ripple_audio.wav"]];
+  dl[DemoPlayLine["demo/fluid/output/karman_audio.wav"]];
+  dl[DemoPlayLine["demo/pendulum/output/double_audio.wav"]];
+  dl[DemoPlayLine["demo/cellular/output/life_rpentomino_audio.wav"]];
+  dl[DemoPlayLine["demo/primes/output/gaps_slow.wav"]];
+  dl[DemoPlayLine["demo/bayes/output/coin_audio.wav"]];
+  dl[DemoPlayLine["demo/quantum/output/qho_audio.wav"]];
+  dl[DemoPlayLine["demo/qubit/output/qubit_rabi.wav"]];
+  dl[DemoPlayLine["demo/bell/output/bell_chsh.wav"]];
+  dl[DemoPlayLine["demo/grover/output/grover_compare.wav"]];
+  dl[DemoPlayLine["demo/scattering/output/discovery_audio.wav"]];
+  dl[DemoPlayLine["demo/hydrogen/output/spectrum_audio.wav"]];
+  dl[DemoPlayLine["demo/blackbody/output/spectrum_audio.wav"]];
+  dl[DemoPlayLine["demo/compton/output/discovery_audio.wav"]];
+  dl[DemoPlayLine["demo/quantum_tunnelling/output/barrier_audio.wav"]];
+  dl[DemoPlayLine["demo/clt/output/dice_audio.wav"]];
+  dl[DemoPlayLine["demo/brownian/output/brownian_ensemble.wav"]];
+  dl[DemoPlayLine["demo/thermo/output/distribution_audio.wav"]];
+  dl[DemoPlayLine["demo/quantum_statistics/output/quantum_statistics_fermi_sea.wav"]];
+  dl[DemoPlayLine["demo/montecarlo/output/sweep_audio.wav"]];
+  dl[DemoPlayLine["demo/magnetic/output/mirror_audio.wav"]];
+  dl[DemoPlayLine["demo/lorenz/output/rossler_audio.wav"]];
+  dl[DemoPlayLine["demo/dynamical/output/sweep_audio.wav"]];
+  dl[DemoPlayLine["demo/henon/output/henon_attractor.wav"]];
+  dl[DemoPlayLine["demo/asteroids/output/*.wav"]];
+  dl[DemoPlayLine["demo/lagrange/output/l4_audio.wav"]];
+  dl[DemoPlayLine["demo/resonance/output/galilean_audio.wav"]];
+  dl[DemoPlayLine["demo/images/output/images_brightness_audio.wav"]];
+  dl[DemoPlayLine["demo/mandelbrot/output/mandelbrot_mandelbrot.wav"]];
+  dl[DemoPlayLine["demo/relativity/output/chirp.wav"]];
+  dl[DemoPlayLine["demo/cosmology/output/cmb_spectrum_audio.wav"]];
   dl["```"]; dl[""];
-  dl["Linux: replace `afplay` with `aplay`. " <>
-     "Windows PowerShell: `Start-Process wmplayer demo\\signal\\output\\chord_narrative_full.wav`"]; dl[""];
+  dl["These commands are for " <> DemoPlatformName[] <> ". On macOS use `afplay <file>`, " <>
+     "on Linux `aplay <file>`, in Windows PowerShell " <>
+     "`(New-Object Media.SoundPlayer \"$PWD\\<file>\").PlaySync()`; audio plays only " <>
+     "in an interactive desktop session, not over SSH."]; dl[""];
   dl["## Re-running"]; dl[""];
   dl["```sh"];
   dl["# Full demo (re-runs all apps, overwrites this directory)"];
@@ -1018,7 +1045,7 @@ STEMSay[
   "Demo " <> If[$checkOnly, "check", "run"] <> " complete. " <>
   ToString[$nPassed] <> " of " <> ToString[$nTotal] <> " apps passed. " <>
   If[!$checkOnly,
-     "Total time: " <> ToString[Round[$totalElapsed, 0.1]] <> " seconds. ",
+     "Total time: " <> FmtDec[$totalElapsed, 1] <> " seconds. ",
      ""] <>
   "Outputs in demo/."
 ];

@@ -147,7 +147,40 @@ Module[{text, out, buf, lines, warn, notes, wav, imported},
 Print[""];
 
 
-(* ── 4. STEM_SPEECH_OFF=1 ─────────────────────────────────── *)
+(* ── 4. Explicit English voices ─────────────────────────────── *)
+Print["-- Explicit English voices --"];
+Module[{v, sv, buf, lines, ann, b1, b2},
+  v = Block[{$STEMSpeechConfig = <||>}, STEMSynthVoice[]];
+  AssertTrue["SpeechSynthesize[] gets an English voice by name (" <> If[MissingQ[v], "none", v["name"] <> ", " <> v["lang"]] <> ")",
+    MissingQ[v] || StringStartsQ[STEMSpeechLangCode[v["lang"]], "en"]];
+  If[$OperatingSystem === "MacOSX" && !MissingQ[v],
+    AssertTrue["on the Mac that voice is Samantha, the voice SpeechSynthesize[] uses by default",
+      v["name"] === "Samantha"]];
+  AssertTrue["a configured voice that exists is used as given",
+    Block[{$STEMSpeechConfig = <|"voice" -> "Daniel"|>}, With[{w = STEMSynthVoice[]}, MissingQ[w] || w["name"] === "Daniel" || !MemberQ[#["Name"] & /@ STEMSynthVoices[], "Daniel"]]]];
+  If[$OperatingSystem === "MacOSX" && !MissingQ[STEMFindTool["say"]],
+    sv = Block[{$STEMSpeechConfig = <||>}, STEMSayVoice[STEMFindTool["say"]]];
+    AssertTrue["say gets an English voice from say -v ?, never the system default (" <>
+        If[MissingQ[sv], "none", sv["name"] <> ", " <> sv["lang"]] <> ")",
+      !MissingQ[sv] && StringStartsQ[sv["lang"], "en_"]];
+    SetEnvironment["STEM_SPEECH" -> "platform"];
+    {buf, lines} = Block[{$projectRoot = FileNameJoin[{"stem", "voicetest"}], $STEMSpeechConfig = <||>},
+      CaptureOutput[STEMSpeakToBuffer["Each note is one year.", 44100]]];
+    ann = Select[lines, StringStartsQ[#, "  Narration voice:"] &];
+    AssertTrue["STEM_SPEECH=platform skips SpeechSynthesize[] and say reads it (" <> ToString[Length[buf]] <> " samples)",
+      Length[buf] > 4410];
+    AssertTrue["one sentence names the voice and the tier: " <> If[ann === {}, "(none)", StringTrim[First[ann]]],
+      Length[ann] == 1 && StringContainsQ[First[ann], sv["name"]] && StringContainsQ[First[ann], "say command"]];
+    b1 = Block[{$STEMSpeechConfig = <||>}, STEMSpeakToBuffer["The population settles to one value after a few years.", 44100]];
+    b2 = Block[{$STEMSpeechConfig = <|"rate_wpm" -> 240|>}, Quiet[STEMSpeakToBuffer["The population settles to one value after a few years.", 44100]]];
+    SetEnvironment["STEM_SPEECH" -> None];
+    AssertTrue["simulation.speech.rate_wpm 240 makes say faster (" <> FmtDec[Length[b1]/44100., 2] <> " s -> " <> FmtDec[Length[b2]/44100., 2] <> " s)",
+      0 < Length[b2] < 0.9 Length[b1]]];
+];
+Print[""];
+
+
+(* ── 5. STEM_SPEECH_OFF=1 ─────────────────────────────────── *)
 Print["-- STEM_SPEECH_OFF=1 --"];
 Module[{buf, lines, warn},
   SetEnvironment["STEM_SPEECH_OFF" -> "1"];

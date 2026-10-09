@@ -63,9 +63,9 @@ aplay output/gaps_audio.wav
 aplay output/gaps_slow.wav
 
 # Windows PowerShell
-Start-Process wmplayer output\ulam_audio.wav
-Start-Process wmplayer output\gaps_audio.wav
-Start-Process wmplayer output\gaps_slow.wav
+(New-Object Media.SoundPlayer "$PWD\output\ulam_audio.wav").PlaySync()
+(New-Object Media.SoundPlayer "$PWD\output\gaps_audio.wav").PlaySync()
+(New-Object Media.SoundPlayer "$PWD\output\gaps_slow.wav").PlaySync()
 ```
 
 ## Modes

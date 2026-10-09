@@ -56,8 +56,8 @@ aplay output/life_rpentomino_audio.wav
 aplay output/rule110_audio.wav
 
 # Windows PowerShell
-Start-Process wmplayer output\life_rpentomino_audio.wav
-Start-Process wmplayer output\rule110_audio.wav
+(New-Object Media.SoundPlayer "$PWD\output\life_rpentomino_audio.wav").PlaySync()
+(New-Object Media.SoundPlayer "$PWD\output\rule110_audio.wav").PlaySync()
 ```
 
 ## Starting patterns (Game of Life)

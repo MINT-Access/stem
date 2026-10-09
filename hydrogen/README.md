@@ -139,7 +139,7 @@ afplay output/transitions_audio.wav
 ```
 
 Linux: replace `afplay` with `aplay`. Windows PowerShell:
-`Start-Process wmplayer output\orbitals_audio.wav`
+`(New-Object Media.SoundPlayer "$PWD\output\orbitals_audio.wav").PlaySync()`
 
 ## Config keys (`config.json`)
 

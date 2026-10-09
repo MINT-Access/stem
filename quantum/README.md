@@ -49,8 +49,8 @@ aplay output/qho_audio.wav
 aplay output/box_audio.wav
 
 # Windows PowerShell
-Start-Process wmplayer output\qho_audio.wav
-Start-Process wmplayer output\box_audio.wav
+(New-Object Media.SoundPlayer "$PWD\output\qho_audio.wav").PlaySync()
+(New-Object Media.SoundPlayer "$PWD\output\box_audio.wav").PlaySync()
 ```
 
 ## Modes

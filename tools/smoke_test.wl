@@ -140,6 +140,13 @@ With[{a = TimeConstrained[Quiet[Check[SpeechSynthesize["Test."], $Failed]], 60, 
     "returns audio (" <> fmt[QuantityMagnitude[Duration[a], "Seconds"], 2] <> " s)",
     "no audio (" <> ToString[Head[a]] <> ")"]]];
 out["Speech tier available (STEMSpeechAvailable[]): " <> ToString[STEMSpeechAvailable[]]];
+With[{v = STEMSynthVoice[]},
+  out["Narration voice for SpeechSynthesize[]: " <> If[MissingQ[v], "no English voice in VoiceStyleData[]",
+    v["name"] <> " (" <> v["lang"] <> ", " <> ToLowerCase[v["gender"]] <> "), " <> v["how"]] <>
+    "; English voices listed: " <> ToString[Count[STEMSynthVoices[], e_ /; StringStartsQ[STEMSpeechLangCode[e["LanguageCode"]], "en"]]]]];
+If[$OperatingSystem === "MacOSX" && !MissingQ[STEMFindTool["say"]],
+  With[{v = STEMSayVoice[STEMFindTool["say"]]},
+    out["Narration voice for say: " <> If[MissingQ[v], "no English voice (say is skipped)", v["name"] <> " (" <> v["lang"] <> "), " <> v["how"]]]]];
 Scan[
   Function[tool,
     Module[{p = STEMFindTool[tool], r},
@@ -233,7 +240,7 @@ out[""];
 (* ── 4. demo.wl ───────────────────────────────────────────────── *)
 
 out["== demo.wl" <> If[$smokeQuick, " --quick", ""] <> " =="];
-Module[{r, passed},
+Module[{r, passed, skips},
   Print["  running demo.wl ..."];
   r = STEMRunApp[$smokeRoot, If[$smokeQuick, {"--quick"}, {}], "Script" -> "demo.wl",
         "RequireWAV" -> False, "Silent" -> True, "TimeLimit" -> 3 $smokeTimeLimit];
@@ -241,6 +248,13 @@ Module[{r, passed},
   out["demo.wl | " <> r["status"] <> " | " <> fmt[r["seconds"], 1] <> " s | passed " <>
       If[passed === {}, "?", First[passed]] <> " | " <>
       If[r["messages"] === {}, "-", StringTake[First[r["messages"]], UpTo[160]]]];
+  (* demo.wl prints "[WARNING] <reason> \[LongDash] skipping <app>." for each step it skips *)
+  skips = StringCases[r["log"], "[WARNING] " ~~ why : Shortest[__] ~~ (" \[LongDash] " | " -- ") ~~ "skipping " ~~ app : WordCharacter .. :> {app, why}];
+  $demoSkipText = If[skips === {}, "no step skipped",
+    ToString[Length[skips]] <> " step" <> If[Length[skips] > 1, "s", ""] <> " skipped: " <>
+    StringRiffle[(#[[1]] <> ", because " <> #[[2]]) & /@ skips, "; "]];
+  out["demo.wl skipped steps: " <> $demoSkipText <> "."];
+  $demoPassed = If[passed === {}, "?", First[passed]];
   $results["demo.wl"] = r];
 out[""];
 
@@ -259,7 +273,8 @@ out[""];
 
 $nNoWav = Count[KeyDrop[$results, "demo.wl"], r_ /; r["wavs"] === {}];
 out["Summary: " <> ToString[Length[$apps] - $nNoWav] <> " of " <> ToString[Length[$apps]] <>
-    " apps wrote a WAV; demo.wl " <> $results["demo.wl"]["status"] <> "."];
+    " apps wrote a WAV; demo.wl " <> $results["demo.wl"]["status"] <> ", " <> $demoPassed <>
+    " runs passed, " <> $demoSkipText <> "."];
 
 Export[$smokeOut, StringRiffle[$report, "\n"] <> "\n", "Text", CharacterEncoding -> "UTF8"];
 Print["Report: ", $smokeOut];

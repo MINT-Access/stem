@@ -1,7 +1,7 @@
 # stem
 
 [![Version](https://img.shields.io/badge/version-1.5.1-blue.svg)](RELEASE_NOTES_v1.5.1.md)
-[![Wolfram Language](https://img.shields.io/badge/Wolfram_Language-tested_15.0.1-DD1100.svg)](https://www.wolfram.com/engine/)
+[![Wolfram Language](https://img.shields.io/badge/Wolfram_Language-tested_15.0.1_macOS_%C2%B7_15.0.0_Windows-DD1100.svg)](https://www.wolfram.com/engine/)
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](LICENSE)
 
 A monorepo of Wolfram Language physics simulations, data projects, and signal
@@ -63,9 +63,12 @@ installer on all three platforms — no separate download needed.
 
 Activate the free licence when prompted (requires a Wolfram account).
 
-Tested with Wolfram Engine 15.0.1 on macOS (Apple silicon, `$SystemID`
-MacOSX-ARM64). Earlier versions and other platforms have not been tested
-yet; `tools/smoke_test.wl` (below) checks a new installation in one run.
+Tested on macOS with Wolfram Engine 15.0.1 (Apple silicon, `$SystemID`
+MacOSX-ARM64) and on Windows 11 on Apple silicon via Parallels with the x64
+Wolfram Engine 15.0.0 under emulation (`$SystemID` Windows-x86-64): 32 of 32
+apps pass `tools/smoke_test.wl` on both. Linux and other versions have not
+been tested yet; `tools/smoke_test.wl` (below) checks a new installation in
+one run.
 
 Verify your installation:
 
@@ -84,7 +87,10 @@ wolframscript -version
 | macOS | `afplay` | Built into macOS — no install needed |
 | Linux | `aplay` | `sudo apt install alsa-utils` (Debian/Ubuntu) · `sudo dnf install alsa-utils` (Fedora) |
 | Linux (alt) | `paplay` | `sudo apt install pulseaudio-utils` |
-| Windows | Windows Media Player | Built into Windows 10/11 — no install needed |
+| Windows | PowerShell `Media.SoundPlayer` | Built into Windows 10/11 — plays a WAV in the terminal, no media player needed |
+
+Audio plays only from an interactive desktop session; over SSH (or any
+session without a sound device) the commands below run but nothing is heard.
 
 ### Text-to-speech (required for narration)
 
@@ -105,9 +111,6 @@ tiers, the same on every platform (stem-core `STEMSpeakToBuffer`):
 | Linux | `espeak-ng` (`espeak` is tried if it is missing) | `sudo apt install espeak-ng` · `sudo dnf install espeak-ng` |
 | Windows | PowerShell with System.Speech | Built into Windows 10/11 (Windows PowerShell 5.1) |
 
-   It speaks with the system's default voice, so set that to an English
-   voice (macOS: System Settings, Accessibility, Spoken Content) or the
-   English narration is read with another language's voice.
 3. If neither produces audio, the app prints one warning naming the app, the
    tiers tried and how many seconds of narration are missing, prints the
    text, and still writes a valid WAV without the speech (`signal` puts
@@ -115,6 +118,35 @@ tiers, the same on every platform (stem-core `STEMSpeakToBuffer`):
 
 The text reaches the platform tool through a temporary UTF-8 text file, so
 names such as "Hénon" are spoken correctly on every platform.
+
+The voice is always English and chosen explicitly, never the system default
+(which follows the system's language and could read the English text with a
+German or French voice):
+
+- `SpeechSynthesize[]`: Samantha, then Daniel, then the first en-US or en-GB
+  voice by name (female before male), from Wolfram's own voice list. On the
+  Mac this is Samantha, the voice it used before.
+- macOS `say`: Samantha, then Daniel, then the first `en_` voice in
+  `say -v ?`; with no English voice installed, `say` is skipped.
+- Windows PowerShell: the first installed en-US voice by name, then en-GB.
+- Linux `espeak-ng`: `-v en`.
+
+The first narration of each app prints one line naming the voice and the
+tier, for example `Narration voice: Samantha (en-US, female) through
+SpeechSynthesize[], chosen automatically, at the voice's own rate.`
+
+Two optional config keys override the choice, in `config.json` or on the
+command line:
+
+| Key | Effect |
+|---|---|
+| `simulation.speech.voice` | A voice name, used by every tier that has it (for example `Daniel`; espeak-ng gets it as `-v`) |
+| `simulation.speech.rate_wpm` | Words per minute: `say -r` and `espeak-ng -s`; `SpeechSynthesize[]` and PowerShell output is time-stretched from the voice's own rate, measured once on a calibration sentence |
+
+```sh
+wolframscript -file henon/main.wl -- --simulation.speech.voice=Daniel
+wolframscript -file henon/main.wl -- --simulation.speech.rate_wpm=200
+```
 
 This is separate from `STEM_SPEAK=1`, which only makes the console
 announcements speak aloud as they are printed (see Accessibility below); the
@@ -126,7 +158,9 @@ narration inside the WAV files does not depend on it.
 |---|---|
 | `STEM_SPEAK=1` | Also speak the console announcements aloud (uses the same platform tool) |
 | `NASA_API_KEY` | Personal NASA key for the `asteroids` app (optional; `DEMO_KEY` otherwise) |
-| `STEM_SPEECH_OFF=1` | Skip all narration synthesis (testing the no-speech path) |
+| `STEM_SPEECH=platform` | Skip `SpeechSynthesize[]` and narrate with the platform tool (`say`, `espeak-ng`, PowerShell) |
+| `STEM_SPEECH=synthesize` | Use `SpeechSynthesize[]` only |
+| `STEM_SPEECH=off` (or `STEM_SPEECH_OFF=1`) | Skip all narration synthesis (testing the no-speech path) |
 
 Register for a free NASA key at https://api.nasa.gov/. The built-in
 `DEMO_KEY` works at 30 requests/hour; a personal key removes that limit.

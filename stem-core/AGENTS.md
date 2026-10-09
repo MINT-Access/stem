@@ -221,23 +221,43 @@ themselves.
 Returns mono PCM samples (a list of reals, not normalised) of `text` spoken at
 `sampleRate`, or `{}` when no tier produced audio. Tiers:
 
-1. `SpeechSynthesize[text]` (all platforms). On the development Mac this is
-   the tier that produces every narration (Wolfram's voice, 22.05 kHz,
-   resampled to 44.1 kHz).
+1. `SpeechSynthesize[text, voice]` (all platforms) with an English voice chosen
+   by name from `VoiceStyleData[]` (cached per kernel): Samantha, then Daniel,
+   then the first en-US/en-GB voice by name with female before male, then any
+   English voice. Retried once when it fails (it fails now and then without a
+   message we can act on). On the development Mac this tier produces every
+   narration; Samantha is the voice `SpeechSynthesize[]` used before by
+   default, so the output is byte-identical (22.05 kHz, resampled to 44.1 kHz).
 2. The platform tool, given the text through a temporary UTF-8 file (never a
    command-line argument, so non-ASCII text survives every console code page):
    macOS `say -f <txt> -o <aiff>` then `afconvert -d LEI16 -f WAVE`; Linux
    `espeak-ng -b 1 -f <txt> -w <wav>`, then `espeak` with the same flags;
    Windows `powershell` with `System.Speech`, the text read by
-   `Get-Content -Raw -Encoding UTF8`. `say` and `espeak-ng` use the system's
-   default voice, which follows the system's spoken-content language (on the
-   development Mac a German voice), so this tier can read the English text
-   with a non-English voice.
+   `Get-Content -Raw -Encoding UTF8`. The voice is always English, never the
+   system default (which follows the system's language: German on the
+   development Mac): `say -v` Samantha, then Daniel, then the first `en_`
+   voice in `say -v ?` (no English voice: `say` is skipped, with one line
+   saying so); PowerShell selects the first installed en-US voice by name,
+   then en-GB (none: skipped); `espeak-ng -v en`.
 3. Nothing: prints one warning sentence naming the app (`$projectRoot`'s
    directory), the tiers tried and why each failed, and the narration lost
    (words, and seconds at 175 words per minute); then `STEMSay[text]`; returns
    `{}`. Callers must build their WAV without the segment (most skip the
    intro and its pause; `signal` substitutes 0.5 s of silence).
+
+The first narration of each app prints one line, `  Narration voice: <name>
+(<language>, <gender>) through <tier>, <chosen automatically | set by
+simulation.speech.voice>, <rate>.`
+
+Optional config keys, read by `LoadConfig` into `$STEMSpeechConfig`:
+`simulation.speech.voice` (a voice name; used by every tier that has it,
+otherwise the automatic choice with one line saying so) and
+`simulation.speech.rate_wpm` (`say -r`, `espeak-ng -s`; `SpeechSynthesize[]`
+and PowerShell output is time-stretched by natural/target, where natural is
+the voice's rate on a fixed calibration sentence, measured once per voice).
+
+`STEM_SPEECH=platform` skips `SpeechSynthesize[]`, `STEM_SPEECH=synthesize`
+skips the platform tool, `STEM_SPEECH=off` (or `STEM_SPEECH_OFF=1`) skips both.
 
 The platform tier draws exactly one `RandomInteger[999999]` (temporary file
 names), as the per-app copies did, so seeded runs keep their random streams.

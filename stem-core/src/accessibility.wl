@@ -203,13 +203,15 @@ STEMSay[text_String] :=
 
    macOS   → "afplay <file>"
    Linux   → "aplay <file>"
-   Windows → "Start-Process wmplayer \"<file>\"" *)
+   Windows → "(New-Object Media.SoundPlayer \"<file>\").PlaySync()" (PowerShell;
+             plays the WAV in the terminal and waits; filePath is absolute)
+   Audio plays only in an interactive desktop session, not over SSH. *)
 
-STEMPlayCmd[filePath_String] :=
-  Switch[$OperatingSystem,
+STEMPlayCmd[filePath_String, os_String : $OperatingSystem] :=
+  Switch[os,
     "MacOSX",  "afplay " <> filePath,
     "Unix",    "aplay "  <> filePath,
-    "Windows", "Start-Process wmplayer \"" <> filePath <> "\"",
+    "Windows", "(New-Object Media.SoundPlayer \"" <> filePath <> "\").PlaySync()",
     _,         "afplay " <> filePath
   ]
 

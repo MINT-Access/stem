@@ -292,5 +292,8 @@ LoadConfig[appName_String, cliArgs_List : {}] :=
       Exit[0]
     ];
 
+    (* optional narration voice and rate for stem-core STEMSpeakToBuffer *)
+    $STEMSpeechConfig = Replace[GetCfg[merged, {"simulation", "speech"}, <||>], Except[_Association] -> <||>];
+
     merged
   ]

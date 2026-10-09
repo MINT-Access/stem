@@ -416,14 +416,16 @@ Every narrated app (22 of them) gets its spoken audio from one stem-core
 helper, `STEMSpeakToBuffer[text, sampleRate]` (`stem-core/src/speech.wl`):
 `SpeechSynthesize[]` first on every platform, then the platform tool (macOS
 `say` + `afconvert`, Linux `espeak-ng`/`espeak`, Windows PowerShell
-`System.Speech`) given the text through a temporary UTF-8 file, then nothing:
+`System.Speech`) given the text through a temporary UTF-8 file, each with an
+explicit English voice (never the system default; optional config keys
+`simulation.speech.voice` and `simulation.speech.rate_wpm`), then nothing:
 one warning sentence naming the app, the tiers tried and the seconds of
 narration lost, and `{}` returned so the app still writes its WAV without
 the segment (`signal/` substitutes 0.5 s of silence). Never a hard error.
 Apps keep only their narration text and how they place the buffer (pause,
 normalisation); they must not carry their own TTS code. `STEMSpeechAvailable[]`
-says whether a tier can speak; `STEM_SPEECH_OFF=1` skips every tier for
-testing. This is distinct from `STEMSay[text]` (stem-core), which is a
+says whether a tier can speak; `STEM_SPEECH=platform|synthesize|off` forces a
+tier (or none) for testing. This is distinct from `STEMSay[text]` (stem-core), which is a
 *console-only* announcement (spoken via the OS's TTS command when
 `STEM_SPEAK=1`, otherwise just printed) — it never produces WAV file content.
 

@@ -53,8 +53,8 @@ aplay output/lorenz_audio.wav
 aplay output/rossler_audio.wav
 
 # Windows PowerShell
-Start-Process wmplayer output\lorenz_audio.wav
-Start-Process wmplayer output\rossler_audio.wav
+(New-Object Media.SoundPlayer "$PWD\output\lorenz_audio.wav").PlaySync()
+(New-Object Media.SoundPlayer "$PWD\output\rossler_audio.wav").PlaySync()
 ```
 
 ## Outputs

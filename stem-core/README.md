@@ -116,7 +116,7 @@ afplay pendulum/output/double_audio.wav
 aplay pendulum/output/double_audio.wav
 
 # Windows PowerShell
-Start-Process wmplayer pendulum\output\double_audio.wav
+(New-Object Media.SoundPlayer "$PWD\pendulum\output\double_audio.wav").PlaySync()
 ```
 
 ---
