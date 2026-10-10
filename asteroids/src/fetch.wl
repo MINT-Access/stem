@@ -12,63 +12,156 @@
      Returns a list of Associations, one per asteroid.
    ======================================================== *)
 
-FetchError[msg_String] :=
-  If[StreamQ[$stderr],
-    WriteString[$stderr, "[ERROR] " <> msg <> "\n"],
-    Print["[ERROR] " <> msg]
-  ];
+(* FetchError — one "[ERROR] ..." line on the console. (It used to test
+   StreamQ[$stderr]; StreamQ is not a function, so the If never
+   evaluated and nothing was printed.) *)
+FetchError[msg_String] := Print["[ERROR] " <> msg];
 
 
+(* The key comes from NASA_API_KEY, with surrounding whitespace and
+   quotes removed (a key pasted as "abc" or with a trailing newline
+   would otherwise be sent as typed); DEMO_KEY when it is unset or
+   empty. $NasaApiKeyNote is the sentence printed before the first
+   request when something was trimmed. The key itself is never printed. *)
 If[!ValueQ[$NasaApiKey],
   With[{envKey = Environment["NASA_API_KEY"]},
-    $NasaApiKey = If[StringQ[envKey] && envKey =!= "", envKey, "DEMO_KEY"]
+    Module[{trimmed = If[StringQ[envKey],
+        StringTrim[envKey, (WhitespaceCharacter | "\"" | "'" | "\[OpenCurlyDoubleQuote]" |
+          "\[CloseCurlyDoubleQuote]" | "\[OpenCurlyQuote]" | "\[CloseCurlyQuote]") ..], ""]},
+      $NasaApiKey       = If[trimmed =!= "", trimmed, "DEMO_KEY"];
+      $NasaApiKeySource = If[trimmed =!= "", "env", "demo"];
+      $NasaApiKeyNote   = Which[
+        !StringQ[envKey] || envKey === trimmed, None,
+        trimmed === "",
+          "NASA_API_KEY held only whitespace or quotes (" <>
+          ToString[StringLength[envKey]] <> " characters), so DEMO_KEY is used instead.",
+        True,
+          "NASA_API_KEY had surrounding whitespace or quotes, which were removed: " <>
+          ToString[StringLength[envKey]] <> " characters as set, " <>
+          ToString[StringLength[trimmed]] <> " characters used."]
+    ]
   ]
 ];
+If[!ValueQ[$NasaApiKeySource], $NasaApiKeySource = If[$NasaApiKey === "DEMO_KEY", "demo", "env"]];
+If[!ValueQ[$NasaApiKeyNote], $NasaApiKeyNote = None];
 
 $NeoWsBaseUrl = "https://api.nasa.gov/neo/rest/v1/feed";
 
 
+(* HideApiKey — a URL with the api_key value replaced, for printing *)
+HideApiKey[s_String] :=
+  StringReplace[s, "api_key=" ~~ Except["&"] .. -> "api_key=<hidden>"]
+
+(* NasaKeyDescription — which key a request used, without the key *)
+NasaKeyDescription[] :=
+  If[$NasaApiKeySource === "env",
+    "a key from NASA_API_KEY (" <> ToString[StringLength[$NasaApiKey]] <>
+      If[StringLength[$NasaApiKey] === 1, " character)", " characters)"],
+    "DEMO_KEY, because NASA_API_KEY is " <>
+      If[StringQ[Environment["NASA_API_KEY"]], "empty", "not set"]]
+
+
+(* FetchURLResponse
+   GET a URL and return <|"status" -> HTTP code or None, "body" -> byte
+   string (one character per UTF-8 byte, which is what
+   ImportString[..., "JSON"] expects)|>, or $Failed when neither URLRead
+   nor curl got a response. URLRead runs with $ProgressReporting = False:
+   that, not Interactive -> False or blocking PrintTemporary, is what
+   keeps its "Connecting... | Elapsed time" lines off the console. Only
+   if URLRead gets no response at all is curl tried, with a sentence
+   giving URLRead's failure message. *)
+
+FetchURLResponse[url_String] :=
+  Module[{resp, bytes, r, host, why, out, code},
+    host  = Quiet[URLParse[url, "Domain"]];
+    resp  = Quiet[Block[{$ProgressReporting = False},
+      URLRead[HTTPRequest[url], TimeConstraint -> 30, Interactive -> False]]];
+    If[Head[resp] === HTTPResponse,
+      bytes = Quiet[resp["BodyByteArray"]];
+      Return[<|"status" -> resp["StatusCode"],
+               "body"   -> If[ByteArrayQ[bytes], FromCharacterCode[Normal[bytes]], ""]|>]];
+    why = If[FailureQ[resp],
+      Module[{tmpl = Quiet[resp[[2]]["MessageTemplate"]],
+              pars = HideApiKey[ToString[#]] & /@ Replace[Quiet[resp[[2]]["MessageParameters"]], Except[_List] -> {}]},
+        tmpl = Quiet[ReleaseHold[tmpl]];
+        If[StringQ[tmpl], TemplateApply[StringTemplate[tmpl], pars], ToString[resp[[1]]]]],
+      "URLRead returned " <> ToString[Head[resp]]];
+    why = StringTrim[why, "."];
+    Print["  URLRead got no response from ", host, " (", why,
+          "), so the request is being retried with curl."];
+    r = Quiet[RunProcess[{"curl", "-s", "--max-time", "30",
+                          "-w", "\n%{http_code}", url}]];
+    If[!AssociationQ[r] || r["ExitCode"] =!= 0, Return[$Failed]];
+    out  = r["StandardOutput"];
+    code = Quiet[ToExpression[Last[StringSplit[out, "\n", All]]]];
+    If[!IntegerQ[code] || code === 0, Return[$Failed]];
+    <|"status" -> code,
+      "body"   -> StringDrop[out, -(StringLength[Last[StringSplit[out, "\n", All]]] + 1)]|>
+  ]
+
+
 (* FetchURLText
-   GET a URL and return the response body as a byte string (one
-   character per UTF-8 byte, which is what ImportString[..., "JSON"]
-   expects), or $Failed. Uses the built-in URLRead; only if URLRead
-   cannot reach the server is curl tried, with a printed sentence. The
-   body is returned whatever the HTTP status, as curl -s did, so the
-   callers' checks for API error messages still see them. *)
+   The body of FetchURLResponse whatever the HTTP status, or $Failed
+   when there was no response (used for the JPL SBDB requests). *)
 
 FetchURLText[url_String] :=
-  Module[{resp, bytes, r, host},
-    host  = Quiet[URLParse[url, "Domain"]];
-    resp  = Quiet[URLRead[HTTPRequest[url], TimeConstraint -> 30, Interactive -> False]];
-    bytes = If[Head[resp] === HTTPResponse, Quiet[resp["BodyByteArray"]], $Failed];
-    If[ByteArrayQ[bytes], Return[FromCharacterCode[Normal[bytes]]]];
-    If[Head[resp] === HTTPResponse, Return[""]];   (* reached, empty body *)
-    Print["  URLRead could not reach ", host,
-          ", so the request is being retried with curl."];
-    r = Quiet[RunProcess[{"curl", "-s", "--max-time", "30", url}]];
-    If[AssociationQ[r] && r["ExitCode"] === 0, r["StandardOutput"], $Failed]
+  Module[{r = FetchURLResponse[url]},
+    If[AssociationQ[r], r["body"], $Failed]]
+
+
+(* NasaErrorText — " with error CODE (message)" from a JSON body whose
+   "error" field is an object with code/message (api.nasa.gov key and
+   rate-limit errors) or a string, or from NeoWs's own http_error and
+   error_message fields (bad dates); "" if the body is not JSON or has
+   none of these. *)
+
+NasaErrorText[body_String] :=
+  Module[{json = Quiet[ConfigToAssoc[ImportString[body, "JSON", CharacterEncoding -> "UTF8"]]], err},
+    If[AssociationQ[json] && !KeyExistsQ[json, "error"] && KeyExistsQ[json, "error_message"],
+      Return[" with error " <> ToString[Lookup[json, "http_error", "(no code)"]] <>
+             " (" <> StringTrim[ToString[json["error_message"]], "."] <> ")"]];
+    If[!AssociationQ[json] || !KeyExistsQ[json, "error"], Return[""]];
+    err = json["error"];
+    Which[
+      AssociationQ[err],
+        " with error " <> ToString[Lookup[err, "code", "(no code)"]] <>
+        If[KeyExistsQ[err, "message"], " (" <> StringTrim[ToString[err["message"]], "."] <> ")", ""],
+      StringQ[err], " with error \"" <> StringTrim[err, "."] <> "\"",
+      True, " with error " <> ToString[err]]
   ]
 
 
 (* FetchRawJson
    Fetches the raw JSON string from the NeoWs API for a date range.
-   NeoWs allows at most 7 days per request. *)
+   NeoWs allows at most 7 days per request. Any status other than 200
+   ends the fetch with one sentence: the status, the server's error
+   code and message when the body carries them, the host, and which
+   key was used. *)
 
 FetchRawJson[startDate_String, endDate_String] :=
-  Module[{url, response},
+  Module[{url, response, host},
     url = $NeoWsBaseUrl <>
       "?start_date=" <> startDate <>
       "&end_date="   <> endDate <>
       "&api_key="    <> $NasaApiKey;
+    host = Quiet[URLParse[url, "Domain"]];
 
-    Print["  Fetching: ", url];
-    response = FetchURLText[url];
+    If[StringQ[$NasaApiKeyNote], Print["  ", $NasaApiKeyNote]; $NasaApiKeyNote = None];
+    Print["  Fetching: ", HideApiKey[url]];
+    response = FetchURLResponse[url];
 
-    If[response === $Failed || StringLength[response] < 10,
-      FetchError["Could not reach NASA API. Check your internet connection."];
+    If[response === $Failed,
+      FetchError["The NASA NeoWs request to " <> host <> " got no response from URLRead or curl, using " <>
+        NasaKeyDescription[] <> "; check the internet connection."];
       Return[$Failed]
     ];
-    response
+    If[response["status"] =!= 200,
+      FetchError["The NASA NeoWs request to " <> host <> " returned HTTP " <>
+        ToString[response["status"]] <> NasaErrorText[response["body"]] <>
+        ", using " <> NasaKeyDescription[] <> "."];
+      Return[$Failed]
+    ];
+    response["body"]
   ]
 
 
