@@ -184,6 +184,7 @@ wolframscript -file fluid/tests/test_model.wl
 wolframscript -file stem-core/tests/test_gifsync.wl
 wolframscript -file stem-core/tests/test_loudness.wl
 wolframscript -file stem-core/tests/test_speech.wl
+wolframscript -file stem-core/tests/test_platform.wl
 ```
 
 `tools/smoke_test.wl` (`-- --quick` for a short run) runs every app's default
@@ -234,6 +235,7 @@ After `Get[".../stem-core/init.wl"]` all of the following are available:
 | `STEMSpeakToBuffer[text, sr]` | speech | Narration PCM: SpeechSynthesize[] -> platform tool (UTF-8 text file) -> `{}` with one warning sentence |
 | `STEMRunApp[appDir, args, opts]` / `STEMRunExperiments[appDir, runs]` | runapp | Run a main.wl in this kernel (demo.wl's Block + Get pattern), record status, messages and new files; used by experiments.wl files and tools/smoke_test.wl |
 | `STEMSpeechAvailable[]` | speech | `True` when a speech tier can produce audio (`False` under `STEM_SPEECH_OFF=1`) |
+| `STEMPlatformDescription[]` | platform | Human-readable OS line for reports, e.g. `macOS 26.7.1 (Tahoe) on ARM64`, `Windows 11 25H2 (build 26200) on x86-64` |
 
 See `stem-core/AGENTS.md` for full parameter descriptions and constraints.
 

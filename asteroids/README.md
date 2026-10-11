@@ -43,6 +43,8 @@ $env:NASA_API_KEY = "your_key_here"
 # Or set permanently: System Properties → Environment Variables
 ```
 
+If the fetch fails, the error sentence reports the key's length (never the key); NASA keys are 40 characters, so another length means the key was mistyped or truncated.
+
 Never hardcode the key in source files — always pass it via the
 environment variable.
 

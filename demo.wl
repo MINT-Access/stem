@@ -722,18 +722,6 @@ If[$nSkipped > 0, Print["Skipped:        ", $nSkipped]];
 If[!$checkOnly,
 
   $reportPath = FileNameJoin[{$demoDir, "demo-report.md"}];
-  $osVersion  = Switch[$OperatingSystem,
-    "MacOSX",
-      StringTrim[RunProcess[{"sw_vers", "-productVersion"}, "StandardOutput"]],
-    "Unix",
-      StringTrim[RunProcess[{"uname", "-sr"}, "StandardOutput"]],
-    "Windows",
-      StringTrim[RunProcess[{"powershell", "-NoProfile", "-Command",
-        "[System.Environment]::OSVersion.VersionString"}, "StandardOutput"]],
-    _,
-      $SystemID
-  ];
-
   $rl = {};
   rl[s_] := AppendTo[$rl, s];
 
@@ -741,7 +729,7 @@ If[!$checkOnly,
   rl["Generated: " <> DateString[]]; rl[""];
   rl["## System"]; rl[""];
   rl["- Wolfram Language: " <> $Version];
-  rl["- " <> DemoPlatformName[] <> ": " <> $osVersion]; rl[""];
+  rl["- Operating system: " <> STEMPlatformDescription[]]; rl[""];
   rl["## Summary"]; rl[""];
   rl["| App | Preset | Duration | Files | Status |"];
   rl["|-----|--------|----------|-------|--------|"];

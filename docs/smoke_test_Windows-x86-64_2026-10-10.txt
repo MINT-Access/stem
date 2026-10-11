@@ -1,0 +1,66 @@
+STEM smoke test, 2026-10-10 23:19
+== Environment ==
+Wolfram version: 15.0.0 for Microsoft Windows (64-bit) (June 2, 2026)
+SystemID: Windows-x86-64, OperatingSystem: Windows
+CharacterEncoding: UTF8, SystemCharacterEncoding: WindowsANSI
+Repository: C:\Users\mintaccess\stem-test
+SpeechSynthesize["Test."]: returns audio (1.32 s)
+Speech tier available (STEMSpeechAvailable[]): True
+Narration voice for SpeechSynthesize[]: SLT (en-us, female), chosen automatically; English voices listed: 45
+Tool say: not found
+Tool afconvert: not found
+Tool espeak-ng: not found
+Tool espeak: not found
+Tool powershell: C:\WINDOWS\System32\WindowsPowerShell\v1.0\powershell.exe, starts (exit code 1)
+Tool curl: C:\WINDOWS\system32\curl.exe, starts (exit code 0)
+Network (URLRead to ssd-api.jpl.nasa.gov): HTTP 200
+Probe: Hénon — λ × ☉
+Probe UTF-8 bytes: 48 c3 a9 6e 6f 6e 20 e2 80 94 20 ce bb 20 c3 97 20 e2 98 89 (expect 48 c3 a9 6e 6f 6e 20 e2 80 94 20 ce bb 20 c3 97 20 e2 98 89)
+GIF of a Graphics with ImageSize 100: ExportGIF (144 dpi) 200x200 px; plain Export (host scale) 267x267 px
+
+== Apps (32, default mode each) ==
+app | mode | status | seconds | WAV s | LUFS | peak dBFS | GIF s | GIF-WAV s | GIF px | intro | first message
+asteroids | - | OK | 238.8 | 26.13 | -17 | -5.25 | 26.18 | 0.05 | 1000x1000 | yes | -
+bayes | coin | OK | 41.7 | 35.78 | -17 | -5.4 | 35.76 | -0.015 | 1200x800 | yes | -
+bell | correlations | OK | 67.7 | 24.02 | -17 | -13.9 | 24 | -0.02 | 1200x760 | yes | -
+blackbody | spectrum | OK | 20.2 | 42.17 | -17 | -3.74 | 42.28 | 0.11 | 1200x800 | yes | -
+brownian | walk | OK | 279.9 | 37.36 | -17 | -3.65 | 37.25 | -0.115 | 960x960 | yes | -
+cellular | life | OK | 22.6 | 18 | -17 | -7.57 | 18 | 0 | 960x960 | no | -
+clt | sweep | OK | 11.1 | 23.42 | -17 | -1.06 | 6 | 0 | 1200x760 | yes | -
+compton | scatter | OK | 46.6 | 41.05 | -17 | -5.8 | 41 | -0.05 | 920x920 | yes | -
+cosmology | spectrum | OK | 5.8 | 49.95 | -17 | -4.96 | - | - | - | no | -
+dynamical | sweep | OK | 198 | 339.84 | -17 | -1.15 | 340 | 0.16 | 1200x840 | yes | -
+fluid | karman | OK | 16.1 | 46.44 | -17 | -5.65 | 46.5 | 0.055 | 1040x400 | yes | -
+grover | search | OK | 14.3 | 18.41 | -17 | -7.15 | 18.36 | -0.055 | 1240x760 | yes | -
+henon | attractor | OK | 128.2 | 32.66 | -17 | -0.94 | 32.56 | -0.1 | 1400x560 | yes | -
+hydrogen | orbitals | OK | 49.6 | 105.62 | -17 | -9.12 | 105.5 | -0.125 | 640x640 | yes | -
+images | brightness | OK | 25.1 | 98.74 | -17 | -10.02 | 98.5 | -0.24 | 512x512 | yes | -
+lagrange | l4 | OK | 34.8 | 18.85 | -16.93 | -4.74 | 18.85 | 0 | 840x662 | no | -
+lorenz | lorenz | OK | 256.9 | 40 | -17.01 | -1 | 39.96 | -0.04 | 1000x840 | no | -
+magnetic | cyclotron | OK | 129 | 53.26 | -17 | -10.58 | 53.28 | 0.024 | 840x1092 | yes | -
+mandelbrot | mandelbrot | OK | 24.6 | 81.15 | -17 | -11.17 | 81 | -0.146 | 640x640 | yes | -
+montecarlo | sweep | OK | 62.7 | 81.18 | -19.66 | -0.26 | 81 | -0.185 | 840x1183 | yes | -
+pendulum | double | OK | 102.7 | 20 | -17 | -4.52 | 20 | 0 | 960x932 | no | -
+primes | ulam | OK | 4.2 | 10 | -17 | -1.13 | 10 | 0 | 1200x1200 | no | -
+quantum | qho | OK | 24.6 | 12.55 | -17 | -11.09 | 12.55 | 0 | 1200x600 | no | -
+quantum_statistics | spectrum | OK | 34.9 | 31.04 | -17 | -4.92 | 31 | -0.035 | 1240x760 | yes | -
+quantum_tunnelling | barrier | OK | 14 | 47.13 | -17 | -4.4 | 2.58 | 0.03 | 1040x394 | yes | -
+qubit | gates | OK | 114.5 | 23 | -17 | -4.13 | 22.91 | -0.085 | 1040x1040 | yes | -
+relativity | chirp | OK | 34.4 | 28.96 (+3 more WAV) | -24.57 | -0.26 | 3.6 | 0.02 | 1600x800 | no | -
+resonance | galilean | OK | 92.7 | 56.93 | -17 | -2.77 | 33 | 0 | 920x920 | yes | -
+scattering | scatter | OK | 120.4 | 40.84 | -17 | -8.39 | 20.02 | 0.02 | 920x920 | yes | -
+signal | chord | OK | 37.2 | 39.67 (+3 more WAV) | -17 | -2.79 | 3 | 0 | 1600x800 | yes | -
+thermo | distribution | OK | 14.4 | 31.23 | -17 | -6.21 | 31.31 | 0.08 | 1200x800 | yes | -
+waves | ripple | OK | 45.9 | 20 | -17 | -6.75 | 20.02 | 0.02 | 60x60 | no | -
+
+== Pendulum frame clipping (margin >= 3 px on every frame) ==
+[PASS] double_animation.gif: 500 frames, 960x932 px, worst margins top 119, bottom 37, left 37, right 37 px, 0 frames under the margin
+
+== demo.wl ==
+demo.wl | OK | 1700 s | passed 33/33 | -
+demo.wl skipped steps: no step skipped.
+
+== Messages ==
+none
+
+Summary: 32 of 32 apps wrote a WAV; demo.wl OK, 33/33 runs passed, no step skipped.

@@ -251,9 +251,11 @@ Narrator key = Caps Lock or Insert (configurable).
 Run `wolframscript -version` to confirm the engine is installed and licensed.
 
 **No audio file produced**
-Check `output/errors.log` in the project directory. The asteroids project requires
-a NASA API key in `$NASAAPIKEY`; the pendulum and lorenz projects have no external
-dependencies.
+Check `output/errors.log` in the project directory. The asteroids project uses
+a NASA API key from `NASA_API_KEY` (or `DEMO_KEY`); the pendulum and lorenz projects
+have no external dependencies.
+
+If the fetch fails, the error sentence reports the key's length (never the key); NASA keys are 40 characters, so another length means the key was mistyped or truncated.
 
 **TTS does not speak**
 Confirm `STEM_SPEAK=1` is set. On macOS, check that `say` is present (`which say`).

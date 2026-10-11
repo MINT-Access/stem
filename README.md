@@ -1,12 +1,35 @@
 # stem
 
 [![Version](https://img.shields.io/badge/version-1.5.1-blue.svg)](RELEASE_NOTES_v1.5.1.md)
-[![Wolfram Language](https://img.shields.io/badge/Wolfram_Language-tested_15.0.1_macOS_%C2%B7_15.0.0_Windows-DD1100.svg)](https://www.wolfram.com/engine/)
+[![Wolfram Engine](https://img.shields.io/badge/Wolfram_Engine-supported_platforms-DD1100.svg)](#supported-platforms)
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](LICENSE)
 
 A monorepo of Wolfram Language physics simulations, data projects, and signal
 processing demonstrations — each runnable from the terminal via `wolframscript`
 and producing CSV data, an animated GIF, and audio output.
+
+---
+
+## Supported platforms
+
+- **Supported** (tested with `tools/smoke_test.wl` and `demo.wl` at this
+  release):
+  - macOS 26 on Apple silicon with Wolfram Engine 15.0.1
+    ([smoke report](docs/smoke_test_MacOSX-ARM64_2026-10-07.txt)).
+  - Windows 11 x86-64 with Wolfram Engine 15.0.0
+    ([smoke report](docs/smoke_test_Windows-x86-64_2026-10-10.txt),
+    [demo report](docs/demo_report_Windows-x86-64_2026-10-11.md)). Tested in
+    Parallels on Apple silicon, so the x64 engine runs under emulation,
+    about three times slower than on the Mac.
+- **Pending**: Linux x86-64 (Ubuntu), to be added when its smoke report
+  exists in `docs/`.
+- **Not supported**: Linux on ARM, because Wolfram offers no general
+  Linux-ARM build of the engine (only a Raspberry Pi package, untested
+  here); Wolfram Engine before 15, untested.
+
+Narration voice and length differ by platform: Samantha on macOS, SLT on
+Windows, so the same narration runs a different length on each.
+GIF/WAV sync is verified on every run regardless (`SyncWAVToGIF`).
 
 ---
 
@@ -63,12 +86,8 @@ installer on all three platforms — no separate download needed.
 
 Activate the free licence when prompted (requires a Wolfram account).
 
-Tested on macOS with Wolfram Engine 15.0.1 (Apple silicon, `$SystemID`
-MacOSX-ARM64) and on Windows 11 on Apple silicon via Parallels with the x64
-Wolfram Engine 15.0.0 under emulation (`$SystemID` Windows-x86-64): 32 of 32
-apps pass `tools/smoke_test.wl` on both. Linux and other versions have not
-been tested yet; `tools/smoke_test.wl` (below) checks a new installation in
-one run.
+Tested platforms are listed under [Supported platforms](#supported-platforms);
+`tools/smoke_test.wl` (below) checks a new installation in one run.
 
 Verify your installation:
 
@@ -200,7 +219,7 @@ setx NASA_API_KEY your_key_here
 ## Quick start
 
 Run any project from the `stem/` root. The commands below are for bash or
-zsh (macOS, Linux); the Windows forms follow, and differ in three ways:
+zsh (macOS, Linux); the Windows forms follow, and differ in four ways:
 
 - **Windows PowerShell**: write the separator as `'--'` (quoted). Windows
   PowerShell 5.1 can drop a bare `--` before it reaches a native program
@@ -209,8 +228,10 @@ zsh (macOS, Linux); the Windows forms follow, and differ in three ways:
   continue with a backtick (`` ` ``) instead of `\`.
 - **Command Prompt (cmd)**: `#` is not a comment, so the comments are
   removed (or turned into `REM` lines); lines continue with `^`.
-- **Paths** use `\` on Windows. Not yet run on a Windows machine
-  (docs/PORTABILITY_AUDIT.md, B4).
+- **Paths** use `\` on Windows.
+- **`wolframscript -code`** strips double quotes from its argument on
+  Windows, so `-code 'Print["hi"]'` arrives as `Print[hi]`. Put code that
+  contains quoted strings in a `.wl` file and run it with `-file`.
 
 ```sh
 # Physics simulations

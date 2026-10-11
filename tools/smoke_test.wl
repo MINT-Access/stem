@@ -131,14 +131,23 @@ out["STEM smoke test, " <> DateString[{"Year", "-", "Month", "-", "Day", " ", "H
     If[$smokeQuick, " (--quick)", ""]];
 out["== Environment =="];
 out["Wolfram version: " <> $Version];
-out["SystemID: " <> $SystemID <> ", OperatingSystem: " <> $OperatingSystem];
+out["Operating system: " <> STEMPlatformDescription[] <> "; SystemID: " <> $SystemID];
 out["CharacterEncoding: " <> ToString[$CharacterEncoding] <>
     ", SystemCharacterEncoding: " <> ToString[$SystemCharacterEncoding]];
 out["Repository: " <> $smokeRoot];
-With[{a = TimeConstrained[Quiet[Check[SpeechSynthesize["Test."], $Failed]], 60, $TimedOut]},
-  out["SpeechSynthesize[\"Test.\"]: " <> If[AudioQ[a],
-    "returns audio (" <> fmt[QuantityMagnitude[Duration[a], "Seconds"], 2] <> " s)",
-    "no audio (" <> ToString[Head[a]] <> ")"]]];
+(* SpeechSynthesize fails now and then (about one call in nine on the
+   Mac); STEMSpeakToBuffer retries once, so the probe does too and says
+   which attempt returned audio *)
+Module[{try, why, a1, a2 = None},
+  why[a_] := Which[a === $TimedOut, "no result within 60 s", a === $Failed, "$Failed", True, ToString[Head[a]]];
+  try[] := TimeConstrained[Quiet[Check[SpeechSynthesize["Test."], $Failed]], 60, $TimedOut];
+  a1 = try[];
+  If[!AudioQ[a1], a2 = try[]];
+  out["SpeechSynthesize[\"Test.\"]: " <> Which[
+    AudioQ[a1], "returns audio (" <> fmt[QuantityMagnitude[Duration[a1], "Seconds"], 2] <> " s)",
+    AudioQ[a2], "returned audio on the second attempt (" <>
+      fmt[QuantityMagnitude[Duration[a2], "Seconds"], 2] <> " s); the first attempt gave " <> why[a1],
+    True, "no audio on either of two attempts (" <> why[a2] <> ")"]]];
 out["Speech tier available (STEMSpeechAvailable[]): " <> ToString[STEMSpeechAvailable[]]];
 With[{v = STEMSynthVoice[]},
   out["Narration voice for SpeechSynthesize[]: " <> If[MissingQ[v], "no English voice in VoiceStyleData[]",

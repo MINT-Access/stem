@@ -19,11 +19,12 @@ Get[FileNameJoin[{$stemCoreRoot, "init.wl"}]];
 ```
 
 `init.wl` resolves its own location from `$InputFileName`, sets `$stemCoreRoot`,
-sets `$CharacterEncoding = "UTF8"`, and loads the ten modules in dependency order:
+sets `$CharacterEncoding = "UTF8"`, and loads the eleven modules in dependency order:
 
 ```
 utils.wl  →  scales.wl  →  synth.wl  →  export.wl  →  accessibility.wl
-  →  speech.wl  →  runapp.wl  →  hilbert.wl  →  config.wl  →  sonification.wl
+  →  speech.wl  →  runapp.wl  →  hilbert.wl  →  platform.wl  →  config.wl
+  →  sonification.wl
 ```
 
 `synth.wl` and `export.wl` both call `EnsureDir` from `utils.wl`;
@@ -582,6 +583,29 @@ values = grid[[#[[2]], #[[1]]]] & /@ order   (* sample the grid in traversal ord
 
 ---
 
+### platform.wl — The operating system line in reports
+
+#### `STEMPlatformDescription[]`
+One human-readable string for the platform, computed once per kernel and
+printed by `demo.wl` (System section) and `tools/smoke_test.wl` (environment
+block). Never "Windows NT" and never a bare version number; the architecture
+is `$ProcessorType` (the engine's, so the x64 engine under emulation says
+x86-64).
+
+| Platform | Source | Example |
+|---|---|---|
+| macOS | `sw_vers -productVersion`; major 26 Tahoe, 15 Sequoia, 14 Sonoma, others without a name | `macOS 26.7.1 (Tahoe) on ARM64` |
+| Windows | registry `HKLM\SOFTWARE\Microsoft\Windows NT\CurrentVersion` (`CurrentBuildNumber`, `DisplayVersion`, else `ReleaseId`) via PowerShell, `cmd /c ver` for the build if that fails; build >= 22000 is Windows 11, 10240-19045 Windows 10 | `Windows 11 25H2 (build 26200) on x86-64` |
+| Linux | `PRETTY_NAME` from `/etc/os-release`, `uname -r` | `Ubuntu 24.04.1 LTS, kernel 6.8.0-45-generic, on x86-64` |
+
+The strings are built by pure helpers (`STEMMacPlatformString[version, arch]`,
+`STEMWindowsProduct[build]`, `STEMWindowsPlatformString[build, displayVersion,
+arch]`, `STEMLinuxPlatformString[prettyName, kernel, arch]`,
+`STEMOsReleasePrettyName[text]`), tested with fixed inputs in
+`tests/test_platform.wl`.
+
+---
+
 ### config.wl — 4-layer configuration merge
 
 All projects call `LoadConfig` at startup to produce a single merged
@@ -748,6 +772,8 @@ init.wl
  ├── accessibility.wl  ← utils.wl  (FmtN)
  ├── speech.wl         ← accessibility.wl (STEMSay), utils.wl (FmtDec)
  ├── runapp.wl         ← utils.wl (FmtDec)
+ ├── hilbert.wl        (no deps)
+ ├── platform.wl       (no deps)
  ├── config.wl         ← (self-contained; calls DeepMerge internally)
  └── sonification.wl   ← scales.wl (ScaleLookup), synth.wl (ExportAudioBuffer)
 ```
