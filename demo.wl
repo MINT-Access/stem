@@ -505,7 +505,7 @@ Scan[
       t0, duration,
       outputFiles, copiedFiles, fileInfo,
       missing, failed, status, note,
-      apiKey, demoFiles, beforeFiles
+      apiKey, demoFiles, beforeFiles, ed, gifFails, otherMsgs
     },
 
       appName      = app["name"];
@@ -577,27 +577,34 @@ Scan[
           beforeFiles = If[DirectoryQ[appOutputDir],
             AssociationMap[FileDate[#, "Modification"] &,
               Select[FileNames["*", appOutputDir], !DirectoryQ[#] &]], <||>];
+          $STEMGIFFailures = {}; $STEMGIFFailureMessages = {};
           t0     = AbsoluteTime[];
 
           (* Load the app in a protected Block:
              - $ScriptCommandLine is overridden to match the app's expected CLI
              - $projectRoot and other common globals are shielded from the demo's scope
-             - $Output is silenced so app output does not interleave with demo's status lines *)
+             - $Output is silenced so app output does not interleave with demo's status lines
+             - $STEMInHostRun stops STEMExitStatus[] (the app's last line) from
+               calling Exit[2] after a failed GIF, which would end this kernel
+             - a message counts as an error unless it came from a GIF export
+               that ExportGIF recorded as failed: that is a GIF failure
+               ("NO GIF"), not a failed run *)
           Block[{
             $projectRoot, $stemCoreRoot,
             $cliArgs, $rawArgs,
             cfg, mode, params, sol, model,
             $noOrbitalElements,
             $ScriptCommandLine = cliArgs,
-            $Output            = {$nullSink}
+            $Output            = {$nullSink},
+            $STEMInHostRun     = True
           },
-            Quiet[
-              Check[Get[appMainWl], failed = True],
-              General::stop
-            ]
+            ed = Quiet[EvaluationData[Get[appMainWl]], General::stop]
           ];
 
           duration = AbsoluteTime[] - t0;
+          gifFails  = $STEMGIFFailures;
+          otherMsgs = Fold[DeleteCases[#1, #2, {1}, 1] &, ed["MessagesText"], $STEMGIFFailureMessages];
+          failed    = otherMsgs =!= {} || ed["Result"] === $Aborted;
 
           (* 5-minute warning *)
           If[duration > 300.0,
@@ -607,12 +614,14 @@ Scan[
 
           If[failed, Print["  [FAIL] App encountered an error during execution"]];
 
-          (* Verify expected output files *)
+          (* Verify expected output files; a GIF that ExportGIF reported as
+             failed is counted once, as "NO GIF", not again as missing *)
           missing = If[Length[expected] === 0,
             {},
             Select[expected,
               (With[{p = FileNameJoin[{appDir, #}]},
-                !FileExistsQ[p] || FileByteCount[p] === 0]) &
+                (!FileExistsQ[p] || FileByteCount[p] === 0) &&
+                !MemberQ[ExpandFileName /@ gifFails, ExpandFileName[p]]]) &
             ]
           ];
 
@@ -640,13 +649,18 @@ Scan[
           fileInfo = Map[(<| "path" -> #, "bytes" -> FileByteCount[#] |>) &, copiedFiles];
 
           With[{allOk = !failed && Length[missing] === 0},
-            status = If[allOk, "PASS", "FAIL"];
+            status = Which[!allOk, "FAIL", gifFails =!= {}, "NO GIF", True, "PASS"];
             note   = Which[
               failed,              "error during execution",
               Length[missing] > 0, "missing: " <> StringRiffle[FileNameTake /@ missing, ", "],
+              gifFails =!= {},
+                "the GIF export failed for " <> StringRiffle[FileNameTake /@ gifFails, ", "] <>
+                " (" <> StringDrop[STEMFirstMessage[$STEMGIFFailureMessages], -1] <> "); the WAV and the " <>
+                "other files listed were written",
               True,                ""
             ]
           ];
+          $STEMGIFFailures = {}; $STEMGIFFailureMessages = {};
 
           Print[""];
           STEMPrintN["Duration",        duration,              "s", {6, 1}];
@@ -686,6 +700,7 @@ $totalElapsed = AbsoluteTime[] - $demoStartTime;
 $nPassed  = Length[Select[$demoResults, #["status"] === "PASS"    &]];
 $nFailed  = Length[Select[$demoResults, #["status"] === "FAIL"    &]];
 $nSkipped = Length[Select[$demoResults, #["status"] === "SKIPPED" &]];
+$nNoGIF   = Length[Select[$demoResults, #["status"] === "NO GIF"  &]];
 
 (* ── Summary table ───────────────────────────────────────────── *)
 Print[""];
@@ -715,6 +730,7 @@ Print[$sep];
 Print[""];
 Print["Total elapsed:  ", FmtN[$totalElapsed, {7, 1}], " s"];
 Print["Passed:         ", $nPassed, "/", $nTotal, " runs (", $nUniqueApps, " unique apps)"];
+If[$nNoGIF   > 0, Print["GIF failed:     ", $nNoGIF, " (WAV written, GIF not)"]];
 If[$nFailed  > 0, Print["Failed:         ", $nFailed]];
 If[$nSkipped > 0, Print["Skipped:        ", $nSkipped]];
 
@@ -742,11 +758,13 @@ If[!$checkOnly,
          ToString[Length[r["files"]]] <> " | " <>
          Which[r["status"] === "PASS",    "\[Checkmark] PASS",
                r["status"] === "SKIPPED", "\[LongDash] SKIPPED",
+               r["status"] === "NO GIF",  "\[Times] NO GIF (WAV written)",
                True,                      "\[Times] FAIL"] <> " |"]],
     $demoResults];
   rl[""];
   rl["**Total elapsed:** " <> FmtDec[$totalElapsed, 1] <> " s  |  " <>
      ToString[$nPassed] <> " passed" <>
+     If[$nNoGIF   > 0, "  |  " <> ToString[$nNoGIF]   <> " GIF failed (WAV written)", ""] <>
      If[$nFailed  > 0, "  |  " <> ToString[$nFailed]  <> " failed",  ""] <>
      If[$nSkipped > 0, "  |  " <> ToString[$nSkipped] <> " skipped", ""]]; rl[""];
   rl["## App Results"]; rl[""];
@@ -777,7 +795,7 @@ If[!$checkOnly,
   rl[DemoPlayFence[]];
   Scan[
     Function[r,
-      If[r["status"] === "PASS",
+      If[MemberQ[{"PASS", "NO GIF"}, r["status"]],
         Scan[Function[f,
                If[StringEndsQ[f["path"], ".wav"],
                   rl[DemoPlayLine["demo/" <> r["name"] <> "/output/" <> FileNameTake[f["path"]]]]]],

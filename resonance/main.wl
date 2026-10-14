@@ -212,3 +212,6 @@ Which[
           "\" -- expected \"galilean\", \"kirkwood\", or \"saturn\"."];
     Exit[1]
 ]
+
+(* Exit code 2 if a GIF export failed; does nothing otherwise (stem-core) *)
+STEMExitStatus[];

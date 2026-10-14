@@ -191,6 +191,9 @@ wolframscript -file stem-core/tests/test_platform.wl
 mode and demo.wl in one kernel and writes `smoke_test_<SystemID>_<date>.txt`
 in the repo root (gitignored): environment, one line per app, the pendulum
 frame-clipping check, every Wolfram message. Use it first on a new machine.
+`--demo-timeout-seconds=N` sets demo.wl's time limit (default 3600 s, printed
+in the report); on a timeout the report lists the finished demo steps and the
+one that was running.
 
 `cellular`, `signal`, `quantum`, `primes`, and `relativity` do not have test files. All existing test files exit 0 on success, 1 on failure.
 
@@ -284,7 +287,11 @@ All code must run correctly via `wolframscript -file` with no display server.
   `IntegerString` formatting.
 - **GIF timing**: choose the frame delay and count with `GIFFramePlan[audioDur,
   desiredFps]`, export with `ExportGIF[frames, path, plan]`, and call
-  `SyncWAVToGIF[gifPath, wavPath]` in `main.wl` once both files exist. GIF
+  `SyncWAVToGIF[gifPath, wavPath]` in `main.wl` once both files exist.
+  A failed GIF export is reported by `ExportGIF` and skipped by
+  `SyncWAVToGIF`; the WAV is still written. Every `main.wl` ends with
+  `STEMExitStatus[]`, which exits with code 2 after a failed GIF
+  (`STEM_GIF_DIAG=1` adds diagnostics; see `stem-core/AGENTS.md`). GIF
   delays are whole centiseconds, so a count computed from a non-round fps
   drifts from the audio; the plan derives the count from the rounded delay.
 - **Image resolution**: export PNGs with `ExportPNG[path, graphics]` and GIFs

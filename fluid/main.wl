@@ -242,3 +242,6 @@ Which[
           "\" -- expected \"karman\", \"strouhal\", or \"flag\"."];
     Exit[1]
 ]
+
+(* Exit code 2 if a GIF export failed; does nothing otherwise (stem-core) *)
+STEMExitStatus[];

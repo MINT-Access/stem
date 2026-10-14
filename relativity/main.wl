@@ -239,3 +239,6 @@ If[mode === "chirp",
     "Play audio: " <>
     STEMPlayCmd[FileNameJoin[{$outDir, "geodesic.wav"}]]]
 ]
+
+(* Exit code 2 if a GIF export failed; does nothing otherwise (stem-core) *)
+STEMExitStatus[];

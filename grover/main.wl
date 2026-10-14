@@ -207,3 +207,6 @@ Which[
 
 STEMHeading["Done"];
 STEMSay["Complete. Play audio: " <> STEMPlayCmd[outWAV]];
+
+(* Exit code 2 if a GIF export failed; does nothing otherwise (stem-core) *)
+STEMExitStatus[];

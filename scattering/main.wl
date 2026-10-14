@@ -207,3 +207,6 @@ Which[
           "\" \[LongDash] expected \"scatter\", \"distribution\", or \"discovery\"."];
     Exit[1]
 ]
+
+(* Exit code 2 if a GIF export failed; does nothing otherwise (stem-core) *)
+STEMExitStatus[];

@@ -243,3 +243,6 @@ Which[
           "\" \[LongDash] expected \"cyclotron\", \"drift\", \"mirror\", or \"multi\"."];
     Exit[1]
 ]
+
+(* Exit code 2 if a GIF export failed; does nothing otherwise (stem-core) *)
+STEMExitStatus[];

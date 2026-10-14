@@ -287,3 +287,6 @@ Which[
 
 STEMSay["Complete. Play audio: " <>
   STEMPlayCmd[FileNameJoin[{$outDir, mode <> "_narrative_full.wav"}]]]
+
+(* Exit code 2 if a GIF export failed; does nothing otherwise (stem-core) *)
+STEMExitStatus[];

@@ -468,3 +468,6 @@ Which[
     Print["Error: unknown simulation.mode \"", mode, "\" -- expected \"sweep\", \"iterate\", \"lyapunov\" or \"divergence\"."];
     Exit[1]
 ];
+
+(* Exit code 2 if a GIF export failed; does nothing otherwise (stem-core) *)
+STEMExitStatus[];

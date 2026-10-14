@@ -7,6 +7,9 @@
      wolframscript -file tools/smoke_test.wl                 all apps + demo.wl
      wolframscript -file tools/smoke_test.wl -- --quick      6 apps + demo.wl --quick
      wolframscript -file tools/smoke_test.wl -- --out=<path> report path
+     wolframscript -file tools/smoke_test.wl -- --demo-timeout-seconds=7200
+                                                 time limit for demo.wl
+                                                 (default 3600)
 
    What it does, in this one kernel (no child wolframscript):
    1. An environment block: Wolfram version, system, encodings, whether
@@ -21,10 +24,14 @@
       whether the WAV opens with speech, and the first message.
    3. The pendulum frame-clipping check (pendulum/tests/
       verify_animation_frames.py, here in Wolfram so Python is not needed).
-   4. demo.wl (with --quick under --quick).
+   4. demo.wl (with --quick under --quick), with its own time limit; if it
+      is reached, the apps demo.wl had finished and the one it was
+      running are listed.
+   An app whose GIF export failed (stem-core ExportGIF) is listed as
+   GIF FAILED with its WAV measured; its frame check is skipped.
    The report is written as UTF-8 to smoke_test_<SystemID>_<date>.txt in
    the repository root (or --out). Exit code 0 only if every app wrote a
-   WAV; 1 otherwise.
+   WAV and every GIF export succeeded; 1 otherwise.
    ================================================================ *)
 
 $CharacterEncoding = "UTF8";
@@ -39,6 +46,11 @@ $smokeOut   = With[{o = Select[$smokeArgs, StringStartsQ[#, "--out="] &]},
       DateString[{"Year", "-", "Month", "-", "Day"}] <> ".txt"}]]];
 $smokeQuickApps = {"pendulum", "dynamical", "henon", "images", "mandelbrot", "signal"};
 $smokeTimeLimit = 600;
+$smokeDemoTimeLimit = With[{o = Select[$smokeArgs, StringStartsQ[#, "--demo-timeout-seconds="] &]},
+  If[o === {}, 3600,
+    With[{v = Quiet[ToExpression[StringDrop[First[o], StringLength["--demo-timeout-seconds="]]]]},
+      If[NumericQ[v] && v > 0, v,
+        Print["[WARNING] --demo-timeout-seconds needs a positive number of seconds; using 3600."]; 3600]]]];
 
 $report = {};
 out[s_String] := (AppendTo[$report, s]; Print[s]);
@@ -231,6 +243,8 @@ out[""];
 
 out["== Pendulum frame clipping (margin >= 3 px on every frame) =="];
 If[KeyExistsQ[$results, "pendulum"],
+  Scan[out["[SKIP] " <> FileNameTake[#] <> ": the frame-clearance check was skipped because the GIF was not written."] &,
+    $results["pendulum"]["gifFailures"]];
   Scan[
     Function[g,
       With[{c = FrameClipCheck[g]},
@@ -249,21 +263,47 @@ out[""];
 (* ── 4. demo.wl ───────────────────────────────────────────────── *)
 
 out["== demo.wl" <> If[$smokeQuick, " --quick", ""] <> " =="];
-Module[{r, passed, skips},
+out["demo.wl time limit: " <> fmt[$smokeDemoTimeLimit, 0] <> " s (--demo-timeout-seconds)"];
+Module[{r, passed, noGif, skips, steps, done, running},
   Print["  running demo.wl ..."];
   r = STEMRunApp[$smokeRoot, If[$smokeQuick, {"--quick"}, {}], "Script" -> "demo.wl",
-        "RequireWAV" -> False, "Silent" -> True, "TimeLimit" -> 3 $smokeTimeLimit];
+        "RequireWAV" -> False, "Silent" -> True, "TimeLimit" -> $smokeDemoTimeLimit];
   passed = StringCases[r["log"], "Passed:" ~~ Whitespace ~~ p : (DigitCharacter .. ~~ "/" ~~ DigitCharacter ..) :> p];
-  out["demo.wl | " <> r["status"] <> " | " <> fmt[r["seconds"], 1] <> " s | passed " <>
-      If[passed === {}, "?", First[passed]] <> " | " <>
+  (* demo.wl's "GIF failed:     n (WAV written, GIF not)" line *)
+  noGif = StringCases[r["log"], "GIF failed:" ~~ Whitespace ~~ n : DigitCharacter .. :> n];
+  noGif = If[noGif === {}, "", ", GIF failed in " <> First[noGif] <> " (WAV written)"];
+  (* demo.wl's own lines: "=== Demo k/N: app ===" opens a step and
+     "  Status: PASS" (or FAIL, NO GIF) closes it *)
+  steps = Flatten[StringCases[StringSplit[r["log"], "\n"], {
+    StartOfString ~~ "=== Demo " ~~ k : DigitCharacter .. ~~ "/" ~~ n : DigitCharacter .. ~~
+      ": " ~~ a : Except[" "] .. ~~ " ===" :> {"start", a, k, n},
+    StartOfString ~~ "  Status: " ~~ st : (WordCharacter | " ") .. :> {"status", StringTrim[st]}}], 1];
+  done = {}; running = None;
+  Scan[If[#[[1]] === "start", running = #,
+         If[running =!= None, AppendTo[done, running[[2]] <> " " <> #[[2]]]; running = None]] &, steps];
+  out["demo.wl | " <> r["status"] <> " | " <> fmt[r["seconds"], 1] <> " s | " <>
+      Which[
+        passed =!= {}, "passed " <> First[passed] <> noGif,
+        r["status"] === "TIMEOUT",
+          "stopped at the " <> fmt[$smokeDemoTimeLimit, 0] <> " s limit after " <>
+          ToString[Length[done]] <> If[Length[done] === 1, " finished step", " finished steps"] <>
+          If[running =!= None, ", while running step " <> running[[3]] <> " of " <> running[[4]] <>
+            " (" <> running[[2]] <> ")", ""],
+        True, "passed count not printed"] <> " | " <>
       If[r["messages"] === {}, "-", StringTake[First[r["messages"]], UpTo[160]]]];
+  If[passed === {} && done =!= {},
+    out["demo.wl finished steps: " <> StringRiffle[done, ", "] <> "."]];
   (* demo.wl prints "[WARNING] <reason> \[LongDash] skipping <app>." for each step it skips *)
   skips = StringCases[r["log"], "[WARNING] " ~~ why : Shortest[__] ~~ (" \[LongDash] " | " -- ") ~~ "skipping " ~~ app : WordCharacter .. :> {app, why}];
   $demoSkipText = If[skips === {}, "no step skipped",
     ToString[Length[skips]] <> " step" <> If[Length[skips] > 1, "s", ""] <> " skipped: " <>
     StringRiffle[(#[[1]] <> ", because " <> #[[2]]) & /@ skips, "; "]];
   out["demo.wl skipped steps: " <> $demoSkipText <> "."];
-  $demoPassed = If[passed === {}, "?", First[passed]];
+  $demoPassed = Which[passed =!= {}, First[passed] <> " runs passed" <> noGif,
+    r["status"] === "TIMEOUT", "timed out after " <> ToString[Length[done]] <>
+      If[Length[done] === 1, " finished step", " finished steps"] <>
+      If[running =!= None, " while running " <> running[[2]], ""],
+    True, "no pass count"];
   $results["demo.wl"] = r];
 out[""];
 
@@ -281,10 +321,14 @@ If[AllTrue[Values[$results], #["messages"] === {} &], out["none"]];
 out[""];
 
 $nNoWav = Count[KeyDrop[$results, "demo.wl"], r_ /; r["wavs"] === {}];
+$gifFailedApps = Keys[Select[KeyDrop[$results, "demo.wl"], #["gifFailures"] =!= {} &]];
 out["Summary: " <> ToString[Length[$apps] - $nNoWav] <> " of " <> ToString[Length[$apps]] <>
-    " apps wrote a WAV; demo.wl " <> $results["demo.wl"]["status"] <> ", " <> $demoPassed <>
-    " runs passed, " <> $demoSkipText <> "."];
+    " apps wrote a WAV; " <>
+    If[$gifFailedApps === {}, "every GIF export succeeded",
+      ToString[Length[$gifFailedApps]] <> " GIF export" <> If[Length[$gifFailedApps] > 1, "s", ""] <>
+      " failed (" <> StringRiffle[$gifFailedApps, ", "] <> ")"] <>
+    "; demo.wl " <> $results["demo.wl"]["status"] <> ", " <> $demoPassed <> ", " <> $demoSkipText <> "."];
 
 Export[$smokeOut, StringRiffle[$report, "\n"] <> "\n", "Text", CharacterEncoding -> "UTF8"];
 Print["Report: ", $smokeOut];
-Exit[If[$nNoWav == 0 && Length[$apps] > 0, 0, 1]];
+Exit[If[$nNoWav == 0 && $gifFailedApps === {} && Length[$apps] > 0, 0, 1]];

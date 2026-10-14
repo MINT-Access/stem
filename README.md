@@ -1144,8 +1144,17 @@ block (Wolfram version, encodings, which speech and network tools work),
 then one line per app with its status, timings, WAV loudness and length,
 GIF length and pixel size, and any Wolfram messages. It also runs the
 pendulum frame-clipping check, so Python is not needed. It exits with code
-0 only if every app wrote a WAV. `--quick` runs six apps and `demo.wl --quick`
-(about five minutes); without it the run takes about thirty minutes.
+0 only if every app wrote a WAV and every GIF export succeeded; an app whose
+GIF failed is listed as `GIF FAILED` with its WAV measured. `--quick` runs six
+apps and `demo.wl --quick` (about five minutes); without it the run takes
+about thirty minutes on the Mac. `--demo-timeout-seconds=N` changes the time
+limit for `demo.wl` (default 3600 s), for slower machines; if the limit is
+reached, the report lists the demo steps that finished and the one running.
+
+If a GIF export fails, the app says so in one `[GIF FAILED]` sentence, still
+writes its WAV, and exits with code 2. Setting `STEM_GIF_DIAG=1` prints the
+conditions of each export (free disk space, memory, frame-list size, open-file
+limit) and retries a failed export once, for diagnosis.
 
 ```sh
 # macOS / Linux

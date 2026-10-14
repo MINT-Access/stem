@@ -1,7 +1,7 @@
 (* ========================================================
    stem-core/tests/test_gifsync.wl — GIFFramePlan, ExportGIF (plan
    form), GIFFrameDelays, WAVDuration, PadWAVWithSilence, SyncWAVToGIF,
-   FmtDec
+   FmtDec, and a failed GIF export (reported, recorded, sync skipped)
 
    Run: wolframscript -file stem-core/tests/test_gifsync.wl
    Exits 0 if every test passes, 1 otherwise.
@@ -139,6 +139,80 @@ writeWAV[wavOutro, 1.0 + 2.0 + 1.0];
 res = SyncWAVToGIF[gifPath3, wavOutro, "IntroSeconds" -> 1.0, "OutroSeconds" -> 1.0];
 check["with an outro the WAV is not padded", res["PaddedSeconds"] == 0.0 && Abs[WAVDuration[wavOutro] - 4.0] < 10^-6];
 
+
+
+STEMSection["Failed GIF export"];
+(* Capture printed lines and message texts of expr *)
+SetAttributes[captureRun, HoldFirst];
+captureRun[expr_] :=
+  Module[{path = FileNameJoin[{$tmp, "capture_" <> ToString[RandomInteger[10^9]] <> ".txt"}], strm, ed},
+    strm = OpenWrite[path, CharacterEncoding -> "UTF8", FormatType -> OutputForm, PageWidth -> Infinity];
+    ed = Block[{$Output = {strm}}, EvaluationData[expr]];
+    Close[strm];
+    <|"value" -> ed["Result"], "lines" -> StringSplit[Import[path, "Text", CharacterEncoding -> "UTF8"], "\n"],
+      "messages" -> ed["MessagesText"]|>];
+
+(* every GIF Export fails as on Linux: Export::fmterr, then $Failed *)
+Unprotect[Export];
+Export[_String, _List, "GIF", ___] /; TrueQ[$forceGIFFail] := (Message[Export::fmterr, "GIF"]; $Failed);
+DownValues[Export] = SortBy[DownValues[Export], FreeQ[#, $forceGIFFail] &];   (* tried first *)
+Protect[Export];
+
+$STEMGIFFailures = {}; $STEMGIFFailureMessages = {};
+failDir = FileNameJoin[{$tmp, "failapp", "output"}];
+failGif = FileNameJoin[{failDir, "anim.gif"}];
+failWav = FileNameJoin[{failDir, "anim.wav"}];
+writeWAV[failWav, 2.0];
+r = Block[{$forceGIFFail = True}, captureRun[ExportGIF[frameList[4], failGif, GIFFramePlan[2.0, 2]]]];
+check["failed export returns $Failed", r["value"] === $Failed];
+check["failed export writes no file", !FileExistsQ[failGif]];
+check["failed path is recorded", $STEMGIFFailures === {failGif} && STEMGIFFailedQ[failGif]];
+check["the only message is the export's own", r["messages"] === {"Export::fmterr : Invalid GIF format."}];
+check["one sentence names app, file, frames, pixel size and the message",
+  Length[Select[r["lines"], StringStartsQ[#, "  [GIF FAILED]"] &]] === 1 &&
+  StringContainsQ[First[Select[r["lines"], StringStartsQ[#, "  [GIF FAILED]"] &]],
+    "failapp: the GIF " <> failGif <> " (4 frames, 80x80 px) was not written; the first message was: Export::fmterr : Invalid GIF format. The app"]];
+
+r = captureRun[SyncWAVToGIF[failGif, failWav]];
+check["sync is skipped with one sentence and no messages",
+  r["messages"] === {} && Length[r["lines"]] === 1 && StringStartsQ[First[r["lines"]], "  GIF/WAV sync skipped: the GIF anim.gif was not written"]];
+check["skipped sync leaves the WAV unchanged", Abs[WAVDuration[failWav] - 2.0] < 10^-6 && r["value"]["PaddedSeconds"] == 0.0];
+
+r = captureRun[STEMDescribeGIF[failGif, 4, 2]];
+check["STEMDescribeGIF says the GIF was not written", r["messages"] === {} &&
+  StringContainsQ[First[r["lines"]], "not written"]];
+
+(* STEMExitStatus exits with 2 after a failure (Exit caught here) *)
+r = Catch[Block[{Exit = Throw[{"exit", #}, "t"] &}, STEMExitStatus[]; "no exit"], "t"];
+check["STEMExitStatus exits with code 2 after a failed GIF", r === {"exit", 2}];
+r = Catch[Block[{Exit = Throw[{"exit", #}, "t"] &, $STEMInHostRun = True}, STEMExitStatus[]; "no exit"], "t"];
+check["inside demo.wl ($STEMInHostRun) it does not exit", r === "no exit"];
+$STEMGIFFailures = {}; $STEMGIFFailureMessages = {};
+r = Catch[Block[{Exit = Throw[{"exit", #}, "t"] &}, STEMExitStatus[]; "no exit"], "t"];
+check["without a failure STEMExitStatus does nothing", r === "no exit"];
+
+(* five failures in one evaluation (as in the smoke test and demo.wl):
+   each still reports its own message, none is replaced by General::stop *)
+$STEMGIFFailures = {}; $STEMGIFFailureMessages = {};
+r = Block[{$forceGIFFail = True}, captureRun[Do[ExportGIF[frameList[2], FileNameJoin[{failDir, "rep" <> ToString[k] <> ".gif"}],
+      GIFFramePlan[1.0, 2]], {k, 5}]]];
+check["five failures in one kernel each name Export::fmterr, no General::stop",
+  Count[r["lines"], l_ /; StringContainsQ[l, "the first message was: Export::fmterr"]] === 5 &&
+  FreeQ[r["messages"], m_String /; StringStartsQ[m, "General::stop"]]];
+$STEMGIFFailures = {}; $STEMGIFFailureMessages = {};
+
+(* a directory where the GIF should go: Export cannot write it *)
+blocked = FileNameJoin[{failDir, "blocked.gif"}];
+CreateDirectory[blocked];
+r = captureRun[ExportGIF[frameList[2], blocked, GIFFramePlan[1.0, 2]]];
+check["an unwritable target is reported as a failed export", r["value"] === $Failed && STEMGIFFailedQ[blocked] &&
+  MemberQ[r["lines"], l_ /; StringStartsQ[l, "  [GIF FAILED]"]]];
+$STEMGIFFailures = {}; $STEMGIFFailureMessages = {};
+
+(* a normal export still works and is not recorded *)
+okGif = FileNameJoin[{failDir, "ok.gif"}];
+r = captureRun[ExportGIF[frameList[2], okGif, GIFFramePlan[1.0, 2]]];
+check["a normal export returns its path and is not recorded", r["value"] === okGif && $STEMGIFFailures === {} && r["lines"] === {}];
 
 Quiet[DeleteDirectory[$tmp, DeleteContents -> True]];
 Print[""];

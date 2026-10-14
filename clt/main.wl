@@ -268,3 +268,6 @@ Which[
 STEMHeading["Done"];
 STEMSay["Central Limit Theorem sonification complete. Play audio: " <>
         STEMPlayCmd[FileNameJoin[{$outDir, mode <> "_audio.wav"}]]]
+
+(* Exit code 2 if a GIF export failed; does nothing otherwise (stem-core) *)
+STEMExitStatus[];

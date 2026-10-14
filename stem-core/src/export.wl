@@ -117,18 +117,133 @@ ExportGIF[frames_List, filePath_String, plan_Association] :=
   (If[Length[frames] =!= plan["FrameCount"],
      Print["  Warning: ", Length[frames], " frames were rendered for ", filePath,
            " but the frame plan asked for ", plan["FrameCount"], "."]];
-   EnsureDir[filePath];
-   Export[filePath, STEMRasterize /@ frames, "GIF",
-     "AnimationRepetitions" -> Infinity,
-     "DisplayDurations"     -> ConstantArray[plan["FrameDelay"], Length[frames]]];
-   filePath)
+   STEMExportGIFFrames[frames, filePath,
+     ConstantArray[plan["FrameDelay"], Length[frames]]])
 
 ExportGIF[frames_List, filePath_String, Optional[frameRate_?NumericQ, 25]] :=
-  (EnsureDir[filePath];
-   Export[filePath, STEMRasterize /@ frames, "GIF",
-     "AnimationRepetitions" -> Infinity,
-     "DisplayDurations"     -> Max[2, Round[100.0 / frameRate]] / 100.0];
-   filePath)
+  STEMExportGIFFrames[frames, filePath, Max[2, Round[100.0 / frameRate]] / 100.0]
+
+
+(* Failed GIF exports
+   An export that returns $Failed, writes no file, or writes a file that
+   does not start with a GIF header is a reported event, not a crash:
+   ExportGIF prints one sentence (app, file, frame count, pixel size,
+   first Wolfram message), records the path in $STEMGIFFailures and
+   returns $Failed. STEMDescribeGIF and SyncWAVToGIF then print a
+   "skipped" sentence for that path instead of reading the missing
+   file, the app still writes its WAV, and the app's last line,
+   STEMExitStatus[], exits with code 2. STEMRunApp (smoke test) and
+   demo.wl reset the lists before each run and report a GIF failure
+   separately from a failed run.
+
+   STEM_GIF_DIAG=1 adds STEMGIFDiagnostics: one line of conditions
+   before every export and, after a failure, one retry after a 2 s
+   pause. The retry is a diagnostic: the export still counts as failed. *)
+
+If[!ListQ[$STEMGIFFailures], $STEMGIFFailures = {}];
+(* the message texts those failed exports issued, so demo.wl can tell
+   them from other errors *)
+If[!ListQ[$STEMGIFFailureMessages], $STEMGIFFailureMessages = {}];
+
+STEMGIFFailedQ[filePath_String] := MemberQ[$STEMGIFFailures, filePath]
+
+(* STEMExitStatus — the last line of every main.wl. With a failed GIF it
+   prints one sentence and exits with code 2; otherwise it does nothing.
+   Inside demo.wl ($STEMInHostRun) it does not exit, so the demo goes on;
+   demo.wl reads $STEMGIFFailures itself. *)
+STEMExitStatus[] :=
+  If[$STEMGIFFailures =!= {},
+    Print["  Exit code 2: the GIF export failed for ",
+          StringRiffle[FileNameTake /@ $STEMGIFFailures, ", "],
+          "; the WAV and the other output files were written."];
+    If[!TrueQ[$STEMInHostRun], Exit[2]]]
+
+(* first message, preferring one from Export itself (an unwritable path
+   first raises internal StringForm/OpenAppend messages) *)
+STEMFirstMessage[msgs_List] :=
+  If[msgs === {}, "no Wolfram message was issued.",
+    With[{m = StringReplace[StringTrim[
+        SelectFirst[msgs, StringStartsQ[#, "Export::"] &, First[msgs]]], Whitespace -> " "]},
+      If[StringEndsQ[m, "."], m, m <> "."]]]
+
+STEMGIFWrittenQ[filePath_String] :=
+  FileType[filePath] === File && FileByteCount[filePath] >= 6 &&
+  MemberQ[{"GIF87a", "GIF89a"}, Quiet[FromCharacterCode[BinaryReadList[filePath, "Byte", 6]]]]
+
+STEMExportGIFOnce[raster_List, filePath_String, delays_] :=
+  Module[{ed},
+    If[FileType[filePath] === File, Quiet[DeleteFile[filePath]]];
+    (* a fresh $MessageList, so a kernel that has already seen three
+       failed exports (smoke test, demo.wl) does not replace this one's
+       message with General::stop and report it as having none *)
+    ed = Block[{$MessageList = {}}, EvaluationData[Export[filePath, raster, "GIF",
+      "AnimationRepetitions" -> Infinity, "DisplayDurations" -> delays]]];
+    <|"ok" -> (ed["Result"] =!= $Failed && STEMGIFWrittenQ[filePath]),
+      "messages" -> ed["MessagesText"]|>]
+
+STEMExportGIFFrames[frames_List, filePath_String, delays_] :=
+  Module[{raster, r, app, size, diag, retry, partial},
+    EnsureDir[filePath];
+    raster = STEMRasterize /@ frames;
+    diag   = Environment["STEM_GIF_DIAG"] === "1";
+    If[diag, STEMGIFDiagnostics[raster, filePath]];
+    r = STEMExportGIFOnce[raster, filePath, delays];
+    If[r["ok"], Return[filePath]];
+    (* a failed export can leave a truncated file that starts like a GIF
+       (seen with a full output volume); remove it so nothing reads it *)
+    partial = If[FileType[filePath] === File, FileByteCount[filePath], None];
+    If[partial =!= None, Quiet[DeleteFile[filePath]]];
+    app  = FileNameTake[DirectoryName[DirectoryName[filePath]]];
+    size = If[raster =!= {} && ImageQ[First[raster]],
+      StringRiffle[ToString /@ ImageDimensions[First[raster]], "x"] <> " px", "unknown pixel size"];
+    Print["  [GIF FAILED] ", app, ": the GIF ", filePath, " (", Length[raster],
+          If[Length[raster] === 1, " frame, ", " frames, "], size,
+          ") was not written; the first message was: ", STEMFirstMessage[r["messages"]],
+          If[partial =!= None, " A truncated " <> ToString[partial] <> "-byte file was removed.", ""],
+          " The app continues without it and will exit with code 2."];
+    If[diag,
+      Pause[2];
+      retry = STEMExportGIFOnce[raster, filePath, delays];
+      If[!retry["ok"] && FileType[filePath] === File, Quiet[DeleteFile[filePath]]];
+      Print["  GIF diagnostics: one retry after a 2 s pause ",
+            If[retry["ok"], "wrote the GIF", "failed too (" <> StringDrop[STEMFirstMessage[retry["messages"]], -1] <> ")"],
+            "; the retry is a diagnostic, not a fix, so the export still counts as failed."]];
+    AppendTo[$STEMGIFFailures, filePath];
+    $STEMGIFFailureMessages = Join[$STEMGIFFailureMessages, r["messages"],
+      If[diag, retry["messages"], {}]];
+    $Failed
+  ]
+
+(* STEMGIFDiagnostics — one line of the conditions an export runs under *)
+STEMFreeSpace[dir_String] :=
+  Module[{r, n},
+    r = Quiet[If[$OperatingSystem === "Windows",
+      RunProcess[{"powershell", "-NoProfile", "-NonInteractive", "-Command",
+        "(Get-Item -LiteralPath '" <> dir <> "').PSDrive.Free"}],
+      RunProcess[{"df", "-Pk", dir}]]];
+    If[!AssociationQ[r] || r["ExitCode"] =!= 0, Return["unknown"]];
+    n = If[$OperatingSystem === "Windows",
+      Quiet[ToExpression[StringTrim[r["StandardOutput"]]]],
+      Quiet[1024 ToExpression[StringSplit[Last[StringSplit[StringTrim[r["StandardOutput"]], "\n"]]][[4]]]]];
+    If[IntegerQ[n], STEMBytesText[n], "unknown"]]
+
+STEMBytesText[n_?NumericQ] := Which[
+  n >= 1024.^3, FmtDec[n / 1024.^3, 2] <> " GB",
+  n >= 1024.^2, FmtDec[n / 1024.^2, 1] <> " MB",
+  True,         FmtDec[n / 1024., 1] <> " KB"]
+
+STEMOpenFileLimit[] :=
+  If[$OperatingSystem === "Windows", "no per-process limit reported on Windows",
+    Module[{r = Quiet[RunProcess[{"sh", "-c", "ulimit -n"}]]},
+      If[AssociationQ[r] && r["ExitCode"] === 0, StringTrim[r["StandardOutput"]], "unknown"]]]
+
+STEMGIFDiagnostics[raster_List, filePath_String] :=
+  Print["  GIF diagnostics before exporting ", FileNameTake[filePath], ": free space ",
+        STEMFreeSpace[$TemporaryDirectory], " in the temporary directory (", $TemporaryDirectory,
+        ") and ", STEMFreeSpace[DirectoryName[filePath]], " in the output directory; MemoryInUse ",
+        STEMBytesText[MemoryInUse[]], ", MemoryAvailable ", STEMBytesText[MemoryAvailable[]],
+        "; ", Length[raster], " frames, rasterised frame list ", STEMBytesText[ByteCount[raster]],
+        "; open-file limit ", STEMOpenFileLimit[], "."]
 
 
 (* GIFFrameDelays
@@ -235,6 +350,18 @@ PadWAVWithSilence[wavPath_String, targetSeconds_?NumericQ] :=
    section (the whole WAV when both options are 0), in seconds. *)
 
 Options[SyncWAVToGIF] = {"IntroSeconds" -> 0, "OutroSeconds" -> 0};
+
+SyncWAVToGIF[gifPath_String, wavPath_String, OptionsPattern[]] /;
+    STEMGIFFailedQ[gifPath] || FileType[gifPath] =!= File :=
+  (Print["  GIF/WAV sync skipped: the GIF ", FileNameTake[gifPath],
+         If[FileType[gifPath] === File,
+           "'s export failed (only a diagnostic retry wrote the file), so it is not timed against the WAV",
+           " was not written, so there is nothing to time the WAV against"],
+         "; the WAV is unchanged."];
+   <|"FrameCount" -> 0, "FrameDelay" -> Missing["NoGIF"], "GIFDuration" -> Missing["NoGIF"],
+     "WAVDuration" -> Quiet[WAVDuration[wavPath]], "IntroSeconds" -> N[OptionValue["IntroSeconds"]],
+     "OutroSeconds" -> N[OptionValue["OutroSeconds"]], "Difference" -> Missing["NoGIF"],
+     "PaddedSeconds" -> 0.0|>)
 
 SyncWAVToGIF[gifPath_String, wavPath_String, OptionsPattern[]] :=
   Module[{delays, nFrames, gifDur, delay, wavDur, intro, outro, diff, padded = 0.0,

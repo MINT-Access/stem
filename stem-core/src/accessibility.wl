@@ -91,6 +91,11 @@ STEMDescribeWAV[filePath_String, durationSec_?NumericQ] :=
    nFrames is the total frame count; fps is the playback rate, printed
    with at most three decimals (FmtDec). *)
 
+STEMDescribeGIF[filePath_String, ___] /; STEMGIFFailedQ[filePath] :=
+  Print["  Animation: ", If[FileType[filePath] === File,
+    "the export failed; only a diagnostic retry wrote the file", "not written (the GIF export failed, see above)"],
+    " \[LongDash] ", filePath]
+
 STEMDescribeGIF[filePath_String] :=
   Print["  Animation: ", filePath]
 

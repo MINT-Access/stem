@@ -204,3 +204,6 @@ Which[
           "\" -- expected \"l4\", \"l5\", or \"l1\"."];
     Exit[1]
 ]
+
+(* Exit code 2 if a GIF export failed; does nothing otherwise (stem-core) *)
+STEMExitStatus[];

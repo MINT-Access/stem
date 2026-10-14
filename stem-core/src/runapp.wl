@@ -36,11 +36,15 @@ Options[STEMRunApp] = {
      "TIMEOUT"  the TimeLimit was reached
      "EXIT0"    main.wl ended with Exit[0] before writing audio (as
                 --config-dump does); counted as a success
+     "GIF FAILED" a WAV was written but a GIF export failed (ExportGIF
+                recorded it in $STEMGIFFailures; main.wl exits with 2);
+                a failure of the GIF, not of the run
+   The record also holds "gifFailures", the GIF paths that failed.
    Exit[] and Quit[] inside main.wl end the run, not this kernel. *)
 STEMRunApp[appDir_String, args_List, OptionsPattern[]] :=
   Module[{main, outDir, t0, sinkPath = None, sink, ed, res, msgs, exitCode = 0,
           exited = False, aborted = False, before, newFiles, wavs, status, log = "", seconds,
-          snapshot},
+          snapshot, gifFailures = {}},
     main   = FileNameJoin[{appDir, OptionValue["Script"]}];
     outDir = FileNameJoin[{appDir, "output"}];
     If[TrueQ[OptionValue["Silent"]],
@@ -54,6 +58,7 @@ STEMRunApp[appDir_String, args_List, OptionsPattern[]] :=
       AssociationMap[FileDate[#, "Modification"] &,
         Select[FileNames["*", outDir], !DirectoryQ[#] &]], <||>];
     before = snapshot[];
+    $STEMGIFFailures = {}; $STEMGIFFailureMessages = {};   (* ExportGIF appends per failed GIF *)
     t0 = AbsoluteTime[];
     ed = EvaluationData[
       CheckAbort[
@@ -74,6 +79,7 @@ STEMRunApp[appDir_String, args_List, OptionsPattern[]] :=
           "stemRunAppExit"],
         aborted = True; "aborted"]];
     seconds = AbsoluteTime[] - t0;
+    gifFailures = $STEMGIFFailures;
     If[sinkPath =!= None,
       Close[sink];
       log = Quiet[Import[sinkPath, "Text", CharacterEncoding -> "UTF8"]];
@@ -89,13 +95,15 @@ STEMRunApp[appDir_String, args_List, OptionsPattern[]] :=
     status = Which[
       res === "timeout",                   "TIMEOUT",
       aborted || res === "aborted",        "FAIL",
+      gifFailures =!= {} && wavs =!= {} && MemberQ[{0, 2}, exitCode], "GIF FAILED",
       exitCode =!= 0,                      "FAIL",
       exited && wavs === {},              "EXIT0",
       wavs === {} && TrueQ[OptionValue["RequireWAV"]], "FAIL",
       msgs =!= {},                         "MESSAGES",
       True,                                "OK"];
     <|"status" -> status, "seconds" -> seconds, "exitCode" -> exitCode,
-      "messages" -> msgs, "newFiles" -> newFiles, "wavs" -> wavs, "log" -> log|>
+      "messages" -> msgs, "newFiles" -> newFiles, "wavs" -> wavs, "log" -> log,
+      "gifFailures" -> gifFailures|>
   ];
 
 
@@ -123,6 +131,11 @@ STEMRunExperiments[appDir_String, runs_List] :=
               " Wolfram message(s), the first being: " <> First[r["messages"]],
             "TIMEOUT",
               " was stopped after " <> FmtDec[r["seconds"], 1] <> " s by its time limit.",
+            "GIF FAILED",
+              " wrote " <> wavNames <> " in " <> FmtDec[r["seconds"], 1] <>
+              " s, but the GIF export failed for " <>
+              StringRiffle[FileNameTake /@ r["gifFailures"], ", "] <> "; first message: " <>
+              STEMFirstMessage[r["messages"]],
             "EXIT0",
               " ended with Exit[0] after " <> FmtDec[r["seconds"], 1] <>
               " s without writing audio, which is expected for this run.",
@@ -137,6 +150,6 @@ STEMRunExperiments[appDir_String, runs_List] :=
     nBad = Count[results, r_ /; !MemberQ[{"OK", "MESSAGES", "EXIT0"}, r["status"]]];
     Print[""];
     Print[app, " experiments: ", n - nBad, " of ", n, " runs finished as expected",
-          If[nBad > 0, "; " <> ToString[nBad] <> " failed or timed out.", "."]];
+          If[nBad > 0, "; " <> ToString[nBad] <> " failed, timed out or lost their GIF.", "."]];
     If[nBad > 0, 1, 0]
   ];

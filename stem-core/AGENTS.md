@@ -523,8 +523,28 @@ Apps must export PNGs with `ExportPNG`, never `Export[path, graphics, "PNG"]`.
 #### `ExportGIF[frames_List, filePath_String, frameRate_:25]`
 Exports a list of `Graphics` (or `GraphicsGrid`, or `Image`) objects as a
 looping animated GIF, each frame through `STEMRasterize`. Creates the output
-directory if needed. Returns `filePath`. `AnimationRepetitions -> Infinity` is
-always set.
+directory if needed. Returns `filePath`, or `$Failed` if the GIF was not
+written. `AnimationRepetitions -> Infinity` is always set.
+
+**A failed export is reported, not fatal.** If `Export` returns `$Failed`,
+writes no file, or writes a file without a GIF header (Wolfram Engine 15.0.0
+on Linux has raised `Export::fmterr` "Invalid GIF format." intermittently),
+`ExportGIF` prints one sentence (`[GIF FAILED]`, the app, the file, frame
+count, pixel size and first Wolfram message), appends the path to
+`$STEMGIFFailures` (and the messages to `$STEMGIFFailureMessages`) and
+returns `$Failed`. For that path `STEMDescribeGIF` prints "not written" and
+`SyncWAVToGIF` prints one "sync skipped" sentence and leaves the WAV alone,
+so the app still writes its WAV and loudness line. `STEMExitStatus[]`, the
+last line of every `main.wl`, then exits with code 2 (not inside demo.wl,
+which sets `$STEMInHostRun` and reports the run as `NO GIF`). `STEMRunApp`
+resets both lists per run and reports `GIF FAILED`, with the WAV listed.
+
+**`STEM_GIF_DIAG=1`** prints one diagnostic line before every export (free
+space in `$TemporaryDirectory` and in the output directory, `MemoryInUse`,
+`MemoryAvailable`, frame count, `ByteCount` of the rasterised frame list,
+the open-file limit) and, after a failure, retries once after a 2 s pause and
+says whether the retry wrote the GIF. The retry is a diagnostic: the export
+still counts as failed. See docs/VERIFICATION_linux_gif.md.
 
 The plan form writes every frame with the plan's whole-centisecond delay and
 prints a warning line if the frame list's length differs from the plan's count.
