@@ -2,7 +2,7 @@
 
 ## Context
 - Acts on the Linux smoke test of 2026-10-13 (Ubuntu 26.04.1 LTS, Wolfram Engine 15.0.0 x86-64): Export::fmterr "Invalid GIF format." for pendulum and quantum in the smoke run and for lorenz, dynamical iterate, henon, resonance, fluid, thermo, montecarlo and mandelbrot in the demo run.
-- The report was read from ~/Downloads/smoke_test_Linux-x86-64_2026-10-13.txt and ~/Downloads/demo-report-linux.md; it is not in docs/ (not filed in this task).
+- The reports: docs/smoke_test_Linux-x86-64_2026-10-13.txt and docs/demo_report_Linux-x86-64_2026-10-13.md (filed after this record was written; first read from ~/Downloads).
 - Repo HEAD 2196612 (main); every change is uncommitted, as asked.
 - Machine for every measurement: macOS 26.7.1 on Apple silicon, 32 GB RAM, Wolfram Engine 15.0.1; no Linux machine here.
 - Scripts used (in the session scratchpad, not in the repo): force_gif_fail.wl (every GIF Export issues Export::fmterr and returns $Failed, other formats untouched), force_all.wl, force_demo.wl, force_smoke.wl, capture_frames.wl, repro.wl, mem1.wl, peak.wl, diag.wl, retry.wl, seeded.wl.
