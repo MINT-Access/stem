@@ -21,8 +21,10 @@ and producing CSV data, an animated GIF, and audio output.
     [demo report](docs/demo_report_Windows-x86-64_2026-10-11.md)). Tested in
     Parallels on Apple silicon, so the x64 engine runs under emulation,
     about three times slower than on the Mac.
-- **Pending**: Linux x86-64 (Ubuntu), to be added when its smoke report
-  exists in `docs/`.
+- **Pending**: Linux x86-64 (Ubuntu), to be added after a clean rerun; the
+  first run had intermittent GIF export failures
+  ([smoke report](docs/smoke_test_Linux-x86-64_2026-10-13.txt),
+  [details](docs/VERIFICATION_linux_gif.md)).
 - **Not supported**: Linux on ARM, because Wolfram offers no general
   Linux-ARM build of the engine (only a Raspberry Pi package, untested
   here); Wolfram Engine before 15, untested.
