@@ -297,8 +297,11 @@ spaces work) and no second kernel licence.
 Options: `"TimeLimit"` (seconds, default `Infinity`), `"Silent"` (`True` sends
 the app's console to a temporary file returned as `"log"`), `"Script"`
 (default `"main.wl"`; `"demo.wl"` for the demo), `"RequireWAV"` (default
-`True`). Returns `<|"status", "seconds", "exitCode", "messages", "newFiles",
-"wavs", "log"|>`; `newFiles` are the files in `appDir/output` the run created
+`True`), `"LogFile"` (a path: the app's console output and its messages are
+written there through the `"STEMFlushed"` stream method, one flush per write,
+so the log is complete up to the last line even if the kernel dies; the file
+is kept). Returns `<|"status", "seconds", "exitCode", "messages", "newFiles",
+"wavs", "log", "gifFailures"|>`; `newFiles` are the files in `appDir/output` the run created
 or rewrote (compared with a snapshot taken before it). Status: `"OK"`,
 `"MESSAGES"` (audio written, Wolfram messages issued), `"FAIL"` (no new WAV,
 aborted, or `Exit[n]` with n not 0), `"TIMEOUT"`, `"EXIT0"` (ended with
@@ -526,13 +529,28 @@ looping animated GIF, each frame through `STEMRasterize`. Creates the output
 directory if needed. Returns `filePath`, or `$Failed` if the GIF was not
 written. `AnimationRepetitions -> Infinity` is always set.
 
+**Chunked export.** Export holds every frame's quantised index data as
+integer lists while it builds a GIF, so its memory grows with the frame
+count: pendulum's 500-frame GIF peaked at 10.3 GB resident, dynamical
+lyapunov's at 12.8 GB. `ExportGIF` therefore rasterises and exports the
+frames in chunks of at most `$STEMGIFChunkPixels` pixels (24 million) and
+splices the chunk files (header of the first, frame blocks of all, one
+trailer). Every frame has its own colour table, so the result is
+byte-identical to a single `Export`; peaks are now 0.6 to 0.8 GB
+(docs/VERIFICATION_gif_memory.md). Frames of different sizes, or a header
+that differs between chunks, fall back to the single `Export`, as do the
+legacy numeric frame-rate form and lists that fit in one chunk.
+
 **A failed export is reported, not fatal.** If `Export` returns `$Failed`,
 writes no file, or writes a file without a GIF header (Wolfram Engine 15.0.0
 on Linux has raised `Export::fmterr` "Invalid GIF format." intermittently),
 `ExportGIF` prints one sentence (`[GIF FAILED]`, the app, the file, frame
 count, pixel size and first Wolfram message), appends the path to
 `$STEMGIFFailures` (and the messages to `$STEMGIFFailureMessages`) and
-returns `$Failed`. For that path `STEMDescribeGIF` prints "not written" and
+returns `$Failed`. Export reduces any failure of the GIF library to
+`Export::fmterr`; while `ExportGIF` runs, a temporary rule on
+`GIFTools`GIFWrite` records what the library returned, and the sentence adds
+it ("The GIF library reported: ..."). For that path `STEMDescribeGIF` prints "not written" and
 `SyncWAVToGIF` prints one "sync skipped" sentence and leaves the WAV alone,
 so the app still writes its WAV and loudness line. `STEMExitStatus[]`, the
 last line of every `main.wl`, then exits with code 2 (not inside demo.wl,

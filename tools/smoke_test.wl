@@ -10,6 +10,10 @@
      wolframscript -file tools/smoke_test.wl -- --demo-timeout-seconds=7200
                                                  time limit for demo.wl
                                                  (default 3600)
+     wolframscript -file tools/smoke_test.wl -- --resume
+                                                 continue an interrupted run:
+                                                 apps already in the report
+                                                 are kept, not run again
 
    What it does, in this one kernel (no child wolframscript):
    1. An environment block: Wolfram version, system, encodings, whether
@@ -30,8 +34,20 @@
    An app whose GIF export failed (stem-core ExportGIF) is listed as
    GIF FAILED with its WAV measured; its frame check is skipped.
    The report is written as UTF-8 to smoke_test_<SystemID>_<date>.txt in
-   the repository root (or --out). Exit code 0 only if every app wrote a
-   WAV and every GIF export succeeded; 1 otherwise.
+   the repository root (or --out), line by line as the run goes, so an
+   interrupted run leaves the lines so far. Each app's full console
+   output and messages go to smoke_logs_<SystemID>_<date>/<app>.txt next
+   to the report, flushed line by line (stem-core STEMRunApp "LogFile"),
+   so the log of an app during which the kernel died is kept. For every
+   app that failed or issued a message, the Messages section copies its
+   GIF diagnostics lines, its [GIF FAILED] sentence and the 20 log lines
+   before its first message. --resume reads the report being written
+   (--out, or the newest smoke_test_<SystemID>_*.txt in the repository
+   root), keeps the app lines it already holds and runs the rest; the
+   log of the app that was running when the run stopped is kept as
+   <app>.interrupted.txt and named in the report.
+   Exit code 0 only if every app wrote a WAV and every GIF export
+   succeeded; 1 otherwise.
    ================================================================ *)
 
 $CharacterEncoding = "UTF8";
@@ -44,6 +60,26 @@ $smokeOut   = With[{o = Select[$smokeArgs, StringStartsQ[#, "--out="] &]},
   If[o =!= {}, StringDrop[First[o], 6],
     FileNameJoin[{$smokeRoot, "smoke_test_" <> $SystemID <> "_" <>
       DateString[{"Year", "-", "Month", "-", "Day"}] <> ".txt"}]]];
+$smokeResume = MemberQ[$smokeArgs, "--resume"];
+(* --resume without --out: the newest report of this system in the root *)
+If[$smokeResume && !FileExistsQ[$smokeOut],
+  With[{old = FileNames["smoke_test_" <> $SystemID <> "_*.txt", $smokeRoot]},
+    If[old =!= {}, $smokeOut = First[MaximalBy[old, FileDate[#, "Modification"] &]]]]];
+$smokeLogDir = FileNameJoin[{DirectoryName[$smokeOut],
+  With[{b = FileBaseName[$smokeOut]},
+    If[StringStartsQ[b, "smoke_test_"], StringReplace[b, StartOfString ~~ "smoke_test_" -> "smoke_logs_"], b <> "_logs"]]}];
+$smokeLog[app_String] := FileNameJoin[{$smokeLogDir, app <> ".txt"}];
+(* the app lines of the report being resumed: app -> line *)
+$smokeResumed = If[$smokeResume && FileExistsQ[$smokeOut],
+  Module[{lines = StringSplit[Import[$smokeOut, "Text", CharacterEncoding -> "UTF8"], "\n"], i, j},
+    i = FirstPosition[lines, l_ /; StringStartsQ[l, "app | mode | status"], {0}][[1]];
+    If[i == 0, <||>,
+      j = i + 1;
+      While[j <= Length[lines] && (StringContainsQ[lines[[j]], " | "] || StringStartsQ[lines[[j]], "[INTERRUPTED]"]), j++];
+      Association[(First[StringSplit[#, " | "]] -> #) & /@
+        Select[lines[[i + 1 ;; j - 1]], StringContainsQ[#, " | "] &]]]],
+  <||>];
+If[$smokeResume, Print["  --resume: ", Length[$smokeResumed], " app lines kept from ", $smokeOut]];
 $smokeQuickApps = {"pendulum", "dynamical", "henon", "images", "mandelbrot", "signal"};
 $smokeTimeLimit = 600;
 $smokeDemoTimeLimit = With[{o = Select[$smokeArgs, StringStartsQ[#, "--demo-timeout-seconds="] &]},
@@ -53,7 +89,12 @@ $smokeDemoTimeLimit = With[{o = Select[$smokeArgs, StringStartsQ[#, "--demo-time
         Print["[WARNING] --demo-timeout-seconds needs a positive number of seconds; using 3600."]; 3600]]]];
 
 $report = {};
-out[s_String] := (AppendTo[$report, s]; Print[s]);
+(* every report line goes to the report file at once (flushed), so a run
+   that dies leaves its lines so far for --resume *)
+EnsureDir[$smokeOut];
+$reportStream = OpenWrite[$smokeOut, Method -> "STEMFlushed", CharacterEncoding -> "UTF8",
+  FormatType -> OutputForm, PageWidth -> Infinity];
+out[s_String] := (AppendTo[$report, s]; WriteString[$reportStream, s <> "\n"]; Print[s]);
 fmt[x_?NumericQ, d_Integer] := FmtDec[x, d];
 fmt[_, _] := "-";
 
@@ -137,6 +178,37 @@ DefaultMode[app_String] :=
       c["simulation"]["mode"], "-"]];
 
 
+(* FileSystemType — the file system of the volume holding dir: df -T on
+   Linux, the mount table on macOS, Get-Volume on Windows *)
+FileSystemType[dir_String] :=
+  Module[{r, mp, line},
+    Quiet[Switch[$OperatingSystem,
+      "Unix",
+        r = RunProcess[{"df", "-PT", dir}, "StandardOutput"];
+        If[StringQ[r], StringSplit[Last[StringSplit[StringTrim[r], "\n"]]][[2]], "unknown"],
+      "MacOSX",
+        r = RunProcess[{"df", "-P", dir}, "StandardOutput"];
+        mp = If[StringQ[r], Last[StringSplit[Last[StringSplit[StringTrim[r], "\n"]]]], ""];
+        line = SelectFirst[StringSplit[RunProcess[{"mount"}, "StandardOutput"], "\n"],
+          StringContainsQ[#, " on " <> mp <> " ("] &, ""];
+        First[StringCases[line, " on " <> mp <> " (" ~~ t : Except[","] .. :> t], "unknown"],
+      "Windows",
+        r = RunProcess[{"powershell", "-NoProfile", "-NonInteractive", "-Command",
+          "(Get-Volume -FilePath '" <> dir <> "').FileSystemType"}, "StandardOutput"];
+        If[StringQ[r] && StringTrim[r] =!= "", StringTrim[r], "unknown"],
+      _, "unknown"]] /. Except[_String] -> "unknown"];
+
+(* log excerpt for the Messages section: the GIF diagnostics lines, the
+   [GIF FAILED] sentence, and the 20 lines before the first message *)
+MessageLineQ[l_String] := StringMatchQ[l, RegularExpression["^[A-Za-z$`][A-Za-z0-9$`]*::[A-Za-z0-9]+: .*"]];
+LogExcerpt[log_String] :=
+  Module[{lines = StringSplit[log, "\n"], i},
+    i = FirstPosition[lines, l_String /; MessageLineQ[l], {0}][[1]];
+    <|"gif" -> Select[lines, StringStartsQ[#, "  GIF diagnostics" | "  [GIF FAILED]"] &],
+      "before" -> If[i > 0, lines[[Max[1, i - 20] ;; i - 1]], {}],
+      "first" -> If[i > 0, lines[[i]], None]|>];
+
+
 (* ── 1. Environment ───────────────────────────────────────────── *)
 
 out["STEM smoke test, " <> DateString[{"Year", "-", "Month", "-", "Day", " ", "Hour", ":", "Minute"}] <>
@@ -144,6 +216,22 @@ out["STEM smoke test, " <> DateString[{"Year", "-", "Month", "-", "Day", " ", "H
 out["== Environment =="];
 out["Wolfram version: " <> $Version];
 out["Operating system: " <> STEMPlatformDescription[] <> "; SystemID: " <> $SystemID];
+out["Memory: " <> STEMBytesText[$SystemMemory] <> " total, " <> STEMBytesText[MemoryAvailable[]] <>
+    " available (MemoryAvailable[])" <> If[$OperatingSystem === "Unix",
+      With[{m = StringCases[Quiet[Import["/proc/meminfo", "Text"]] /. Except[_String] -> "",
+          "MemAvailable:" ~~ Whitespace ~~ k : DigitCharacter .. :> ToExpression[k]]},
+        If[m === {}, "", "; MemAvailable in /proc/meminfo " <> STEMBytesText[1024 First[m]]]], ""]];
+out["Free space: " <> STEMFreeSpace[$smokeRoot] <> " on the output volume (" <> $smokeRoot <> ", " <>
+    FileSystemType[$smokeRoot] <> "); " <> STEMFreeSpace[$TemporaryDirectory] <> " in $TemporaryDirectory (" <>
+    $TemporaryDirectory <> ", " <> FileSystemType[$TemporaryDirectory] <> ")"];
+If[$OperatingSystem === "Unix",
+  With[{o = StringTrim[Quiet[Import["/proc/sys/vm/overcommit_memory", "Text"]] /. Except[_String] -> "?"]},
+    out["Kernel overcommit (/proc/sys/vm/overcommit_memory): " <> o <>
+        Switch[o, "0", " (heuristic)", "1", " (always)", "2", " (never, strict accounting)", _, ""]]]];
+If[$OperatingSystem === "Unix",
+  With[{c = StringTrim[Quiet[Import["/proc/sys/kernel/core_pattern", "Text"]] /. Except[_String] -> "?"]},
+    out["Core dumps (/proc/sys/kernel/core_pattern): " <> c]]];
+out["Per-app console logs: " <> $smokeLogDir <> If[$smokeResume, " (resumed run)", ""]];
 out["CharacterEncoding: " <> ToString[$CharacterEncoding] <>
     ", SystemCharacterEncoding: " <> ToString[$SystemCharacterEncoding]];
 out["Repository: " <> $smokeRoot];
@@ -208,10 +296,29 @@ out["app | mode | status | seconds | WAV s | LUFS | peak dBFS | GIF s | GIF-WAV 
 $results = <||>;
 Scan[
   Function[app,
-    Module[{r, wav, gif, wf, gs, gp, line, more, sync},
+    Module[{r, wav, gif, wf, gs, gp, line, more, sync, log, fields},
+      If[KeyExistsQ[$smokeResumed, app],
+        (* resumed: keep the line; rebuild what the later sections need
+           from the line and the app's log *)
+        line = $smokeResumed[app]; fields = StringSplit[line, " | "];
+        log = If[FileExistsQ[$smokeLog[app]], Import[$smokeLog[app], "Text", CharacterEncoding -> "UTF8"], ""];
+        If[!StringQ[log], log = ""];
+        out[line];
+        $results[app] = <|"status" -> fields[[3]], "log" -> log, "resumed" -> True,
+          "messages" -> Select[StringSplit[log, "\n"], MessageLineQ],
+          "wavs" -> If[fields[[5]] === "-", {}, {"(resumed)"}],
+          "gifFailures" -> If[fields[[3]] === "GIF FAILED", {"(resumed)"}, {}],
+          "newFiles" -> Select[StringCases[log, Shortest[p : ($PathnameSeparator ~~ Except[WhitespaceCharacter] ..)] ~~ ".gif" :> p <> ".gif"],
+            FileExistsQ], "wav" -> None, "gif" -> None|>,
       Print["  running ", app, " ..."];
+      (* resuming: a log already there is from the run that stopped
+         during this app; keep it as the evidence of what happened *)
+      If[$smokeResume && FileExistsQ[$smokeLog[app]],
+        Quiet[RenameFile[$smokeLog[app], $smokeLog[app <> ".interrupted"], OverwriteTarget -> True]];
+        out["[INTERRUPTED] the previous run stopped while " <> app <> " was running; its log up to that point is " <>
+            FileNameTake[$smokeLog[app <> ".interrupted"], -2] <> ", and " <> app <> " is run again."]];
       r = STEMRunApp[FileNameJoin[{$smokeRoot, app}], {},
-            "Silent" -> True, "TimeLimit" -> $smokeTimeLimit];
+            "Silent" -> True, "LogFile" -> $smokeLog[app], "TimeLimit" -> $smokeTimeLimit];
       wav = If[r["wavs"] === {}, None,
               First[MaximalBy[r["wavs"], Quiet[WAVDuration[#]] &]]];
       gif = SelectFirst[r["newFiles"], StringEndsQ[#, ".gif", IgnoreCase -> True] &, None];
@@ -234,7 +341,7 @@ Scan[
         If[wf["ok"], If[wf["intro"], "yes", "no"], "-"],
         If[r["messages"] === {}, "-", StringTake[First[r["messages"]], UpTo[160]]]}, " | "];
       out[line];
-      $results[app] = Join[r, <|"wav" -> wav, "gif" -> gif|>]]],
+      $results[app] = Join[r, <|"wav" -> wav, "gif" -> gif|>]]]],
   $apps];
 out[""];
 
@@ -267,7 +374,8 @@ out["demo.wl time limit: " <> fmt[$smokeDemoTimeLimit, 0] <> " s (--demo-timeout
 Module[{r, passed, noGif, skips, steps, done, running},
   Print["  running demo.wl ..."];
   r = STEMRunApp[$smokeRoot, If[$smokeQuick, {"--quick"}, {}], "Script" -> "demo.wl",
-        "RequireWAV" -> False, "Silent" -> True, "TimeLimit" -> $smokeDemoTimeLimit];
+        "RequireWAV" -> False, "Silent" -> True, "LogFile" -> $smokeLog["demo"],
+        "TimeLimit" -> $smokeDemoTimeLimit];
   passed = StringCases[r["log"], "Passed:" ~~ Whitespace ~~ p : (DigitCharacter .. ~~ "/" ~~ DigitCharacter ..) :> p];
   (* demo.wl's "GIF failed:     n (WAV written, GIF not)" line *)
   noGif = StringCases[r["log"], "GIF failed:" ~~ Whitespace ~~ n : DigitCharacter .. :> n];
@@ -313,11 +421,18 @@ out[""];
 out["== Messages =="];
 KeyValueMap[
   Function[{k, r},
-    If[r["messages"] =!= {},
-      out[k <> " (" <> ToString[Length[r["messages"]]] <> "):"];
-      Scan[out["  " <> #] &, r["messages"]]]],
+    If[r["messages"] =!= {} || !MemberQ[{"OK", "EXIT0"}, r["status"]],
+      out[k <> " (" <> r["status"] <> ", " <> ToString[Length[r["messages"]]] <> " message" <>
+          If[Length[r["messages"]] === 1, "", "s"] <> "; full log " <>
+          FileNameTake[$smokeLog[If[k === "demo.wl", "demo", k]], -2] <> "):"];
+      Scan[out["  " <> #] &, r["messages"]];
+      With[{x = LogExcerpt[r["log"]]},
+        If[x["gif"] =!= {}, out["  GIF lines from the log:"]; Scan[out["    " <> StringTrim[#]] &, x["gif"]]];
+        If[x["first"] =!= None,
+          out["  the " <> ToString[Length[x["before"]]] <> " log lines before the first message (" <> x["first"] <> "):"];
+          Scan[out["    | " <> #] &, x["before"]]]]]],
   $results];
-If[AllTrue[Values[$results], #["messages"] === {} &], out["none"]];
+If[AllTrue[Values[$results], #["messages"] === {} && MemberQ[{"OK", "EXIT0"}, #["status"]] &], out["none"]];
 out[""];
 
 $nNoWav = Count[KeyDrop[$results, "demo.wl"], r_ /; r["wavs"] === {}];
@@ -329,6 +444,6 @@ out["Summary: " <> ToString[Length[$apps] - $nNoWav] <> " of " <> ToString[Lengt
       " failed (" <> StringRiffle[$gifFailedApps, ", "] <> ")"] <>
     "; demo.wl " <> $results["demo.wl"]["status"] <> ", " <> $demoPassed <> ", " <> $demoSkipText <> "."];
 
-Export[$smokeOut, StringRiffle[$report, "\n"] <> "\n", "Text", CharacterEncoding -> "UTF8"];
+Close[$reportStream];
 Print["Report: ", $smokeOut];
 Exit[If[$nNoWav == 0 && $gifFailedApps === {} && Length[$apps] > 0, 0, 1]];

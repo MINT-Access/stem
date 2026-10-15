@@ -21,8 +21,23 @@ Options[STEMRunApp] = {
   "Silent"    -> False,      (* True: app console output goes to a
                                 temporary file, returned as "log" *)
   "Script"    -> "main.wl",  (* file in appDir to Get (demo.wl for the demo) *)
-  "RequireWAV" -> True       (* False: success does not need a new WAV *)
+  "RequireWAV" -> True,      (* False: success does not need a new WAV *)
+  "LogFile"   -> None        (* a path: the app's console output and its
+                                messages go to this file, written and
+                                flushed line by line so it survives a
+                                kernel crash, and kept; implies Silent *)
 };
+
+(* "STEMFlushed": an output stream method that writes every chunk straight
+   to the file and flushes it, so a log is complete up to the last line
+   printed even if the kernel dies. *)
+(* registered once per kernel: every app run loads stem-core again *)
+If[!MemberQ[$OutputStreamMethods, "STEMFlushed"], DefineOutputStreamMethod["STEMFlushed", {
+  "ConstructorFunction" -> Function[{name, isAppend, caller, opts},
+    With[{s = If[isAppend, OpenAppend, OpenWrite][name, BinaryFormat -> True]},
+      If[Head[s] === OutputStream, {True, s}, {False, None}]]],
+  "WriteFunction" -> Function[{s, bytes}, BinaryWrite[s, bytes]; Flush[s]; {Length[bytes], s}],
+  "CloseFunction" -> Function[s, Close[s]]}]];
 
 (* STEMRunApp
    appDir — the app's directory (holds main.wl and output/)
@@ -44,14 +59,19 @@ Options[STEMRunApp] = {
 STEMRunApp[appDir_String, args_List, OptionsPattern[]] :=
   Module[{main, outDir, t0, sinkPath = None, sink, ed, res, msgs, exitCode = 0,
           exited = False, aborted = False, before, newFiles, wavs, status, log = "", seconds,
-          snapshot, gifFailures = {}},
+          snapshot, gifFailures = {}, logFile = OptionValue["LogFile"]},
     main   = FileNameJoin[{appDir, OptionValue["Script"]}];
     outDir = FileNameJoin[{appDir, "output"}];
-    If[TrueQ[OptionValue["Silent"]],
-      sinkPath = FileNameJoin[{$TemporaryDirectory,
-        "stem_runapp_" <> ToString[$ProcessID] <> "_" <> ToString[Round[1000 AbsoluteTime[]]] <> ".txt"}];
-      sink = OpenWrite[sinkPath, CharacterEncoding -> "UTF8",
-                       FormatType -> OutputForm, PageWidth -> Infinity]];
+    Which[
+      StringQ[logFile],
+        sinkPath = logFile; EnsureDir[logFile];
+        sink = OpenWrite[sinkPath, Method -> "STEMFlushed", CharacterEncoding -> "UTF8",
+                         FormatType -> OutputForm, PageWidth -> Infinity],
+      TrueQ[OptionValue["Silent"]],
+        sinkPath = FileNameJoin[{$TemporaryDirectory,
+          "stem_runapp_" <> ToString[$ProcessID] <> "_" <> ToString[Round[1000 AbsoluteTime[]]] <> ".txt"}];
+        sink = OpenWrite[sinkPath, CharacterEncoding -> "UTF8",
+                         FormatType -> OutputForm, PageWidth -> Infinity]];
     (* output/ before the run: file -> modification date, so only files
        this run created or rewrote count as its output *)
     snapshot[] := If[DirectoryQ[outDir],
@@ -70,6 +90,7 @@ STEMRunApp[appDir_String, args_List, OptionsPattern[]] :=
                 $CharacterEncoding = $CharacterEncoding,
                 $ScriptCommandLine = Join[{main}, If[args === {}, {}, Prepend[args, "--"]]],
                 $Output = If[sinkPath === None, $Output, {sink}],
+                $Messages = If[StringQ[logFile], {sink}, $Messages],
                 $MessagePrePrint = Function[x, ToString[x, InputForm]],
                 Exit = (Throw[{"exit", If[{##} === {}, 0, First[{##}]]}, "stemRunAppExit"] &),
                 Quit = (Throw[{"exit", If[{##} === {}, 0, First[{##}]]}, "stemRunAppExit"] &)},
@@ -84,7 +105,7 @@ STEMRunApp[appDir_String, args_List, OptionsPattern[]] :=
       Close[sink];
       log = Quiet[Import[sinkPath, "Text", CharacterEncoding -> "UTF8"]];
       If[!StringQ[log], log = ""];
-      Quiet[DeleteFile[sinkPath]]];
+      If[!StringQ[logFile], Quiet[DeleteFile[sinkPath]]]];
     res  = ed["Result"];
     If[MatchQ[res, {"exit", _}], exited = True; exitCode = res[[2]]];
     msgs = StringReplace[StringTrim[#], Whitespace -> " "] & /@ ed["MessagesText"];

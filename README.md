@@ -25,9 +25,23 @@ and producing CSV data, an animated GIF, and audio output.
   first run had intermittent GIF export failures
   ([smoke report](docs/smoke_test_Linux-x86-64_2026-10-13.txt),
   [details](docs/VERIFICATION_linux_gif.md)).
+  - If the kernel crashes (segmentation fault), the smoke report ends at the
+    last finished app, `smoke_logs_<SystemID>_<date>/<app>.txt` holds the
+    crashing app's output up to the crash, and the core file goes where the
+    report's "Core dumps" line (`/proc/sys/kernel/core_pattern`) says (on
+    Ubuntu usually `/var/crash/*.crash` from apport, or `coredumpctl` with
+    systemd-coredump); a stack trace from `gdb -batch -ex bt <WolframKernel
+    binary> <core>`, if gdb is present, is what to report; then continue
+    with `wolframscript -file tools/smoke_test.wl -- --resume`.
 - **Not supported**: Linux on ARM, because Wolfram offers no general
   Linux-ARM build of the engine (only a Raspberry Pi package, untested
   here); Wolfram Engine before 15, untested.
+
+Memory: the full smoke test, `demo.wl` included, peaks at 5.2 to 6.0 GB
+resident in the Wolfram kernel (two runs on the Mac, 2026-10-15; the largest
+step is the `waves` finite-element solve), so 8 GB of RAM is the minimum. Before GIFs were
+exported in chunks, one GIF export alone could take 12.8 GB
+([measurements](docs/VERIFICATION_gif_memory.md)).
 
 Narration voice and length differ by platform: Samantha on macOS, SLT on
 Windows, so the same narration runs a different length on each.
@@ -1152,6 +1166,12 @@ apps and `demo.wl --quick` (about five minutes); without it the run takes
 about thirty minutes on the Mac. `--demo-timeout-seconds=N` changes the time
 limit for `demo.wl` (default 3600 s), for slower machines; if the limit is
 reached, the report lists the demo steps that finished and the one running.
+Each app's full console output is kept in `smoke_logs_<SystemID>_<date>/`
+next to the report, written line by line so it survives a kernel crash;
+`--resume` continues an interrupted run, keeping the apps already in the
+report. The environment block records total and available memory, free
+space and file system of the output volume and `$TemporaryDirectory`, and on
+Linux the kernel's overcommit and core-dump settings.
 
 If a GIF export fails, the app says so in one `[GIF FAILED]` sentence, still
 writes its WAV, and exits with code 2. Setting `STEM_GIF_DIAG=1` prints the

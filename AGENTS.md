@@ -193,7 +193,12 @@ in the repo root (gitignored): environment, one line per app, the pendulum
 frame-clipping check, every Wolfram message. Use it first on a new machine.
 `--demo-timeout-seconds=N` sets demo.wl's time limit (default 3600 s, printed
 in the report); on a timeout the report lists the finished demo steps and the
-one that was running.
+one that was running. Each app's console output and messages go to
+`smoke_logs_<SystemID>_<date>/<app>.txt`, flushed line by line; the report is
+written as the run goes, and its Messages section copies, for every app that
+failed or issued a message, the GIF diagnostics lines, the `[GIF FAILED]`
+sentence and the 20 log lines before the first message. `--resume` continues
+an interrupted run (kernel crash) from the report being written.
 
 `cellular`, `signal`, `quantum`, `primes`, and `relativity` do not have test files. All existing test files exit 0 on success, 1 on failure.
 

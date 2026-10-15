@@ -170,40 +170,146 @@ STEMGIFWrittenQ[filePath_String] :=
   FileType[filePath] === File && FileByteCount[filePath] >= 6 &&
   MemberQ[{"GIF87a", "GIF89a"}, Quiet[FromCharacterCode[BinaryReadList[filePath, "Byte", 6]]]]
 
-STEMExportGIFOnce[raster_List, filePath_String, delays_] :=
-  Module[{ed},
+(* Chunked export
+   Export holds every frame's quantised index data as integer lists while
+   it builds a GIF (8 bytes a pixel): pendulum's 500-frame export peaked
+   at 10.5 GB resident for a 1.3 GB frame list. Each frame is quantised
+   and written on its own, with its own colour table (no global table, no
+   comment block), so ExportGIF rasterises and exports the frames in
+   chunks of at most $STEMGIFChunkPixels pixels and splices the files:
+   the header of the first chunk, the frame blocks of every chunk, one
+   trailer. The result is byte-identical to a single Export of all the
+   frames (docs/VERIFICATION_gif_memory.md); a chunk whose frames differ
+   in size from the first frame, or whose header differs, makes it fall
+   back to the single Export (Export would pad every frame to the
+   largest size of the whole list). *)
+
+$STEMGIFChunkPixels = 24*10^6;
+
+(* 1-based offset of the first frame block: after the header, the screen
+   descriptor, the global colour table and any extension other than a
+   Graphic Control Extension (the NETSCAPE loop block) *)
+STEMGIFFrameStart[b_ByteArray] :=
+  Module[{p, n = Length[b], packed = b[[11]]},
+    p = 14 + If[BitAnd[packed, 128] > 0, 3 * 2^(BitAnd[packed, 7] + 1), 0];
+    While[p < n && b[[p]] == 16^^21 && b[[p + 1]] != 16^^F9,
+      p += 2; While[p <= n && b[[p]] != 0, p += b[[p]] + 1]; p++];
+    p]
+
+STEMGIFExportOpts[delays_] := Sequence["AnimationRepetitions" -> Infinity, "DisplayDurations" -> delays]
+
+(* one Export of the whole list (short lists, the legacy scalar delay, and
+   the fallback) *)
+STEMExportGIFSingle[frames_List, filePath_String, delays_] :=
+  Export[filePath, STEMRasterize /@ frames, "GIF", STEMGIFExportOpts[delays]]
+
+(* chunked export; returns filePath, $Failed (an Export failed), or
+   "fallback" (frame sizes or headers differ) *)
+STEMExportGIFChunked[frames_List, filePath_String, delays_List, dims_List, chunks_List] :=
+  Module[{header = None, parts = {}, partPath, result = filePath, strm},
+    partPath[i_] := filePath <> ".part" <> ToString[i] <> ".gif";
+    Catch[
+      Do[Module[{raster = STEMRasterize /@ frames[[c]], b, start},
+          If[!AllTrue[raster, ImageDimensions[#] === dims &], Throw["fallback", "gifchunk"]];
+          If[Export[partPath[Length[parts] + 1], raster, "GIF", STEMGIFExportOpts[delays[[c]]]] === $Failed,
+            Throw[$Failed, "gifchunk"]];
+          raster = None;
+          b = ReadByteArray[partPath[Length[parts] + 1]];
+          Quiet[DeleteFile[partPath[Length[parts] + 1]]];
+          If[!ByteArrayQ[b] || Length[b] < 14, Throw[$Failed, "gifchunk"]];
+          start = STEMGIFFrameStart[b];
+          Which[
+            header === None, header = b[[;; start - 1]],
+            b[[;; start - 1]] =!= header, Throw["fallback", "gifchunk"]];
+          AppendTo[parts, b[[start ;; -2]]]],
+        {c, chunks}];
+      strm = OpenWrite[filePath, BinaryFormat -> True];
+      If[Head[strm] =!= OutputStream, Throw[$Failed, "gifchunk"]];
+      BinaryWrite[strm, header]; Scan[BinaryWrite[strm, #] &, parts];
+      BinaryWrite[strm, ByteArray[{16^^3B}]]; Close[strm];
+      If[FileByteCount[filePath] =!= Length[header] + Total[Length /@ parts] + 1, $Failed, filePath],
+      "gifchunk",
+      (Quiet[DeleteFile /@ Select[Table[partPath[i], {i, Length[chunks]}], FileExistsQ]]; #1) &]
+  ]
+
+(* the chunks for a frame list whose first frame has the size dims: at
+   most $STEMGIFChunkPixels pixels each, never a chunk of one frame
+   (a one-frame GIF may be written without the loop block) *)
+STEMGIFChunks[n_Integer, dims_List] :=
+  Module[{k = Max[2, Floor[$STEMGIFChunkPixels / Max[1, Times @@ dims]]], c},
+    c = Partition[Range[n], UpTo[k]];
+    If[Length[c] > 1 && Length[Last[c]] < 2, c = Append[Drop[c, -2], Join @@ Take[c, -2]]];
+    c]
+
+(* The GIF library's own reason for a failure. Export turns any failure of
+   GIFTools`GIFWrite (giflib: "Failed to write to given file", "Failed to
+   allocate required memory", ...) into the bare Export::fmterr, and
+   GIFWrite runs inside Quiet @ Catch. While ExportGIF runs, a temporary
+   rule on GIFWrite records what it returned when it failed. *)
+STEMGIFLowLevelText[r_] :=
+  Which[
+    FailureQ[r], StringTrim[ToString[Quiet[r["Message"]] /. _Missing -> r[[1]]]] <>
+      " (" <> ToString[r[[1]]] <> ")",
+    True, ToString[Short[r, 2], InputForm]]
+
+SetAttributes[STEMWithGIFWriteRecorder, HoldFirst];
+STEMWithGIFWriteRecorder[expr_] :=
+  If[!MemberQ[$Packages, "GIFTools`"] && Quiet[Check[Block[{$ContextPath}, Needs["GIFTools`"]]; True, False]] =!= True,
+    {expr, {}},
+    Module[{seen = {}, val},
+      Internal`InheritedBlock[{GIFTools`GIFWrite},
+        Unprotect[GIFTools`GIFWrite];
+        GIFTools`GIFWrite[a___] /; !TrueQ[$STEMInGIFWrite] :=
+          Block[{$STEMInGIFWrite = True},
+            With[{r = GIFTools`GIFWrite[a]},
+              If[FailureQ[r] || MatchQ[r, $Failed | _LibraryFunctionError], AppendTo[seen, r]]; r]];
+        DownValues[GIFTools`GIFWrite] =
+          SortBy[DownValues[GIFTools`GIFWrite], FreeQ[#, $STEMInGIFWrite] &];
+        val = expr];
+      {val, STEMGIFLowLevelText /@ seen}]]
+
+STEMExportGIFOnce[frames_List, filePath_String, delays_, dims_] :=
+  Module[{ed, chunks, low},
     If[FileType[filePath] === File, Quiet[DeleteFile[filePath]]];
+    chunks = If[ListQ[delays] && ListQ[dims], STEMGIFChunks[Length[frames], dims], {All}];
     (* a fresh $MessageList, so a kernel that has already seen three
        failed exports (smoke test, demo.wl) does not replace this one's
        message with General::stop and report it as having none *)
-    ed = Block[{$MessageList = {}}, EvaluationData[Export[filePath, raster, "GIF",
-      "AnimationRepetitions" -> Infinity, "DisplayDurations" -> delays]]];
+    {ed, low} = STEMWithGIFWriteRecorder[Block[{$MessageList = {}}, EvaluationData[
+      If[Length[chunks] > 1,
+        Replace[STEMExportGIFChunked[frames, filePath, delays, dims, chunks],
+          "fallback" :> STEMExportGIFSingle[frames, filePath, delays]],
+        STEMExportGIFSingle[frames, filePath, delays]]]]];
     <|"ok" -> (ed["Result"] =!= $Failed && STEMGIFWrittenQ[filePath]),
-      "messages" -> ed["MessagesText"]|>]
+      "messages" -> ed["MessagesText"], "chunks" -> Length[chunks], "lowLevel" -> low|>]
 
 STEMExportGIFFrames[frames_List, filePath_String, delays_] :=
-  Module[{raster, r, app, size, diag, retry, partial},
+  Module[{first, dims, r, app, size, diag, retry, partial},
     EnsureDir[filePath];
-    raster = STEMRasterize /@ frames;
-    diag   = Environment["STEM_GIF_DIAG"] === "1";
-    If[diag, STEMGIFDiagnostics[raster, filePath]];
-    r = STEMExportGIFOnce[raster, filePath, delays];
+    first = If[frames === {}, None, STEMRasterize[First[frames]]];
+    dims  = If[ImageQ[first], ImageDimensions[first], None];
+    diag  = Environment["STEM_GIF_DIAG"] === "1";
+    If[diag, STEMGIFDiagnostics[Length[frames], first, filePath]];
+    first = None;
+    r = STEMExportGIFOnce[frames, filePath, delays, dims];
     If[r["ok"], Return[filePath]];
     (* a failed export can leave a truncated file that starts like a GIF
        (seen with a full output volume); remove it so nothing reads it *)
     partial = If[FileType[filePath] === File, FileByteCount[filePath], None];
     If[partial =!= None, Quiet[DeleteFile[filePath]]];
     app  = FileNameTake[DirectoryName[DirectoryName[filePath]]];
-    size = If[raster =!= {} && ImageQ[First[raster]],
-      StringRiffle[ToString /@ ImageDimensions[First[raster]], "x"] <> " px", "unknown pixel size"];
-    Print["  [GIF FAILED] ", app, ": the GIF ", filePath, " (", Length[raster],
-          If[Length[raster] === 1, " frame, ", " frames, "], size,
+    size = If[ListQ[dims], StringRiffle[ToString /@ dims, "x"] <> " px", "unknown pixel size"];
+    Print["  [GIF FAILED] ", app, ": the GIF ", filePath, " (", Length[frames],
+          If[Length[frames] === 1, " frame, ", " frames, "], size,
           ") was not written; the first message was: ", STEMFirstMessage[r["messages"]],
+          If[r["lowLevel"] === {}, "",
+            " The GIF library reported: " <> StringRiffle[DeleteDuplicates[r["lowLevel"]], "; "] <>
+            If[StringEndsQ[Last[r["lowLevel"]], "."], "", "."]],
           If[partial =!= None, " A truncated " <> ToString[partial] <> "-byte file was removed.", ""],
           " The app continues without it and will exit with code 2."];
     If[diag,
       Pause[2];
-      retry = STEMExportGIFOnce[raster, filePath, delays];
+      retry = STEMExportGIFOnce[frames, filePath, delays, dims];
       If[!retry["ok"] && FileType[filePath] === File, Quiet[DeleteFile[filePath]]];
       Print["  GIF diagnostics: one retry after a 2 s pause ",
             If[retry["ok"], "wrote the GIF", "failed too (" <> StringDrop[STEMFirstMessage[retry["messages"]], -1] <> ")"],
@@ -237,12 +343,15 @@ STEMOpenFileLimit[] :=
     Module[{r = Quiet[RunProcess[{"sh", "-c", "ulimit -n"}]]},
       If[AssociationQ[r] && r["ExitCode"] === 0, StringTrim[r["StandardOutput"]], "unknown"]]]
 
-STEMGIFDiagnostics[raster_List, filePath_String] :=
+STEMGIFDiagnostics[n_Integer, first_, filePath_String] :=
   Print["  GIF diagnostics before exporting ", FileNameTake[filePath], ": free space ",
         STEMFreeSpace[$TemporaryDirectory], " in the temporary directory (", $TemporaryDirectory,
         ") and ", STEMFreeSpace[DirectoryName[filePath]], " in the output directory; MemoryInUse ",
         STEMBytesText[MemoryInUse[]], ", MemoryAvailable ", STEMBytesText[MemoryAvailable[]],
-        "; ", Length[raster], " frames, rasterised frame list ", STEMBytesText[ByteCount[raster]],
+        "; ", n, " frames", If[ImageQ[first],
+          " of " <> StringRiffle[ToString /@ ImageDimensions[first], "x"] <> " px, rasterised about " <>
+          STEMBytesText[n ByteCount[first]] <> " in all, exported in " <>
+          ToString[Length[STEMGIFChunks[n, ImageDimensions[first]]]] <> " chunk(s)", ""],
         "; open-file limit ", STEMOpenFileLimit[], "."]
 
 

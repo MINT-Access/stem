@@ -141,6 +141,34 @@ check["with an outro the WAV is not padded", res["PaddedSeconds"] == 0.0 && Abs[
 
 
 
+STEMSection["Chunked GIF export"];
+(* a small chunk budget splits short lists into chunks; the spliced file
+   must equal one Export of all the frames, byte for byte *)
+singleGIF[frames_, path_, delays_] := (Export[path, STEMRasterize /@ frames, "GIF",
+  "AnimationRepetitions" -> Infinity, "DisplayDurations" -> delays]; ReadByteArray[path]);
+chunkFrames = Table[Graphics[{Hue[k/11], Disk[{Cos[k], Sin[k]}, 0.5], Black, Text[ToString[k], {0, 0}]},
+  PlotRange -> 2, ImageSize -> 60], {k, 11}];
+chunkPlan = GIFFramePlan[11 * 0.1, 10];
+chunkDelays = ConstantArray[chunkPlan["FrameDelay"], 11];
+refBytes = singleGIF[chunkFrames, FileNameJoin[{$tmp, "single.gif"}], chunkDelays];
+Block[{$STEMGIFChunkPixels = 3 * 120 * 120},
+  check["11 frames make 4 chunks (3, 3, 3, 2 frames)", Length /@ STEMGIFChunks[11, {120, 120}] === {3, 3, 3, 2}];
+  check["a last chunk of one frame joins the one before", Length /@ STEMGIFChunks[10, {120, 120}] === {3, 3, 4}];
+  chunkPath = FileNameJoin[{$tmp, "chunkapp", "output", "chunked.gif"}];
+  r = ExportGIF[chunkFrames, chunkPath, chunkPlan];
+  check["chunked export returns its path", r === chunkPath];
+  check["chunked export is byte-identical to one Export", ReadByteArray[chunkPath] === refBytes];
+  check["no part files are left", FileNames["*.part*", DirectoryName[chunkPath]] === {}];
+  check["the spliced GIF has 11 frames of 0.1 s", GIFFrameDelays[chunkPath] === ConstantArray[0.1, 11]];
+  (* frames of two sizes: Export pads them all to the largest, so the
+     chunked path must fall back to one Export *)
+  mixed = MapAt[Show[#, ImageSize -> 70] &, chunkFrames, 8];
+  mixedRef = singleGIF[mixed, FileNameJoin[{$tmp, "mixed_single.gif"}], chunkDelays];
+  mixedPath = FileNameJoin[{$tmp, "chunkapp", "output", "mixed.gif"}];
+  check["mixed frame sizes fall back to one Export, same bytes",
+    ExportGIF[mixed, mixedPath, chunkPlan] === mixedPath && ReadByteArray[mixedPath] === mixedRef];
+  check["no part files are left after the fallback", FileNames["*.part*", DirectoryName[mixedPath]] === {}]];
+
 STEMSection["Failed GIF export"];
 (* Capture printed lines and message texts of expr *)
 SetAttributes[captureRun, HoldFirst];
@@ -199,6 +227,16 @@ r = Block[{$forceGIFFail = True}, captureRun[Do[ExportGIF[frameList[2], FileName
 check["five failures in one kernel each name Export::fmterr, no General::stop",
   Count[r["lines"], l_ /; StringContainsQ[l, "the first message was: Export::fmterr"]] === 5 &&
   FreeQ[r["messages"], m_String /; StringStartsQ[m, "General::stop"]]];
+$STEMGIFFailures = {}; $STEMGIFFailureMessages = {};
+
+(* a failure inside a chunked export is reported the same way *)
+$STEMGIFFailures = {}; $STEMGIFFailureMessages = {};
+r = Block[{$forceGIFFail = True, $STEMGIFChunkPixels = 3 * 120 * 120},
+  captureRun[ExportGIF[chunkFrames, FileNameJoin[{failDir, "chunkfail.gif"}], chunkPlan]]];
+check["a failed chunked export is reported, with its message and no part files",
+  r["value"] === $Failed && STEMGIFFailedQ[FileNameJoin[{failDir, "chunkfail.gif"}]] &&
+  Count[r["lines"], l_ /; StringContainsQ[l, "11 frames, 120x120 px) was not written; the first message was: Export::fmterr"]] === 1 &&
+  FileNames["*.part*", failDir] === {}];
 $STEMGIFFailures = {}; $STEMGIFFailureMessages = {};
 
 (* a directory where the GIF should go: Export cannot write it *)
