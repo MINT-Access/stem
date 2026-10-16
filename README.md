@@ -1115,7 +1115,7 @@ start "" "brownian\output\brownian_temperature.wav"
 
 </details>
 
-See [RELEASE_NOTES_v1.6.0.md](RELEASE_NOTES_v1.6.0.md) for what changed in this release, and [RELEASE_NOTES_v1.5.1.md](RELEASE_NOTES_v1.5.1.md) for full app descriptions, physics notes, and listening guides.
+See [RELEASE_NOTES_v1.6.0.md](RELEASE_NOTES_v1.6.0.md) for what changed in this release, and [docs/archive/RELEASE_NOTES_v1.5.1.md](docs/archive/RELEASE_NOTES_v1.5.1.md) for full app descriptions, physics notes, and listening guides.
 
 ---
 
