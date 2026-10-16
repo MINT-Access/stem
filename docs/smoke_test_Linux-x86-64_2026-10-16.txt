@@ -1,0 +1,61 @@
+STEM smoke test, 2026-10-16 01:17
+== Environment ==
+Wolfram version: 15.0.0 for Linux x86 (64-bit) (May 26, 2026)
+Operating system: Ubuntu 26.04.1 LTS, kernel 7.0.0-38-generic, on x86-64; SystemID: Linux-x86-64
+Memory: 14.98 GB total, 13.33 GB available (MemoryAvailable[]); MemAvailable in /proc/meminfo 13.33 GB
+Free space: 835.11 GB on the output volume (/home/mintaccess/Projects/stem, ext4); 7.49 GB in $TemporaryDirectory (/tmp, tmpfs)
+Kernel overcommit (/proc/sys/vm/overcommit_memory): 0 (heuristic)
+Core dumps (/proc/sys/kernel/core_pattern): |/usr/share/apport/apport -p%p -s%s -c%c -d%d -P%P -u%u -g%g -F%F -- %E
+Per-app console logs: /home/mintaccess/Projects/stem/smoke_logs_Linux-x86-64_2026-10-16
+CharacterEncoding: UTF8, SystemCharacterEncoding: UTF-8
+Repository: /home/mintaccess/Projects/stem
+SpeechSynthesize["Test."]: returns audio (0.74 s)
+Speech tier available (STEMSpeechAvailable[]): True
+Narration voice for SpeechSynthesize[]: SLT (en-us, female), chosen automatically; English voices listed: 43
+Tool say: not found
+Tool afconvert: not found
+Tool espeak-ng: not found
+Tool espeak: not found
+Tool powershell: not found
+Tool curl: /usr/bin/curl, starts (exit code 0)
+Network (URLRead to ssd-api.jpl.nasa.gov): HTTP 200
+Probe: Hénon — λ × ☉
+Probe UTF-8 bytes: 48 c3 a9 6e 6f 6e 20 e2 80 94 20 ce bb 20 c3 97 20 e2 98 89 (expect 48 c3 a9 6e 6f 6e 20 e2 80 94 20 ce bb 20 c3 97 20 e2 98 89)
+GIF of a Graphics with ImageSize 100: ExportGIF (144 dpi) 200x200 px; plain Export (host scale) 134x134 px
+
+== Apps (32, default mode each) ==
+app | mode | status | seconds | WAV s | LUFS | peak dBFS | GIF s | GIF-WAV s | GIF px | intro | first message
+asteroids | - | OK | 216.1 | 22.78 | -18.13 | -0.26 | 22.8 | 0.02 | 1000x1000 | no | -
+bayes | coin | OK | 62.5 | 35.78 | -17 | -5.4 | 35.76 | -0.015 | 1200x800 | yes | -
+bell | correlations | OK | 44.5 | 24.02 | -17 | -13.88 | 24 | -0.02 | 1200x760 | yes | -
+blackbody | spectrum | OK | 73 | 42.17 | -17 | -3.74 | 42.28 | 0.11 | 1200x800 | yes | -
+brownian | walk | OK | 192.4 | 37.36 | -17 | -3.66 | 37.25 | -0.115 | 960x960 | yes | -
+cellular | life | OK | 32.6 | 18 | -17 | -7.57 | 18 | 0 | 960x960 | no | -
+clt | sweep | OK | 14.9 | 23.42 | -17 | -1.06 | 6 | 0 | 1200x760 | yes | -
+compton | scatter | OK | 23.1 | 41.05 | -17 | -5.77 | 41 | -0.05 | 920x920 | yes | -
+cosmology | spectrum | OK | 5.3 | 49.95 | -17 | -4.96 | - | - | - | no | -
+dynamical | sweep | OK | 226.7 | 339.84 | -17 | -1.15 | 340 | 0.16 | 1200x840 | yes | -
+fluid | karman | OK | 22.5 | 46.44 | -17 | -5.65 | 46.5 | 0.055 | 1040x400 | yes | -
+grover | search | OK | 38.9 | 18.41 | -17 | -7.2 | 18.36 | -0.055 | 1240x760 | yes | -
+henon | attractor | OK | 105.5 | 32.66 | -17 | -0.93 | 32.56 | -0.1 | 1400x560 | yes | -
+hydrogen | orbitals | OK | 68.3 | 105.62 | -17 | -9.12 | 105.5 | -0.125 | 640x640 | yes | -
+images | brightness | OK | 22.4 | 98.74 | -17 | -10.03 | 98.5 | -0.24 | 512x512 | yes | -
+lagrange | l4 | OK | 22 | 18.85 | -16.93 | -4.74 | 18.85 | 0 | 840x662 | no | -
+lorenz | lorenz | OK | 188.7 | 40 | -17.01 | -1 | 39.96 | -0.04 | 1000x840 | no | -
+magnetic | cyclotron | OK | 44.7 | 53.26 | -17 | -10.52 | 53.28 | 0.024 | 840x1092 | yes | -
+mandelbrot | mandelbrot | OK | 34.5 | 81.15 | -17 | -11.17 | 81 | -0.146 | 640x640 | yes | -
+montecarlo | sweep | OK | 93.4 | 81.18 | -19.66 | -0.26 | 81 | -0.185 | 840x1183 | yes | -
+pendulum | double | OK | 81.9 | 20 | -17 | -4.52 | 20 | 0 | 960x932 | no | -
+primes | ulam | OK | 4.1 | 10 | -17 | -1.13 | 10 | 0 | 1200x1200 | no | -
+quantum | qho | OK | 157.5 | 12.55 | -17 | -11.09 | 12.55 | 0 | 1200x600 | no | -
+quantum_statistics | spectrum | OK | 22 | 31.04 | -17 | -4.74 | 31 | -0.035 | 1240x760 | yes | -
+quantum_tunnelling | barrier | OK | 17.7 | 47.13 | -17 | -4.4 | 2.58 | 0.03 | 1040x394 | yes | -
+qubit | gates | OK | 154.2 | 23 | -17 | -4.13 | 22.91 | -0.085 | 1040x1040 | yes | -
+relativity | chirp | OK | 121.3 | 28.96 (+3 more WAV) | -24.57 | -0.26 | 3.6 | 0.02 | 1600x800 | no | -
+resonance | galilean | OK | 64.8 | 56.93 | -17 | -2.77 | 33 | 0 | 920x920 | yes | -
+scattering | scatter | OK | 94.9 | 40.84 | -17 | -8.39 | 20.02 | 0.02 | 920x920 | yes | -
+signal | chord | OK | 63.5 | 39.67 (+3 more WAV) | -17 | -2.82 | 3 | 0 | 1600x800 | yes | -
+thermo | distribution | OK | 35.1 | 31.23 | -17 | -6.17 | 31.31 | 0.08 | 1200x800 | yes | -
+waves | ripple | OK | 38.3 | 20 | -17 | -6.75 | 20.02 | 0.02 | 60x60 | no | -
+
+== Pendulum frame clipping (margin >= 3 px on every frame) ==

@@ -1,7 +1,7 @@
 # Smoke test wrapper, timed names, streamed frame check: verification (measured 2026-10-16)
 
 ## Context
-- Acts on the overnight Linux runs smoke_test_Linux-x86-64_2026-10-15.txt and _2026-10-16.txt with their smoke_logs (read from ~/Downloads; not filed in docs/ in this task): neither reached its Summary line.
+- Acts on the overnight Linux runs smoke_test_Linux-x86-64_2026-10-15.txt and _2026-10-16.txt with their smoke_logs (docs/smoke_test_Linux-x86-64_2026-10-15.txt, _2026-10-16.txt and docs/smoke_logs_Linux-x86-64_2026-10-15.zip, _2026-10-16.zip, filed after this record was written): neither reached its Summary line.
 - The 2026-10-15 report ends after mandelbrot; the machine's journal (boot -1) ends with a system reboot at 01:04.
 - The 2026-10-16 report ends with the header "== Pendulum frame clipping (margin >= 3 px on every frame) ==" and no result: it stopped inside the frame check, which loaded all 500 frames of pendulum's GIF.
 - Both Linux reports: 14.98 GB total memory, overcommit 0, core_pattern piped to apport; /var/crash held only orca crash files.

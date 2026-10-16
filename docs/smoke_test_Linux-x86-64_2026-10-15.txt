@@ -1,0 +1,46 @@
+STEM smoke test, 2026-10-15 22:18
+== Environment ==
+Wolfram version: 15.0.0 for Linux x86 (64-bit) (May 26, 2026)
+Operating system: Ubuntu 26.04.1 LTS, kernel 7.0.0-38-generic, on x86-64; SystemID: Linux-x86-64
+Memory: 14.98 GB total, 13.27 GB available (MemoryAvailable[]); MemAvailable in /proc/meminfo 13.27 GB
+Free space: 835.16 GB on the output volume (/home/mintaccess/Projects/stem, ext4); 7.49 GB in $TemporaryDirectory (/tmp, tmpfs)
+Kernel overcommit (/proc/sys/vm/overcommit_memory): 0 (heuristic)
+Core dumps (/proc/sys/kernel/core_pattern): |/usr/share/apport/apport -p%p -s%s -c%c -d%d -P%P -u%u -g%g -F%F -- %E
+Per-app console logs: /home/mintaccess/Projects/stem/smoke_logs_Linux-x86-64_2026-10-15
+CharacterEncoding: UTF8, SystemCharacterEncoding: UTF-8
+Repository: /home/mintaccess/Projects/stem
+SpeechSynthesize["Test."]: returns audio (0.74 s)
+Speech tier available (STEMSpeechAvailable[]): True
+Narration voice for SpeechSynthesize[]: SLT (en-us, female), chosen automatically; English voices listed: 43
+Tool say: not found
+Tool afconvert: not found
+Tool espeak-ng: not found
+Tool espeak: not found
+Tool powershell: not found
+Tool curl: /usr/bin/curl, starts (exit code 0)
+Network (URLRead to ssd-api.jpl.nasa.gov): HTTP 200
+Probe: Hénon — λ × ☉
+Probe UTF-8 bytes: 48 c3 a9 6e 6f 6e 20 e2 80 94 20 ce bb 20 c3 97 20 e2 98 89 (expect 48 c3 a9 6e 6f 6e 20 e2 80 94 20 ce bb 20 c3 97 20 e2 98 89)
+GIF of a Graphics with ImageSize 100: ExportGIF (144 dpi) 200x200 px; plain Export (host scale) 134x134 px
+
+== Apps (32, default mode each) ==
+app | mode | status | seconds | WAV s | LUFS | peak dBFS | GIF s | GIF-WAV s | GIF px | intro | first message
+asteroids | - | OK | 209.5 | 24.12 | -17 | -0.4 | 24.16 | 0.04 | 1000x1000 | no | -
+bayes | coin | OK | 61.1 | 35.78 | -17 | -5.4 | 35.76 | -0.015 | 1200x800 | yes | -
+bell | correlations | OK | 44.5 | 24.02 | -17 | -13.9 | 24 | -0.02 | 1200x760 | yes | -
+blackbody | spectrum | OK | 73 | 42.17 | -17 | -3.73 | 42.28 | 0.11 | 1200x800 | yes | -
+brownian | walk | OK | 191.6 | 37.36 | -17 | -3.66 | 37.25 | -0.115 | 960x960 | yes | -
+cellular | life | OK | 33.5 | 18 | -17 | -7.57 | 18 | 0 | 960x960 | no | -
+clt | sweep | OK | 14.9 | 23.42 | -17 | -1.06 | 6 | 0 | 1200x760 | yes | -
+compton | scatter | OK | 23.3 | 41.05 | -17 | -5.65 | 41 | -0.05 | 920x920 | yes | -
+cosmology | spectrum | OK | 5.3 | 49.95 | -17 | -4.96 | - | - | - | no | -
+dynamical | sweep | OK | 226.4 | 339.84 | -17 | -1.16 | 340 | 0.16 | 1200x840 | yes | -
+fluid | karman | OK | 22.7 | 46.44 | -17 | -5.65 | 46.5 | 0.055 | 1040x400 | yes | -
+grover | search | OK | 39.1 | 18.41 | -17 | -7.18 | 18.36 | -0.055 | 1240x760 | yes | -
+henon | attractor | OK | 105.4 | 32.66 | -17 | -0.94 | 32.56 | -0.1 | 1400x560 | yes | -
+hydrogen | orbitals | OK | 68.2 | 105.62 | -17 | -9.12 | 105.5 | -0.125 | 640x640 | yes | -
+images | brightness | OK | 22.8 | 98.74 | -17 | -10.02 | 98.5 | -0.24 | 512x512 | yes | -
+lagrange | l4 | OK | 22.2 | 18.85 | -16.93 | -4.74 | 18.85 | 0 | 840x662 | no | -
+lorenz | lorenz | OK | 188.6 | 40 | -17.01 | -1 | 39.96 | -0.04 | 1000x840 | no | -
+magnetic | cyclotron | OK | 44.5 | 53.26 | -17 | -10.56 | 53.28 | 0.024 | 840x1092 | yes | -
+mandelbrot | mandelbrot | OK | 34.7 | 81.15 | -17 | -11.17 | 81 | -0.146 | 640x640 | yes | -
