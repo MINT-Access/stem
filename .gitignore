@@ -10,3 +10,6 @@ demo/
 # Smoke test reports (tools/smoke_test.wl)
 /smoke_test_*.txt
 /smoke_logs_*/
+/smoke_console_*.txt
+/smoke_heartbeat_*.txt
+/smoke_wrapper_*.txt

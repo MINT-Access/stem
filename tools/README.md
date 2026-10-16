@@ -12,7 +12,7 @@ app's own README.
 One command that checks an installation: every app's default mode, then
 `demo.wl`, all in one kernel (stem-core `STEMRunApp`; no child
 wolframscript). Writes a UTF-8 plain-text report
-`smoke_test_<SystemID>_<date>.txt` in the repository root (gitignored; pass
+`smoke_test_<SystemID>_<date>_<HHMM>.txt` in the repository root (gitignored; pass
 `--out=<path>` to put it elsewhere): an environment block (version, system,
 encodings, SpeechSynthesize, which speech and network tools start, a
 non-ASCII probe line with its UTF-8 bytes, the pixel size of a test GIF),
@@ -28,6 +28,12 @@ wolframscript -file tools/smoke_test.wl -- --quick   # 6 apps + demo.wl --quick 
 ```
 
 On Windows PowerShell write the separator as `'--'`; see the root README.
+
+`smoke_test.sh` (and `smoke_test.ps1` for Windows) runs the same command for
+a machine nobody is watching: console to `smoke_console_<...>.txt`, a
+heartbeat file every 10 s (time, app being run), and one line appended to
+the report when wolframscript ends, with its exit code and, if the kernel was
+killed, the signal (`tools/smoke_test.sh --quick`).
 The report from the development Mac is kept in
 `docs/smoke_test_MacOSX-ARM64_2026-10-07.txt` for comparison.
 

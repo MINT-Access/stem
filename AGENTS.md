@@ -188,17 +188,21 @@ wolframscript -file stem-core/tests/test_platform.wl
 ```
 
 `tools/smoke_test.wl` (`-- --quick` for a short run) runs every app's default
-mode and demo.wl in one kernel and writes `smoke_test_<SystemID>_<date>.txt`
+mode and demo.wl in one kernel and writes `smoke_test_<SystemID>_<date>_<HHMM>.txt`
 in the repo root (gitignored): environment, one line per app, the pendulum
 frame-clipping check, every Wolfram message. Use it first on a new machine.
 `--demo-timeout-seconds=N` sets demo.wl's time limit (default 3600 s, printed
 in the report); on a timeout the report lists the finished demo steps and the
 one that was running. Each app's console output and messages go to
-`smoke_logs_<SystemID>_<date>/<app>.txt`, flushed line by line; the report is
+`smoke_logs_<SystemID>_<date>_<HHMM>/<app>.txt`, flushed line by line; the report is
 written as the run goes, and its Messages section copies, for every app that
 failed or issued a message, the GIF diagnostics lines, the `[GIF FAILED]`
 sentence and the 20 log lines before the first message. `--resume` continues
-an interrupted run (kernel crash) from the report being written.
+an interrupted run (kernel crash) from the report being written. Report and
+log names carry the time (`_<date>_<HHMM>`). `tools/smoke_test.sh`
+(`tools/smoke_test.ps1` on Windows) wraps the run for unattended machines:
+console file, a heartbeat file every 10 s, and one line appended to the
+report with the exit code and signal when wolframscript ends.
 
 `cellular`, `signal`, `quantum`, `primes`, and `relativity` do not have test files. All existing test files exit 0 on success, 1 on failure.
 

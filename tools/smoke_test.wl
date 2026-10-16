@@ -33,11 +33,12 @@
       running are listed.
    An app whose GIF export failed (stem-core ExportGIF) is listed as
    GIF FAILED with its WAV measured; its frame check is skipped.
-   The report is written as UTF-8 to smoke_test_<SystemID>_<date>.txt in
-   the repository root (or --out), line by line as the run goes, so an
-   interrupted run leaves the lines so far. Each app's full console
-   output and messages go to smoke_logs_<SystemID>_<date>/<app>.txt next
-   to the report, flushed line by line (stem-core STEMRunApp "LogFile"),
+   The report is written as UTF-8 to smoke_test_<SystemID>_<date>_<HHMM>.txt
+   in the repository root (or --out), line by line as the run goes, so an
+   interrupted run leaves the lines so far; the time in the name keeps two
+   runs on one day apart. Each app's full console output and messages go
+   to smoke_logs_<SystemID>_<date>_<HHMM>/<app>.txt next to the report,
+   flushed line by line (stem-core STEMRunApp "LogFile"),
    so the log of an app during which the kernel died is kept. For every
    app that failed or issued a message, the Messages section copies its
    GIF diagnostics lines, its [GIF FAILED] sentence and the 20 log lines
@@ -59,7 +60,7 @@ $smokeQuick = MemberQ[$smokeArgs, "--quick"];
 $smokeOut   = With[{o = Select[$smokeArgs, StringStartsQ[#, "--out="] &]},
   If[o =!= {}, StringDrop[First[o], 6],
     FileNameJoin[{$smokeRoot, "smoke_test_" <> $SystemID <> "_" <>
-      DateString[{"Year", "-", "Month", "-", "Day"}] <> ".txt"}]]];
+      DateString[{"Year", "-", "Month", "-", "Day", "_", "Hour", "Minute"}] <> ".txt"}]]];
 $smokeResume = MemberQ[$smokeArgs, "--resume"];
 (* --resume without --out: the newest report of this system in the root *)
 If[$smokeResume && !FileExistsQ[$smokeOut],
@@ -131,30 +132,81 @@ WAVFacts[path_String] :=
 (* Frame-clipping check, ported from pendulum/tests/verify_animation_frames.py:
    a pixel is content unless it is near-achromatic (max - min channel < 12)
    and light (min channel > 120); the content bounding box must keep a
-   margin of at least 3 px from every edge on every frame. *)
+   margin of at least 3 px from every edge on every frame.
+   The GIF is decoded one frame at a time and only the running worst
+   margins are kept: importing all 500 frames of pendulum's GIF at once
+   held 1.3 GB of images and peaked near 6 GB resident (the Linux run of
+   2026-10-16 stopped in this check). *)
+
+(* GIFFrameBlocks — the byte ranges of a GIF: the header (signature,
+   screen descriptor, global colour table, extensions before the first
+   frame) and, per frame, its Graphic Control Extension and image block.
+   standalone is True when every frame covers the whole canvas and has no
+   transparent colour, so header + one frame + trailer is a valid GIF of
+   exactly that frame (what ExportGIF writes). *)
+GIFFrameBlocks[b_ByteArray] :=
+  Module[{n = Length[b], pos, hdrEnd = None, start = None, frames = {}, skip, packed,
+          w = b[[7]] + 256 b[[8]], h = b[[9]] + 256 b[[10]], standalone = True},
+    skip[q0_] := Module[{q = q0}, While[q <= n && b[[q]] != 0, q += b[[q]] + 1]; q + 1];
+    packed = b[[11]];
+    pos = 14 + If[BitAnd[packed, 128] > 0, 3 * 2^(BitAnd[packed, 7] + 1), 0];
+    While[pos <= n,
+      Switch[b[[pos]],
+        16^^21,
+          If[b[[pos + 1]] == 16^^F9,
+            If[start === None, start = pos; If[hdrEnd === None, hdrEnd = pos - 1]];
+            If[BitAnd[b[[pos + 3]], 1] == 1, standalone = False]];
+          pos = skip[pos + 2],
+        16^^2C,
+          If[start === None, start = pos; If[hdrEnd === None, hdrEnd = pos - 1]];
+          If[b[[pos + 1 ;; pos + 8]] =!= ByteArray[{0, 0, 0, 0, BitAnd[w, 255], BitShiftRight[w, 8],
+               BitAnd[h, 255], BitShiftRight[h, 8]}], standalone = False];
+          packed = b[[pos + 9]];
+          pos += 10 + If[BitAnd[packed, 128] > 0, 3 * 2^(BitAnd[packed, 7] + 1), 0];
+          pos = skip[pos + 1];
+          AppendTo[frames, {start, pos - 1}]; start = None,
+        _, pos = n + 1]];
+    <|"header" -> Replace[hdrEnd, None -> 13], "frames" -> frames, "standalone" -> standalone|>];
+
+FrameContentMargins[f_Image] :=
+  Module[{a, r, g, bl, hi, lo, content, rows, cols, w, h},
+    {w, h} = ImageDimensions[f];
+    a = ImageData[ColorConvert[RemoveAlphaChannel[f], "RGB"], "Byte"];
+    {r, g, bl} = Transpose[a, {2, 3, 1}];
+    hi = (r + g + Abs[r - g])/2; hi = (hi + bl + Abs[hi - bl])/2;
+    lo = (r + g - Abs[r - g])/2; lo = (lo + bl - Abs[lo - bl])/2;
+    content = 1 - UnitStep[11 - (hi - lo)] UnitStep[lo - 121];
+    rows = Flatten[Position[Unitize[Total[content, {2}]], 1]];
+    cols = Flatten[Position[Unitize[Total[content]], 1]];
+    If[rows === {}, None,
+      <|"top" -> First[rows] - 1, "bottom" -> h - Last[rows],
+        "left" -> First[cols] - 1, "right" -> w - Last[cols]|>]];
+
 FrameClipCheck[path_String] :=
-  Module[{frames, w, h, worst, nViol = 0, nFrames},
-    frames  = Quiet[Import[path, "ImageList"]];
-    If[!ListQ[frames], Return[<|"ok" -> False|>]];
-    {w, h}  = ImageDimensions[First[frames]];
-    nFrames = Length[frames];
-    worst   = <|"top" -> Infinity, "bottom" -> Infinity, "left" -> Infinity, "right" -> Infinity|>;
-    Do[
-      Module[{a, r, g, b, hi, lo, content, rows, cols, margins},
-        a = ImageData[ColorConvert[RemoveAlphaChannel[f], "RGB"], "Byte"];
-        {r, g, b} = Transpose[a, {2, 3, 1}];
-        hi = (r + g + Abs[r - g])/2; hi = (hi + b + Abs[hi - b])/2;
-        lo = (r + g - Abs[r - g])/2; lo = (lo + b - Abs[lo - b])/2;
-        content = 1 - UnitStep[11 - (hi - lo)] UnitStep[lo - 121];
-        rows = Flatten[Position[Unitize[Total[content, {2}]], 1]];
-        cols = Flatten[Position[Unitize[Total[content]], 1]];
-        If[rows =!= {},
-          margins = <|"top" -> First[rows] - 1, "bottom" -> h - Last[rows],
-                      "left" -> First[cols] - 1, "right" -> w - Last[cols]|>;
-          worst = Merge[{worst, margins}, Min];
-          If[Min[Values[margins]] < 3, nViol++]]],
-      {f, frames}];
-    <|"ok" -> True, "frames" -> nFrames, "size" -> {w, h}, "worst" -> worst, "violations" -> nViol|>
+  Module[{bytes, blocks, frameAt, nFrames, size = None, worst, nViol = 0},
+    bytes = Quiet[ReadByteArray[path]];
+    If[!ByteArrayQ[bytes] || Length[bytes] < 14, Return[<|"ok" -> False|>]];
+    blocks = GIFFrameBlocks[bytes];
+    nFrames = Length[blocks["frames"]];
+    frameAt = If[TrueQ[blocks["standalone"]],
+      (* one frame at a time: header + this frame + trailer *)
+      Function[k, Quiet[ImportByteArray[Join[bytes[[;; blocks["header"]]],
+        bytes[[blocks["frames"][[k, 1]] ;; blocks["frames"][[k, 2]]]], ByteArray[{16^^3B}]], "GIF"]]],
+      (* frames that build on earlier ones: the whole list, as before *)
+      With[{all = Quiet[Import[path, "ImageList"]]}, If[ListQ[all], all[[#]] &, $Failed &]]];
+    worst = <|"top" -> Infinity, "bottom" -> Infinity, "left" -> Infinity, "right" -> Infinity|>;
+    Catch[
+      Do[
+        Module[{f = frameAt[k], m},
+          If[!ImageQ[f], Throw[<|"ok" -> False|>, "frameclip"]];
+          If[size === None, size = ImageDimensions[f]];
+          m = FrameContentMargins[f];
+          If[m =!= None, worst = Merge[{worst, m}, Min]; If[Min[Values[m]] < 3, nViol++]]],
+        {k, nFrames}];
+      If[size === None, <|"ok" -> False|>,
+        <|"ok" -> True, "frames" -> nFrames, "size" -> size, "worst" -> worst, "violations" -> nViol,
+          "streamed" -> TrueQ[blocks["standalone"]]|>],
+      "frameclip"]
   ];
 
 (* GIF minus WAV in seconds from the app's own sync sentence (stem-core

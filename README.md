@@ -26,20 +26,30 @@ and producing CSV data, an animated GIF, and audio output.
   ([smoke report](docs/smoke_test_Linux-x86-64_2026-10-13.txt),
   [details](docs/VERIFICATION_linux_gif.md)).
   - If the kernel crashes (segmentation fault), the smoke report ends at the
-    last finished app, `smoke_logs_<SystemID>_<date>/<app>.txt` holds the
+    last finished app, `smoke_logs_<SystemID>_<date>_<HHMM>/<app>.txt` holds the
     crashing app's output up to the crash, and the core file goes where the
     report's "Core dumps" line (`/proc/sys/kernel/core_pattern`) says (on
     Ubuntu usually `/var/crash/*.crash` from apport, or `coredumpctl` with
     systemd-coredump); a stack trace from `gdb -batch -ex bt <WolframKernel
     binary> <core>`, if gdb is present, is what to report; then continue
-    with `wolframscript -file tools/smoke_test.wl -- --resume`.
+    with `tools/smoke_test.sh --resume`.
+  - For an unattended run (overnight), first stop the machine sleeping: set
+    `HandleLidSwitch=ignore` in `/etc/systemd/logind.conf`, then
+    `sudo systemctl mask sleep.target suspend.target`; run the smoke test
+    inside `tmux` through `tools/smoke_test.sh`, and read the result from the
+    report's last line, which the wrapper writes when wolframscript ends
+    (with the signal if the kernel was killed). Ubuntu's apport does not
+    keep crash reports for Wolfram Engine, so a segmentation fault is
+    visible only in that last line.
 - **Not supported**: Linux on ARM, because Wolfram offers no general
   Linux-ARM build of the engine (only a Raspberry Pi package, untested
   here); Wolfram Engine before 15, untested.
 
-Memory: the full smoke test, `demo.wl` included, peaks at 5.2 to 6.0 GB
-resident in the Wolfram kernel (two runs on the Mac, 2026-10-15; the largest
-step is the `waves` finite-element solve), so 8 GB of RAM is the minimum. Before GIFs were
+Memory: the full smoke test, `demo.wl` included, peaks at 5.2 GB resident in
+the Wolfram kernel (Mac, 2026-10-16, during `dynamical`), so 8 GB of RAM is
+the minimum. The 6.0 GB measured the day before was the pendulum frame check
+loading all 500 frames of its GIF; it now reads one frame at a time
+([measurements](docs/VERIFICATION_smoke_wrapper.md)). Before GIFs were
 exported in chunks, one GIF export alone could take 12.8 GB
 ([measurements](docs/VERIFICATION_gif_memory.md)).
 
@@ -1155,7 +1165,7 @@ Outputs are collected in `demo/` with a written report at `demo/demo-report.md`.
 
 `tools/smoke_test.wl` runs every app's default mode and then `demo.wl`, all
 in one kernel, and writes a plain-text report
-`smoke_test_<SystemID>_<date>.txt` in the repository root: an environment
+`smoke_test_<SystemID>_<date>_<HHMM>.txt` in the repository root: an environment
 block (Wolfram version, encodings, which speech and network tools work),
 then one line per app with its status, timings, WAV loudness and length,
 GIF length and pixel size, and any Wolfram messages. It also runs the
@@ -1166,12 +1176,25 @@ apps and `demo.wl --quick` (about five minutes); without it the run takes
 about thirty minutes on the Mac. `--demo-timeout-seconds=N` changes the time
 limit for `demo.wl` (default 3600 s), for slower machines; if the limit is
 reached, the report lists the demo steps that finished and the one running.
-Each app's full console output is kept in `smoke_logs_<SystemID>_<date>/`
+Each app's full console output is kept in `smoke_logs_<SystemID>_<date>_<HHMM>/`
 next to the report, written line by line so it survives a kernel crash;
 `--resume` continues an interrupted run, keeping the apps already in the
 report. The environment block records total and available memory, free
 space and file system of the output volume and `$TemporaryDirectory`, and on
-Linux the kernel's overcommit and core-dump settings.
+Linux the kernel's overcommit and core-dump settings. The time in the
+report's name (`_<HHMM>`) keeps two runs on one day apart; `--resume` picks
+the newest report.
+
+On a machine you are not watching, run the smoke test through the wrapper,
+`tools/smoke_test.sh` (macOS, Linux) or `tools\smoke_test.ps1` (Windows; not
+yet run there). It passes its options on, writes the console to
+`smoke_console_<...>.txt`, rewrites `smoke_heartbeat_<...>.txt` every 10 s
+with the time and the app being run, and when wolframscript ends appends one
+line to the report, for example "The smoke test process ended at 01:52 with
+exit code 139 (SIGSEGV, segmentation fault) after 2103 s." (only the end
+time when the report already has its Summary line). A run that stops for
+any reason, a kernel crash or a machine that went to sleep, then shows when
+and where in the report and the heartbeat file.
 
 If a GIF export fails, the app says so in one `[GIF FAILED]` sentence, still
 writes its WAV, and exits with code 2. Setting `STEM_GIF_DIAG=1` prints the
@@ -1182,10 +1205,13 @@ limit) and retries a failed export once, for diagnosis.
 # macOS / Linux
 wolframscript -file tools/smoke_test.wl
 wolframscript -file tools/smoke_test.wl -- --quick
+tools/smoke_test.sh            # the same, through the wrapper (unattended runs)
+tools/smoke_test.sh --quick
 
 # Windows PowerShell
 wolframscript -file tools\smoke_test.wl
 wolframscript -file tools\smoke_test.wl '--' --quick
+powershell -ExecutionPolicy Bypass -File tools\smoke_test.ps1 --quick   # wrapper
 
 :: Windows Command Prompt (cmd)
 wolframscript -file tools\smoke_test.wl
