@@ -16,6 +16,8 @@
 #   the app being run (the console's last "running <app> ..." line; the
 #   report itself holds only finished apps). After a crash or a power
 #   loss it shows when the run was last alive and where.
+# - It passes an explicit --out=<report> (see below), so the end line
+#   always lands in this run's own report.
 # - When wolframscript ends it appends one line to the report, e.g.
 #     The smoke test process ended at 01:52 with exit code 139 (SIGSEGV,
 #     segmentation fault) after 2103 s.
@@ -32,21 +34,42 @@ here="$(cd "$(dirname "$0")" && pwd)"
 root="$(dirname "$here")"
 start=$(date +%s)
 
-# the report this run writes: --out=<path> if given, otherwise the newest
-# smoke_test_*.txt in the repository root written since the start
-out=""
-for a in "$@"; do case "$a" in --out=*) out="${a#--out=}";; esac; done
+# The report this run writes, fixed before the start and passed to the
+# smoke test as --out, so the end line can only land in this run's report
+# (looking for "the newest report" put a second run's end line into the
+# first run's report on 2026-10-16):
+# - --out=<path> given: that path;
+# - --resume: the newest smoke_test_<SystemID>_*.txt, the one smoke_test.wl
+#   would pick itself;
+# - otherwise smoke_test_<SystemID>_<date>_<HHMM>.txt from the start time
+#   (with _2, _3 ... if a run in the same minute already used the name).
+case "$(uname -s)/$(uname -m)" in
+  Darwin/arm64)         sysid=MacOSX-ARM64 ;;
+  Darwin/x86_64)        sysid=MacOSX-x86-64 ;;
+  Linux/x86_64)         sysid=Linux-x86-64 ;;
+  Linux/aarch64|Linux/arm64) sysid=Linux-ARM64 ;;
+  *)                    sysid="$(uname -s)-$(uname -m)" ;;
+esac
+out=""; resume=0; pass=()
+for a in "$@"; do
+  case "$a" in
+    --out=*) out="${a#--out=}" ;;
+    --resume) resume=1; pass+=("$a") ;;
+    *) pass+=("$a") ;;
+  esac
+done
+if [ -z "$out" ] && [ "$resume" = 1 ]; then
+  out="$(ls -t "$root"/smoke_test_"$sysid"_*.txt 2>/dev/null | head -1)"
+  [ -z "$out" ] && { echo "--resume: no smoke_test_${sysid}_*.txt in $root to resume." >&2; exit 1; }
+fi
+if [ -z "$out" ]; then
+  out="$root/smoke_test_${sysid}_$(date -r "$start" '+%Y-%m-%d_%H%M' 2>/dev/null || date -d "@$start" '+%Y-%m-%d_%H%M').txt"
+  n=2; base="${out%.txt}"
+  while [ -e "$out" ]; do out="${base}_$n.txt"; n=$((n + 1)); done
+fi
+pass+=("--out=$out")
 
-report_path() {
-  if [ -n "$out" ]; then [ -f "$out" ] && echo "$out"; return; fi
-  local f newest="" newest_t=0 t
-  for f in "$root"/smoke_test_*.txt; do
-    [ -f "$f" ] || continue
-    t=$(stat -c %Y "$f" 2>/dev/null || stat -f %m "$f")
-    if [ "$t" -ge "$start" ] && [ "$t" -ge "$newest_t" ]; then newest="$f"; newest_t=$t; fi
-  done
-  [ -n "$newest" ] && echo "$newest"
-}
+report_path() { [ -f "$out" ] && echo "$out"; }
 
 # smoke_test_X.txt -> smoke_<kind>_X.txt; any other name -> name.<kind>.txt
 sibling() {
@@ -69,7 +92,7 @@ signal_text() {
 }
 
 tmpconsole="$(mktemp "${TMPDIR:-/tmp}/stem_smoke_console.XXXXXX")"
-wolframscript -file "$here/smoke_test.wl" -- "$@" > >(tee "$tmpconsole") 2>&1 &
+wolframscript -file "$here/smoke_test.wl" -- "${pass[@]}" > >(tee "$tmpconsole") 2>&1 &
 pid=$!
 
 report=""; console=""; heartbeat=""
@@ -88,11 +111,10 @@ wait "$pid"; code=$?
 sleep 1   # let tee finish
 
 end_hm="$(date '+%H:%M')"; secs=$(( $(date +%s) - start ))
-[ -z "$report" ] && report="$(report_path)"
-if [ -z "$report" ]; then
-  report="$root/smoke_wrapper_$(date '+%Y-%m-%d_%H%M').txt"
-  echo "No report was written by this run; the wrapper's line goes to $report." | tee -a "$report"
+if [ ! -f "$out" ]; then
+  echo "No report was written by this run; the wrapper's line goes to $out." | tee -a "$out"
 fi
+report="$out"
 console="$(sibling "$report" console)"; cp "$tmpconsole" "$console"; rm -f "$tmpconsole"
 heartbeat="$(sibling "$report" heartbeat)"
 

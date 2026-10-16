@@ -1,0 +1,72 @@
+STEM smoke test, 2026-10-16 13:44
+== Environment ==
+Wolfram version: 15.0.1 for Mac OS X ARM (64-bit) (July 2, 2026)
+Operating system: macOS 26.7.1 (Tahoe) on ARM64; SystemID: MacOSX-ARM64
+Memory: 32 GB total, 16.59 GB available (MemoryAvailable[])
+Free space: 1388.12 GB on the output volume (/Users/mintaccess/Projects/stem, apfs); 1388.12 GB in $TemporaryDirectory (/private/var/folders/jc/bmdfzv5n78g7f6tqdt9d1b500000gn/T, apfs)
+Per-app console logs: /Users/mintaccess/Projects/stem/smoke_logs_MacOSX-ARM64_2026-10-16_1344
+CharacterEncoding: UTF8, SystemCharacterEncoding: UTF-8
+Repository: /Users/mintaccess/Projects/stem
+SpeechSynthesize["Test."]: returns audio (0.5 s)
+Speech tier available (STEMSpeechAvailable[]): True
+Narration voice for SpeechSynthesize[]: Samantha (en-US, female), chosen automatically; English voices listed: 87
+Narration voice for say: Samantha (en_US), chosen automatically
+Tool say: /usr/bin/say, starts (exit code 1)
+Tool afconvert: /usr/bin/afconvert, starts (exit code 2)
+Tool espeak-ng: not found
+Tool espeak: not found
+Tool powershell: not found
+Tool curl: /opt/anaconda3/bin/curl, starts (exit code 0)
+Network (URLRead to ssd-api.jpl.nasa.gov): HTTP 200
+Probe: Hénon — λ × ☉
+Probe UTF-8 bytes: 48 c3 a9 6e 6f 6e 20 e2 80 94 20 ce bb 20 c3 97 20 e2 98 89 (expect 48 c3 a9 6e 6f 6e 20 e2 80 94 20 ce bb 20 c3 97 20 e2 98 89)
+GIF of a Graphics with ImageSize 100: ExportGIF (144 dpi) 200x200 px; plain Export (host scale) 200x200 px
+
+== Apps (32, default mode each) ==
+app | mode | status | seconds | WAV s | LUFS | peak dBFS | GIF s | GIF-WAV s | GIF px | intro | first message
+asteroids | - | OK | 74.9 | 22.78 | -18.13 | -0.26 | 22.8 | 0.02 | 1000x1000 | no | -
+bayes | coin | OK | 19.2 | 36.09 | -17 | -5.59 | 36 | -0.093 | 1200x800 | yes | -
+bell | correlations | OK | 11.6 | 24 | -17 | -13 | 24 | 0 | 1200x760 | yes | -
+blackbody | spectrum | OK | 19.1 | 42.54 | -17 | -4.25 | 42.56 | 0.02 | 1200x800 | yes | -
+brownian | walk | OK | 49.9 | 38.07 | -17 | -3.98 | 38 | -0.071 | 960x960 | yes | -
+cellular | life | OK | 5.5 | 18 | -17 | -7.57 | 18 | 0 | 960x960 | no | -
+clt | sweep | OK | 4.6 | 23.78 | -17 | -1.2 | 6 | 0 | 1200x760 | yes | -
+compton | scatter | OK | 6.5 | 39.11 | -17 | -5.14 | 39 | -0.115 | 920x920 | yes | -
+cosmology | spectrum | OK | 1.8 | 49.95 | -17 | -4.96 | - | - | - | no | -
+dynamical | sweep | OK | 56.1 | 338.29 | -17 | -1.13 | 338.5 | 0.215 | 1200x840 | yes | -
+fluid | karman | OK | 6.7 | 45.65 | -17 | -5.79 | 45.6 | -0.046 | 1040x400 | yes | -
+grover | search | OK | 10.7 | 18.67 | -17 | -5.54 | 18.72 | 0.053 | 1240x760 | yes | -
+henon | attractor | OK | 29.2 | 30.95 | -17 | -1.62 | 30.87 | -0.079 | 1400x560 | yes | -
+hydrogen | orbitals | OK | 15.7 | 105.61 | -17 | -9.13 | 105.5 | -0.106 | 640x640 | yes | -
+images | brightness | OK | 7.4 | 98.93 | -17 | -10.01 | 99 | 0.075 | 512x512 | yes | -
+lagrange | l4 | OK | 6.2 | 18.85 | -16.93 | -4.74 | 18.85 | 0 | 840x662 | no | -
+lorenz | lorenz | OK | 47 | 40 | -17.02 | -1 | 39.96 | -0.04 | 1000x840 | no | -
+magnetic | cyclotron | OK | 9.4 | 52.57 | -17 | -8.9 | 52.5 | -0.073 | 840x1092 | yes | -
+mandelbrot | mandelbrot | OK | 10.3 | 81.23 | -17 | -11.04 | 81 | -0.231 | 640x640 | yes | -
+montecarlo | sweep | OK | 26.2 | 81.41 | -19.47 | -0.26 | 81.5 | 0.086 | 840x1183 | yes | -
+pendulum | double | OK | 22.6 | 20 | -17 | -4.52 | 20 | 0 | 960x932 | no | -
+primes | ulam | OK | 1.1 | 10 | -17 | -1.13 | 10 | 0 | 1200x1200 | no | -
+quantum | qho | OK | 40.4 | 12.55 | -17 | -11.09 | 12.55 | 0 | 1200x600 | no | -
+quantum_statistics | spectrum | OK | 6.1 | 30.62 | -17 | -4.68 | 30.5 | -0.122 | 1240x760 | yes | -
+quantum_tunnelling | barrier | OK | 6 | 47.23 | -17 | -4.77 | 2.58 | 0.03 | 1040x394 | yes | -
+qubit | gates | OK | 22.3 | 24.5 | -17 | -4.22 | 24.49 | -0.014 | 1040x1040 | yes | -
+relativity | chirp | OK | 31 | 28.96 (+3 more WAV) | -24.57 | -0.26 | 3.6 | 0.02 | 1600x800 | no | -
+resonance | galilean | OK | 17.6 | 57.02 | -17 | -3.06 | 33 | 0 | 920x920 | yes | -
+scattering | scatter | OK | 26.5 | 40.55 | -17 | -7.71 | 20.02 | 0.02 | 920x920 | yes | -
+signal | chord | OK | 11.9 | 37.75 (+3 more WAV) | -17 | -4.48 | 3 | 0 | 1600x800 | yes | -
+thermo | distribution | OK | 10.9 | 31.22 | -17 | -4.73 | 31.31 | 0.089 | 1200x800 | yes | -
+waves | ripple | OK | 13.3 | 20 | -17 | -9.01 | 20.02 | 0.02 | 60x60 | no | -
+
+== Pendulum frame clipping (margin >= 3 px on every frame) ==
+[PASS] double_animation.gif: 500 frames, 960x932 px, worst margins top 119, bottom 37, left 30, right 30 px, 0 frames under the margin
+
+== demo.wl ==
+demo.wl time limit: 3600 s (--demo-timeout-seconds)
+demo.wl | OK | 500.1 s | passed 33/33 | -
+demo.wl skipped steps: no step skipped.
+
+== Messages ==
+none
+
+Summary: 32 of 32 apps wrote a WAV; every GIF export succeeded; demo.wl OK, 33/33 runs passed, no step skipped.
+The smoke test process ended at 14:06.

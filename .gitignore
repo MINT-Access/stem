@@ -12,4 +12,3 @@ demo/
 /smoke_logs_*/
 /smoke_console_*.txt
 /smoke_heartbeat_*.txt
-/smoke_wrapper_*.txt

@@ -28,9 +28,19 @@ $demoDir     = FileNameJoin[{$demoHtmlRoot, "demo"}];
 $demoHtmlOut = FileNameJoin[{$demoDir, "demo.html"}];
 $genDate     = DateString[];
 
-(* Single source of truth for the release string shown in the page
-   header and footer — bump this on release, nowhere else needed. *)
-$stemVersion = "v1.5.0";
+(* The release string shown in the page header and footer: the highest
+   version among the RELEASE_NOTES_v<x.y.z>.md files in the repository
+   root, which every release writes, so the page follows the release
+   without a separate number to bump (a hard-coded "v1.5.0" here was
+   still shown after v1.5.1 and v1.6.0). *)
+$stemVersion = Module[{versions},
+  versions = StringCases[FileNameTake /@ FileNames["RELEASE_NOTES_v*.md", $demoHtmlRoot],
+    "RELEASE_NOTES_v" ~~ v : (DigitCharacter .. ~~ ("." ~~ DigitCharacter ..) ...) ~~ ".md" :>
+      ToExpression /@ StringSplit[v, "."]];
+  versions = Flatten[versions, 1];
+  If[versions === {},
+    Print["  [WARNING] no RELEASE_NOTES_v*.md in ", $demoHtmlRoot, ", so the page shows no version number."]; "",
+    "v" <> StringRiffle[ToString /@ Last[SortBy[versions, PadRight[#, 3] &]], "."]]];
 
 (* ── Demo listening order (mirrors demo.wl / demo/README.md) ─── *)
 (* "bayes" is inserted immediately after "primes", before "quantum" —

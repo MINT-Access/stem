@@ -25,15 +25,29 @@
 $here  = Split-Path -Parent $MyInvocation.MyCommand.Path
 $root  = Split-Path -Parent $here
 $start = Get-Date
+# The report this run writes, fixed before the start and passed as --out,
+# so the end line can only land in this run's report: --out=<path> if
+# given; with --resume the newest smoke_test_<SystemID>_*.txt; otherwise
+# smoke_test_<SystemID>_<date>_<HHMM>.txt from the start time (_2, _3 ...
+# if a run in the same minute already used the name).
+$sysid = 'Windows-' + $(if ($env:PROCESSOR_ARCHITECTURE -eq 'ARM64') { 'ARM64' } else { 'x86-64' })
 $out   = ($args | Where-Object { $_ -like '--out=*' } | Select-Object -First 1)
 if ($out) { $out = $out.Substring(6) }
-
-function Get-ReportPath {
-  if ($out) { if (Test-Path $out) { return (Resolve-Path $out).Path } else { return $null } }
-  Get-ChildItem -Path $root -Filter 'smoke_test_*.txt' -File -ErrorAction SilentlyContinue |
-    Where-Object { $_.LastWriteTime -ge $start.AddSeconds(-1) } |
+$resume = $args -contains '--resume'
+$pass  = @($args | Where-Object { $_ -notlike '--out=*' })
+if (-not $out -and $resume) {
+  $out = Get-ChildItem -Path $root -Filter "smoke_test_${sysid}_*.txt" -File -ErrorAction SilentlyContinue |
     Sort-Object LastWriteTime -Descending | Select-Object -First 1 -ExpandProperty FullName
+  if (-not $out) { Write-Error "--resume: no smoke_test_${sysid}_*.txt in $root to resume."; exit 1 }
 }
+if (-not $out) {
+  $base = Join-Path $root ("smoke_test_{0}_{1}" -f $sysid, $start.ToString('yyyy-MM-dd_HHmm'))
+  $out = "$base.txt"; $n = 2
+  while (Test-Path -LiteralPath $out) { $out = "${base}_$n.txt"; $n++ }
+}
+$pass += "--out=$out"
+
+function Get-ReportPath { if (Test-Path -LiteralPath $out) { return $out } else { return $null } }
 
 function Get-Sibling([string]$report, [string]$kind) {
   $dir = Split-Path -Parent $report; $base = [IO.Path]::GetFileNameWithoutExtension($report)
@@ -52,7 +66,7 @@ function Get-ExitText([int]$code) {
 }
 
 $tmpOut = [IO.Path]::GetTempFileName(); $tmpErr = [IO.Path]::GetTempFileName()
-$wsArgs = @('-file', "`"$(Join-Path $here 'smoke_test.wl')`"", '--') + ($args | ForEach-Object { "`"$_`"" })
+$wsArgs = @('-file', "`"$(Join-Path $here 'smoke_test.wl')`"", '--') + ($pass | ForEach-Object { "`"$_`"" })
 $p = Start-Process -FilePath 'wolframscript' -ArgumentList $wsArgs -NoNewWindow -PassThru `
        -RedirectStandardOutput $tmpOut -RedirectStandardError $tmpErr
 $null = $p.Handle   # keeps ExitCode available after the process ends
@@ -76,11 +90,10 @@ $lines = @(Get-Content -LiteralPath $tmpOut -ErrorAction SilentlyContinue)
 if ($lines.Count -gt $shown) { $lines[$shown..($lines.Count - 1)] | Write-Host }
 
 $endHM = Get-Date -Format 'HH:mm'; $secs = [int]((Get-Date) - $start).TotalSeconds
-if (-not $report) { $report = Get-ReportPath }
-if (-not $report) {
-  $report = Join-Path $root ("smoke_wrapper_{0}.txt" -f (Get-Date -Format 'yyyy-MM-dd_HHmm'))
-  "No report was written by this run; the wrapper's line goes to $report." | Tee-Object -FilePath $report -Append
+if (-not (Test-Path -LiteralPath $out)) {
+  "No report was written by this run; the wrapper's line goes to $out." | Tee-Object -FilePath $out -Append
 }
+$report = $out
 Get-Content -LiteralPath $tmpOut, $tmpErr -ErrorAction SilentlyContinue |
   Set-Content -LiteralPath (Get-Sibling $report 'console') -Encoding UTF8
 Remove-Item -LiteralPath $tmpOut, $tmpErr -ErrorAction SilentlyContinue

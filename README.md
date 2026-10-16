@@ -1,6 +1,6 @@
 # stem
 
-[![Version](https://img.shields.io/badge/version-1.5.1-blue.svg)](RELEASE_NOTES_v1.5.1.md)
+[![Version](https://img.shields.io/badge/version-1.6.0-blue.svg)](RELEASE_NOTES_v1.6.0.md)
 [![Wolfram Engine](https://img.shields.io/badge/Wolfram_Engine-supported_platforms-DD1100.svg)](#supported-platforms)
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](LICENSE)
 
@@ -15,24 +15,28 @@ and producing CSV data, an animated GIF, and audio output.
 - **Supported** (tested with `tools/smoke_test.wl` and `demo.wl` at this
   release):
   - macOS 26 on Apple silicon with Wolfram Engine 15.0.1
-    ([smoke report](docs/smoke_test_MacOSX-ARM64_2026-10-07.txt)).
+    ([smoke report](docs/smoke_test_MacOSX-ARM64_2026-10-16_1344.txt)).
   - Windows 11 x86-64 with Wolfram Engine 15.0.0
     ([smoke report](docs/smoke_test_Windows-x86-64_2026-10-10.txt),
     [demo report](docs/demo_report_Windows-x86-64_2026-10-11.md)). Tested in
     Parallels on Apple silicon, so the x64 engine runs under emulation,
     about three times slower than on the Mac.
-- **Pending**: Linux x86-64 (Ubuntu), to be added after a clean rerun; the
-  first run had intermittent GIF export failures
-  ([smoke report](docs/smoke_test_Linux-x86-64_2026-10-13.txt),
-  [details](docs/VERIFICATION_linux_gif.md)).
-  - If the kernel crashes (segmentation fault), the smoke report ends at the
-    last finished app, `smoke_logs_<SystemID>_<date>_<HHMM>/<app>.txt` holds the
-    crashing app's output up to the crash, and the core file goes where the
-    report's "Core dumps" line (`/proc/sys/kernel/core_pattern`) says (on
-    Ubuntu usually `/var/crash/*.crash` from apport, or `coredumpctl` with
-    systemd-coredump); a stack trace from `gdb -batch -ex bt <WolframKernel
-    binary> <core>`, if gdb is present, is what to report; then continue
-    with `tools/smoke_test.sh --resume`.
+  - Ubuntu 26.04 LTS x86-64 with Wolfram Engine 15.0.0: 32 of 32 apps and
+    `demo.wl` 33 of 33 in two consecutive clean runs
+    ([smoke report 17:19](docs/smoke_test_Linux-x86-64_2026-10-16_1719.txt),
+    [smoke report 18:48](docs/smoke_test_Linux-x86-64_2026-10-16_1848.txt),
+    [demo report](docs/demo_report_Linux-x86-64_2026-10-16.md), a separate
+    standalone `demo.wl` run, 33 of 33),
+    about four times slower than the Mac (3.9 times for the apps, 4.5 for
+    `demo.wl`). The runs of 2026-10-13, 10-14 and 10-15 in `docs/` are the
+    record of the failures fixed before that: intermittent GIF export
+    errors, the memory of GIF export and of the frame check, and runs that
+    stopped without saying why ([details](docs/VERIFICATION_linux_gif.md),
+    [memory](docs/VERIFICATION_gif_memory.md),
+    [wrapper](docs/VERIFICATION_smoke_wrapper.md)).
+  - Ubuntu's apport does not keep crash reports for Wolfram Engine; the
+    report's last line, written by the wrapper, is where a crash shows, and
+    `tools/smoke_test.sh --resume` continues the run.
   - For an unattended run (overnight), first stop the machine sleeping: set
     `HandleLidSwitch=ignore` in `/etc/systemd/logind.conf`, then
     `sudo systemctl mask sleep.target suspend.target`; run the smoke test
@@ -53,9 +57,16 @@ loading all 500 frames of its GIF; it now reads one frame at a time
 exported in chunks, one GIF export alone could take 12.8 GB
 ([measurements](docs/VERIFICATION_gif_memory.md)).
 
-Narration voice and length differ by platform: Samantha on macOS, SLT on
-Windows, so the same narration runs a different length on each.
-GIF/WAV sync is verified on every run regardless (`SyncWAVToGIF`).
+Narration voice and length differ by platform: Samantha on macOS; on Linux
+and Windows, SLT, the English voice bundled with Wolfram Engine, so no
+espeak-ng or other speech package is needed. The same narration runs a
+different length on each, and GIF/WAV sync is verified on every run
+regardless (`SyncWAVToGIF`).
+
+The asteroids loudness figure is not a regression indicator: the app
+sonifies live NASA data, which differ from week to week, and a week's file
+can be held below the -17 LUFS target by the peak ceiling (-18.1 LUFS in the
+two Linux runs).
 
 ---
 
@@ -1104,7 +1115,7 @@ start "" "brownian\output\brownian_temperature.wav"
 
 </details>
 
-See [RELEASE_NOTES_v1.5.1.md](RELEASE_NOTES_v1.5.1.md) for full app descriptions, physics notes, and listening guides.
+See [RELEASE_NOTES_v1.6.0.md](RELEASE_NOTES_v1.6.0.md) for what changed in this release, and [RELEASE_NOTES_v1.5.1.md](RELEASE_NOTES_v1.5.1.md) for full app descriptions, physics notes, and listening guides.
 
 ---
 
